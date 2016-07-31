@@ -80,11 +80,32 @@ def print_anf(sbox):
             sys.stdout.write('0')
         sys.stdout.write('\n')
 
-
+def count_terms(sbox):
+    import StringIO
+    backup = sys.stdout
+    sys.stdout = logger = StringIO.StringIO()
+    print_anf(sbox)
+    sys.stdout = backup
+    logger.seek(0)
+    
+    with open("anfdump.txt", 'w') as _file:
+        for line in logger.readlines():
+            line = line.replace('+', '')
+            line = line.replace('=', '')
+            print line.split()[1:]
+            _file.write(line[2:])
+    
 if __name__ == '__main__':
     print 'The sample sbox'
     sample_sbox = (0x0, 0x2, 0x4, 0x6, 0x7, 0xA, 0xC, 0xE,
                    0x1, 0x3, 0x5, 0x7, 0x9, 0xB, 0xD, 0xF)
     print 'y = sbox(x) =', sample_sbox
     print 'has been translated to ANF Boolean functions'
-    print_anf(sample_sbox)
+    with open("anfdump.txt", 'w') as _file:
+        sys.stdout = _file
+        print_anf(sample_sbox)
+        sys.stdout = sys.__stdout__
+    #print_anf(sample_sbox)
+    #
+    #count_terms(sample_sbox)
+    

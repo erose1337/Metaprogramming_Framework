@@ -77,8 +77,9 @@ def sponge_function(hash_input, key='', output_size=32, capacity=32, rate=32,
         #print "Absorbing: ", [byte for byte in _bytes]
         absorb(_bytes, state, rate, mixing_subroutine, absorb_mode)
     
-    #print "\nBeginning final mix before mode of operation: ", [byte for byte in state]
+ #   print "\nBeginning final mix before mode of operation: ", [byte for byte in state]
     mixing_subroutine(state)
+#    print "State: ", [byte for byte in state]
     return mode_of_operation(state, rate, output_size, mixing_subroutine, absorb_mode)                
     
 def encrypt(data, key, iv, mixing_subroutine, rate=32, **kwargs):
@@ -194,9 +195,22 @@ def test_psuedorandom_data():
     assert len(data) == 257
     print data
     
+def test_example_mixer_stats():
+    hash_function = sponge_factory(example_mixing_subroutine)
+    from metrics import test_hash_function
+    test_hash_function(hash_function, avalanche_test=False, randomness_test=False)
+    
+    #import sys
+    #backup = sys.stdout
+    #with open("example_mixer_stats.txt", 'w') as _file:
+    #    sys.stdout = _file
+    #    test_hash_function(hash_function)
+    #    sys.stdout = backup
+        
 if __name__ == "__main__":
-    test_hash()
-    test_hash_object()
-    test_encrypt_decrypt()
-    test_psuedorandom_data()
+    #test_hash()
+    #test_hash_object()
+    #test_encrypt_decrypt()
+    #test_psuedorandom_data()
+    test_example_mixer_stats()
     

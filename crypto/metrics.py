@@ -50,7 +50,7 @@ def test_bias_of_data(random_data):
     for chunk in slide(random_data, 256):
         for index, byte in enumerate(chunk):
             outputs[index].append(byte)
-    print "Symbols out of 256 that appeared at position: ", [len(set(_list)) for _list in outputs]       
+    print "Symbols out of 256 that appeared at position: ", len(outputs), [len(set(_list)) for _list in outputs]       
     
 def test_avalanche_hash(hash_function, blocksize=16):        
     print "Testing diffusion/avalanche... "
@@ -60,10 +60,12 @@ def test_avalanche_hash(hash_function, blocksize=16):
     ratio = []
     for byte in _bytes:  
         last_output = hash_function(beginning + byte + _bytes[0])
+        sys.stdout.write("\r{}%".format(ord(byte) / 256.0))
+        sys.stdout.flush()
         for byte2 in _bytes[1:]:
-            next_input = beginning + byte + byte2      
-            #print next_input
-            next_output = hash_function(next_input)            
+            next_input = beginning + byte + byte2                  
+            next_output = hash_function(next_input)    
+            #print next_input, next_output
             distance = hamming_distance(last_output, next_output)
             ratio.append(distance)
             last_output = next_output
@@ -147,7 +149,7 @@ def test_period(hash_function, blocksize=16, test_size=2):
     average = sum(cycle_lengths) / float(len(cycle_lengths))
     print "Minimum/Average/Maximum cycle lengths: ", (minimum, average, maximum)
     
-def test_bias(hash_function, byte_range=slice(0, 16)):
+def test_bias(hash_function, byte_range=slice(0, 32)):
     biases = [[] for x in xrange(byte_range.stop)]    
     outputs2 = []   
     print "Testing for byte bias..."
@@ -157,8 +159,8 @@ def test_bias(hash_function, byte_range=slice(0, 16)):
             for index, byte in enumerate(output[byte_range]):
                 biases[index].append(ord(byte))            
             outputs2.extend(output[byte_range])        
-    print "Byte bias: ", len(output), [len(set(_list)) for _list in biases]   
-    print "Symbols out of 256 that appeared anywhere: ", len(set(outputs2))
+    print "output size: {}; symbols that appear at index: {}".format(len(output), [len(set(_list)) for _list in biases])
+    print "Symbols out of 256 that appeared anywhere: {}".format(len(set(outputs2)))
        
 def test_collisions(hash_function, output_size=3):      
     outputs = {}        

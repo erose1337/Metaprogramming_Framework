@@ -60,7 +60,7 @@ def test_avalanche_hash(hash_function, blocksize=16):
     ratio = []
     for byte in _bytes:  
         last_output = hash_function(beginning + byte + _bytes[0])
-        sys.stdout.write("\r{}%".format(ord(byte) / 256.0))
+        sys.stdout.write("\r{}%".format((ord(byte) / 256.0) * 100))
         sys.stdout.flush()
         for byte2 in _bytes[1:]:
             next_input = beginning + byte + byte2                  
@@ -69,7 +69,7 @@ def test_avalanche_hash(hash_function, blocksize=16):
             distance = hamming_distance(last_output, next_output)
             ratio.append(distance)
             last_output = next_output
-
+    print
     minimum = min(ratio)
     maximum = max(ratio)
     average = sum(ratio) / len(ratio)   

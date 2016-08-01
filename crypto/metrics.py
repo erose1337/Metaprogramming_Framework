@@ -171,7 +171,7 @@ def test_collisions(hash_function, output_size=3):
         if hash_output in outputs:            
             format_args = (log(count, 2), output_size * 8)
             print "Collision after: 2 ** {}; output size: 2 ** {}".format(*format_args)            
-            print "Expected after : 2 ** {}".format(output_size * 8)
+            print "Expected after : 2 ** {}".format(output_size * 4)
             break
         else:
             outputs[hash_output] = hash_input

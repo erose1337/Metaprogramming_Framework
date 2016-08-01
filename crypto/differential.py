@@ -36,7 +36,9 @@ def rotational_difference(input_one, input_two):
 ALL_FUNCTIONS = ((modular_addition, modular_subtraction), (xor, xor), 
                  (modular_multiplication, modular_subtraction), 
                  (rotate_left, rotational_difference))            
-                       
+                 
+STANDARD_DIFFERENTIAL = ((xor, xor), )
+                 
 def _difference(input_one, input_difference, sbox, distribution_table, difference_function1, difference_function2=None):    
     input_two = difference_function1(input_one, input_difference)            
     output_differential = (difference_function2 or difference_function1)(sbox[input_one], sbox[input_two])
@@ -51,7 +53,7 @@ def _difference(input_one, input_difference, sbox, distribution_table, differenc
         else:
             distribution_table[input_difference] = {output_differential : 1}
       
-def build_difference_distribution_table(sbox, differences=ALL_FUNCTIONS):
+def build_difference_distribution_table(sbox, differences=STANDARD_DIFFERENTIAL):
     difference_tables = dict((index, {}) for index in range(len(differences)))    
     size = len(sbox)
     

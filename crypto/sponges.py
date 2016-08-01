@@ -91,6 +91,7 @@ def permute4(state):
     state_xor = xor_sum(state)
     for index in range(len(state)):
         left, right = state[index - 1], state[index]
+        state_xor ^= right
         left, right, state_xor = round_function(left, right, state_xor, index)
         state[index - 1], state[index] = left, right
         

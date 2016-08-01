@@ -25,7 +25,7 @@ def _hash_prng(hash_function, digest_size, output_size):
     chunks, extra = divmod(output_size, digest_size)
     chunks += 1 if extra else 0      
     for chunk in range(chunks):      
-        sys.stdout.write("\rGenerating random data: {:10.4f}%".format(100 * (float(chunk) / chunks)))
+        sys.stdout.write("\rGenerating random data: {:3.4f}%".format(100 * (float(chunk) / chunks)))
         sys.stdout.flush()
         #print "Hashing: ", [byte for byte in bytearray(hash_input)]
         #print "Hashed : ", hash_function(hash_input)
@@ -62,7 +62,7 @@ def test_avalanche_hash(hash_function, blocksize=16):
     ratio = []
     for byte in _bytes:  
         last_output = hash_function(beginning + byte + _bytes[0])
-        sys.stdout.write("\r{}%".format((ord(byte) / 256.0) * 100))
+        sys.stdout.write("\r{:3.4f}%".format((ord(byte) / 256.0) * 100))
         sys.stdout.flush()
         for byte2 in _bytes[1:]:
             next_input = beginning + byte + byte2                  

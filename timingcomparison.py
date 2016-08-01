@@ -64,5 +64,17 @@ def xor_sum2(data1):
         xor_sum2.state ^= byte
     return xor_sum2.state
     
-timing_comparison((xor_sum, (range(256), ), {}), (xor_sum2, (range(256), ), {}),
-                  iterations=10000)
+#timing_comparison((xor_sum, (range(256), ), {}), (xor_sum2, (range(256), ), {}),
+#                  iterations=10000)
+                  
+def extract_number_from_string(data):
+    return [int(s) for s in data.split() if s.isdigit()]
+    
+def extract_number_from_string2(data, numbers=set("0123456789")):
+    return [int(s) for s in data if s in numbers]
+    
+if __name__ == "__main__":
+    timing_comparison((extract_number_from_string, ("h3110 23 cat 444.4 rabbit 11 2 dog", ), {}),
+                      (extract_number_from_string2, ("h3110 23 cat 444.4 rabbit 11 2 dog", ), {}),
+                      iterations=10000)
+    

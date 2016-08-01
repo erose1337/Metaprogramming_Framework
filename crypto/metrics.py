@@ -24,12 +24,14 @@ def _hash_prng(hash_function, digest_size, output_size):
     hash_input = "\x01" * digest_size    
     chunks, extra = divmod(output_size, digest_size)
     chunks += 1 if extra else 0      
-    for chunk in range(chunks):                
+    for chunk in range(chunks):      
+        sys.stdout.write("\rGenerating random data: {:10.4f}%".format(100 * (float(chunk) / chunks)))
+        sys.stdout.flush()
         #print "Hashing: ", [byte for byte in bytearray(hash_input)]
         #print "Hashed : ", hash_function(hash_input)
         output += hash_function(hash_input)    
         hash_input = output[-digest_size:]
-    
+    print
     return output
         
 def hamming_distance(str1, str2):    

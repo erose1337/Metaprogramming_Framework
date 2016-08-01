@@ -1,6 +1,20 @@
 import sponge    
-from blockcipher3 import round_function, xor_sum
+from utilities import xor_sum, rotate_left
+from metrics import test_hash_function    
 
+def round_function(left, right, key, index, 
+                   mask=255, rotation_amount=5, bit_width=8):        
+    key ^= right                 
+    right = rotate_left((right + key + index) & mask, rotation_amount, bit_width)                
+    key ^= right
+    
+    key ^= left        
+    left = (left + (right >> (bit_width / 2))) & mask                
+    left ^= rotate_left(right, (index % bit_width) ^ rotation_amount)                    
+    key ^= left
+         
+    return left, right, key    
+    
 def shuffle_bytes(_state, state_slice, temp=list(range(16)), offset=0):          
     temp[7] = _state[0 + offset] 
     temp[12] = _state[1 + offset]
@@ -52,10 +66,43 @@ def permute(state, rate_section=slice(0, 16), capacity_section=slice(16, 32), ma
     
 permute3_sponge = sponge.sponge_factory(permute, output_size=32, rate=slice(0, 16), capacity=slice(16, 32))
     
-def test_sponge_permute():    
-    from metrics import test_hash_function    
+def shuffle_bytes_optimized(_state):
+    temp = _state[0] # copied from blockcipher3optimized.cpp
+    
+    _state[0] = _state[11];
+    _state[11] = _state[8];
+    _state[8] = _state[13];
+    _state[13] = _state[10];
+    _state[10] = _state[14];
+    _state[14] = _state[2];
+    _state[2] = _state[4];
+    _state[4] = _state[12];
+    _state[12] = _state[1];
+    _state[1] = _state[5];
+    _state[5] = _state[6];
+    _state[6] = _state[9];
+    _state[9] = _state[3];
+    _state[3] = _state[15];
+    _state[15] = _state[7];
+    _state[7] = temp;
+    
+def permute4(state):
+    shuffle_bytes_optimized(state)
+    state_xor = xor_sum(state)
+    for index in range(len(state)):
+        left, right = state[index - 1], state[index]
+        left, right, state_xor = round_function(left, right, state_xor, index)
+        state[index - 1], state[index] = left, right
+        
+permute4_sponge = sponge.sponge_factory(permute4, output_size=32, rate=slice(0, 8), capacity=slice(8, 16))
+        
+def test_permute3_sponge():       
     test_hash_function(permute3_sponge, avalanche_test=False)
     
+def test_permute4_sponge():
+    test_hash_function(permute4_sponge, avalanche_test=False)
+    
 if __name__ == "__main__":
-    test_sponge_permute()
+    #test_permute3_sponge()
+    test_permute4_sponge()
     

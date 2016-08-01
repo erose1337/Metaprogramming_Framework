@@ -77,51 +77,26 @@ template <int left_index, int right_index> WORD_TYPE invert_round_function(WORD_
 	return key;
 }
 
-
-void shuffle_bytes(WORD_TYPE* _state) {
-	WORD_TYPE temp[DATA_SIZE];
-
-	temp[7]  = _state[0];
-	temp[12] = _state[1];
-	temp[14] = _state[2];
-	temp[9]  = _state[3];
-	temp[2]  = _state[4];
-	temp[1]  = _state[5];
-	temp[5]  = _state[6];
-	temp[15] = _state[7];
-	temp[11] = _state[8];
-	temp[6]  = _state[9];
-	temp[13] = _state[10];
-	temp[0]  = _state[11];
-	temp[4]  = _state[12];
-	temp[8]  = _state[13];
-	temp[10] = _state[14];
-	temp[3]  = _state[15];
-
-	memcpy_s(_state, temp, DATA_SIZE * WORD_SIZE);
+void shuffle_bytes(WORD_TYPE* _state) {        
+    WORD_TYPE temp = _state[0];
+    
+    _state[0] = _state[11];
+    _state[11] = _state[8];
+    _state[8] = _state[13];
+    _state[13] = _state[10];
+    _state[10] = _state[14];
+    _state[14] = _state[2];
+    _state[2] = _state[4];
+    _state[4] = _state[12];
+    _state[12] = _state[1];
+    _state[1] = _state[5];
+    _state[5] = _state[6];
+    _state[6] = _state[9];
+    _state[9] = _state[3];
+    _state[3] = _state[15];
+    _state[15] = _state[7];
+    _state[7] = temp;
 }
-//void shuffle_bytes(WORD_TYPE* _state) {
-//    //WORD_TYPE temp[DATA_SIZE];
-//    
-//    WORD_TYPE temp = _state[0];
-//    
-//    _state[0] = _state[11];
-//    _state[11] = _state[8];
-//    _state[8] = _state[13];
-//    _state[13] = _state[10];
-//    _state[10] = _state[14];
-//    _state[14] = _state[2];
-//    _state[2] = _state[4];
-//    _state[4] = _state[12];
-//    _state[12] = _state[1];
-//    _state[1] = _state[5];
-//    _state[5] = _state[6];
-//    _state[6] = _state[9];
-//    _state[9] = _state[3];
-//    _state[3] = _state[15];
-//    _state[15] = _state[7];
-//    _state[7] = temp;
-//}
 
 int prp(WORD_TYPE* data, WORD_TYPE key) {
 	shuffle_bytes(data);

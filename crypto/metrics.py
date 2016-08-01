@@ -2,7 +2,7 @@ import itertools
 import random
 import sys
 import os
-
+from math import log
 from timeit import default_timer as timestamp
 
 def slide(iterable, x=16):
@@ -168,8 +168,10 @@ def test_collisions(hash_function, output_size=3):
     for count, possibility in enumerate(itertools.product(*(ASCII for count in range(output_size)))):
         hash_input = ''.join(possibility)        
         hash_output = hash_function(hash_input)[:output_size]
-        if hash_output in outputs:
-            print "Collision after: ", count, "; Output size: ", output_size
+        if hash_output in outputs:            
+            format_args = (log(count, 2), output_size * 8)
+            print "Collision after: 2 ** {}; output size: 2 ** {}".format(*format_args)            
+            print "Expected after : 2 ** {}".format(output_size * 8)
             break
         else:
             outputs[hash_output] = hash_input

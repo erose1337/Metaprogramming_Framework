@@ -8,7 +8,7 @@ def mick_sponge_64_subroutine(state, mask=0xFFFFFFFFFFFFFFFF):
     m = 0xFFFFFFFFFFFFFFFF    
     for i in range(10):
         m -= PD[i]
-#        spunj = (spunj * m) % mask
+        spunj = (spunj * m) % mask
         spunj = (spunj << PS[i]) | (spunj >> (64 - PS[i]))
         spunj = (spunj + m) % mask    
     replacement_subroutine(state, integer_to_bytes(spunj, 8))
@@ -46,7 +46,7 @@ def mick_hash(data, sponge_function=mick_sponge_64):
 def test_mick_sponge_64():
     from sponge import sponge_factory    
     hash_function = sponge_factory(mick_sponge_64_subroutine, rate=1, capacity=7)
-    test_hash_function(hash_function, avalanche_test=False, randomness_test=False)
+    test_hash_function(hash_function, avalanche_test=False, randomness_test=True)
     
 def test_mick_hash():
     test_hash_function(mick_hash)    

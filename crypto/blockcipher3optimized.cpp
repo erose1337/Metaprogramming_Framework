@@ -152,7 +152,7 @@ void prf(WORD_TYPE* data, WORD_TYPE key) {
 	key = round_function<1, 2>(data, key);
 	key ^= data[1];
 	key = round_function<0, 1>(data, key);
-
+    key ^= data[0];
 	key = round_function<15, 0>(data, key);
 }
 

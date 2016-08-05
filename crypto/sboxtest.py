@@ -30,10 +30,11 @@ def test_sbox_differentials():
     print cryptanalyze_sbox_worst_case([(entry ^ 251) & 251 for entry in S_BOX])
     linearity_14_differential_6_sbox = [(entry ^ 251) & 251 for entry in S_BOX]
     
-    for number in range(256):
-        print "{}: {}".format(number, cryptanalyze_sbox_worst_case([((entry + number) * number) % 256 for entry in S_BOX]))
-        
+    #for number in range(256):
+    #    print "{}: {}".format(number, cryptanalyze_sbox_worst_case([((entry + number) * number) % 256 for entry in S_BOX]))
+     # yields nothing interesting   
     
+    print cryptanalyze_sbox_worst_case([S_BOX[linearity_14_differential_6_sbox[x]] for x in range(256)])
     
 if __name__ == "__main__":
     test_sbox_differentials()

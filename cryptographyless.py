@@ -21,25 +21,7 @@ _TEST_MESSAGE = "This is a sweet test message :)"
 def random_bytes(count):
     """ Generates count cryptographically secure random bytes """
     return os.urandom(count) 
-    
-class Hash_Object(object):
-    
-    def __init__(self, algorithm="md5"):
-        self.hash_object = getattr(hashlib, algorithm.lower())()
-        
-    def __getattr__(self, attribute):
-        try:
-            return getattr(super(Hash_Object, self).__getattribute__("hash_object"), attribute)
-        except AttributeError:
-            if attribute == "finalize":
-                return super(Hash_Object, self).__getattribute__("finalize")
-            else:
-                raise
-                
-    def finalize(self):
-        return self.hash_object.digest()
-        
-    
+             
 class Key_Derivation_Object(object):
     
     def __init__(self, algorithm, length, salt, iterations):
@@ -63,9 +45,37 @@ class HKDFExpand(object):
         return hkdf.expand(key_material, length=self.length, info=self.info, 
                            hash_function=getattr(hashlib, self.algorithm.lower()))
                            
+class Hash_Factory(object):
+            
+    def __init__(self, algorithm_name):
+        self.hash_factory = getattr(hashlib, algorithm_name.lower())
         
+    def __call__(self, message=''):
+        return Hash_Object(self.hash_factory(message))
+        
+        
+class Hash_Object(object):
+
+    def __init__(self, hash_function):
+        self.hash_function = hash_function
+        
+    def __getattribute__(self, attribute):
+        get_attribute = super(Hash_Object, self).__getattribute__
+        try:
+            return getattr(get_attribute("hash_function"), attribute)
+        except AttributeError:
+            try:
+                return get_attribute(attribute)
+            except AttributeError:
+                raise AttributeError("{} object has no attribute '{}'".format(self, attribute))              
+                
+    def finalize(self):
+        return self.hash_function.digest()
+
+        
+
 def hash_function(algorithm_name, backend=None):
-    return Hash_Object(algorithm_name.lower())#getattr(hashlib, algorithm_name.lower())()
+    return Hash_Factory(algorithm_name)()#Hash_Object(algorithm_name.lower())#getattr(hashlib, algorithm_name.lower())()
  
 def hkdf_expand(algorithm="SHA256", length=256, info='', backend=None):
     """ Returns an hmac based key derivation function (expand only) from
@@ -76,8 +86,8 @@ def key_derivation_function(salt, algorithm="sha256", length=32,
                             iterations=100000, backend=None):
     return Key_Derivation_Object(algorithm, length, salt, iterations)
     
-def generate_mac(key, data, algorithm="SHA256", backend=None):
-    return hmac.HMAC(key, algorithm + "::" + data, hash_function(algorithm)).digest()
+def generate_mac(key, data, algorithm="SHA256", backend=None):    
+    return hmac.HMAC(key, algorithm + "::" + data, Hash_Factory(algorithm)).digest()
     
 def apply_mac(key, data, algorithm="SHA256", backend=None):
     return save_data(generate_mac(key, data, algorithm, backend), data)
@@ -86,17 +96,17 @@ def verify_mac(key, packed_data, algorithm="SHA256", backend=None):
     """ Verifies a message authentication code as obtained by apply_mac.
         Successful comparison indicates integrity and authenticity of the data. """
     mac, data = load_data(packed_data)
-    calculated_mac = hmac.HMAC(key, algorithm + "::" + data, hash_function(algorithm)).digest()        
+    calculated_mac = hmac.HMAC(key, algorithm + "::" + data, Hash_Factory(algorithm)).digest()        
     try:
-        if not hmac.HMAC.compare_digest(mac, calculated_mac):
+        if not hmac.compare_digest(mac, calculated_mac):
             raise InvalidTag()
     except InvalidTag: # to be consistent with how it is done when the cryptography package is used
-        return False
+        return InvalidTag()
     else:
-        return True    
+        return data
 
 def encrypt(data='', key='', mac_key=None,iv=None, extra_data='', algorithm="SHA256",
-            mode=None, backend=None, iv_size=16, hash_algorithm="sha256"):        
+            mode=None, return_mode="cryptogram", backend=None, iv_size=16, hash_algorithm="sha256"):        
     iv = iv or random_bytes(iv_size)
     if (not data) or (not key) or (not mac_key):
         raise ValueError("Encryption requires data, encryption key, and mac key")
@@ -148,7 +158,7 @@ def _hash_stream_cipher_hkdf(data, key, seed, algorithm="sha256"):
     return bytes(data)
     
 def _encrypt(data, key, mac_key, nonce='', extra_data='', algorithm="sha256", nonce_size=32, hmac_algorithm="sha256",
-             cipher_priority=("hkdf", "hmac")):
+             cipher_priority=("hkdf", "hmac"), return_mode="cryptogram"):
     """ usage: _encrypt(data, key, extra_data='', nonce='', 
                 hash_function="SHA256", nonce_size=32) => encrypted_packet
     
@@ -177,7 +187,12 @@ def _encrypt(data, key, mac_key, nonce='', extra_data='', algorithm="sha256", no
 
     header = algorithm + '_' + mode + '_' + hmac_algorithm
     mac_tag = hmac.HMAC(mac_key, header + extra_data + nonce + encrypted_data, getattr(hashlib, hmac_algorithm)).digest()
-    return save_data(header, encrypted_data, nonce, mac_tag, extra_data)
+    if return_mode == "cryptogram":
+        return save_data(header, encrypted_data, nonce, mac_tag, extra_data)
+    elif return_mode == "values":
+        return header, encrypted_data, nonce, mac_tag, extra_data
+    else:
+        raise ValueError("Invalid mode supplied: '{}'; (valid: {})".format(("cryptogram", "values")))
         
 def _decrypt(data, key, mac_key):
     """ usage: _decrypt(data, key, mac_key) => (plaintext, extra_data)
@@ -251,3 +266,4 @@ if __name__ == "__main__":
     test_hmac_rng()
     test__encrypt__decrypt()
     test_encrypt_decrypt()
+    

@@ -11,7 +11,7 @@ from pride.errors import SecurityError, InvalidPassword, InvalidTag, InvalidSign
 AEAD_MODES = ["GCM"]
 INVALID_TAG = [] # just needs to be a unique object
     
-try:                
+try:                    
     import cryptography
 except ImportError:
     # use an alternative file when the cryptography package is not installed    

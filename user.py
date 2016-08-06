@@ -162,7 +162,7 @@ class User(pride.base.Base):
             assert verifier == self.username
         verifier_file.close()             
                                         
-    def encrypt(self, data, extra_data=''):
+    def encrypt(self, data, extra_data='', return_mode="cryptogram"):
         """ Encrypt and authenticates the supplied data; Authenticates, but 
             does not encrypt, any extra_data. The data is encrypted using the 
             Users encryption key. Returns packed encrypted bytes. 
@@ -170,7 +170,8 @@ class User(pride.base.Base):
             Encryption is done via AES-256-GCM. """        
         return pride.security.encrypt(data=data, key=self.encryption_key, mac_key=self.mac_key, 
                                       iv=random._urandom(self.iv_size), extra_data=extra_data, 
-                                      algorithm=self.encryption_algorithm, mode=self.encryption_mode)
+                                      algorithm=self.encryption_algorithm, mode=self.encryption_mode,
+                                      return_mode=return_mode)
                                       
     def decrypt(self, packed_encrypted_data):
         """ Decrypts packed encrypted data as returned by encrypt. The Users 
@@ -189,7 +190,7 @@ class User(pride.base.Base):
             
             Combining encryption and authentication is not simple. This method 
             should be used ONLY in conjunction with unencrypted data, unless 
-            you are certain you know what you are doing. """
+            you are certain you know what you are doing. """        
         return pride.security.apply_mac(self.mac_key, data, self.hash_function)
         
     def verify(self, macd_data):
@@ -210,7 +211,7 @@ class User(pride.base.Base):
         return self.authenticate(package)
         
     def load_data(self, package):
-        packed_bytes = self.verify(package)
+        packed_bytes = self.verify(package)        
         if packed_bytes is not pride.security.INVALID_TAG:
             return pride.persistence.load_data(packed_bytes)
         else:            
@@ -218,7 +219,7 @@ class User(pride.base.Base):
     
     def hash(self, data):
         """ Hash data using the user objects specified hashing algorithm """
-        hasher = pride.security.hash_function(self.hash_function)
+        hasher = pride.security.hash_function(self.hash_function)    
         hasher.update(data)
         return hasher.finalize()
         
@@ -228,13 +229,14 @@ def test_User():
     data = "This is some test data!"
     packed_encrypted_data = user.encrypt(data)
     assert user.decrypt(packed_encrypted_data) == data
-
+    
     saved = user.save_data(data, packed_encrypted_data)
     _data, _packed_encrypted_data = user.load_data(saved)
     assert _data == data
     assert _packed_encrypted_data == packed_encrypted_data
     
     user.hash(_data)
+    user.alert("Passed unit test", level=0)
     raise SystemExit()
     
 if __name__ == "__main__":

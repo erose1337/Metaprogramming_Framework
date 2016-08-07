@@ -1,4 +1,4 @@
-from utilities import rotate_right
+from utilities import rotate_right, print_state_4x4
 
 def bit_transposition(state, state_offset):
     output = bytearray(8)    
@@ -31,3 +31,21 @@ def bit_transposition_hackers_delight(A, m=1, n=1, B=list(bytearray(8))):
    B[4*n]=y>>24;  B[5*n]=y>>16 & 255;    B[6*n]=(y>>8) & 255;  B[7*n]=y & 255; 
       
    A[:] = B[:] 
+   
+def test_bit_transposition():
+    data = range(8)
+    print_state_4x4(data, "Before: ")
+    bit_transposition(data, 0)
+    print_state_4x4(data, "After: ")
+    rotated = data[:]
+    bit_transposition(data, 0)
+    assert data == range(8)
+    
+    print_state_4x4(data, "Before: ")
+    bit_transposition_hackers_delight(data)
+    print_state_4x4(data, "After: ")
+    #assert data == rotated, (data, rotated)
+    bit_transposition_hackers_delight(data)
+    print_state_4x4(data, "Reverted: ")
+    assert data == range(8)
+    

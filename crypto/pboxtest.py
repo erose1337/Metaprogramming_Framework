@@ -27,8 +27,99 @@ def bit_transposition_hackers_delight(A, state_offset):
     A[0 + state_offset]=t>>24;  A[1 + state_offset]=t>>16 & 255; A[2 + state_offset]=(t>>8) & 255; A[3 + state_offset]=t & 255; 
     A[4 + state_offset]=y>>24;  A[5 + state_offset]=y>>16 & 255; A[6 + state_offset]=(y>>8) & 255; A[7 + state_offset]=y & 255; 
 
+def bit_transposition_16_bytes(A, B):   
+    # top half    
+    x = (A[0]<<24)   | (A[1]<<16)   | (A[2]<<8) | A[3]; 
+    y = (A[4]<<24) | (A[5]<<16) | (A[6]<<8) | A[7];    
+    
+    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
+    
+    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
+    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
+    
+    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
+    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
+        
+    A[0]=t>>24;  A[1]=t>>16 & 255; A[2]=(t>>8) & 255; A[3]=t & 255; 
+    A[4]=y>>24;  A[5]=y>>16 & 255; A[6]=(y>>8) & 255; A[7]=y & 255; 
+    
+    # bottom half
+    x = (B[0]<<24) | (B[1]<<16) | (B[2]<<8) | B[3]; 
+    y = (B[4]<<24) | (B[5]<<16) | (B[6]<<8) | B[7];    
+    
+    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
+    
+    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
+    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
+    
+    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
+    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
+        
+    B[0]=t>>24;  B[1]=t>>16 & 255; B[2]=(t>>8) & 255; B[3]=t & 255; 
+    B[4]=y>>24;  B[5]=y>>16 & 255; B[6]=(y>>8) & 255; B[7]=y & 255; 
+    
+def decorrelation_layer3(A, B):
+    ## top half    
+    #x = (A[0]<<24)   | (A[1]<<16)   | (A[2]<<8) | A[3]; 
+    #y = (A[4]<<24) | (A[5]<<16) | (A[6]<<8) | A[7];    
+    #
+    # # bottom half
+    #x =  (B[8]<<24) | (B[9]<<16) | (B[10]<<8) | B[11]; 
+    #y2 = (B[12]<<24) | (B[13]<<16) | (B[14]<<8) | B[15];  
+    
+    x = (B[3]<<24) | (A[5]<<16) | (A[4]<<8) | B[7]
+    y = (B[4]<<24) | (A[6]<<16) | (B[1]<<8) | A[0]
+    
+    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
+    
+    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
+    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
+    
+    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
+    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
+        
+    
+     # bottom half
+    x =  (B[5]<<24) | (A[3]<<16) | (B[6]<<8) | B[0] 
+    y2 = (A[1]<<24) | (B[2]<<16) | (A[2]<<8) | A[7]       
+    
+    t2 = (y2 ^ (y2 >> 7)) & 0x00AA00AA;  y2 = y2 ^ t2 ^ (t2 << 7); 
+    
+    t2 = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t2 ^ (t2 <<14); 
+    t2 = (y2 ^ (y2 >>14)) & 0x0000CCCC;  y2 = y2 ^ t2 ^ (t2 <<14); 
+    
+    t2 = (x & 0xF0F0F0F0) | ((y2 >> 4) & 0x0F0F0F0F); 
+    y2 = ((x << 4) & 0xF0F0F0F0) | (y2 & 0x0F0F0F0F); 
+            
+    A[0]=t>>24;  A[1]=t>>16 & 255; A[2]=(t>>8) & 255; A[3]=t & 255; 
+    A[4]=y>>24;  A[5]=y>>16 & 255; A[6]=(y>>8) & 255; A[7]=y & 255; 
+
+    B[0]=t2>>24;  B[1]=t2>>16 & 255; B[2]=(t2>>8) & 255; B[3]=t2 & 255; 
+    B[4]=y2>>24;  B[5]=y2>>16 & 255; B[6]=(y2>>8) & 255; B[7]=y2 & 255; 
+    
+    
+   # A[0]=t2 & 255;  A[1]=y>>16 & 255;  A[2]=y>>24;        A[3]=y2 & 255;
+   # A[4]=y2>>24;    A[5]=(y>>8) & 255; A[6]=t2>>16 & 255; A[7]=t>>24; 
+   # 
+   # B[0]=y2>>16 & 255;  B[1]=t & 255;        B[2]=(y2>>8) & 255; B[3]=t2>>24;
+   # B[4]=t>>16 & 255;  B[5]=(t2>>8) & 255; B[6]=(t>>8) & 255;  B[7]=y & 255; 
+    
+   # temp =  
     
 
+    
+def test_decorrelation_layer3():
+    data = range(16)
+    data2 = data[:]
+    
+    decorrelation_layer(data)
+        
+    data2_left, data2_right = data2[:8], data2[8:]
+    decorrelation_layer3(data2_left, data2_right)
+    data2 = data2_left + data2_right
+    
+    assert data == data2, (data, data2)
+    
 def shuffle_bytes(_state):
 
     temp = _state[0]
@@ -54,8 +145,27 @@ def decorrelation_layer(state):
     shuffle_bytes(state)
     #bit_transposition_involution(state, 0)
     #bit_transposition_involution(state, 8)
+    print state
     bit_transposition_hackers_delight(state, 0)
+    print state
     bit_transposition_hackers_delight(state, 8)
+    print state
+    
+def decorrelation_layer2(state):
+    shuffle_bytes(state)
+    state_left, state_right = state[:8], state[8:]
+    bit_transposition_16_bytes(state_left, state_right)
+    state[:8] = state_left[:]
+    state[8:] = state_right[:]
+    
+def test_decorrelation_layer2():
+    data = range(16)
+    data2 = data[:]
+    
+    decorrelation_layer(data)
+    decorrelation_layer2(data2)
+    assert data == data2, (data, data2)
+    
     
 def polarize_state(state):
     #bit_transposition_involution(state, 0)
@@ -170,7 +280,9 @@ def test_decorrelation_layer_period():
             
 if __name__ == "__main__":
     #test_decorrelation_layer_period()    
-    test_bit_transposition()
+    #test_bit_transposition()
     #test_prp()
     #test_prf_sponge()
+    #test_decorrelation_layer2()
+    test_decorrelation_layer3()
     

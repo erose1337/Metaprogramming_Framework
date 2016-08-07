@@ -31,7 +31,9 @@ def bit_transposition_hackers_delight(A, m=1, n=1, B=list(bytearray(8))):
 
    B[0]=x>>24;    B[n]=x>>16   & 255;    B[2*n]=(x>>8) & 255;  B[3*n]=x & 255; 
    B[4*n]=y>>24;  B[5*n]=y>>16 & 255;    B[6*n]=(y>>8) & 255;  B[7*n]=y & 255; 
-      
+ #  B[7]=x>>24;    B[6]=x>>16   & 255;    B[5]=(x>>8) & 255;  B[4]=x & 255; 
+ #  B[3*n]=y>>24;  B[2*n]=y>>16 & 255;    B[1*n]=(y>>8) & 255;  B[0]=y & 255;
+   
    A[:] = B[:] 
    
 def print_state(state, message=''):
@@ -42,11 +44,12 @@ def print_state(state, message=''):
         
 def test_bit_transposition():
     data = range(8)
-    print_state(data, "Before: ")
+    print_state(data, "Correct algorithm:\nBefore: ")
     bit_transposition(data, 0)
     print_state(data, "After: ")
     rotated = data[:]
     bit_transposition(data, 0)
+    print_state(data, "Reverted: ")
     assert data == range(8)
     
     

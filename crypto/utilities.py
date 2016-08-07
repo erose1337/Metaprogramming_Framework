@@ -249,7 +249,7 @@ def modular_addition(x, y, modulus=256):
     return (x + y) % modulus
     
 def modular_subtraction(x, y, modulus=256):
-    return abs(x - y) % modulus
+    return (modulus + (x - y)) % modulus
 
 def print_state_4x4(state, message=''):
     if message:

@@ -55,12 +55,49 @@ def mixColumns(state, mode="forward"):
     for i in range(4):
         # construct one column by slicing over the 4 rows
         column = state[i:i+16:4]
-        # apply the _mixColumn on one column
+        # apply the _mixColumn on one column        
         column = _mixColumn(column, mult)
         # put the values back into the state
         state[i:i+16:4] = column
 
     return state
+   
+def test_mixColumns_subroutine():
+    state = range(16)
+    state2 = range(16)
+    state = mixColumns(state)
+    mixColumns_subroutine(state2)
+    assert state == state2
+    
+def mixColumns_subroutine(state, mode="forward"):
+    mult = [2, 1, 1, 3] if mode == "forward" else [14, 9, 13, 11]    
+    # iterate over the 4 columns
+    for i in range(4):
+        # construct one column by slicing over the 4 rows
+        #column = state[i:i+16:4]
+        # apply the _mixColumn on one column
+        _mixColumn_subroutine(state, i, mult)
+        # put the values back into the state
+        #state[i:i+16:4] = column
+
+    #return state
+    
+def _mixColumn_subroutine(state, i, mult=[2, 1, 1, 3]): # inverse_mult = [14, 9, 13, 11]
+    cpy = list(state)
+    g = _galois_multiplication
+    index0, index1, index2, index3 = (i, i + 4, i + 8, i + 12)
+    
+    state[index0] = g(cpy[index0], mult[0]) ^ g(cpy[index3], mult[1]) ^ \
+                    g(cpy[index2], mult[2]) ^ g(cpy[index1], mult[3])
+    
+    state[index1] = g(cpy[index1], mult[0]) ^ g(cpy[index0], mult[1]) ^ \
+                    g(cpy[index3], mult[2]) ^ g(cpy[index2], mult[3])
+    
+    state[index2] = g(cpy[index2], mult[0]) ^ g(cpy[index1], mult[1]) ^ \
+                    g(cpy[index0], mult[2]) ^ g(cpy[index3], mult[3])
+    
+    state[index3] = g(cpy[index3], mult[0]) ^ g(cpy[index2], mult[1]) ^ \
+                    g(cpy[index1], mult[2]) ^ g(cpy[index0], mult[3])    
     
 # galois multiplication of 1 column of the 4x4 matrix
 def _mixColumn(column, mult=[2, 1, 1, 3]): # inverse_mult = [14, 9, 13, 11]
@@ -239,4 +276,6 @@ def aes_encrypt(state, key):
     shiftRows(state)
     addRoundKey(state, key)
     
+if __name__ == "__main__":
+    test_mixColumns_subroutine()
     

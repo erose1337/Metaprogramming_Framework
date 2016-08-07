@@ -1,5 +1,7 @@
-from utilities import rotate_right, print_state_4x4
-
+def rotate_right(x, r, bit_width=8, _mask=dict((bit_width, ((2 ** bit_width) - 1)) for bit_width in (8, 16, 32, 64, 128))): 
+    r %= bit_width
+    return ((x >> r) | (x << (bit_width - r))) & _mask[bit_width]
+        
 def bit_transposition(state, state_offset):
     output = bytearray(8)    
     for index in range(8):
@@ -32,20 +34,30 @@ def bit_transposition_hackers_delight(A, m=1, n=1, B=list(bytearray(8))):
       
    A[:] = B[:] 
    
+def print_state(state, message=''):
+    if message:
+        print message    
+    print(' '.join(format(byte, 'b').zfill(8) for byte in state[:4]))
+    print(' '.join(format(byte, 'b').zfill(8) for byte in state[4:]))        
+        
 def test_bit_transposition():
     data = range(8)
-    print_state_4x4(data, "Before: ")
+    print_state(data, "Before: ")
     bit_transposition(data, 0)
-    print_state_4x4(data, "After: ")
+    print_state(data, "After: ")
     rotated = data[:]
     bit_transposition(data, 0)
     assert data == range(8)
     
-    print_state_4x4(data, "Before: ")
+    
+    print_state(data, "\nHackers delight algorithm\nBefore: ")
     bit_transposition_hackers_delight(data)
-    print_state_4x4(data, "After: ")
+    print_state(data, "After: ")
     #assert data == rotated, (data, rotated)
     bit_transposition_hackers_delight(data)
-    print_state_4x4(data, "Reverted: ")
+    print_state(data, "Reverted: ")
     assert data == range(8)
+    
+if __name__ == "__main__":
+    test_bit_transposition()
     

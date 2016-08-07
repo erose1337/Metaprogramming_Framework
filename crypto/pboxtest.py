@@ -1,7 +1,6 @@
 from utilities import rotate_right, print_state_4x4, hamming_weight, modular_subtraction, xor_sum
-from aes_procedures import mixColumns_subroutine
 
-def bit_transposition(state, state_offset):
+def bit_transposition_involution(state, state_offset):
     output = bytearray(8)    
     for index in range(8):
         output[index] = 0
@@ -11,27 +10,24 @@ def bit_transposition(state, state_offset):
             state[state_offset + index2] = rotate_right(byte, 1)           
     state[state_offset:state_offset+8] = output[:]  
     
-def bit_transposition_hackers_delight(A, m=1, n=1, B=list(bytearray(8))):   
-   # Load the array and pack it into x and y. 
+def bit_transposition_hackers_delight(A, state_offset):   
+    # Load the array and pack it into x and y. 
+    
+    x = (A[0 + state_offset]<<24)   | (A[1 + state_offset]<<16)   | (A[2 + state_offset]<<8) | A[3 + state_offset]; 
+    y = (A[4 + state_offset]<<24) | (A[5 + state_offset]<<16) | (A[6 + state_offset]<<8) | A[7 + state_offset];    
+    
+    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
+    
+    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
+    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
+    
+    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
+    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
+        
+    A[0 + state_offset]=t>>24;  A[1 + state_offset]=t>>16 & 255; A[2 + state_offset]=(t>>8) & 255; A[3 + state_offset]=t & 255; 
+    A[4 + state_offset]=y>>24;  A[5 + state_offset]=y>>16 & 255; A[6 + state_offset]=(y>>8) & 255; A[7 + state_offset]=y & 255; 
 
-   x = (A[0]<<24)   | (A[m]<<16)   | (A[2*m]<<8) | A[3*m]; 
-   y = (A[4*m]<<24) | (A[5*m]<<16) | (A[6*m]<<8) | A[7*m]; 
-   #x = (A[3*m]<<24)   | (A[2*m]<<16)   | (A[1*m]<<8) | A[0]; 
-   #y = (A[7*m]<<24) | (A[6*m]<<16) | (A[5*m]<<8) | A[4*m];   
-   
-   t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
-
-   t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
-   t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
-
-   t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
-   y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
-   x = t; 
-
-   B[0]=x>>24;    B[n]=x>>16   & 255;    B[2*n]=(x>>8) & 255;  B[3*n]=x & 255; 
-   B[4*n]=y>>24;  B[5*n]=y>>16 & 255;    B[6*n]=(y>>8) & 255;  B[7*n]=y & 255; 
-      
-   A[:] = B[:] 
+    
 
 def shuffle_bytes(_state):
 
@@ -56,11 +52,14 @@ def shuffle_bytes(_state):
     
 def decorrelation_layer(state):
     shuffle_bytes(state)
-    bit_transposition(state, 0)
-    bit_transposition(state, 8)
+    #bit_transposition_involution(state, 0)
+    #bit_transposition_involution(state, 8)
+    bit_transposition_hackers_delight(state, 0)
+    bit_transposition_hackers_delight(state, 8)
     
 def polarize_state(state):
-    bit_transposition(state, 0)
+    #bit_transposition_involution(state, 0)
+    bit_transposition_hackers_delight(state, 0)
     
 #def H(a, b, m=255): # NORX H function
 #    return ((a ^ b) ^ ((a & b) << 1)) & m
@@ -102,14 +101,14 @@ def test_prf_sponge():
 #        state[_slice] = [[row[index2 + offset][index] for index2 in range(8)] for index in range(8)]
                 
 def _test_decorrelation_layer(state):    
-    bit_transposition(state, 0)
+    bit_transposition_involution(state, 0)
             
     states = [state[:]]
     while True:
         #print_state_4x4(state, "Before: ")
         shuffle_bytes(state)
-        bit_transposition(state, 0)
-        bit_transposition(state, 8)
+        bit_transposition_involution(state, 0)
+        bit_transposition_involution(state, 8)
             
         #print_state_4x4(state, "After: ")
         if state in states:                   
@@ -123,21 +122,42 @@ def _test_decorrelation_layer(state):
         #    break
           
 def test_bit_transposition():
-    data = range(8)
-    print_state_4x4(data, "Before: ")
-    bit_transposition(data, 0)
-    print_state_4x4(data, "After: ")
+    data = range(16)
+    _sum = sum(hamming_weight(byte) for byte in data)
+    _data = data[:]
+    #print_state_4x4(data, "Before: ")
+    bit_transposition_involution(data, 0)
+    #print_state_4x4(data, "After: ")
     rotated = data[:]
-    bit_transposition(data, 0)
-    assert data == range(8)
+    bit_transposition_involution(data, 0)
+    assert data == _data
+    bit_transposition_involution(data, 8)
+    #print_state_4x4(data, "Bottom transposed: ")
+    bit_transposition_involution(data, 8)
+    assert data == _data
+    
+    
+    
     
     print_state_4x4(data, "Before: ")
-    bit_transposition_hackers_delight(data)
+    bit_transposition_hackers_delight(data, 0)
+    _sum_after = sum(hamming_weight(byte) for byte in data)
+    assert _sum == _sum_after, (_sum, _sum_after)
     print_state_4x4(data, "After: ")
     #assert data == rotated, (data, rotated)
-    bit_transposition_hackers_delight(data)
+    bit_transposition_hackers_delight(data, 0)
     print_state_4x4(data, "Reverted: ")
-    assert data == range(8)
+    _sum_after = sum(hamming_weight(byte) for byte in data)
+    assert _sum == _sum_after, (_sum, _sum_after)    
+    #assert data == _data
+    
+    data = _data[:]
+    print_state_4x4(data, "Bottom before: ")
+    bit_transposition_hackers_delight(data, 8)
+    print_state_4x4(data, "Bottom after: ")
+    _sum_after = sum(hamming_weight(byte) for byte in data)
+    assert _sum == _sum_after, (_sum, _sum_after)  
+    
     
 def test_decorrelation_layer_period():    
     import os

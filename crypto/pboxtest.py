@@ -1,4 +1,4 @@
-from utilities import rotate_right, print_state_4x4, hamming_weight, modular_subtraction, xor_sum
+from utilities import rotate_right, print_state_4x4, hamming_weight, modular_subtraction, xor_sum, integer_to_bytes, bytes_to_integer, rotate_left
 
 def bit_transposition_involution(state, state_offset):
     output = bytearray(8)    
@@ -11,21 +11,7 @@ def bit_transposition_involution(state, state_offset):
     state[state_offset:state_offset+8] = output[:]  
     
 def bit_transposition_hackers_delight(A, state_offset):   
-    # Load the array and pack it into x and y. 
-    
-    x = (A[0 + state_offset]<<24)   | (A[1 + state_offset]<<16)   | (A[2 + state_offset]<<8) | A[3 + state_offset]; 
-    y = (A[4 + state_offset]<<24) | (A[5 + state_offset]<<16) | (A[6 + state_offset]<<8) | A[7 + state_offset];    
-    
-    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
-    
-    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
-    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
-    
-    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
-    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
-        
-    A[0 + state_offset]=t>>24;  A[1 + state_offset]=t>>16 & 255; A[2 + state_offset]=(t>>8) & 255; A[3 + state_offset]=t & 255; 
-    A[4 + state_offset]=y>>24;  A[5 + state_offset]=y>>16 & 255; A[6 + state_offset]=(y>>8) & 255; A[7 + state_offset]=y & 255; 
+
 
 def bit_transposition_16_bytes(A, B):   
     # top half    
@@ -58,17 +44,10 @@ def bit_transposition_16_bytes(A, B):
     B[0]=t>>24;  B[1]=t>>16 & 255; B[2]=(t>>8) & 255; B[3]=t & 255; 
     B[4]=y>>24;  B[5]=y>>16 & 255; B[6]=(y>>8) & 255; B[7]=y & 255; 
     
-def decorrelation_layer3(A, B):
-    ## top half    
-    #x = (A[0]<<24)   | (A[1]<<16)   | (A[2]<<8) | A[3]; 
-    #y = (A[4]<<24) | (A[5]<<16) | (A[6]<<8) | A[7];    
-    #
-    # # bottom half
-    #x =  (B[8]<<24) | (B[9]<<16) | (B[10]<<8) | B[11]; 
-    #y2 = (B[12]<<24) | (B[13]<<16) | (B[14]<<8) | B[15];  
-    
-    x = (B[3]<<24) | (A[5]<<16) | (A[4]<<8) | B[7]
-    y = (B[4]<<24) | (A[6]<<16) | (B[1]<<8) | A[0]
+def decorrelation_layer3(state):
+    # top half    
+    x = (state[11]<<24) | (state[5]<<16) | (state[4]<<8) | state[15]
+    y = (state[12]<<24) | (state[6]<<16) | (state[9]<<8) | state[0]
     
     t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
     
@@ -77,11 +56,10 @@ def decorrelation_layer3(A, B):
     
     t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
     y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
-        
-    
+            
      # bottom half
-    x =  (B[5]<<24) | (A[3]<<16) | (B[6]<<8) | B[0] 
-    y2 = (A[1]<<24) | (B[2]<<16) | (A[2]<<8) | A[7]       
+    x =  (state[13]<<24) | (state[3]<<16) | (state[14]<<8) | state[8] 
+    y2 = (state[1]<<24) | (state[10]<<16) | (state[2]<<8) | state[7]       
     
     t2 = (y2 ^ (y2 >> 7)) & 0x00AA00AA;  y2 = y2 ^ t2 ^ (t2 << 7); 
     
@@ -91,33 +69,20 @@ def decorrelation_layer3(A, B):
     t2 = (x & 0xF0F0F0F0) | ((y2 >> 4) & 0x0F0F0F0F); 
     y2 = ((x << 4) & 0xF0F0F0F0) | (y2 & 0x0F0F0F0F); 
             
-    A[0]=t>>24;  A[1]=t>>16 & 255; A[2]=(t>>8) & 255; A[3]=t & 255; 
-    A[4]=y>>24;  A[5]=y>>16 & 255; A[6]=(y>>8) & 255; A[7]=y & 255; 
+    state[0]=t>>24;  state[1]=t>>16 & 255; state[2]=(t>>8) & 255; state[3]=t & 255; 
+    state[4]=y>>24;  state[5]=y>>16 & 255; state[6]=(y>>8) & 255; state[7]=y & 255; 
 
-    B[0]=t2>>24;  B[1]=t2>>16 & 255; B[2]=(t2>>8) & 255; B[3]=t2 & 255; 
-    B[4]=y2>>24;  B[5]=y2>>16 & 255; B[6]=(y2>>8) & 255; B[7]=y2 & 255; 
-    
-    
-   # A[0]=t2 & 255;  A[1]=y>>16 & 255;  A[2]=y>>24;        A[3]=y2 & 255;
-   # A[4]=y2>>24;    A[5]=(y>>8) & 255; A[6]=t2>>16 & 255; A[7]=t>>24; 
-   # 
-   # B[0]=y2>>16 & 255;  B[1]=t & 255;        B[2]=(y2>>8) & 255; B[3]=t2>>24;
-   # B[4]=t>>16 & 255;  B[5]=(t2>>8) & 255; B[6]=(t>>8) & 255;  B[7]=y & 255; 
-    
-   # temp =  
-    
+    state[8]=t2>>24;  state[9]=t2>>16 & 255; state[10]=(t2>>8) & 255; state[11]=t2 & 255; 
+    state[12]=y2>>24;  state[13]=y2>>16 & 255; state[14]=(y2>>8) & 255; state[15]=y2 & 255;    
 
     
 def test_decorrelation_layer3():
     data = range(16)
     data2 = data[:]
     
-    decorrelation_layer(data)
+    decorrelation_layer(data)           
+    decorrelation_layer3(data2)
         
-    data2_left, data2_right = data2[:8], data2[8:]
-    decorrelation_layer3(data2_left, data2_right)
-    data2 = data2_left + data2_right
-    
     assert data == data2, (data, data2)
     
 def shuffle_bytes(_state):
@@ -174,19 +139,72 @@ def polarize_state(state):
 #def H(a, b, m=255): # NORX H function
 #    return ((a ^ b) ^ ((a & b) << 1)) & m
     
+def round_function(data, left_index, right_index, key, mask=255, rotation_amount=5, bit_width=8):
+    left, right = data[left_index], data[right_index]        
+    
+    key ^= right                 
+    right = rotate_left((right + key + right_index) & mask, rotation_amount, bit_width)                
+    key ^= right
+    
+    key ^= left        
+    left = (left + (right >> (bit_width / 2))) & mask                
+    left ^= rotate_left(right, (right_index % bit_width) ^ rotation_amount)                    
+    key ^= left
+    
+    data[left_index], data[right_index] = left, right   
+    return key    
+    
 def prp(state):
-    decorrelation_layer(state)
-    key = xor_sum(state)
-    for index, byte in enumerate(state): 
-        key ^= byte
-        state[index] = (key + byte + index) & 255
-        key ^= state[index]    
-#    mixColumns_subroutine(state)
+    polarize_state(state)
+    for round in range(1):
+        decorrelation_layer3(state)
+            
+        data_xor = xor_sum(state)    
+        data_xor = round_function(state, 14, 15, data_xor)                                      
+        data_xor = round_function(state, 13, 14, data_xor)
+        data_xor = round_function(state, 12, 13, data_xor)
+        data_xor = round_function(state, 11, 12, data_xor)
+        data_xor = round_function(state, 10, 11, data_xor)
+        data_xor = round_function(state, 9,  10, data_xor)
+        data_xor = round_function(state, 8,   9, data_xor)
+        data_xor = round_function(state, 7,   8, data_xor)
+        data_xor = round_function(state, 6,   7, data_xor)
+        data_xor = round_function(state, 5,   6, data_xor)
+        data_xor = round_function(state, 4,   5, data_xor)
+        data_xor = round_function(state, 3,   4, data_xor)
+        data_xor = round_function(state, 2,   3, data_xor)
+        data_xor = round_function(state, 1,   2, data_xor)
+        data_xor = round_function(state, 0,   1, data_xor)                                  
+        data_xor = round_function(state, 15, 0, data_xor)
+    
+def prf(state):
+    polarize_state(state)
+    data_xor = xor_sum(state)    
+    for round in range(1):
+        decorrelation_layer3(state)                    
+        data_xor = round_function(state, 14, 15, data_xor)                                      
+        data_xor = round_function(state, 13, 14, data_xor)
+        data_xor = round_function(state, 12, 13, data_xor)
+        data_xor = round_function(state, 11, 12, data_xor)
+        data_xor = round_function(state, 10, 11, data_xor)
+        data_xor = round_function(state, 9,  10, data_xor)
+        data_xor = round_function(state, 8,   9, data_xor)
+        data_xor = round_function(state, 7,   8, data_xor)
+        data_xor = round_function(state, 6,   7, data_xor)
+        data_xor = round_function(state, 5,   6, data_xor)
+        data_xor = round_function(state, 4,   5, data_xor)
+        data_xor = round_function(state, 3,   4, data_xor)
+        data_xor = round_function(state, 2,   3, data_xor)
+        data_xor = round_function(state, 1,   2, data_xor)
+        data_xor = round_function(state, 0,   1, data_xor)                                  
+        data_xor = round_function(state, 15, 0, data_xor)
+        
+    
       
 def test_prf_sponge():
     import sponge
     from metrics import test_hash_function
-    hasher = sponge.sponge_factory(prp, rate=8, capacity=8, output_size=8)
+    hasher = sponge.sponge_factory(prf, rate=8, capacity=8, output_size=8)
     test_hash_function(hasher)
     
 #def test_prp():
@@ -282,7 +300,7 @@ if __name__ == "__main__":
     #test_decorrelation_layer_period()    
     #test_bit_transposition()
     #test_prp()
-    #test_prf_sponge()
+    test_prf_sponge()
     #test_decorrelation_layer2()
-    test_decorrelation_layer3()
+    #test_decorrelation_layer3()
     

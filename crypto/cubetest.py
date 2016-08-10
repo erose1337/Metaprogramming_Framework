@@ -126,39 +126,63 @@ def test_prp():
         if raw_input(''):
             break
     
+def mick_prp(x, magic1=3, magic2=5, magic3=7, mask=0xFF):
+    a = (x * magic1) & mask #0xFFFFFFFF
+    b = (x * magic2) & mask #0xFFFFFFFF
+    c = (x * magic3) & mask #0xFFFFFFFF
+    return (a & b) ^ (b & c) ^ (c & a)
     
+def test_mick_prp():
+    from cryptanalysis import summarize_sbox
+    sbox = [mick_prp(byte) for byte in range(256)]
+    print len(set(sbox))
+    print
+    print bytearray(sbox)
+    summarize_sbox(sbox)
+    
+    #state = bytearray(range(16))
+    #state2 = bytearray(16)
+    #statesize = len(state)
+    #while True:
+    #    for index, byte in enumerate(state):
+    #        state[index] = mick_prp(byte)
+    #    print bytearray(state)
+    #    print
+    #    if raw_input(''):
+    #        break
+    
+        
 def cube_prf(state, rounds=1):    
     a, b, c, d = (bytes_to_integer(state[offset:offset + 8]) for offset in range(0, 32, 8))    
     data_xor = a ^ b ^ c ^ d 
-   # a, d = decorrelation_layer(a, d)
-    
-    for round in range(rounds):
-        
+    data_xord = data_xorc = data_xorb = data_xora = data_xor
+    a, c = decorrelation_layer(a, c)
+    for round in range(rounds):         
         #print a, b, data_xor
         a, b = decorrelation_layer(a, b)                
-        a, b, data_xor = prp(a, b, data_xor, round)
-            
-        b, c = decorrelation_layer(b, c)
-        b, c, data_xor = prp(b, c, data_xor, round + 1)
-        
-    
         c, d = decorrelation_layer(c, d)
-        c, d, data_xor = prp(c, d, data_xor, round + 2)
+                
+        b, c = decorrelation_layer(b, c)        
+        d, a = decorrelation_layer(d, a)                    
+
+        a, b, data_xora = prp(a, b, data_xora, round)                           
+        b, c, data_xorb = prp(b, c, data_xorb, round + 1)  
+        c, d, data_xorc = prp(c, d, data_xorc, round + 2)                                            
+        d, a, data_xord = prp(d, a, data_xord, round + 3)        
+         
+        #data_xor ^= data_xora ^ data_xorb ^ data_xorc ^ data_xord
         
-    
-        d, a = decorrelation_layer(d, a)
-        d, a, data_xor = prp(d, a, data_xor, round + 3)
-    
-    state[:] = bytearray(''.join(bytes(integer_to_bytes(quadword, 8)) for quadword in (a, b, c, d)))
+    state[:] = integer_to_bytes(a, 8) + integer_to_bytes(b, 8) + integer_to_bytes(c, 8) + integer_to_bytes(d, 8)    
     
 def test_cube_prf():
-    state = range(32)
-        
-    while not raw_input(''):
-        cube_prf(state)
-        print bytearray(state)
+    from sponge import sponge_factory
+    cube_hash = sponge_factory(cube_prf, rate=16, capacity=16, output_size=16)
+    
+    from metrics import test_hash_function
+    test_hash_function(cube_hash)
         
 if __name__ == "__main__":
+    #test_mick_prp()
     test_cube_prf()
     #test_prp()
     

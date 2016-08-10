@@ -158,7 +158,7 @@ def cube_prf(state, rounds=1):
     data_xord = data_xorc = data_xorb = data_xora = data_xor
     a, c = decorrelation_layer(a, c)
     for round in range(rounds):         
-        #print a, b, data_xor
+        
         a, b = decorrelation_layer(a, b)                
         c, d = decorrelation_layer(c, d)
                 
@@ -176,7 +176,7 @@ def cube_prf(state, rounds=1):
     
 def test_cube_prf():
     from sponge import sponge_factory
-    cube_hash = sponge_factory(cube_prf, rate=16, capacity=16, output_size=16)
+    cube_hash = sponge_factory(cube_prf, rate=32, capacity=0, output_size=32)
     
     from metrics import test_hash_function
     test_hash_function(cube_hash)

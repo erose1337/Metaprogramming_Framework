@@ -10,7 +10,38 @@ def bit_transposition_involution(state, state_offset):
             state[state_offset + index2] = rotate_right(byte, 1)           
     state[state_offset:state_offset+8] = output[:]  
     
-def bit_transposition_hackers_delight(A, state_offset):   
+#def decorrelation_layer(state, offset):
+#    # top half   
+#    
+#    x = (state[11 + offset]<<24) | (state[5 + offset]<<16) | (state[4 + offset]<<8) | state[15 + offset]
+#    y = (state[12 + offset]<<24) | (state[6 + offset]<<16) | (state[9 + offset]<<8) | state[0  + offset]       
+#    
+#    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7); 
+#    
+#    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
+#    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
+#    
+#    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
+#    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
+#            
+#     # bottom half
+#    x =  (state[13 + offset]<<24) | (state[3  + offset]<<16) | (state[14 + offset]<<8) | state[8 + offset] 
+#    y2 = (state[1  + offset]<<24) | (state[10 + offset]<<16) | (state[2  + offset]<<8) | state[7 + offset]       
+#    
+#    t2 = (y2 ^ (y2 >> 7)) & 0x00AA00AA;  y2 = y2 ^ t2 ^ (t2 << 7); 
+#    
+#    t2 = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t2 ^ (t2 <<14); 
+#    t2 = (y2 ^ (y2 >>14)) & 0x0000CCCC;  y2 = y2 ^ t2 ^ (t2 <<14); 
+#    
+#    t2 = (x & 0xF0F0F0F0) | ((y2 >> 4) & 0x0F0F0F0F); 
+#    y2 = ((x << 4) & 0xF0F0F0F0) | (y2 & 0x0F0F0F0F); 
+#            
+#    state[0 + offset]=t>>24;  state[1 + offset]=t>>16 & 255; state[2 + offset]=(t>>8) & 255; state[3 + offset]=t & 255; 
+#    state[4 + offset]=y>>24;  state[5 + offset]=y>>16 & 255; state[6 + offset]=(y>>8) & 255; state[7 + offset]=y & 255; 
+#
+#    state[8  + offset]=t2>>24;  state[9  + offset]=t2>>16 & 255; state[10 + offset]=(t2>>8) & 255; state[11 + offset]=t2 & 255; 
+#    state[12 + offset]=y2>>24;  state[13 + offset]=y2>>16 & 255; state[14 + offset]=(y2>>8) & 255; state[15 + offset]=y2 & 255; 
+    
 
 
 def bit_transposition_16_bytes(A, B):   
@@ -136,8 +167,8 @@ def polarize_state(state):
     #bit_transposition_involution(state, 0)
     bit_transposition_hackers_delight(state, 0)
     
-#def H(a, b, m=255): # NORX H function
-#    return ((a ^ b) ^ ((a & b) << 1)) & m
+def H(a, b, m=255): # NORX H function
+    return ((a ^ b) ^ ((a & b) << 1)) & m
     
 def round_function(data, left_index, right_index, key, mask=255, rotation_amount=5, bit_width=8):
     left, right = data[left_index], data[right_index]        
@@ -199,6 +230,18 @@ def prf(state):
         data_xor = round_function(state, 0,   1, data_xor)                                  
         data_xor = round_function(state, 15, 0, data_xor)
         
+def test_prf_words():
+    state = range(32)
+        
+    a, b, c, d = bytes_to_integer(state[:8]), bytes_to_integer(state[8:16]), bytes_to_integer(state[16:24]), bytes_to_integer(state[24:32])
+    for round in range(4):
+        decorrelation_layer_ab(a, c)
+        decorrelation_layer_ab(a, b)
+        decorrelation_layer_ab(b, d)
+        decorrelation_layer_ab(c, d)
+        
+        
+     
     
       
 def test_prf_sponge():

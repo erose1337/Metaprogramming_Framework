@@ -1,17 +1,31 @@
-import os
-from converttest import generate_key
+from os import urandom
 
-ASCII = ''.join(chr(x) for x in xrange(256))
+ASCII = bytes(bytearray(range(256)))
 
+def _shuffle(data, key): 
+    n = len(data)
+    for i in reversed(range(1, n)):
+        j = key[i] & (i - 1)
+        data[i], data[j] = data[j], data[i]
+    
+def _generate_key(size=256, seed=None):
+    if seed is None:
+        key = bytearray(range(size))            
+    else:
+        key = bytearray(seed)
+        size = len(seed)
+    random_data = bytearray(urandom(size))
+    _shuffle(key, random_data)    
+    return key
+    
 def convert(old_value, old_base, new_base):
     old_base_size = len(old_base)    
     old_base_mapping = dict((symbol, index) for index, symbol in enumerate(old_base))
             
-    for leading_zero_count, symbol in enumerate(old_value):
+    for leading_zero_count, symbol in enumerate(old_value): # counts the number of leading zeros
         if old_base_mapping[symbol]:
             break
-    #zero_padding = new_base[0] * leading_zero_count
-    
+        
     decimal_value = sum((old_base_mapping[value_representation] * (old_base_size ** power) for
                          power, value_representation in enumerate(reversed(old_value))))
     
@@ -19,6 +33,7 @@ def convert(old_value, old_base, new_base):
     # decimal_value = 0    
     # for power, value_representation in enumerate(reversed(old_value)):
     #     decimal_value += old_base_mapping[value_representation]*(old_base_size**power)
+    
     new_value = ''                        
     if decimal_value:
         new_base_size = len(new_base)           
@@ -38,7 +53,7 @@ def arbitrary_base_addition(value1, value2, base):
                 
         new_value = first_value + other_value        
         carry, new_value = divmod(new_value, base_size)
-        #print "Added: ", first_value, other_value, first_value + other_value, carry, ord(base[new_value])
+        
         value1[current_index] = base[new_value]
         
         if carry:            
@@ -66,48 +81,11 @@ def arbitrary_base_subtraction(value1, value2, base):
             value1[current_index] = base[base_size + new_value]
         else:                        
             value1[current_index] = base[new_value]
-        
-def test_key_exchange_idea():
-    public_key1 = bytes(generate_key(256))    
-    
-    private_key1 = bytes(generate_key(256))
-    private_key2 = bytes(generate_key(256))
-    assert private_key1 != private_key2
-    
-    message = ("\x00" * 7) + "\x01"  
-    print "Plaintext message: ", [ord(byte) for byte in message]
-    print
-   # message = convert(message, ASCII, private_key1)
-    message = convert(message, private_key1, public_key1)
-    
-    message2 = ("\xff" * 7) + "\x02"#os.urandom(32)    
-    print "Plaintext message 2: ", [ord(byte) for byte in message2]
-    print
-    #message2 = convert(message2, ASCII, private_key2)
-    message2 = convert(message2, private_key2, public_key1)
-    
-    message3 = list(message)    
-    arbitrary_base_addition(message3, message2, public_key1)  
-    print "Encoded Message: ", [ord(byte) for byte in message]
-    print
-    print "Encoded Message2: ", [ord(byte) for byte in message2]
-    print
-    print "Encoded Message1 + Encoded Message2: ", [ord(char) for char in message3]
-    print 
-    print "Real value of message3: ", [ord(char) for char in convert(message3, public_key1, private_key1)]
-    print
-    print "Incorrect value of message3: ", [ord(char) for char in convert(message3, public_key1, ASCII)]
-
-    arbitrary_base_subtraction(message3, message, public_key1)
-    print
-    print "Message3 - Message = Message2:", [ord(char) for char in convert(message3, public_key1, private_key1)]
-    print
-    assert message3 == list(message2), "Correct Message2: " + str([ord(char) for char in convert(message2, public_key1, private_key1)])    
-        
+                        
 def test_arbitrary_base_addition():
     value1 = list("0123456789")
     value2 = list("9876543210")
-    base = bytes(generate_key(seed=range(10)))# list("3017845962")    
+    base = bytes(_generate_key(seed=range(10)))# list("3017845962")    
     
     value1_in_base = convert(value1, "0123456789", base)
     value2_in_base = convert(value2, "0123456789", base)
@@ -130,7 +108,7 @@ def test_arbitrary_base_subtraction():
     shuffle(value2)
     value1_copy, value2_copy = value1[:], value2[:]
     
-    base = bytes(generate_key(seed=range(10)))# list("3017845962")    
+    base = bytes(_generate_key(seed=range(10)))# list("3017845962")    
     
     value1_in_base = convert(value1, "0123456789", base)
     value2_in_base = convert(value2, "0123456789", base)
@@ -145,41 +123,41 @@ def test_arbitrary_base_subtraction():
     print ''.join(value1_in_public_base), '        ({})'.format(list(bytearray(value1_in_public_base)))
     print convert(convert(value1_in_public_base, ASCII, base), base, "0123456789")
     print int(''.join(str(item) for item in value1_copy)) - int(''.join(str(item) for item in value2_copy))
+
+
+def addition_test():
+    plaintext1 = bytearray(16)
+    plaintext1[-1] = 1
+
+    secret_key = bytearray(os.urandom)
+    private_base = generate_key(256)
+    public_base = generate_key(256)
     
-def test_idea():
-    common_base = ASCII
-    alices_key = bytes(generate_key(256))
-    eves_key = bytes(generate_key(256))
-    random_value = bytes(bytearray(15) + bytearray("\x01"))#os.urandom(16)
-    print "Alices value: ", random_value
-    random_value_encoded = convert(random_value, alices_key, common_base)
-    print
-    print "Alices ciphertext: ", random_value_encoded
+    arbitrary_base_addition(plaintext, secret_key, ASCII)
+    ciphertext1 = convert(plaintext, private_base, public_base)
     
+    plaintext2 = bytearray(16)
+    plaintext2[-1] = 1
     
-    random_value2 = bytes(bytearray(15) + bytearray("\x02"))#os.urandom(16)
-    print "Bobs value: ", random_value2
-    bobs_key = bytes(generate_key(256))
-    random_value2_encoded = convert(random_value2, bobs_key, common_base)
-    print
-    print "Bobs ciphertext: ", random_value2_encoded
+    secret_key2 = bytearray(os.urandom)
+    arbitrary_base_addition(plaintext2, secret_key2, ASCII)
+    arbitrary_base_addition(secret_key, secret_key2, ASCII)
     
-    ciphertext = list(random_value_encoded)
-    ciphertext2 = list(random_value2_encoded)
-    arbitrary_base_addition(ciphertext, ciphertext2, common_base)
+    ciphertext2 = convert(plaintext2, private_base, public_base)
     
-    combined_message = list(convert(ciphertext, common_base, alices_key))
+    arbitrary_base_addition(ciphertext, ciphertext2, public_base)
     
-    arbitrary_base_subtraction(combined_message, ciphertext, alices_key)
+    correct_string = convert(ciphertext, public_base, private_base)
+    arbitrary_base_subtraction(correct_string, secret_key, ASCII)
     
-    ciphertext2_in_alices_base = combined_message[:]
-    ciphertext2_in_common_base = convert(ciphertext2_in_alices_base, alices_key, common_base)
+    print("Correct string: {}".format(correct_string))
     
-    print "Alice got: ", [byte for byte in bytearray(ciphertext2_in_common_base)]
+    maybe_string = convert(ciphertext, public_base, ASCII)
+    print("Maybe string  : {}".format(maybe_string))
+    
     
 if __name__ == "__main__":
     test_arbitrary_base_addition()
     test_arbitrary_base_subtraction()
-    #test_key_exchange_idea()    
-    #test_idea()
+    
     

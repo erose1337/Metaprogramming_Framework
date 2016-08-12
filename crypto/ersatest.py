@@ -113,6 +113,7 @@ def test_subtraction2():
     
     arbitrary_base_subtraction(value1_other_base, value2_other_base, other_base)        
     print "First value: ", ''.join(value1_other_base), len(value1_other_base)
+    print "Converted  : ", convert(bytes(bytearray(value1_other_base)), other_base, ASCII)
     
     arbitrary_base_subtraction2(value1_other_base_copy, value2_other_base_copy, other_base)
     print "Second value:", bytes(bytearray(value1_other_base_copy)), len(value1_other_base_copy)

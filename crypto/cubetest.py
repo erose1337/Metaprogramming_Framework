@@ -33,16 +33,14 @@ def decorrelation_layer(state, state2):
 def prp(top, bottom, key, index, mask=0xFFFFFFFFFFFFFFFF, rotations=21):
     key ^= top ^ bottom
     top = rotate_left((top + key + index) & mask, rotations, bit_width=64)    
-    #key ^= top
-    
-    #key ^= bottom
+
     bottom = (bottom + (top >> 32)) & mask    
     bottom ^= rotate_left(top, index, bit_width=64) 
     key ^= top ^ bottom
             
     return top, bottom, key
             
-def cube_prf(state, rounds=2, mask=0xFFFFFFFFFFFFFFFF):    
+def cube_prf(state, rounds=1):    
     a, b, c, d = (bytes_to_integer(state[offset:offset + 8]) for offset in range(0, 32, 8))    
     data_xor = a ^ b ^ c ^ d 
     data_xord = data_xorc = data_xorb = data_xora = data_xor
@@ -55,13 +53,11 @@ def cube_prf(state, rounds=2, mask=0xFFFFFFFFFFFFFFFF):
         b, c = decorrelation_layer(b, c)        
         d, a = decorrelation_layer(d, a)    
             
-        a, b, data_xora = prp(a, b, data_xora, round)                                  
+        a, b, data_xora = prp(a, b, data_xora, round)                                                   
         c, d, data_xorc = prp(c, d, data_xorc, round + 2)                       
 
-        b, c, data_xorb = prp(b, c, data_xorb, round + 1)          
-        d, a, data_xord = prp(d, a, data_xord, round + 3)        
-            
-        #data_xor ^= data_xora ^ data_xorb ^ data_xorc ^ data_xord
+        b, c, data_xorb = prp(b, c, data_xorb, round + 1)                
+        d, a, data_xord = prp(d, a, data_xord, round + 3)                           
 
     state[:] = integer_to_bytes(a, 8) + integer_to_bytes(b, 8) + integer_to_bytes(c, 8) + integer_to_bytes(d, 8)    
     
@@ -70,7 +66,7 @@ def test_cube_prf():
     cube_hash = sponge_factory(cube_prf, rate=32, capacity=0, output_size=32)
     
     from metrics import test_hash_function
-    test_hash_function(cube_hash)
+    test_hash_function(cube_hash, avalanche_test=False, randomness_test=False)
         
 if __name__ == "__main__":    
     test_cube_prf()

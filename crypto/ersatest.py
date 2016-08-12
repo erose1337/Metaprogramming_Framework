@@ -81,7 +81,44 @@ def arbitrary_base_subtraction(value1, value2, base):
             value1[current_index] = base[base_size + new_value]
         else:                        
             value1[current_index] = base[new_value]
-                        
+  
+def arbitrary_base_subtraction2(value1, value2, base):
+    borrow = 0;
+    for i in range(len(value1)):    
+        temp = ord(value1[i]) - ord(value2[i]) - borrow;
+        if (temp < 0):
+            temp += len(base);
+            borrow = 1;
+        else:
+            borrow = 0;
+        
+        value1[i] = temp;
+    
+    return borrow;        
+  
+def test_subtraction2():
+    value1 = list("9876543210")
+    value2 = list("0123456789")
+    
+    value2_copy = value1[:]
+    value2_copy = value2[:]
+    
+    other_base = bytes(_generate_key(seed=range(256)))
+        
+    value1_other_base = list(convert(bytes(value1), ASCII, other_base))
+    value2_other_base = convert(bytes(value2), ASCII, other_base)
+    
+    value1_other_base_copy = value1_other_base[:]
+    value2_other_base_copy = value2_other_base[:]
+    
+    arbitrary_base_subtraction(value1_other_base, value2_other_base, other_base)        
+    print "First value: ", ''.join(value1_other_base), len(value1_other_base)
+    
+    arbitrary_base_subtraction2(value1_other_base_copy, value2_other_base_copy, other_base)
+    print "Second value:", bytes(bytearray(value1_other_base_copy)), len(value1_other_base_copy)
+    print "Converted   :", convert(bytes(bytearray(value1_other_base_copy)), ASCII, other_base)
+    
+    
 def test_arbitrary_base_addition():
     value1 = list("0123456789")
     value2 = list("9876543210")
@@ -118,13 +155,15 @@ def test_arbitrary_base_subtraction():
     print "\nSubtracting encoded numbers: "
     print ''.join(value1)#_in_public_base)
     print ''.join(value2)#_in_public_base) + " -"
-    print "_" * len(value1)
+    print "_" * len(value1)        
+    
     arbitrary_base_subtraction(value1_in_public_base, value2_in_public_base, ASCII) 
-    print ''.join(value1_in_public_base), '        ({})'.format(list(bytearray(value1_in_public_base)))
+    print ''.join(bytes(value1_in_public_base)), '        ({})'.format(list(bytearray(value1_in_public_base)))
     print convert(convert(value1_in_public_base, ASCII, base), base, "0123456789")
     print int(''.join(str(item) for item in value1_copy)) - int(''.join(str(item) for item in value2_copy))
 
-
+    
+    
 def addition_test():
     plaintext1 = bytearray(16)
     plaintext1[-1] = 1
@@ -157,7 +196,7 @@ def addition_test():
     
     
 if __name__ == "__main__":
-    test_arbitrary_base_addition()
-    test_arbitrary_base_subtraction()
-    
+    #test_arbitrary_base_addition()
+    #test_arbitrary_base_subtraction()
+    test_subtraction2()
     

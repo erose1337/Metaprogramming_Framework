@@ -65,11 +65,23 @@ def cube_prf(state, rounds=1):
     data_xora = data_xorb = data_xorc = data_xord = data_xor
     
     for round in range(rounds):         
-        (a, b, c, d, 
-         data_xora, data_xorb, 
-         data_xorc, data_xord) = round_function(a, b, c, d, 
-                                                data_xora, data_xorb, 
-                                                data_xorc, data_xord, round)
+      #  (a, b, c, d, 
+      #   data_xora, data_xorb, 
+      #   data_xorc, data_xord) = round_function(a, b, c, d, 
+      #                                          data_xora, data_xorb, 
+      #                                          data_xorc, data_xord, round)
+        a, b = decorrelation_layer(a, b)                
+        c, d = decorrelation_layer(c, d)
+                
+        b, c = decorrelation_layer(b, c)        
+        d, a = decorrelation_layer(d, a)    
+            
+        a, b, data_xora = prp(a, b, data_xora, round)                                                   
+        c, d, data_xorc = prp(c, d, data_xorc, round + 2)                       
+    
+        b, c, data_xorb = prp(b, c, data_xorb, round + 1)                
+        d, a, data_xord = prp(d, a, data_xord, round + 3)  
+    
 
     state[:] = integer_to_bytes(a, 8) + integer_to_bytes(b, 8) + integer_to_bytes(c, 8) + integer_to_bytes(d, 8)    
     
@@ -78,7 +90,7 @@ def test_cube_prf():
     cube_hash = sponge_factory(cube_prf, rate=32, capacity=0, output_size=32)
     
     from metrics import test_hash_function
-    test_hash_function(cube_hash, avalanche_test=False, randomness_test=False)
+    test_hash_function(cube_hash)
         
 if __name__ == "__main__":    
     test_cube_prf()

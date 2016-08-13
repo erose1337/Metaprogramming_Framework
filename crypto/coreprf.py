@@ -30,12 +30,12 @@ def decorrelation_layer(state, state2):
     state2 = y2 | t2          
     return state, state2
     
-def prp(slice1, slice2, key, index, mask=0xFFFFFFFFFFFFFFFF, rotations=41):
-    key ^= slice1 ^ slice2
-    slice1 = rotate_left((slice1 + key + index) & mask, rotations, bit_width=64)    
+def prp(slice1, slice2, key, index, mask=0xFFFFFFFFFFFFFFFF, rotations=41, bit_width=64):
+    key ^= slice1 ^ slice2    
+    slice1 = rotate_left((slice1 + key + index) & mask, rotations, bit_width=bit_width)    
 
     slice2 = (slice2 + (slice1 >> 32)) & mask    
-    slice2 ^= rotate_left(slice1, index, bit_width=64) 
+    slice2 ^= rotate_left(slice1, index, bit_width=bit_width) 
     key ^= slice1 ^ slice2
             
     return slice1, slice2, key
@@ -130,7 +130,7 @@ def test_encrypt_decrypt():
     
 def _print_active_sbox_info(function, function_args, bit_width=64, 
                             active_bytes=True, active_bits=True,
-                            hamming_weights=True, bit_strings=True):    
+                            bit_strings=True):    
     output = function(*function_args)      
     bits = [' '.join(slide(format(word, 'b').zfill(bit_width), 8)) for word in output]
     
@@ -139,10 +139,6 @@ def _print_active_sbox_info(function, function_args, bit_width=64,
             actives = [(index, byte) for index, byte in enumerate(bit_string.split()) if '1' in byte]
             print "Active bytes: {} {}".format(len(actives), [index for index, byte in actives])
         
-    if hamming_weights:
-        for word in output:
-            print format(word, 'b').zfill(bit_width).count('1')
-    
     if bit_strings:
         for word in bits:
             print word
@@ -153,9 +149,9 @@ def _print_active_sbox_info(function, function_args, bit_width=64,
             print "Active bits: {} {}".format(len(actives), actives)
     return output
     
-def test_prp_active_sboxes():
-    bit_strings = show_weight = False
-    rounds = 8
+def test_prp_active_sboxes():    
+    bit_strings = False
+    rounds = 4
   #  def test_function(top, bottom, key, index):        
   #      
   #      decorrelation_layer(top, bottom)
@@ -164,23 +160,47 @@ def test_prp_active_sboxes():
     bottom = 1
     key = top ^ bottom
     
+    from aes_procedures import mixColumns
+    
+    def prp_8_bit(top, bottom, key, index):
+        return prp(top, bottom, key, index, mask=0xFF, rotations=5, bit_width=8)
+        
+    def prp_finer_grain(state, key):
+        for index in reversed(range(1, 16)):
+            left, right = state[(index - 1)], state[index]
+            state[(index - 1)], state[index], key = prp_8_bit(left, right, key, index)            
+        
+        left, right = state[15], state[0]
+        state[15], state[0], key = prp_8_bit(left, right, key, 0)                     
+        return key
+    
+    def test_function(top, bottom, key, index):
+        top, bottom = decorrelation_layer(top, bottom)
+        state = integer_to_bytes(top, 8) + integer_to_bytes(bottom, 8)
+       # mixColumns(state)
+        
+        key = prp_finer_grain(state, key)
+        top = bytes_to_integer(state[:8])
+        bottom = bytes_to_integer(state[8:])
+        return top, bottom, key
+        #return prp(top, bottom, key, index)
+        
     for index in range(rounds):       
-        print "\nAfter round: {}".format(index)          
-        bottom, top, key = _print_active_sbox_info(prp, (top, bottom, key, index), hamming_weights=show_weight, bit_strings=bit_strings)                                        
-        index += 1
-   
-    print top, bottom, key 
+        print "\nAfter round: {}".format(index)     
+        bottom, top, key = _print_active_sbox_info(test_function, (top, bottom, key, index), bit_strings=bit_strings)                                        
+        index += 1      
     
     print "\nInput difference\n" + "-" * 20
     top =  0    
-    bottom = 2 << 60
-    key = top ^ bottom
+    bottom = 2 << 1
+    key = top ^ bottom   
+        
     for index in range(rounds):                    
         print "\nAfter round: {}".format(index)          
-        bottom, top, key = _print_active_sbox_info(prp, (top, bottom, key, index), hamming_weights=show_weight, bit_strings=bit_strings)
-        index += 1
-    print top, bottom, key    
         
+        bottom, top, key = _print_active_sbox_info(test_function, (top, bottom, key, index), bit_strings=bit_strings)
+        index += 1
+            
         
 if __name__ == "__main__":
     #test_encrypt_decrypt()

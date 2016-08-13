@@ -101,18 +101,64 @@ def _mixColumn_subroutine(state, i, mult=[2, 1, 1, 3]): # inverse_mult = [14, 9,
     
 # galois multiplication of 1 column of the 4x4 matrix
 def _mixColumn(column, mult=[2, 1, 1, 3]): # inverse_mult = [14, 9, 13, 11]
-    cpy = list(column)
-    g = _galois_multiplication
+    return integer_to_bytes(_mixColumn2(bytes_to_integer(column)), 4)
 
-    column[0] = g(cpy[0], mult[0]) ^ g(cpy[3], mult[1]) ^ \
-                g(cpy[2], mult[2]) ^ g(cpy[1], mult[3])
-    column[1] = g(cpy[1], mult[0]) ^ g(cpy[0], mult[1]) ^ \
-                g(cpy[3], mult[2]) ^ g(cpy[2], mult[3])
-    column[2] = g(cpy[2], mult[0]) ^ g(cpy[1], mult[1]) ^ \
-                g(cpy[0], mult[2]) ^ g(cpy[3], mult[3])
-    column[3] = g(cpy[3], mult[0]) ^ g(cpy[2], mult[1]) ^ \
-                g(cpy[1], mult[2]) ^ g(cpy[0], mult[3])
-    return column
+    #cpy = list(column)
+    #g = _galois_multiplication
+    #
+    #column[0] = g(cpy[0], mult[0]) ^ g(cpy[3], mult[1]) ^ \
+    #            g(cpy[2], mult[2]) ^ g(cpy[1], mult[3])
+    #column[1] = g(cpy[1], mult[0]) ^ g(cpy[0], mult[1]) ^ \
+    #            g(cpy[3], mult[2]) ^ g(cpy[2], mult[3])
+    #column[2] = g(cpy[2], mult[0]) ^ g(cpy[1], mult[1]) ^ \
+    #            g(cpy[0], mult[2]) ^ g(cpy[3], mult[3])
+    #column[3] = g(cpy[3], mult[0]) ^ g(cpy[2], mult[1]) ^ \
+    #            g(cpy[1], mult[2]) ^ g(cpy[0], mult[3])
+    #return column
+    
+def test_mixcolumn():    
+    test = [
+        0x455313DB, 0xBCA14D8E,
+        0x5C220AF2, 0x9D58DC9F,
+        0x01010101, 0x01010101,
+        0xC6C6C6C6, 0xC6C6C6C6,
+        0xD5D4D4D4, 0xD6D7D5D5,
+        0x4C31262D, 0xF8BD7E4D
+    ];
+    
+    for i in range(len(test)/2):
+        x = test[i*2];
+        y = test[i*2+1];
+        z = bytes_to_integer(_mixColumn(integer_to_bytes(x, 4)));
+        #z = _mixColumn2(x)
+        txt= "fail"
+        if (z == y): txt = "pass"
+        print ("f(0x%08X) = 0x%08X (expect 0x%08X) [%s]" % (x, z, y, txt))
+    
+from utilities import bytes_to_integer, integer_to_bytes
+    
+def _mixColumn2(a):
+    b = a & 0x80808080;
+    
+    b |= b >> 1;
+    b |= b >> 3;
+    b >>= 3;
+    
+    b ^= (a << 1) & 0xFEFEFEFE;
+    c = a ^ b;
+    b ^= (c >>  8) | ((c << 24) & 0xFFFFFFFF);
+    b ^= ((a <<  8) & 0xFFFFFFFF) | (a >> 24);
+    return b ^ (a >> 16) ^ ((a << 16) & 0xFFFFFFFF);
+    
+def test_mixColumn2():
+    from utilities import bytes_to_integer, integer_to_bytes
+    column = range(4)
+    column2 = range(4)
+    
+    column = _mixColumn(column)
+    column2 = [byte for byte in integer_to_bytes(_mixColumn2(bytes_to_integer(column2)), 4)]
+    
+    assert column == column2, (column, column2)
     
 def _galois_multiplication(a, b):
     """Galois multiplication of 8 bit characters a and b."""
@@ -277,5 +323,7 @@ def aes_encrypt(state, key):
     addRoundKey(state, key)
     
 if __name__ == "__main__":
-    test_mixColumns_subroutine()
+    #test_mixColumns_subroutine()
+    #test_mixColumn2()
+    test_mixcolumn()
     

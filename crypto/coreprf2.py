@@ -1,10 +1,14 @@
+from utilities import rotate_left
+
 def micksRow(a):
     b = a & 0x80808080;
     
-    b |= b >> 1;
-    b |= b >> 3;
-    b >>= 3;
-    
+    # b |= b >> 1; # without multiply instruction
+    # b |= b >> 3;
+    # b >>= 3;
+        
+    b = (b >> 7) * 0x1B; # with multiply instruction
+
     b ^= (a << 1) & 0xFEFEFEFE;
     c = a ^ b;
     b ^= (c >>  8) | ((c << 24) & 0xFFFFFFFF);
@@ -25,7 +29,7 @@ def round_function(state, state2):
     t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
     y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
             
-     # bottom half
+    # bottom half
     x =  (((state2 >> 40) & 255) << 24) | (((state >> 24) & 255) << 16) | (((state2 >> 48) & 255) << 8) | (state2 & 255)
     y2 = (((state >> 8) & 255) <<24)  | (((state2 >> 16) & 255) << 16) | (((state >> 16) & 255) << 8) | ((state >> 56) & 255)      
     
@@ -39,26 +43,30 @@ def round_function(state, state2):
     # end decorrelation layer
     
     # recursive diffusion layer + mix the rows
-    t ^= y ^ y2 ^ t2
+    t ^= rotate_left(y ^ y2 ^ t2, 7, bit_width=32)
+    #t ^= y ^ y2 ^ t2
     t = micksRow(t)
-    
-    y ^= t ^ y2 ^ t2
+        
+    y ^= rotate_left(t ^ y2 ^ t2, 23, bit_width=32)
     y = micksRow(y)
-    
-    t2 ^= y ^ y2 ^ t
+        
+    t2 ^= rotate_left(y ^ y2 ^ t, 37, bit_width=32)
     t2 = micksRow(t2)
-    
-    y2 ^= y ^ t ^ t2
+        
+    y2 ^= rotate_left(y ^ t ^ t2, 47, bit_width=32)
     y2 = micksRow(y2)
+        
+    state =  (y << 32) | t        
+    state2 = (y2 << 32)| t2     
     
-    state =  y | t        
-    state2 = y2 | t2     
     return state, state2
     
 def test_round_function():
+    from utilities import print_state_4x4, integer_to_bytes
     state, state2 = 0, 1
     
     state, state2 = round_function(state, state2)
+    print_state_4x4(integer_to_bytes(state, 8) + integer_to_bytes(state2, 8))    
     print "State :\n{}".format(state)
     print "State2:\n{}".format(state2)
     

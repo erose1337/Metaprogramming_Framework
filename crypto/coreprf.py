@@ -26,8 +26,8 @@ def decorrelation_layer(state, state2):
     t2 = (x & 0xF0F0F0F0) | ((y2 >> 4) & 0x0F0F0F0F); 
     y2 = ((x << 4) & 0xF0F0F0F0) | (y2 & 0x0F0F0F0F); 
             
-    state =  y | t        
-    state2 = y2 | t2          
+    state =  (y << 32) | t        
+    state2 = (y2 << 32) | t2          
     return state, state2
     
 def prp(slice1, slice2, key, index, mask=0xFFFFFFFFFFFFFFFF, rotations=41, bit_width=64):
@@ -122,7 +122,7 @@ def test_encrypt_decrypt():
     plaintext = "\x00" * 32
     key = "\x00" * 32
     nonce = "\x00" * 32
-    rounds = 3
+    rounds = 1
     tag, ciphertext = encrypt(plaintext, key, nonce, rounds)   
     _plaintext = decrypt(tag, ciphertext, key, nonce, rounds)
     
@@ -203,6 +203,6 @@ def test_prp_active_sboxes():
             
         
 if __name__ == "__main__":
-    #test_encrypt_decrypt()
-    test_prp_active_sboxes()
+    test_encrypt_decrypt()
+    #test_prp_active_sboxes()
     

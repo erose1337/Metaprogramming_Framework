@@ -31,7 +31,7 @@ def polarize(state):
 def choice(b, c, d):
     return d ^ (b & (c ^ d))    
     
-def round_function(state, state2):
+def round_function(state, state2):    
     # top half   
     # the strange ordering applies shuffle_bytes before the bit permutation
  
@@ -58,23 +58,20 @@ def round_function(state, state2):
     y2 = ((x << 4) & 0xF0F0F0F0) | (y2 & 0x0F0F0F0F);                    
     # end decorrelation layer
     
-    # recursive diffusion layer + mix the rows
-    #t ^= rotate_left(y ^ y2 ^ t2, 7, bit_width=32)   
-    t ^= choice(y, y2, t2)
-    t = micksRow(t)     
+    # non linear layer + mix the rows
+   # t y t2 y2
+    t ^= choice(y, t2, y2)
+    t = micksRow(t)
     
-    #y ^= rotate_left(t ^ y2 ^ t2, 23, bit_width=32)
-    y ^= choice(t, y2, t2)
+    y ^= choice(t2, y2, t)
     y = micksRow(y)
-        
-    #t2 ^= rotate_left(y ^ y2 ^ t, 5, bit_width=32)
-    t2 ^= choice(y, y2, t)
+    
+    t2 ^= choice(y2, t, y)
     t2 = micksRow(t2)
-        
-    #y2 ^= rotate_left(y ^ t ^ t2, 15, bit_width=32)
-    y2 ^= choice(y, t, t2)
-    y2 = micksRow(y2)
-        
+    
+    y2 ^= choice(t, y, t2)
+    y2 = micksRow(y2)               
+    
     state =  (y << 32) | t        
     state2 = (y2 << 32)| t2     
     
@@ -123,7 +120,7 @@ def print_active_sbox_info():
             
 def test_round_function():
     from utilities import print_state_4x4, integer_to_bytes
-    state, state2 = 0, 2
+    state, state2 = 0, 1
     
     state = polarize(state)
     state, state2 = round_function(state, state2)

@@ -1,3 +1,4 @@
+from utilities import rotate_right
 import itertools
 
 def mick_prp(x, magic1=3, magic2=5, magic3=11, mask=0xFF):
@@ -15,7 +16,28 @@ def test_mick_prp():
         sbox = [mick_prp(byte, *combination) for byte in range(256)]
         print '\n' + str(combination)
         summarize_sbox(sbox)
+        
+def thingy(a, b, c, bit_width=64):
+    x = 0;
+    for i in range(4):
+        a = rotate_right(a, 1, bit_width=bit_width)
+        b = rotate_right(b, 3, bit_width=bit_width)
+        c = rotate_right(c, 5, bit_width=bit_width)
+        x ^= a & ~(b & c);
     
+    return x;        
+    
+def test_mick_thingy():
+    outputs = []    
+    c = 0
+    for a in range(1, 256):
+        for b in range(256):
+            
+           # for c in range(256):
+            outputs.append(thingy(a, b, c, 8))
+            print outputs[-1]
+        
+        
 if __name__ == "__main__":
-    test_mick_prp()
-    
+    #test_mick_prp()
+    test_mick_thingy()

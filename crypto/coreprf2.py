@@ -1,4 +1,4 @@
-from utilities import rotate_left
+from utilities import rotate_left, bytes_to_integer, integer_to_bytes
 
 def micksRow(a):
     b = a & 0x80808080;
@@ -15,6 +15,22 @@ def micksRow(a):
     b ^= ((a <<  8) & 0xFFFFFFFF) | (a >> 24);
     return b ^ (a >> 16) ^ ((a << 16) & 0xFFFFFFFF);
 
+def polarize(state):
+    x = (((state >> 24) & 255) << 24) | (((state >> 16) & 255) << 16) | (((state >> 8) & 255) << 8) | (state & 255)
+    y = (((state >> 56) & 255) << 24) | (((state >> 48) & 255) << 16) | (((state >> 40) & 255) << 8) | ((state >> 32) & 255)    
+    
+    t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7);    
+    t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
+    t = (y ^ (y >>14)) & 0x0000CCCC;  y = y ^ t ^ (t <<14); 
+    
+    t = (x & 0xF0F0F0F0) | ((y >> 4) & 0x0F0F0F0F); 
+    y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
+    
+    return (y << 32) | t
+    
+def choice(b, c, d):
+    return d ^ (b & (c ^ d))    
+    
 def round_function(state, state2):
     # top half   
     # the strange ordering applies shuffle_bytes before the bit permutation
@@ -43,17 +59,20 @@ def round_function(state, state2):
     # end decorrelation layer
     
     # recursive diffusion layer + mix the rows
-    t ^= rotate_left(y ^ y2 ^ t2, 7, bit_width=32)
-    #t ^= y ^ y2 ^ t2
-    t = micksRow(t)
-        
-    y ^= rotate_left(t ^ y2 ^ t2, 23, bit_width=32)
+    #t ^= rotate_left(y ^ y2 ^ t2, 7, bit_width=32)   
+    t ^= choice(y, y2, t2)
+    t = micksRow(t)     
+    
+    #y ^= rotate_left(t ^ y2 ^ t2, 23, bit_width=32)
+    y ^= choice(t, y2, t2)
     y = micksRow(y)
         
-    t2 ^= rotate_left(y ^ y2 ^ t, 37, bit_width=32)
+    #t2 ^= rotate_left(y ^ y2 ^ t, 5, bit_width=32)
+    t2 ^= choice(y, y2, t)
     t2 = micksRow(t2)
         
-    y2 ^= rotate_left(y ^ t ^ t2, 47, bit_width=32)
+    #y2 ^= rotate_left(y ^ t ^ t2, 15, bit_width=32)
+    y2 ^= choice(y, t, t2)
     y2 = micksRow(y2)
         
     state =  (y << 32) | t        
@@ -61,16 +80,58 @@ def round_function(state, state2):
     
     return state, state2
     
+def get_output_difference(function, input1, input2):    
+    output1 = function(input1)
+    output2 = function(input2)
+    
+    output1_bits = ''.join(format(byte, 'b').zfill(8) for byte in output1)
+    output2_bits = ''.join(format(byte, 'b').zfill(8) for byte in output2)    
+    return _get_difference(output1, output2)        
+    
+def binary_form(bytestring):
+    return ''.join(format(byte, 'b').zfill(8) for byte in bytestring)
+    
+def _get_difference(output1, output2):  
+    output1_bits = binary_form(output1)
+    output2_bits = binary_form(output2)
+    input_differences = b''
+    
+    for index, bit in enumerate(output1_bits):          
+        if bit != output2_bits[index]:
+            input_differences += '1'
+        else:
+            input_differences += '0'
+    return input_differences        
+    
+def print_active_sbox_info():
+    rounds = 1
+    input1 = bytearray(16)
+    input2 = bytearray(16)
+    input1[-1] = 1
+    
+    def test_function(state):
+        state1, state2 = bytes_to_integer(state[:8]), bytes_to_integer(state[8:16])
+        state1, state2 = round_function(state1, state2)
+        state[:] = integer_to_bytes(state1, 8) + integer_to_bytes(state2, 8)
+        return state
+        
+    for round in range(rounds):
+        input_difference = _get_difference(input1, input2)
+        print "Input difference: {}/{}".format(input_difference.count('1'), len(input_difference))
+        output_difference = get_output_difference(test_function, input1, input2)
+        print "Active bits: {}/{}".format(output_difference.count('1'), len(output_difference))                   
+            
 def test_round_function():
     from utilities import print_state_4x4, integer_to_bytes
-    state, state2 = 0, 1
+    state, state2 = 0, 2
     
+    state = polarize(state)
     state, state2 = round_function(state, state2)
     print_state_4x4(integer_to_bytes(state, 8) + integer_to_bytes(state2, 8))    
     print "State :\n{}".format(state)
     print "State2:\n{}".format(state2)
-    
+        
 if __name__ == "__main__":
     test_round_function()
-    
+    #print_active_sbox_info()
     

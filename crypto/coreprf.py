@@ -137,7 +137,7 @@ def _print_active_sbox_info(function, function_args, bit_width=64,
     if active_bytes:
         for bit_string in bits:
             actives = [(index, byte) for index, byte in enumerate(bit_string.split()) if '1' in byte]
-            print "Active bytes: {} {}".format(len(actives), [index for index, byte in actives])
+            print "Non-zero bytes: {} {}".format(len(actives), [index for index, byte in actives])
         
     if bit_strings:
         for word in bits:
@@ -146,7 +146,7 @@ def _print_active_sbox_info(function, function_args, bit_width=64,
     if active_bits:
         for word in bits:
             actives = [index for index, bit in enumerate(''.join(word.split())) if bit == '1']
-            print "Active bits: {} {}".format(len(actives), actives)
+            print "Set bits: {} {}".format(len(actives), actives)
     return output
     
 def test_prp_active_sboxes():    

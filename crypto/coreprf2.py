@@ -18,6 +18,8 @@ def micksRow(a):
 def choice(b, c, d):
     return d ^ (b & (c ^ d))    
     
+# mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))
+    
 def round_function(state, state2):    
     # top half   
     # the strange ordering applies shuffle_bytes before the bit permutation 
@@ -54,18 +56,6 @@ def round_function(state, state2):
     state2 = (y2 << 32)| t2     
     
     return state, state2
-  
-# possible transpositions  
-# 865F1CA9EB2470D3
-# 07E15B823AD6FC49
-# 2EF5C19AB468073D
-# 0734C1AFDE6B2895
-# 
-# 7CE9215FB6D048A3
-# 4A168F7C30ED59B2
-# 2FC156ADE8340B97
-# F4589721A30E6CDB
-
     
 def decorrelation_layer(state, state2):    
     x = (((state2 >> 24) & 255) << 24) | (((state >> 40) & 255) << 16) | (((state >> 32) & 255) << 8) | ((state2 >> 56) & 255)

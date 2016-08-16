@@ -1,0 +1,73 @@
+This answer assumes the discussion is about symmetric block ciphers (https://en.wikipedia.org/wiki/Symmetric-key_algorithm) and not asymmetric ones. (https://en.wikipedia.org/wiki/Public-key_cryptography)
+
+It also assumes the asker and/or reader is interested in the design of ciphers for the purposes of learning, and not to protect information in the real world. 
+
+In order to design and analyze a cipher, we have to establish what a cipher is supposed to accomplish. Put simply, we would like to be able to transform information in such a way that only those who are authorized may perform or invert the transformation. We can refer to this transformation as "encryption". Unauthorized parties may exist that should not be able to obtain any information protected by the encryption method, despite the fact that they can/will try to do so, if given the opportunity. This applies even if the work that would be involved is a large, nontrivial amount. We can refer to unauthorized parties as adversaries.
+
+Ideally, we would like the mutual information required by the authorized parties to be minimal, and for it to be obtainable with some level of convenience. If it were not for these two extremely practical aspects, the One Time Pad (https://en.wikipedia.org/wiki/One-time_pad) would be literally unbeatable, with information-theoretic security (https://en.wikipedia.org/wiki/Information_theoretic_security), implementation simplicity, and maximum efficiency (just a single addition per character!). A OTP is not a block cipher, but it makes for a good reference point to measure against.
+
+Unfortunately, one time pads require the key material be as long as the information to be enciphered, and prepared ahead of time by the authorized parties. This violates our two practical desires listed above, so we must design other algorithms that can re-use a much smaller key.
+
+One temptation is to keep the encryption algorithm itself secret. Unfortunately, keeping an algorithm secret implies that all users of the algorithm know the secret to encrypting/decrypting. As the number of users that know the secret increases, so does the likelihood that the secret will become compromised by adversaries. This would fail the original design goal, and only does marginally better then the OTP in terms of practicality and the size of the secret to be protected. 
+
+This leads to the third, most successful option: Using a publicly known algorithm that concentrates the required secrecy into a key that is used by the algorithm.
+
+Whatever method is used to encrypt, the information may be subject to attack by adversaries. The job of encryption is to resist this attack, and keep the information protected. This means a few things:
+
+- Since modern ciphers use a key to authorize parties to perform the transformation, the goal of an adversary is to obtain the key
+    - Obtaining the key implies the ability to encrypt plaintexts and decrypt ciphertexts, violating the original design goal of the cipher
+        - Similar to how a lock on a door uses a key
+        - You just have to protect the key, not prevent anyone from knowing there is a lock
+        - The key is reusable, and has a very long lifespan.           
+        - The key should be relatively small - 128 to 256 bits is common    
+        
+    - The key must remain secure even if the adversary:
+        - Possesses vast amounts of ciphertext
+        - Knows the plaintext contents of a message, and the corresponding ciphertexts for each message
+        - Can trick an authorized party into encrypting/decrypting messages for the adversary
+            - Choose messages to encrypt or decrypt at will.
+            - Can adapt or modify future encryption/decryption queries in response to past queries.
+    
+Most of the complexity of a modern cipher comes from the attempt at protecting the key, and by extension, the plaintext. Designing a cipher with a reusable will require an understanding of the ways that the cipher and key can be attacked. In order to design a cipher, you must learn to think like the adversary, and study how ciphers are broken. 
+
+Standard attacks
+------------
+There are a handful of generic attack methods that any new cipher must protect against: brute force search, differential cryptanalysis, and linear cryptanalysis.
+- Brute force search means that the adversary simply guesses all possible combinations of key values, until the correct key is found
+    - Has a worst case time complexity of 2 ** N, where N is the width of the key in bits
+        - time complexity is only accurate if the key is uniformly random
+        - 64 bits is considered too low for modern computers
+        - 128 bits is considered secure for now
+        - 256 bits is considered secure forever, even in the face of futuristic quantum computers
+        
+- Differential cryptanalysis exploits the probability that a particular difference between inputs will be propagate to a particular output difference
+    - For example, consider a function that maps a number in the range 0-256 to another number in the range 0-256
+        - For every input1 X, and an input difference 0-256, create input2 via input1 + difference = input2
+            - For example: input1 = 1; difference = 1; input2 = input1 + difference; input2 == 2;
+        - Supply the inputs to the function and note the difference between the outputs
+        - Record the number of times a given input difference propagates to a given output difference        
+    - The more likely that a given difference holds, the more effectively this behaviour can be exploited against the cipher               
+        
+- Linear cryptanalysis exploits the probability of a subsection of bits from a given input is correlated with a subsection of bits in the output of a function
+    - A subsection of bits is selected via bitwise masking (http://stackoverflow.com/questions/10493411/what-is-bit-masking)
+    - The exploitable relationship is if the parity (https://en.wikipedia.org/wiki/Parity_(mathematics)) of the hamming weight (https://en.wikipedia.org/wiki/Hamming_weight) of the subsection of input and output bits is the same
+    - The more regularly this relationship occurs, the more effective linear cryptanalysis will be
+    
+Linear and differential cryptanalysis can provide hints as to what the internal state of the cipher may be, up to a certain point. This can reduce the number of possible values for a part of the key that an adversary will have to guess.
+            
+Block Cipher constructions
+-----------
+There are two main classes of cipher constructions: The Feistel network (https://en.wikipedia.org/wiki/Feistel_cipher), and the substitution-permutation network. (https://en.wikipedia.org/wiki/Substitution-permutation_network)
+
+The basic design of the Feistel network is to split the message block into two halves, a left and a right. A keyed function with good diffusion and confusion is applied to right half, and the output of this is added to the left half. The halves are then swapped, and the process repeated. Decryption is more or less the same operation performed with the reverse keys, and so this construction is relatively lightweight in terms of implementation complexity. DES (https://en.wikipedia.org/wiki/Data_Encryption_Standard) is an example of a Feistel network. There are differential and linear attacks against DES (https://en.wikipedia.org/wiki/Data_Encryption_Standard#Security_and_cryptanalysis) .
+
+The design of a substitution permutation network is typically finer grain then a left and right half of a Feistel network. For example, in The Advanced Encryption Standard (AES), also known as Rijndael (https://en.wikipedia.org/wiki/Advanced_Encryption_Standard), the message is operated upon as 16 x 1 byte state, arranged as 4 rows and 4 columns. It consists of 4 main steps: a byte substitution, a row transposition, a mixColumns step, and the addition of key material via XOR. 
+
+Many, if not all modern block ciphers besides the OTP, are made of repeatedly iterating the same core function(s), often times with multiple different keys between each application. Often times, these keys are derived from the master key that is actually supplied to the cipher by the user. We refer to keys generated this way as the round keys, and the process of generating them the key schedule.
+
+The way round keys are derived can influence both the security and efficiency of the cipher (http://crypto.stackexchange.com/questions/33975/what-are-the-requirements-of-a-key-schedule). Ideally, recovery of any round key information should reveal as little as possible about other rounds keys or the master key. This is one of the strengths of the OTP: recovery of a byte of key material (i.e. via known plaintext attack) provides no assistance in the recovery of any other bytes of the key. It is also generally considered beneficial for the generation of round key material to be quick, as a cipher with a slow key schedule may have greater latency and/or lower throughput.
+
+
+Designing a round function
+-----------
+There are a variety of functions and operations that are useful for designing the round function for a cipher. The simplest are combinations of substitution tables and permutations. 

@@ -1,6 +1,4 @@
-This answer assumes the discussion is about symmetric block ciphers (https://en.wikipedia.org/wiki/Symmetric-key_algorithm) and not asymmetric ones. (https://en.wikipedia.org/wiki/Public-key_cryptography)
-
-It also assumes the asker and/or reader is interested in the design of ciphers for the purposes of learning, and not to protect information in the real world. 
+This answer assumes the asker and/or reader is interested in the design of ciphers for the purposes of learning, and not to protect information in the real world. 
 
 In order to design and analyze a cipher, we have to establish what a cipher is supposed to accomplish. Put simply, we would like to be able to transform information in such a way that only those who are authorized may perform or invert the transformation. We can refer to this transformation as "encryption". Unauthorized parties may exist that should not be able to obtain any information protected by the encryption method, despite the fact that they can/will try to do so, if given the opportunity. This applies even if the work that would be involved is a large, nontrivial amount. We can refer to unauthorized parties as adversaries.
 
@@ -47,13 +45,17 @@ There are a handful of generic attack methods that any new cipher must protect a
         - Supply the inputs to the function and note the difference between the outputs
         - Record the number of times a given input difference propagates to a given output difference        
     - The more likely that a given difference holds, the more effectively this behaviour can be exploited against the cipher               
-        
+    - A relatively simple tutorial with code can be found here (http://www.theamazingking.com/crypto-diff.php)
+    - The original paper by biham and shamir can be found here (http://www.cs.bilkent.edu.tr/~selcuk/teaching/cs519/Biham-DC.pdf)
+    
 - Linear cryptanalysis exploits the probability of a subsection of bits from a given input is correlated with a subsection of bits in the output of a function
     - A subsection of bits is selected via bitwise masking (http://stackoverflow.com/questions/10493411/what-is-bit-masking)
     - The exploitable relationship is if the parity (https://en.wikipedia.org/wiki/Parity_(mathematics)) of the hamming weight (https://en.wikipedia.org/wiki/Hamming_weight) of the subsection of input and output bits is the same
     - The more regularly this relationship occurs, the more effective linear cryptanalysis will be
+    - A relatively simple tutorial with code can be found here (http://www.theamazingking.com/crypto-linear.php)
+    - The original paper by matsui can be found here (http://www.cs.bilkent.edu.tr/~selcuk/teaching/cs519/Matsui-LC.pdf)
     
-Linear and differential cryptanalysis can provide hints as to what the internal state of the cipher may be, up to a certain point. This can reduce the number of possible values for a part of the key that an adversary will have to guess.
+Linear and differential cryptanalysis can provide hints as to what the internal state of the cipher may be, up to a certain point. This can reduce the number of possible values for a part of the key that an adversary will have to guess. These are considered to be two of the most powerful tools in regards to cryptanalysis of a modern cipher. 
             
 Block Cipher constructions
 -----------
@@ -71,3 +73,7 @@ The way round keys are derived can influence both the security and efficiency of
 Designing a round function
 -----------
 There are a variety of functions and operations that are useful for designing the round function for a cipher. The simplest are combinations of substitution tables and permutations. 
+
+
+Breaking a round function
+----------

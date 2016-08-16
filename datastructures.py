@@ -96,16 +96,16 @@ class Average(object):
             self.average = sum(self.values) / self.size
         else:
             self.average = 0
-        self.add = self.partial_add
+        self.add = self._partial_add
 
-    def partial_add(self, value):
+    def _partial_add(self, value):
         self.size += 1
         self.values.append(value)
         self.average = sum(self.values) / self.size
         if self.size == self.max_size:
-            self.add = self.full_add
+            self.add = self._full_add
 
-    def full_add(self, value):
+    def _full_add(self, value):
         old_value = self.values[0]
         adjustment = (value - old_value) / self.size
         self.values.append(value)

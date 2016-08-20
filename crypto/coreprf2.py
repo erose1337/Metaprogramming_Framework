@@ -17,14 +17,56 @@ def micksRow(a):
     
 def choice(b, c, d):
     return d ^ (b & (c ^ d))    
+       
+# mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))  
+  
+def shuffle_bytes(state):                 
+    #state[0] = state[0]
+    temp = state[1]
     
-# mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))
+    state[1] = state[7] 
+    state[7] = state[2]    
+    state[2] = state[14]    
+    state[14] = state[4]
+    state[4] = state[5]
+    state[5] = state[11]
+    state[11] = state[6]
+    state[6] = state[8]
+    state[8] = state[3]
+    state[3] = temp
+         
+    temp = state[9]
+    state[9] = state[10]
+    state[10] = state[13]
+    state[13] = state[12]
+    state[12] = state[15]        
+    state[15] = temp    
+  
+def round_function(state1, state2):    
+    #state = integer_to_bytes(state1, 8) + integer_to_bytes(state2, 8)
+    #temp
     
-def round_function(state, state2):    
+    #x = ((state[7] << 24) & 255) | ((state[6] << 24) ^ 255) | ((state[5] << 16) & 255) | state[4]
+    #y = ((state[3] << 24) & 255) | ((state[2] << 24) ^ 255) | ((state[1] << 16) & 255) | state[0]
+    ##
+    #x  = ((state[15] << 24) & 255) | ((state[14] << 24) ^ 255) | ((state[13] << 16) & 255) | state[12]
+    #y2 = ((state[11] << 24) & 255) | ((state[10] << 24) ^ 255) | ((state[9] << 16) & 255) | state[8]
+    
+    # state1 0-7 state2 8-15
     # top half   
-    # the strange ordering applies shuffle_bytes before the bit permutation 
-    x = (((state2 >> 24) & 255) << 24) | (((state >> 40) & 255) << 16) | (((state >> 32) & 255) << 8) | ((state2 >> 56) & 255)
-    y = (((state2 >> 32) & 255) << 24) | (((state >> 48) & 255) << 16) | (((state2 >> 8) & 255) << 8) | (state & 255)    
+    # the strange ordering applies shuffle_bytes before the bit permutation     
+    
+    
+    
+    #x = ((state[1] << 16) & 255) | ((state[6] << 24) ^ 255) | ((state[5] << 16) & 255) | state[4]
+    #y = ((state[3] << 24) & 255) | ((state[2] << 24) ^ 255) |  | state[0]
+  
+    #x  = ((state[15] << 24) & 255) | ((state[14] << 24) ^ 255) | ((state[13] << 16) & 255) | state[12]
+    #y2 = ((state[11] << 24) & 255) | ((state[10] << 24) ^ 255) | ((state[9] << 16) & 255) | state[8]
+    
+    
+    x = (((state2 >> 24) & 255) << 24) | (((state1 >> 40) & 255) << 16) | (((state1 >> 32) & 255) << 8) | ((state2 >> 56) & 255)
+    y = (((state2 >> 32) & 255) << 24) | (((state1 >> 48) & 255) << 16) | (((state2 >> 8) & 255) << 8) | (state1 & 255)      
     
     t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7);    
     t = (x ^ (x >>14)) & 0x0000CCCC;  x = x ^ t ^ (t <<14); 
@@ -34,8 +76,8 @@ def round_function(state, state2):
     y = ((x << 4) & 0xF0F0F0F0) | (y & 0x0F0F0F0F); 
             
     # bottom half
-    x =  (((state2 >> 40) & 255) << 24) | (((state >> 24) & 255) << 16) | (((state2 >> 48) & 255) << 8) | (state2 & 255)
-    y2 = (((state >> 8) & 255) <<24)  | (((state2 >> 16) & 255) << 16) | (((state >> 16) & 255) << 8) | ((state >> 56) & 255)      
+    x =  (((state2 >> 40) & 255) << 24) | (((state1 >> 24) & 255) << 16) | (((state2 >> 48) & 255) << 8) | (state2 & 255)
+    y2 = (((state1 >> 8) & 255) <<24)  | (((state2 >> 16) & 255) << 16) | (((state1 >> 16) & 255) << 8) | ((state1 >> 56) & 255)      
     
     t2 = (y2 ^ (y2 >> 7)) & 0x00AA00AA;  y2 = y2 ^ t2 ^ (t2 << 7); 
     
@@ -52,10 +94,10 @@ def round_function(state, state2):
     t2 ^= micksRow(rotate_left(choice(y2, t, y), 5, bit_width=32))
     y2 ^= micksRow(rotate_left(choice(t, y, t2), 7, bit_width=32))                    
     
-    state =  (y << 32) | t        
+    state1 =  (y << 32) | t        
     state2 = (y2 << 32)| t2     
     
-    return state, state2
+    return state1, state2
     
 def decorrelation_layer(state, state2):    
     x = (((state2 >> 24) & 255) << 24) | (((state >> 40) & 255) << 16) | (((state >> 32) & 255) << 8) | ((state2 >> 56) & 255)

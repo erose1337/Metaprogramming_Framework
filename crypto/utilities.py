@@ -223,7 +223,7 @@ def words_to_bytes(state, wordsize):
     return output
     
 def bytes_to_integer(data):
-    output = 0
+    output = 0    
     size = len(data)
     for index in range(size):
         output |= data[index] << (8 * (size - 1 - index))
@@ -284,3 +284,12 @@ def brute_force(output, function, test_bytes, prefix='', postfix='', joiner='',
     else:                   
         raise ValueError("Unable to recover input for given output with supplied arguments")  
         
+def bytes_to_longs(data):
+    return [bytes_to_integer(word) for word in slide(data, 4)]          
+    
+def longs_to_bytes(*longs):
+    output = bytearray()
+    for long in longs:
+        output.extend(integer_to_bytes(long, 4))
+    return output
+    

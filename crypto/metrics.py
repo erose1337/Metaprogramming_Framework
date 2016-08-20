@@ -127,7 +127,7 @@ def test_randomness(random_bytes):
     with open(filename, 'wb') as _file:
         _file.write(random_bytes)
         _file.flush()    
-    print "Data generated; Running ent..."
+    print "Running ent..."
     os.system(os.path.join(current_directory, "ent.exe ") + filename)
     os.remove(filename)
     
@@ -153,11 +153,12 @@ def test_period(hash_function, blocksize=16, test_size=2):
     
 def test_bias(hash_function, byte_range=slice(0, 32)):
     biases = [[] for x in xrange(byte_range.stop)]    
+    padding = "\x00" *(byte_range.stop - byte_range.start - 2)
     outputs2 = []   
     print "Testing for byte bias..."
     for byte1 in range(256):
-        for byte2 in range(len(hash_function(''))):
-            output = hash_function(chr(byte1) + chr(byte2))
+        for byte2 in range(len(hash_function(padding + "\x00\x00"))):
+            output = hash_function(padding + chr(byte1) + chr(byte2))
             for index, byte in enumerate(output[byte_range]):
                 biases[index].append(ord(byte))            
             outputs2.extend(output[byte_range])        
@@ -180,21 +181,28 @@ def test_collisions(hash_function, output_size=3):
     else:
         print "No collisions after {} inputs with output size {}".format(count, output_size), len(set(outputs))
     
-def test_compression_performance(hash_function):    
-    print "Time testing compression function..."
+def test_compression_performance(hash_function, test_message="\x00" * 2 ** 24):    
+    print "Time testing compression function; Compressing {} bytes 10 times... ".format(len(test_message))
     start = timestamp()
     for round in range(10):
-        hash_function("Timing test for input" * 1000)
+        hash_function(test_message)
     end = timestamp()
     print (end - start) / 10
     
-def test_prng_performance(hash_function):    
+def test_prng_performance_hash(hash_function):    
     print "Testing time to generate 1024 * 1024 bytes... "
     start = timestamp()
     output = _hash_prng(hash_function, len(hash_function('\x00')), 1024 * 1024)
     end = timestamp()
     print end - start    
         
+def test_prng_performance_permutation(permutation, state_size):
+    print "Testing time to generate 1024 * 1024 bytes... "
+    start = timestamp()
+    output = _hash_prng(permutation, state_size, 1024 * 1024)
+    end = timestamp()
+    print end - start  
+    
 def test_cipher_performance(performance_test_sizes, encrypt_method, key, seed):  
     for increment_size in performance_test_sizes:
         print "Testing time to generate 1MB in {} byte increments... ".format(increment_size)
@@ -222,6 +230,19 @@ def test_for_involution(encrypt_function, blocksize, key, iv):
     if encrypt_function(ciphertext, key, iv, "ecb")[:blocksize] == ("\x00" * blocksize):
         print "[*]The supplied function is an involution F(F(x)) == x"
                             
+def test_permutation(permutation, state_size, avalanche_test=True, randomness_test=True, bias_test=True,
+                     period_test=True, performance_test=True):
+    if avalanche_test:
+        test_avalanche_hash(permutation, state_size)
+    if randomness_test:
+        test_randomness(_hash_prng(permutation, state_size, 1024 * 1024))
+    if bias_test:
+        test_bias(permutation, slice(0, state_size))
+    if period_test:
+        test_period(permutation, blocksize=state_size)
+    if performance_test:
+        test_prng_performance_permutation(permutation, state_size)
+                            
 def test_hash_function(hash_function, avalanche_test=True, randomness_test=True, bias_test=True,
                        period_test=True, performance_test=True, randomize_key=False, collision_test=True,
                        compression_test=True):
@@ -244,7 +265,7 @@ def test_hash_function(hash_function, avalanche_test=True, randomness_test=True,
     if compression_test:
         test_compression_performance(hash_function)
     if performance_test:
-        test_prng_performance(hash_function)
+        test_prng_performance_hash(hash_function)
     
 def test_block_cipher(encrypt_method, key, iv, avalanche_test=True, randomness_test=True, bias_test=True,
                       period_test=True, performance_test=True, randomize_key=False, 

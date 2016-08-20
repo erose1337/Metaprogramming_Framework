@@ -66,8 +66,33 @@ def test_for_fixed_points():
     #for mapping_number, mapping in enumerate(sboxes):
     #    print "Mapping number: {}".format(mapping_number)
     #    assert len(set(mapping)) == 16, (sorted(mapping), mapping)
-    mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))
-    
+    #mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))
+
+    def shuffle_bytes(state):        
+        #state[0] = state[0]
+        temp = state[1]
+        
+        state[1] = state[7] 
+        state[7] = state[2]    
+        state[2] = state[14]    
+        state[14] = state[4]
+        state[4] = state[5]
+        state[5] = state[11]
+        state[11] = state[6]
+        state[6] = state[8]
+        state[8] = state[3]
+        state[3] = temp
+             
+        temp = state[9]
+        state[9] = state[10]
+        state[10] = state[13]
+        state[13] = state[12]
+        state[12] = state[15]        
+        state[15] = temp
+        
+    mapping = bytearray(range(16))
+    shuffle_bytes(mapping)
+    assert len(set(mapping)) == 16, [byte for byte in mapping]
     for rounds in range(256):
         for index in range(16):    
             for shift in range(8):

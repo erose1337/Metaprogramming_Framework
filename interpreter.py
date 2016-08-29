@@ -158,7 +158,8 @@ class Python(base.Base):
                                         "pride.rpc.Rpc_Server",
                                         "pride.rpc.Rpc_Worker",
                                         "pride.datatransfer.Data_Transfer_Service",
-                                        "pride.datatransfer.Background_Refresh"),
+                                        "pride.datatransfer.Background_Refresh",
+                                        "pride.encryptedstorage.Encryption_Service"),
                 "startup_definitions" : '',
                 "interpreter_type" : "pride.interpreter.Interpreter"}
                      
@@ -179,6 +180,10 @@ class Python(base.Base):
         super(Python, self).__init__(**kwargs)
         self.setup_os_environ()
 
+        session_id, key1, key2, key3, salt = [random_bytes for random_bytes in slide(os.urandom(80), 16)] # ephemeral keys for encrypted in memory only data storage
+        self.session = self.create("pride.user.Session", username=session_id, 
+                                   encryption_key=key1,  mac_key=key2, file_system_key=key3, salt=salt)
+                                   
         if not self.command:
             command = os.path.join((os.getcwd() if "__file__" 
                                     not in globals() else 

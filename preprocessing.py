@@ -132,11 +132,6 @@ class Compiler(object):
     def load_module(self, module_name):
         if module_name not in sys.modules:
             source, path = self.module_source[module_name]    
-          #  print os.path.split(path)[-1]
-          #  if os.path.split(path)[-1] == sys.argv[1]:
-          #      self.fullname = module_name
-
-            #module_code = self.compile(source, path)
             self.compile_module(module_name, source, path)   
             sys.modules[module_name].__loader__ = self
         return sys.modules[module_name]

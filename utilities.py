@@ -24,6 +24,13 @@ _TYPE_RESOLVER = {_TYPE_SYMBOL[int] : int, _TYPE_SYMBOL[bool] : lambda value: Tr
                   _TYPE_SYMBOL[str] : lambda value: value,
                   _TYPE_SYMBOL[unicode] : unicode, _TYPE_SYMBOL[long] : long}                         
                 
+def slide(iterable, x=1):
+    """ Yields x bytes at a time from iterable """
+    slice_count, remainder = divmod(len(iterable), x)
+    for position in range((slice_count + 1 if remainder else slice_count)):
+        _position = position * x
+        yield iterable[_position:_position + x]     
+        
 def isancestor(ancestor, descendant):
     """ usage: isancestor(ancestor, descendant) => (True or False)
     

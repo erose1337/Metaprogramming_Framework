@@ -47,6 +47,7 @@ deter — detect — alarm — delay — respond
 recently done:
 
 known bugs:   
+    execfile does not work as __main__
     fix z layer issue with multiple objects on the same space
             
 things that could be done:

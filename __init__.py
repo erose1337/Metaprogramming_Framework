@@ -208,13 +208,18 @@ class Finalizer(base.Base):
                 try:
                     callback = getattr(objects[reference], method)
                 except KeyError:
-                    self.alert("Unable to load object for callback: '{}'".format(reference), 
-                               level=verbosity["unable_to_load_object"])
+                    if reference in objects:
+                        raise
+                    else:                                                
+                        self.alert("Unable to load object for callback: '{}'; Object does not exist".format(callback), 
+                                   level=verbosity["unable_to_load_object"])
+                        continue
                 except AttributeError:
                     self.alert("Unable to get method: '{}.{}'".format(reference, method), 
                                level=verbosity["unable_to_get_method"])
+                               
             self.alert("Executing finalizer callback: {}({}, {})", (callback, args, kwargs), 
-                       level=verbosity["execute_callback"])
+                       level=verbosity["execute_callback"])            
             try:
                 callback(*args, **kwargs)
             except Exception as error:

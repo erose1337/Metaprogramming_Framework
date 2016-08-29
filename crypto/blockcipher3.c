@@ -298,25 +298,20 @@ void test_encrypt_decrypt()
 
 void test_encrypt_performance()
 {        
-    int rounds = 1, blocks = 1, index ;    
-    unsigned char key[16], round_keys[rounds * 16];
+    int rounds = 1, blocks = 1, index, iterations = 10000;    
+    unsigned char key[16], data[16], round_keys[rounds * 16];
     
-	WORD_TYPE* data = (WORD_TYPE*)malloc(DATA_SIZE * blocks * sizeof(WORD_TYPE));
-	WORD_TYPE* plaintext = (WORD_TYPE*)malloc(DATA_SIZE * blocks * sizeof(WORD_TYPE));
-
-	// setup test data
-	memset(data, 16, DATA_SIZE * blocks * sizeof(WORD_TYPE));
-	memcpy(plaintext, data, sizeof(data));
+	// setup test data	
 	memset(key, 1, sizeof(key));
 	
 	key_schedule(round_keys, key, rounds);    
     
     Stopwatch s;    
-    printf("Amount: %i", DATA_SIZE * blocks * sizeof(WORD_TYPE));
-    for (index = 0; (index * 16) < DATA_SIZE * blocks * sizeof(WORD_TYPE); index++)
+    printf("Iterations: %i", 10000);
+    for (index = 0; index < iterations; index++)
     {
         printf("Block: %i\n", index);
-        encrypt_cached_keyschedule(data + (index * 16), round_keys, rounds);
+        encrypt_cached_keyschedule(data, round_keys, rounds);
     }
     double timee = s.Lap();
         

@@ -242,7 +242,10 @@ class Base(with_metaclass(pride.metaclass.Metaclass, object)):
                      "parse_args", "dont_save", "startup_components")    
         
     site_config_support = ("defaults", "verbosity", "flags", "mutable_defaults")        
-    
+
+    # key : values pairs; if getattr(self, key) not in values, raises ValueError in __init__
+    allowed_values = {}
+                
     def _get_parent(self):
         return objects[self.parent_name] if self.parent_name else None
     parent = property(_get_parent)
@@ -299,7 +302,12 @@ class Base(with_metaclass(pride.metaclass.Metaclass, object)):
                     import pprint
                     pprint.pprint(kwargs)
                     raise ArgumentError("Required attribute '{}' not assigned".format(attribute))
-         
+        
+        if self.allowed_values:
+            for key, values in allowed_values.items():            
+                if getattr(self, key) not in values:
+                    raise ValueError("Invalid {} value: '{}'; Valid values: {}".format(key, getattr(self, key), values))
+                
         if self.parent:            
             self.parent.add(self)
             

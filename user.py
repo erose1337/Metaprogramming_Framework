@@ -163,11 +163,19 @@ class User(pride.base.Base):
         verifier_file.close()             
                                         
     def encrypt(self, data, extra_data='', return_mode="cryptogram"):
-        """ Encrypt and authenticates the supplied data; Authenticates, but 
-            does not encrypt, any extra_data. The data is encrypted using the 
-            Users encryption key. Returns packed encrypted bytes. 
+        """ usage: pride.objects["/User"].encrypt(data, extra_data='', 
+                                                  return_mode="cryptogram") => cryptogram or unpacked cryptogram
+        
+            Encrypt and authenticates the supplied data; 
+            Authenticates, but does not encrypt, any extra_data. 
             
-            Encryption is done via AES-256-GCM. """        
+            The data is encrypted using the Users encryption key. 
+            
+            If return_mode == "cryptogram", returns packed encrypted bytes. 
+            If return_mode == "values", returns unpacked header, ciphertext, iv, mac_tag, extra_data.
+            
+            Default cipher and mode of operation is AES-256-GCM.
+            Modes not recognized as providing authenticity or integrity (i.e. CTR) will be authenticated via HMAC."""        
         return pride.security.encrypt(data=data, key=self.encryption_key, mac_key=self.mac_key, 
                                       iv=random._urandom(self.iv_size), extra_data=extra_data, 
                                       algorithm=self.encryption_algorithm, mode=self.encryption_mode,
@@ -222,6 +230,14 @@ class User(pride.base.Base):
         hasher = pride.security.hash_function(self.hash_function)    
         hasher.update(data)
         return hasher.finalize()
+        
+        
+class Session(User): 
+
+    verbosity = {"login_success" : "vvvv"}
+    defaults = {"open_command_line" : False}
+    required_attributes = ("username", "encryption_key", "mac_key", "file_system_key", "salt")    
+
         
 def test_User():
     import pride    

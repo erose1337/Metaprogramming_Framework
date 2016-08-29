@@ -325,7 +325,8 @@ class Defaults(Inherited_Attributes):
     inherited_attributes = {"defaults" : dict, "verbosity" : dict, 
                             "parser_ignore" : tuple, "flags" : dict,
                             "mutable_defaults" : dict, "required_attributes" : tuple,
-                            "site_config_support" : tuple, "post_initializer" : str}
+                            "site_config_support" : tuple, "post_initializer" : str,
+                            "allowed_values" : dict}
        
  
 class Site_Configuration(type):

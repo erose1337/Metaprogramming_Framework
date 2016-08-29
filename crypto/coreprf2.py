@@ -18,29 +18,7 @@ def micksRow(a):
 def choice(b, c, d):
     return d ^ (b & (c ^ d))    
        
-# mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))  
-  
-def shuffle_bytes(state):                 
-    #state[0] = state[0]
-    temp = state[1]
-    
-    state[1] = state[7] 
-    state[7] = state[2]    
-    state[2] = state[14]    
-    state[14] = state[4]
-    state[4] = state[5]
-    state[5] = state[11]
-    state[11] = state[6]
-    state[6] = state[8]
-    state[8] = state[3]
-    state[3] = temp
-         
-    temp = state[9]
-    state[9] = state[10]
-    state[10] = state[13]
-    state[13] = state[12]
-    state[12] = state[15]        
-    state[15] = temp    
+# mapping = bytearray((0, 7, 14, 1, 5, 11, 8, 2, 3, 10, 13, 6, 15, 12, 4, 9))    
   
 def round_function(state1, state2):    
     #state = integer_to_bytes(state1, 8) + integer_to_bytes(state2, 8)

@@ -21,7 +21,13 @@ def file_operation(filename, mode, method, file_type="open", offset=None, data=N
             return _file.read(data)            
             
 class Background_Refresh(pride.vmlibrary.Process):
-                
+    """ Usage: pride.objects['/Python/Background_Refresh'].add(client_object)
+    
+        Calls client.refresh for all clients in Background_Refresh.children.
+        
+        Newly initialized Data_Transfer_Client objects will call this method
+        automatically inside the __init__ method. """
+        
     defaults = {"priority" : .5}
     
     def run(self):
@@ -30,8 +36,12 @@ class Background_Refresh(pride.vmlibrary.Process):
         
         
 class Data_Transfer_Client(pride.authentication2.Authenticated_Client):
-    """ Client program for sending data securely to a party registered
-        with the target service. """
+    """ Client program for sending data to a party registered with the target service. 
+        
+        Security is provided by TLS, which provides end to end security between
+        machines. However, any Data Transfer Service that forwards the data towards
+        its destination will be able to view and/or manipulate the data. """
+        
     defaults = {"target_service" : "/Python/Data_Transfer_Service"}
     verbosity = {"send_to" : "vvv"}
     

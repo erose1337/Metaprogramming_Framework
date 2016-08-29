@@ -89,7 +89,7 @@ class Socket(base.Wrapper):
                 # Sockets that are connected to each other from within the application
                 # can communicate directly with each other via references, bypassing
                 # even the loopback connector; 0 round trips occur, all sends/recvs occur inline
-                "bypass_network_stack" : True,
+                "bypass_network_stack" : False,
                 "shutdown_on_close" : True, "shutdown_flag" : 2}
         
     additional_parser_ignores = defaults.keys()
@@ -232,7 +232,7 @@ class Socket(base.Wrapper):
             except Exception:
                 instance.alert("Caught non socket.error during recv:\n{}", (traceback.format_exc(), ), level=0)                
                 instance.delete()            
-        else:
+        else:            
             # send through the socket using the network stack
             _socket = self.socket
             _data = memoryview(data)
@@ -530,7 +530,7 @@ class Network(vmlibrary.Process):
     defaults = {"priority" : .01, "run_condition" : "sockets"}
    
     mutable_defaults = {"connecting" : set, "sockets" : list, 
-                        "_timestamp" : pride.utilities.timestamp,
+                     #   "_timestamp" : pride.utilities.timestamp,
                         "error_handler" : Socket_Error_Handler}          
         
     def add(self, sock):
@@ -546,7 +546,7 @@ class Network(vmlibrary.Process):
         del self.sockets
         del self.connecting
         
-    def run(self):
+    def run(self):        
         error_handler = self.error_handler
         readable, writable, empty_list = [], [], []
         # select has a max # of file descriptors it can handle, which
@@ -586,18 +586,18 @@ class Network(vmlibrary.Process):
         if connecting:
             if writable:                            
                 # if a connecting tcp client is now writable, it's connected   
-                for accepted in connecting.intersection(writable):                    
+                for accepted in connecting.intersection(writable):                                        
                     accepted.on_connect()
                 
             # if not, then it's still waiting or the connection timed out
             still_connecting = connecting.difference(writable)
             elapsed_time = self.priority
             
-            old_timestamp = self._timestamp
-            self._timestamp = now = pride.utilities.timestamp()
-            elapsed_time = now - old_timestamp
-            
-            for connection in still_connecting:                
+          #  old_timestamp = self._timestamp
+          #  self._timestamp = now = pride.utilities.timestamp()
+          #  elapsed_time = now - old_timestamp
+            now = pride.utilities.timestamp()
+            for connection in still_connecting:                                
                 if now - connection._started_connecting_at > connection.connect_timeout:                      
                     try:
                         connection.connect(connection.host_info)

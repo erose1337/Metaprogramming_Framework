@@ -32,11 +32,7 @@ else: # python 2.7.9+ will use SSLContext.wrap_socket
     WRAP_SOCKET_OPTIONS = ("server_side", "do_handshake_on_connect", 
                            "suppress_ragged_eofs", "server_hostname")
 
-        
-def generate_self_signed_certificate(name=""): # to do: pass in ssl commands and arguments
-    """ Creates a name.key, name.csr, and name.crt file. These files can
-        be used for the keyfile and certfile options for an ssl server socket"""
-    name = name or raw_input("Please provide the name for the .key, .crt, and .csr files: ", must_reply=True)
+def _get_openssl_location():
     OPENSSL = r"C:\\OpenSSL-Win32\\bin\\openssl.exe"# {} genrsa -aes256 -passout pass:x -out {}.pass.key 2048"
     OPENSSL64 = r"C:\\OpenSSL_Win64\\bin\openssl.exe"
     if os.path.exists(OPENSSL):
@@ -45,20 +41,70 @@ def generate_self_signed_certificate(name=""): # to do: pass in ssl commands and
         openssl = OPENSSL64
     else:
         openssl = "openssl"
-        
+    return openssl
+    
+def generate_self_signed_certificate(name=""): # to do: pass in ssl commands and arguments
+    """ Creates a name.key, name.csr, and name.crt file. These files can
+        be used for the keyfile and certfile options for an ssl server socket"""
+    name = name or raw_input("Please provide the name for the .key and .crt files", must_reply=True)
+    openssl = _get_openssl_location()
+    
     shell = pride.utilities.shell        
     shell("{} genrsa -aes256 -passout pass:x -out {}.pass.key 2048".format(openssl, name), True)
     shell("{} rsa -passin pass:x -in {}.pass.key -out {}.key".format(openssl, name, name), True)
     shell("{} req -new -key {}.key -out {}.csr".format(openssl, name, name), True)
     shell("{} x509 -req -days 365 -in {}.csr -signkey {}.key -out {}.crt".format(openssl, name, name, name), True)
     os.remove("{}.pass.key".format(name))    
-               
+    os.remove("{}.csr".format(name))
+    
 def generate_rsa_keypair(name=''):
     shell = pride.utilities.shell
     shell("openssl genrsa -out {}_private_key.pem 4096".format(name))
     shell("openssl rsa -pubout -in {}_private_key.pem -out {}_public_key.pem".format(
           name))
+
+class TLS_Certificate(pride.base.Base):
+    
+    defaults = {"name" : '', "name_prompt" : "Please provide the name for the .key and .crt files: "}                               
+                
+    def _get_name(self):
+        if not self._name:
+            self._name = raw_input(self.name_prompt, must_reply=True)
+        return self._name
+    def _set_name(self, value):
+        self._name = value
+    name = property(_get_name, _set_name)
+    
+    def __init__(self, **kwargs):
+        super(TLS_Certificate, self).__init__(**kwargs)          
+        self.generate_certificate()
+        
+    def generate_certificate(self):
+        raise NotImplementedError
+        
+        
+class Self_Signed_Certificate(TLS_Certificate):
             
+    def _get_key_file(self):
+        return "{}.key".format(self.name)
+    key_filename = property(_get_key_file)
+    
+    def _get_crt_file(self):
+        return "{}.crt".format(self.name)
+    crt_filename = property(_get_crt_file)
+    
+    def _get_key(self):
+        return self.create("pride.fileio.File", self.key_filename, 'rb')
+    key = property(_get_key)
+    
+    def _get_crt(self):
+        return self.create("pride.fileio.File", self.crt_filename, 'rb')
+    crt = property(_get_crt)
+    
+    def generate_certificate(self):
+        generate_self_signed_certificate(self.name)
+                           
+    
 class SSL_Client(pride.network.Tcp_Client):
     
     """ An asynchronous client side Tcp socket wrapped in an ssl socket.
@@ -154,7 +200,7 @@ class SSL_Server(pride.network.Server):
     defaults.update({"port" : 443, "Tcp_Socket_type" : "pride.networkssl.SSL_Socket",
                      "dont_save" : False, "server_side" : True,                     
                      # configurable
-                     "certfile" : '', "keyfile" : '', #.crt and .key
+                     "certfile" : '', "keyfile" : '', #.crt and .key filenames # can be set in site_config
                      "update_site_config_on_new_certfile" : True})       
         
     verbosity = {"certfile_not_found" : 0, "certfile_generated" : 0}
@@ -170,24 +216,24 @@ class SSL_Server(pride.network.Server):
             else:
                 self.alert("Usage of ssl requires certificates and key files.", level=0)
             if pride.shell.get_permission("{}: Generate a new self signed certificate and key now?: ".format(self.reference)):
-                filename = raw_input("(Optional) Please provide the filepaths for the .key, .crt, and .csr files: ")  
+                filename = raw_input("(Optional) Please provide the filepaths for the .key and .crt files: ")  
                 if not filename:
                     filename = "ssl_server"
                 if not os.path.split(filename)[0]: # no directory supplied or no filename
                     filename = os.path.join(pride.site_config.PRIDE_DIRECTORY, filename)
                                         
-                self.create("pride.programs.create_self_signed_certificate.Self_Signed_Certificate", name=filename)
+                certificate = self.create(Self_Signed_Certificate, name=filename)
                 self.alert("Self signed certificate generated; Continuing.", 
                            level=self.verbosity["certfile_generated"])
-                self.certfile = filename + ".crt"
-                self.keyfile = filename + ".key"
+                self.certfile = certificate.crt_filename
+                self.keyfile = certficiate.key_filename
                 
                 if (self.update_site_config_on_new_certfile and
                     not hasattr(pride.site_config, "pride_rpc_Rpc_Server_defaults")):
                     
                     pride.site_config.write_to("pride_rpc_Rpc_Server_defaults", 
-                                               certfile=r"{}.crt".format(filename),
-                                               keyfile=r"{}.key".format(filename))       
+                                               certfile=certificate.crt_filename,
+                                               keyfile=certificate.key_filename)
             else:
                 raise ValueError("pride.network.SSL_Server requires a certificate and key;" +
                                  " Unable to load certificate file; Unable to continue")            
@@ -210,3 +256,10 @@ class SSL_Server(pride.network.Server):
         super(SSL_Server, self).on_load(state)
         self.wrap_socket = ssl.wrap_socket # hardcoded for now
         
+def test_Self_Signed_Certificate():
+    test_cert = Self_Signed_Certificate(name="Self_Signed_Certificate_unit_test")    
+    print test_cert.name
+    
+if __name__ == "__main__":
+    test_Self_Signed_Certificate()
+    

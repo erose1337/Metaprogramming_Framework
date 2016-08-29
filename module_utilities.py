@@ -126,3 +126,17 @@ def get_all_modules_for_class(_class):
             required_modules.append((module_name, source, module))    
     return required_modules
     
+def patch_module_source(module, new_source):
+    if isinstance(module, str):
+        _module = sys.modules[module]
+    else:
+        _module = module
+        
+    filepath = _module.__file__
+    filepath = filepath[:-1] if filepath[-1] == 'c' else filepath
+    with open(filepath, 'w') as _file:
+        _file.write(new_source)
+        _file.flush()
+    
+    
+    

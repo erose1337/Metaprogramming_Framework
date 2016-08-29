@@ -93,6 +93,6 @@ import pride.gui
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
 """}
 
-pride_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.crt'}
-
 pride_user_User_defaults = {'username': 'localhost'}
+
+pride_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.crt'}

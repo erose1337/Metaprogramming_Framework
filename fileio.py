@@ -267,36 +267,19 @@ class Database_File(File):
         tags may be specified as an iterable of strings describing the 
         contents or purpose of the file. Files in the file system can be
         searched by tag. Tags may be modified whenever required by assigning
-        them when creating the file.
-        
-        The encrypted flag determines whether or not to encrypt file data
-        stored in the file system database. Only file data is encrypted, not
-        metadata or file name. Data is encrypted using pride.security.encrypt,
-        which defaults to AES-GCM with a 16 byte random salt. The encryption
-        key is that of the currently logged in User; If no User is logged in,
-        files cannot be encrypted or decrypted. The encrypt flag only applies
-        to memory saved onto the file system database; The contents of memory
-        are not encrypted. """
-    defaults = {"_data" : '', "tags" : '', "file_type" : "StringIO.StringIO",
-                "encrypted" : False, "indexable" : True}
+        them when creating the file. """
+    defaults = {"_data" : '', "tags" : '', "file_type" : "StringIO.StringIO"}
         
     def __init__(self, filename='', mode='', **kwargs):
-        super(Database_File, self).__init__(filename, mode, **kwargs)        
-        data, tags = pride.objects["/Python/File_System"]._open_file(self.filename, self.mode, 
-                                                                     self.tags, self.indexable)
+        super(Database_File, self).__init__(filename, mode, **kwargs)                
+        data, tags = pride.objects["/Python/File_System"]._open_file(self.filename, self.mode, self.tags)
+                
         filename = {"filename" : self.filename}
         if tags != self.tags:
             for old_tag in set(self.tags).difference(tags):
                 self.delete_from(old_tag, where=filename)
         self.tags = self.tags or tags
-        if self.encrypted and data:
-            data, _filename = pride.objects["/User"].decrypt(data)
-            if self.indexable:
-                assert _filename == filename["filename"], (_filename, filename["filename"])
-            else:                                               
-                filename = objects["/Python/File_System"]._hash(filename["filename"])
-                assert _filename == filename, (_filename, filename)
-                
+
         self.file.write(data)
         if self.mode[0] != 'a':
             self.file.seek(0)
@@ -307,8 +290,7 @@ class Database_File(File):
     def __exit__(self, type, value, traceback):
         if not self.deleted:
             # delete_from_filesystem can be called in the context
-            self.save()
-            self.delete()        
+            self.close()       
         if traceback:
             raise
         return value
@@ -325,20 +307,40 @@ class Database_File(File):
         """ Saves file contents and metadata to /Python-File_System. """
         file = self.file
         backup_position = file.tell()
-        file.seek(0)        
-        pride.objects["/Python/File_System"].save_file(self.filename, file.read(), 
-                                                         self.tags, self.encrypted,
-                                                         self.indexable)                                                       
+        file.seek(0)                
+        pride.objects["/Python/File_System"].save_file(self.filename, file.read(), self.tags)                                                       
         file.seek(backup_position)
-        
+                
     def delete_from_filesystem(self):
         pride.objects["/Python/File_System"].delete_file(self.filename)
         self.delete()
         
         
+class Encrypted_File(Database_File):
+            
+    defaults = {"crypto_provider" : "pride"}
+    allowed_values = {"crypto_provider" : ("pride", "OS", "session")}            
+    
+  #  def __init__(self, **kwargs):
+  #      super(Encrypted_File, self).__init__(**kwargs)
+  #      data = pride.objects["/Python/Encryption_Service"]
+        
+    def save(self):
+        file = self.file
+        position = file.tell()
+        file.seek(0)
+        data = pride.objects["/Python/Encryption_Service"].encrypt(data, self.crypto_provider)
+        pride.objects["/Python/File_System"].save_file(self.get_filename, data, self.tags)        
+        file.seek(position)
+        
+    def get_filename(self):                    
+        user = pride.objects["/Python/Session"] if self.crypto_provider == "session" else pride.objects["/User"]
+        return user.generate_tag(user.file_system_key + user.salt + self.filename)        
+                
+    
 class File_System(pride.database.Database):
     """ Database object for managing database file objects. """    
-    defaults = {"hash_function" : "SHA256", "salt_size" : 16, "database_name" : ''}
+    defaults = {"database_name" : '', "database_file_type" : "pride.fileio.Database_File"}
     
     verbosity = {"file_modified" : "vv", "file_created" : "vv"}
     
@@ -346,7 +348,7 @@ class File_System(pride.database.Database):
                                      "date_created TIMESTAMP", "date_modified TIMESTAMP",
                                      "date_accessed TIMESTAMP", "file_type TEXT",
                                      "tags TEXT"),
-                          "Tags" : ("tag TEXT PRIMARY_KEY", )}
+                          "Tags" : ("tag TEXT PRIMARY_KEY", )}                          
      
     primary_key = {"Files" : "filename", "Tags" : "tag"}
     
@@ -356,27 +358,13 @@ class File_System(pride.database.Database):
         for tag in self.query("Tags"):
             tag = tag[0]
             if tag not in database_structure:
-                self.create_table(tag, ("filename TEXT PRIMARY_KEY", ))
-    
-    def _hash(self, filename):
-        user = objects["/User"]
-        hasher = pride.security.hash_function(self.hash_function)
-        assert user.file_system_key, filename
-        assert user.salt, filename
-        hasher.update(user.file_system_key + user.salt + filename)
-        return hasher.finalize()   
+                self.create_table(tag, ("filename TEXT PRIMARY_KEY", ))    
                 
-    def save_file(self, filename, data, tags=tuple(), encrypt=False, indexable=True):
+    def save_file(self, filename, data, tags=tuple()):
         now = time.time()
-        file_info = {}          
-        if not indexable: 
-            filename = self._hash(filename)                    
-            
-        if encrypt and data:
-            data = objects["/User"].encrypt(data, extra_data=filename)
-               
+        file_info = {}            
         file_info.update({"date_modified" : now, "date_created" : now, "data" : data, 
-                         "file_type" : os.path.splitext(filename)[-1] if indexable else ''})
+                         "file_type" : os.path.splitext(filename)[-1]})
         if tags:
             file_info["tags"] = ' '.join(tags)
             for tag in tags:
@@ -397,24 +385,22 @@ class File_System(pride.database.Database):
             self.alert("Saving new file: {}".format(filename), 
                        level=self.verbosity["file_created"])
         
-    def _open_file(self, filename, mode, tags, indexable):        
-        if not indexable:        
-            filename = self._hash(filename)
-            
+    def _open_file(self, filename, mode, tags):        
         if mode[0] == 'w':
             try:
                 self.delete_from("Files", where={"filename" : filename})
             except sqlite3.Error:
                 pass
-            self.save_file(filename, '', tags)    
+            self.save_file(filename, '', tags) 
+        
         result = self.query("Files", where={"filename" : filename},
-                            retrieve_fields=("data", "tags"))        
+                            retrieve_fields=("data", "tags"))                
         if not result and mode[0] == 'r':
             raise IOError("File {} does not exist in {}".format(filename, self.reference))
         return result or ('', '')
         
     def open_file(self, filename, mode):
-        return self.create(Database_File, filename, mode)
+        return self.create(self.database_file_type, filename, mode)
         
     def delete_file(self, filename):
         self.delete_from("Files", where={"filename" : filename})

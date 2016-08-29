@@ -1,30 +1,7 @@
 from utilities import rotate_left, slide, integer_to_bytes, bytes_to_integer, xor_subroutine, longs_to_bytes, bytes_to_longs
+from ciphercomponents import choice_rotate_mixRow as nonlinear_mixing       
+from ciphercomponents import invert_choice_rotate_mixRow as invert_nonlinear_mixing
 
-def mixRow(a):
-    b = a & 0x80808080;
-    
-    # b |= b >> 1; # without multiply instruction
-    # b |= b >> 3;
-    # b >>= 3;
-        
-    b = (b >> 7) * 0x1B; # with multiply instruction
-
-    b ^= (a << 1) & 0xFEFEFEFE;
-    c = a ^ b;
-    b ^= (c >>  8) | ((c << 24) & 0xFFFFFFFF);
-    b ^= ((a <<  8) & 0xFFFFFFFF) | (a >> 24);
-    return b ^ (a >> 16) ^ ((a << 16) & 0xFFFFFFFF);
-    
-def choice(a, b, c):
-    return c ^ (a & (b ^ c))  
-    
-def nonlinear_mixing(a, b, c, d, bit_width=32):    
-    a ^= mixRow(rotate_left(choice(b, c, d), 1, bit_width=bit_width))
-    b ^= mixRow(rotate_left(choice(c, d, a), 3, bit_width=bit_width))
-    c ^= mixRow(rotate_left(choice(d, a, b), 5, bit_width=bit_width))
-    d ^= mixRow(rotate_left(choice(a, b, c), 7, bit_width=bit_width)) 
-    return a, b, c, d            
-            
 def encrypt(data, key, rounds=2):    
     k1, k2, k3, k4 = bytes_to_longs(key)
     s1, s2, s3, s4 = bytes_to_longs(data)
@@ -39,14 +16,7 @@ def encrypt(data, key, rounds=2):
         k1, k2, k3, k4 = nonlinear_mixing(k1, k2, k3, k4)            
         
     return longs_to_bytes(s1 ^ k1, s2 ^ k2, s3 ^ k3, s4 ^ k4)    
-            
-def invert_nonlinear_mixing(a, b, c, d, bit_width=32):
-    d ^= mixRow(rotate_left(choice(a, b, c), 7, bit_width=bit_width)) 
-    c ^= mixRow(rotate_left(choice(d, a, b), 5, bit_width=bit_width))
-    b ^= mixRow(rotate_left(choice(c, d, a), 3, bit_width=bit_width))
-    a ^= mixRow(rotate_left(choice(b, c, d), 1, bit_width=bit_width))
-    return a, b, c, d   
-    
+                
 def decrypt(data, key, rounds=2):
     k1, k2, k3, k4 = bytes_to_longs(key)
     s1, s2, s3, s4 = bytes_to_longs(data)
@@ -87,7 +57,6 @@ def test_encrypt_decrypt():
     
     
 if __name__ == "__main__":
-    #test_encrypt_decrypt()
-    #test_encrypt_stream()
-    test_encrypt_stream_metrics()
+    test_encrypt_decrypt()
+        
     

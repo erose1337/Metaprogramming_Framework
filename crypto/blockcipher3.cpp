@@ -299,32 +299,25 @@ void test_encrypt_decrypt()
 
 void test_encrypt_performance()
 {        
-    int rounds = 8, blocks = 65536, index, index2, test_count=100;    
-    unsigned char key[16], round_keys[(rounds + 1) * 16];
-    
-	WORD_TYPE* data = (WORD_TYPE*)malloc(DATA_SIZE * blocks * sizeof(WORD_TYPE));
-	
-	// setup test data
-	memset(data, 16, DATA_SIZE * blocks * sizeof(WORD_TYPE));	
-	memset(key, 1, sizeof(key));
-	
+    int rounds = 32, blocks = 65536, index, index2, test_count=1000000;    
+    unsigned char key[16], data[16], round_keys[(rounds + 1) * 16];	
+		
 	key_schedule(round_keys, key, rounds);    
     
     Stopwatch s;    
     double timee = 0;
     for (index2 = 0; index2 < test_count; index2++)
     {
-        for (index = 0; (index * 16) < DATA_SIZE * blocks * sizeof(WORD_TYPE); index++)
-        {        
-            encrypt_cached_keyschedule(data + (index * 16), round_keys, rounds);
-        }
+        encrypt_cached_keyschedule(data, round_keys, rounds);     
         timee += s.Lap();
-                    
     }
-    timee /= test_count;
-    printf("Time taken: %5.2f\n", timee);
-    double mbps = 1.0 / timee;
-	printf("mbps: %5.2f\n", mbps);
+
+    
+   // timee /= test_count;
+    printf("\nBytes enciphered: %i bytes (%iKB) (%iMB)", test_count * 16, (test_count * 16) / 1024, ((test_count * 16) / (1024 * 1024)));
+    printf("\nTime taken: %5.2f", timee);
+    double bps = (test_count * 16) / timee;
+	printf("\n%5.2f Bytes/second (%5.2f KB//second) (%5.2f MB/second)\n", bps, bps / 1024, bps / (1024 * 1024));
     
 }   
 

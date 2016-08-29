@@ -93,7 +93,7 @@ if is_version_two:
             For documentation of the standard CPython raw_input function, consult
             the python interpreter or the internet. """        
         if getattr(objects.get("/Python/Interpreter", None), "_disable_raw_input", None):
-            raise RequestDenied("raw_input does not function remotely and would block")        
+            raise RequestDenied("raw_input does not function remotely")        
         if must_reply:
             reply = ''
             while not reply:

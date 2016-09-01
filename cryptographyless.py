@@ -1,5 +1,5 @@
 """ Provides authenticated encryption and decryption functions using only the python standard library.
-    To be used in situations where the cryptography module cannot be installed, usually for permission reasons. """
+    Used when the cryptography module cannot be installed. """
     
 import itertools
 import hashlib
@@ -72,8 +72,28 @@ class Hash_Object(object):
     def finalize(self):
         return self.hash_function.digest()
 
-        
+def hash_password(password, iterations, algorithm="pbkdf2hmac", sub_algorithm="sha256",
+                                        salt=None, salt_size=16, output_size=32,
+                                        backend="cryptographyless"):    
+    salt = os.urandom(salt_size)
+    header = save_data(algorithm, sub_algorithm, iterations, salt_size, output_size)
+    if algorithm == "pbkdf2hmac":
+        return save_data(header, salt, hashlib.pbkdf2_hmac(sub_algorithm, header + password, salt, iterations, output_size))
+    else:
+        return -1
 
+def verify_hashed_password(password, header_salt_hash, backend="cryptographyless"):
+    header, salt, correct_output = load_data(header_salt_hash)
+    algorithm, sub_algorithm, iterations, salt_size, output_size = load_data(header)
+    if algorithm == "pbkdf2hmac":
+        output = hashlib.pbkdf2_hmac(sub_algorithm, header + password, salt, iterations, output_size)
+    else:
+        return -1
+    return constant_time_comparison(output, correct_output)    
+    
+def constant_time_comparison(data1, data2):
+    return hmac.compare_digest(data1, data2)        
+        
 def hash_function(algorithm_name, backend=None):
     return Hash_Factory(algorithm_name)()#Hash_Object(algorithm_name.lower())#getattr(hashlib, algorithm_name.lower())()
  
@@ -261,9 +281,20 @@ def test_encrypt_decrypt():
     packet = encrypt(_TEST_MESSAGE, _TEST_KEY, _TEST_KEY, extra_data="extra data")
     decrypted = decrypt(packet, _TEST_KEY, _TEST_KEY)
     assert decrypted == (_TEST_MESSAGE, "extra data"), decrypted
-        
+    print "Passed encrypt_decrypt unit test"
+    
+def test_hash_password():
+    password = "password"
+    iterations = 100000
+    _hash = hash_password(password, iterations)
+    assert verify_hashed_password(password, _hash)   
+    invalid_password = "passwore"
+    assert not verify_hashed_password(invalid_password, _hash)    
+    print "Passed hash_password/verify_password unit test"
+    
 if __name__ == "__main__":
     test_hmac_rng()
     test__encrypt__decrypt()
     test_encrypt_decrypt()
+    test_hash_password()
     

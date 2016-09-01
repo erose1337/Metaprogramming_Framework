@@ -2,6 +2,7 @@ import sys
 import random
 import hashlib
 import os
+import getpass
 
 from pride import Instruction
 import pride.security
@@ -11,6 +12,34 @@ import pride.utilities
 from pride.security import hash_function
 from pride.errors import SecurityError, UnauthorizedError             
 
+# generate encryption/signing key pairs
+# encrypt the private key symmetrically via a password
+    # private key can be stored on device, or on the server
+    
+# send session key to partner
+# xor key with key sent by partner
+
+# server stores: identifier, encrypted private key, (possibly encrypted) public key, hmac(keypair, client_HMAC_key)
+
+#client --request public key-user:server----------------------------> server
+#client <----------------------------------------servers public key-- server
+#
+
+#client --.request private key
+
+
+#client --register-username-password-keypair_tag-encrypted_private_key-public_key-> server
+#
+#client --login-username--encrypted_session_secret1------------> server
+#client <--encrypted_private_key-encrypted_session_secret2------ server
+# |                                                                |
+# |                                                                |
+# |                                                                |
+#derive session secret                                       derive session secret
+#    - decrypt encrypted_session_secret via private key
+#    - xor both session secrets together to obtain final session secret
+
+    
                     
 @pride.decorators.required_arguments(no_args=True)
 def remote_procedure_call(callback_name='', callback=None):
@@ -39,89 +68,14 @@ def _split_byte(byte):
     a, b = int(bits[:4], 2), int(bits[4:], 2)
     return a, b     
         
-class Authentication_Table(object):
-    """ Provides an additional factor of authentication. During account
-        registration, the server generates an Authentication_Table for the
-        newly registered client. The server records this table and sends a 
-        copy to the client. When the client attempts to login, the server
-        generates a random selection of indices and sends these to the client.
-        The client is supposed to return the appropriate symbols from the
-        table and the server matches what it expected against the response.
-        
-        Acts as "something you have", albeit in the form of data. """
-    def __init__(self, rows=None, hash_function="sha256"):
-        self.hash_function = hash_function
-        size = 16
-        if not rows:
-            characters = [chr(x) for x in xrange(256)]
-            rows = []
-            for row_number in xrange(size):
-                row = []
-                while len(row) < size:
-                    random_number = random._urandom(1)
-                    try:
-                        characters.remove(random_number)
-                    except ValueError:
-                        continue
-                    else:
-                        row.append(random_number)
-                rows.append(''.join(row))
-        self.rows = rows
-    
-    @staticmethod
-    def generate_challenge(count=9):
-        """ Generates count random pairs of indices, which range from 0-15 """
-        return tuple(_split_byte(ord(byte)) for byte in random._urandom(count))
-        
-    def get_passcode(self, *args): 
-        """ Returns a passcode generated from the symbols located at the 
-            indices specified in the challenge"""
-        return getattr(hashlib, 
-                       self.hash_function)((''.join(self.rows[row][index] for 
-                                            row, index in args))).digest()
-    
-    @staticmethod
-    def compare(calculation, response):
-        """ Compares two iterables in constant time """
-        success = False
-        for index, byte in enumerate(calculation):
-            if response[index] != byte:
-                break
-        else:
-            success = True
-        return success
-        
-    def save(self, _file=None):
-        """ Saves the table information to a bytestream. If _file is supplied,
-            the bytestream is dumped to the file instead of returned.
-            
-            WARNING: This bytestream is a secret that authenticates a username
-            and should be protected as any password or secure information. """
-        text = ''.join(self.rows)
-        if _file:
-            _file.write(text)
-            _file.flush()
-        else:
-            return text
-    
-    @classmethod
-    def load(cls, text):
-        """ Load a bytestream as returned by Authenticated_Table.save and 
-            return an authenticated table object. """
-        return cls(rows=[row for row in slide(text, 16)])
-
-        
 class Authenticated_Service(pride.base.Base):
    
     defaults = {# security related configuration options
-                "hash_function" : "SHA256", "database_name" : '', "shared_key_size" : 32,
-                "authentication_table_size" : 256, "challenge_size" : 9,
-                
-                # specific applications may wish to modify this
-                "hkdf_table_update_info_string" : "Authentication Table Update",                             
-                
+                "iterations" : 100000, "password_hashing_algorithm" : "pbkdf2hmac",
+                "sub_algorithm" : "sha512", "salt_size" : 16, "output_size" : 32,
+                                                                
                 # non security related configuration options
-                "database_type" : "pride.database.Database", 
+                "database_type" : "pride.database.Database", "database_name" : '',
                 "validation_failure_string" :\
                    ".validate: Authorization Failure:\n" +
                    "    ip blacklisted: {}    ip whitelisted: {}\n" +
@@ -129,23 +83,21 @@ class Authenticated_Service(pride.base.Base):
                    "    method_name: '{}'    method available remotely: {}\n" +                   
                    "    login allowed: {}    registration allowed: {}",
                 "allow_login" : True, "allow_registration" : True,
-                "login_message" : "Welcome to the {}, {} from {}"}              
+                "login_message" : "Welcome to the {}, {} from {}"}                     
     
-    verbosity = {"register" : "vv", "login_stage_two" : "vv", "validate_success" : 'vvv',
-                 "on_login" : "vv", "login" : "vv", "authentication_success" : "vv",
-                 "authentication_failure" : "v", "validate_failure" : "vvv",
-                 "login_stage_two_hash_not_found" : "v",
+    verbosity = {"register" : "vv", "validate_success" : 'vvv',
+                 "login" : "vv", "authentication_success" : "vv",
+                 "authentication_failure" : "v", "validate_failure" : "vvv",                
                  "authentication_failure_already_logged_in" : 'v'}
     
     flags = {"current_session" : ('', None)}
-    
-    database_structure = {"Users" : ("authentication_table_hash BLOB PRIMARY_KEY", 
-                                     "authentication_table BLOB", "session_key BLOB",
-                                     "username TEXT")}
+     
+    database_structure = {"Users" : ("identifier BLOB PRIMARY_KEY", 
+                                     "verifier_hash BLOB", "salt BLOB")}
                               
-    database_flags = {"primary_key" : {"Users" : "authentication_table_hash"}}
+    database_flags = {"primary_key" : {"Users" : "identifier"}}
     
-    remotely_available_procedures = ("register", "login", "login_stage_two", "logout")
+    remotely_available_procedures = ("register", "login", "change_credentials", "logout")
     
     rate_limit = {"login" : 2, "register" : 2}       
     
@@ -157,15 +109,16 @@ class Authenticated_Service(pride.base.Base):
     
     def _get_current_user(self):
         return self.session_id[self.current_session[0]]
-#    def _set_current_user(self, session_id, ip, username):
-#        self.session_id[session_id] = username
-#        self.peer_ip[session_id] = ip
+        
+    def _set_current_user(self, session_id, ip, username):
+        self.session_id[session_id] = username
+        self.peer_ip[session_id] = ip
         
     def _del_current_user(self):
         id = self.current_session[0]
         del self.session_id[id]
         del self.peer_ip[id]
-    current_user = property(_get_current_user, fdel=_del_current_user)
+    current_user = property(_get_current_user, _set_current_user, fdel=_del_current_user)
     
     def __init__(self, **kwargs):
         super(Authenticated_Service, self).__init__(**kwargs)
@@ -182,99 +135,61 @@ class Authenticated_Service(pride.base.Base):
                                     database_structure=self.database_structure,
                                     **self.database_flags)
             
-    def register(self, username=''):
-        self.alert("Registering new user", level=self.verbosity["register"])
-        authentication_table = pride.security.random_bytes(self.authentication_table_size)
-        hasher = hash_function(self.hash_function)
-        hasher.update(authentication_table + ':' + "\x00" * self.shared_key_size)
-        table_hash = hasher.finalize()
-        self.database.insert_into("Users", (table_hash, authentication_table, 
-                                            "\x00" * self.shared_key_size, username))
-        return authentication_table
-        
-    def login(self, challenge):
-        authentication_table_hash, ip = self.current_session
-        client_challenge = Authentication_Table.generate_challenge(self.challenge_size)
-        try:
-            (saved_table,
-             session_key) = self.database.query("Users", retrieve_fields=("authentication_table",
-                                                                          "session_key"),
-                                                where={"authentication_table_hash" : authentication_table_hash})
-        except ValueError:
-            response = pride.security.random_bytes(32)
-        else:
-            table = Authentication_Table.load(saved_table)
-            response = table.get_passcode(*challenge)
-            hasher = hash_function(self.hash_function)
-            hasher.update(response + ':' + session_key)            
-            
-            correct_answer = table.get_passcode(*client_challenge)
-            _answer_hasher = hash_function(self.hash_function)
-            _answer_hasher.update(correct_answer + ':' + session_key)
-            self._challenge_answer[authentication_table_hash] = _answer_hasher.finalize()
-            self.alert("Issuing authentication challenge", level=self.verbosity["login"])
-            response = hasher.finalize()
-        return response, client_challenge
-        
-    def login_stage_two(self, hashed_answer, original_challenge):
-        authentication_table_hash, ip = self.current_session           
-        user_id = {"authentication_table_hash" : authentication_table_hash}
-        self.alert("{} attempting to log in".format(ip),
-                   level=self.verbosity["login_stage_two"])       
-        
-        # a fake key, iv, tag, and response for failed attempts
-        encrypted_key = pride.security.random_bytes(self.shared_key_size + 48 + 32)
-        try:
-            (saved_table,
-             session_key,
-             username) = self.database.query("Users", 
-                                             retrieve_fields=("authentication_table",
-                                                              "session_key", "username"),
-                                             where=user_id)
-        except TypeError: # this is really bad, exceptions are way slower then no exceptions, and the timing leaks information
-            self.alert("Failed to find authentication_table_hash in database for login_stage_two",
-                       level=self.verbosity["login_stage_two_hash_not_found"])             
-        else:
-            if authentication_table_hash in self.session_id:
-                self.alert("Authentication Failure: {} '{}';'{}' already logged in at {}",
-                           (ip, username, username, self.peer_ip[authentication_table_hash]),
-                           level=self.verbosity["authentication_failure_already_logged_in"])
-                                
-            elif Authentication_Table.compare(self._challenge_answer[authentication_table_hash], hashed_answer):
-                del self._challenge_answer[authentication_table_hash]                
-                self.alert("Authentication success: {} '{}'",
-                           (ip, username), level=self.verbosity["authentication_success"])
-                
-                new_key = pride.security.random_bytes(self.shared_key_size)
-                
-                hkdf = invoke("pride.security.hkdf_expand", self.hash_function,
-                              length=self.authentication_table_size,
-                              info=self.hkdf_table_update_info_string) 
-                new_table = hkdf.derive(saved_table + ':' + new_key)
-                table_hasher = hash_function(self.hash_function)
-                table_hasher.update(new_table + ':' + new_key)
-                new_table_hash = table_hasher.finalize()      
-                
-                self.database.update_table("Users", where=user_id, 
-                                           arguments={"authentication_table_hash" : new_table_hash,
-                                                       "authentication_table" : new_table,
-                                                       "session_key" : new_key})
-                self.session_id[new_table_hash] = username or new_table_hash    
-                self.current_session = (new_table_hash, ip) 
-                self.peer_ip[new_table_hash] = ip                       
-                login_message = self.on_login()                
-                login_packet = pride.utilities.save_data(new_key, login_message)                                                    
-                encrypted_key = pride.security.encrypt(login_packet, session_key, session_key)                                            
-            else:                
-                self.alert("Authentication Failure: {} '{}'",
-                           (ip, username), 
-                           level=self.verbosity["authentication_failure"])
-        return encrypted_key
-        
-    def on_login(self):
-        session_id, ip = self.current_session        
-        return self.login_message.format(self.reference, self.session_id[session_id], ip)
+  #  def register(self, identifier, encrypted_private_key, public_key, keypair_tag):
+  #      self.alert("Registering new user", level=self.verbosity["register"])
+  #     
+  #      self.database.insert_into("Users", (identifier, encrypted_private_key, public_key, 
+  #                                          keypair_tag, "\x00" * self.shared_key_size))
+  #      return True
+  #      
+  #  def get_public_key(self, identifier):
+  #      public_key = self.database.query("Users", retrieve_fields=("public_key", ), 
+  #                                                where={"identifier" : identifier})
+  #      return public_key
     
+    def register(self, identifier, password_verifier):        
+        salt = os.urandom(self.salt_size)
+        verifier_hash = self._hash_password(password_verifier, salt)
+        self.database.insert_into("Users", (identifier, verifier_hash, salt))
+        return self.register_success(identifier)
+        
+    def change_credentials(self, identifier, password_verifier, new_identifier, new_password_verifier):
+        correct_verifier, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
+                                                              where={"identifier" : identifier})
+        if pride.security.constant_time_comparison(correct_verifier, password_verifier):
+            return self.register(new_identifier, new_password_verifier)
+        else:
+            return self.register_failure(identifier)
+    
+    def register_success(self, username):
+        return self.registration_success_message.format(username)
+    
+    def register_failure(self, username):
+        return self.registration_failure_message.format(username)
+        
+    def login(self, username, password):      
+        correct_hash, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"), 
+                                                          where={"username" : username})                                                          
+        password_hash = self._hash_password(password, salt)
+        if pride.security.constant_time_comparison(password_hash, correct_hash):
+            return self.login_success(username)
+        else:
+            return self.login_failure(username)
+            
+    def login_success(self, username):
+        session_id, user_ip = self.current_session
+        self.current_user = session_id, username, user_ip
+        self.alert("'{}' logged in successfully from {}".format(username, user_ip), level=self.verbosity["login_success"])
+        return True
+        
+    def login_failure(self, username):
+        self.alert("'{}' failed to login".format(username), level=self.verbosity["login_failure"])
+        return False         
+        
+    def _hash_password(self, password, salt):
+        return pride.security.hash_password(password, self.iterations, algorithm=self.password_hashing_algorithm, 
+                                                                       sub_algorithm=self.sub_algorithm,
+                                                                       salt=salt, output_size=self.output_size)   
     def logout(self):        
         del self.current_user     
         
@@ -286,8 +201,8 @@ class Authenticated_Service(pride.base.Base):
             is successful. """
         if ((method_name not in self.remotely_available_procedures) or
             (peername[0] in self.ip_blacklist) or 
-            (session_id == '0' and method_name != "register") or
-            (session_id not in self.session_id and method_name not in ("register", "login", "login_stage_two")) or
+            (session_id == '0' and method_name not in ("register", "login")) or
+            (session_id not in self.session_id and method_name not in ("register", "login")) or
             (method_name == "register" and not self.allow_registration) or
             (method_name == "login" and not self.allow_login)):
             
@@ -342,11 +257,7 @@ class Authenticated_Service(pride.base.Base):
     def on_load(self, attributes):
         super(Authenticated_Service, self).on_load(attributes)
         self._load_database()
-        
-#    def disconnect_idle_clients(self):
-#        for session_id in self.not_idle.difference(self.session_id):
-#            del 
-  
+
   
 class Authenticated_Client(pride.base.Base):   
     
@@ -355,42 +266,37 @@ class Authenticated_Client(pride.base.Base):
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "delayed_request_sent" : "vv", "login_failed" : 0}
                  
-    defaults = {# security related configuration options
-                "hash_function" : "SHA256", "authentication_table_size" : 256,
-                "shared_key_size" : 32, "challenge_size" : 9,
-                                                
-                # application specific needs may configure this when necessary
-                "hkdf_table_update_info_string" : "Authentication Table Update",
-                "crypto_provider" : "pride", "file_system" : "pride",
-                
-                # non security related options
-                "target_service" : "/Python/Authenticated_Service",
+    defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
                 "password_prompt" : "{}: Please provide the pass phrase or word for {}@{}: ",
                 "ip" : "localhost", "port" : 40022, "auto_login" : True, 
-
-                # a callback function may be passed to the constructor to handle
-                # successful registration without defining/extending a class
-                # this is convenient sometimes; otherwise forget about it
-                 "_register_results" : None,
                  
-                 "_user_database" : ''}
+                "username" : '', "password" : None, "hash_password_clientside" : True,
+                "iterations" : 100000, "password_hashing_algorithm" : "pbkdf2hmac",
+                "sub_algorithm" : "sha512", "salt" : None, "salt_size" : 16, "output_size" : 32}
     
     mutable_defaults = {"_delayed_requests" : list}
     flags = {"_registering" : False, "logged_in" : False, "_logging_in" : False,
-             "_username" : '', "auto_register" : False, "_insert_new_user_into_site_config" : None}
-    
+             "_username" : '', "auto_register" : False, "_insert_new_user_into_site_config" : None,
+             "_password_hash" : ''}       
+                    
+    def _get_password(self):
+        return self._password or getpass.getpass(self.password_prompt)
+    def _set_password(self, value):
+        self._password = value
+    password = property(_get_password, _set_password)
+            
+    def _get_password_hash(self):
+        return self._password_hash or self._hash_password(self.password)
+    def _set_password_hash(self, value):
+        self._password_hash = value
+    password_hash = property(_get_password_hash, _set_password_hash)
+        
     def _get_host_info(self):
         return (self.ip, self.port)
     def _set_host_info(self, value):
         self.ip, self.port = value
-    host_info = property(_get_host_info, _set_host_info)
-    
-    def _get_password(self):
-        return (self._password or getpass.getpass(self.password_prompt))
-    def _set_password(self, value):
-        self._password = value
-    password = property(_get_password, _set_password)    
+    host_info = property(_get_host_info, _set_host_info)      
     
     def _get_username(self):
         if not self._username:
@@ -413,40 +319,30 @@ class Authenticated_Client(pride.base.Base):
         super(Authenticated_Client, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference, self.ip, self.target_service)
         self.session = self.create("pride.rpc.Session", session_id='0', host_info=self.host_info)
-        module = self.__module__
-        if module == "__main__":
-            self.alert("Using __main__ as module", level=0)
-        name = ((self._user_database or module + '.' + type(self).__name__)
-                + ":{}".format(self.username))
-        
-        self.authentication_table_file = "{}_auth_table.key".format(name)
-        self.history_file = "{}_history.key".format(name)
-                                       
+                                                       
         if self.auto_login:
             self.alert("Auto logging in", level=self.verbosity["auto_login"])
             self.login()
     
-    def _supply_username(self):
-        self._registering = True
-        return (self, self.username), {}
-    @pride.decorators.with_arguments_from(_supply_username)
-    @remote_procedure_call(callback_name="_store_auth_table")
-    def register(self): pass
-    
-    #def save_file(self, filename, data, indexable=False):    
-        #with self.create(self.token_file_type, self.authentication_table_file, 
-                        #'wb', encrypted=True, indexable=indexable) as _file:
-            #_file.write(new_table + ("\x00" * self.shared_key_size))
-        
-    def _store_auth_table(self, new_table):
-        pride.objects["/Python/Encryption_Service"].save_to_file(self.authentication_table_file, 
-                                                                 new_table + ("\x00" * self.shared_key_size), 
-                                                                 'wb', self.file_system, self.crypto_provider)                                                             
+    def get_credentials(self):
+        return (self, (self.username, self.password_hash if self.hash_password_clientside else self.password), {})
                 
-        self.alert("Registered successfully", level=self.verbosity["register_sucess"])  
-        self._registering = False
+    @pride.decorators.with_arguments_from(get_credentials)
+    @remote_procedure_call(callback_name="register_results")
+    def register(self, username, password_hash): 
+        pass
+    
+    def register_results(self, server_response):
+        self._registering = False  
+        if server_response == True:
+            self.register_success()
+        else:
+            self.register_failure()                                                      
+                        
+    def register_success(self):
+        self.alert("Registered successfully", level=self.verbosity["register_success"])
         
-        if self.register_username_as_default:
+        if pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)):
             entry = '_'.join((self.__module__.replace('.', '_'),
                               self.__class__.__name__,
                               "defaults"))                            
@@ -454,93 +350,33 @@ class Authenticated_Client(pride.base.Base):
 
         if self.auto_login:
             self.login()
-        else:
-            if self._register_results:
-                self._register_results()
                 
-    def _hash_auth_table(self, auth_table, shared_key):
-        hasher = hash_function(self.hash_function)
-        hasher.update(auth_table + ':' + shared_key)
-        return hasher.finalize()
+    def register_failure(self):
+        self.alert("Registration failed", level=self.verbosity["register_failure"])
         
-    def _token_not_registered(self): # called when login fails because user is not registered
-        if not self._registering:
-            self.alert("Login token for '{}' not found ({})", (self.username, self.authentication_table_file), level=0)            
-            if self.auto_register or pride.shell.get_permission("Register now? "):                  
-                if self.ip in ("localhost", "127.0.0.1"):
-                    local_service = objects[self.target_service]
-                    authentication_table = local_service.register(self.username)
-                    self._store_auth_table(authentication_table)                                       
-                else:
-                    self.register()
-                    
-    def _get_auth_table_hash(self):                        
-        file_data = pride.objects["/Python/Encryption_Service"].read_from_file(self.authentication_table_file,
-                                                                               self.file_system, self.crypto_provider)        
-        table_size, key_size = self.authentication_table_size, self.shared_key_size                                                                               
-        auth_table = self.auth_table = file_data[:table_size]
-        shared_key = self.shared_key = file_data[table_size:table_size+key_size]
-        
-        self._logging_in = True    
-        self.session.id = self._hash_auth_table(auth_table, shared_key)
-        challenge = Authentication_Table.generate_challenge(self.challenge_size)
-        table = Authentication_Table.load(auth_table)
-        hasher = hash_function(self.hash_function)
-        hasher.update(table.get_passcode(*challenge) + ':' + shared_key)
-        self._answer = hasher.finalize()    
-        return (self, challenge), {}
-            
-    @pride.decorators.on_exception(IOError, _token_not_registered)
-    @pride.decorators.with_arguments_from(_get_auth_table_hash)
-    @remote_procedure_call(callback_name="login_stage_two")
-    def login(self): pass
-    
-    def _answer_challenge(self, response):
-        hashed_answer, challenge = response
-        if hashed_answer != self._answer:
-            raise SecurityError("Server responded with incorrect response to challenge")
+    def login(self):
+        return self.get_credentials()
 
-        answer = Authentication_Table.load(self.auth_table).get_passcode(*challenge)
-        hasher = hash_function(self.hash_function)
-        hasher.update(answer + ':' + self.shared_key)
-        self.alert("Answering challenge", level=self.verbosity["answer_challenge"])
-        return (self, hasher.finalize(), challenge), {}
+    def _login(self):                                
+        self._logging_in = True    
+        self.session.id = '0'
+        return self, self.get_credentials(), {}
+            
+    @pride.decorators.with_arguments_from(_login)
+    @remote_procedure_call(callback_name="login_result")
+    def login(self, username, password):
+        pass
         
-    @pride.decorators.with_arguments_from(_answer_challenge)
-    @remote_procedure_call(callback_name="decrypt_new_secret")
-    def login_stage_two(self, authenticated_table_hash, answer, challenge): pass
-   
-    def unpack_table_and_key(self, saved_data):
-        table_size = self.authentication_table_size
-        return saved_data[:table_size], saved_data[table_size:table_size + self.shared_key_size]
-        
-    def decrypt_new_secret(self, encrypted_key):
-        storage = pride.objects["/Python/Encryption_Service"]
-        saved_data = storage.read_from_file(self.authentication_table_file, self.file_system, self.crypto_provider)
-        auth_table, shared_key = self.unpack_table_and_key(saved_data)
-        try:
-            packed_key_and_message = pride.security.decrypt(encrypted_key, shared_key, shared_key)
-        except ValueError:                
-            self.alert("Login attempt failed", level=self.verbosity["login_failed"])
-            self._logging_in = False
-            self.handle_login_failure()
-        else:
-            new_key, login_message = pride.utilities.load_data(packed_key_and_message)
-            self.shared_key = new_key
-            hkdf = invoke("pride.security.hkdf_expand", self.hash_function,
-                          length=self.authentication_table_size,
-                          info=self.hkdf_table_update_info_string) 
-                
-        new_table = hkdf.derive(auth_table + ':' + new_key)            
-        storage.save_to_file(self.authentication_table_file, new_table + new_key, 'wb', 
-                             file_system=self.file_system, crypto_provider=self.crypto_provider)
-        
-        self.session.id = self._hash_auth_table(new_table, new_key)
-        self.on_login(login_message)
-        
-    def on_login(self, login_message):
-        self.logged_in = True
+    def login_result(self, server_response):
         self._logging_in = False
+        if server_response:
+            self.login_success(server_response)
+        else:
+            self.login_failure(server_response)
+    
+    def login_success(self, login_message):
+        self.alert("Login success; Received server response: {}".format(login_message, level=self.verbosity['login_success']))    
+        self.logged_in = True        
         self.alert("{}", [login_message], level=self.verbosity["login_message"])        
         for instruction, callback in self._delayed_requests:
             self.alert("Making delayed request: {}",
@@ -551,8 +387,12 @@ class Authenticated_Client(pride.base.Base):
         
     def _reset_login_flags(self):
         self.logged_in = False
-        self.session.id = '0'
+        self.session.id = '0'       
         
+    def login_failure(self, server_response):        
+        self.logged_in = False
+        self.alert("Login failure; Received server response: {}".format(server_response, level=self.verbosity['login_failure']))
+
     @pride.decorators.call_if(logged_in=True)
     @pride.decorators.exit(_reset_login_flags)
     @remote_procedure_call(callback=None)
@@ -588,9 +428,138 @@ class Authenticated_Client(pride.base.Base):
         #if self.auto_login:
         #    self.alert("Auto logging in", level=self.verbosity["auto_login"])
         #    self.login()
+        
+        
+    def _hash_password(self, password):
+        return pride.security.hash_password(password, self.iterations, algorithm=self.password_hashing_algorithm, 
+                                                                       sub_algorithm=self.sub_algorithm,
+                                                                       salt=self.salt, salt_size=self.salt_size, 
+                                                                       output_size=self.output_size) 
+                                                                           
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                           #def save_file(self, filename, data, indexable=False):    
+        #with self.create(self.token_file_type, self.authentication_table_file, 
+        #'wb', encrypted=True, indexable=indexable) as _file:
+            #_file.write(new_table + ("\x00" * self.shared_key_size))
+        
+   # def username_not_registered(self): # called when login fails because user is not registered
+   #     if not self._registering:
+   #         self.alert("Login token for '{}' not found ({})", (self.username, self.authentication_table_file), level=0)            
+   #         if self.auto_register or pride.shell.get_permission("Register now? "):                  
+   #             if self.ip in ("localhost", "127.0.0.1"):
+   #                 local_service = objects[self.target_service]
+   #                 authentication_table = local_service.register(self.username)
+   #                 self._store_auth_table(authentication_table)                                       
+   #             else:
+   #                 self.register()
+                    
+
     
-    def handle_login_failure(self):
-        pass
+    #def _answer_challenge(self, response):
+    #    hashed_answer, challenge = response
+    #    if hashed_answer != self._answer:
+    #        raise SecurityError("Server responded with incorrect response to challenge")
+    #
+    #    answer = Authentication_Table.load(self.auth_table).get_passcode(*challenge)
+    #    hasher = hash_function(self.hash_function)
+    #    hasher.update(answer + ':' + self.shared_key)
+    #    self.alert("Answering challenge", level=self.verbosity["answer_challenge"])
+    #    return (self, hasher.finalize(), challenge), {}
+    #    
+    #@pride.decorators.with_arguments_from(_answer_challenge)
+    #@remote_procedure_call(callback_name="decrypt_new_secret")
+    #def login_stage_two(self, authenticated_table_hash, answer, challenge): pass
+    #
+    #def unpack_table_and_key(self, saved_data):
+    #    table_size = self.authentication_table_size
+    #    return saved_data[:table_size], saved_data[table_size:table_size + self.shared_key_size]
+    #    
+    #def decrypt_new_secret(self, encrypted_key):
+    #    storage = pride.objects["/Python/Encryption_Service"]
+    #    saved_data = storage.read_from_file(self.authentication_table_file, self.file_system, self.crypto_provider)
+    #    auth_table, shared_key = self.unpack_table_and_key(saved_data)
+    #    try:
+    #        packed_key_and_message = pride.security.decrypt(encrypted_key, shared_key, shared_key)
+    #    except ValueError:                
+    #        self.alert("Login attempt failed", level=self.verbosity["login_failed"])
+    #        self._logging_in = False
+    #        self.handle_login_failure()
+    #    else:
+    #        new_key, login_message = pride.utilities.load_data(packed_key_and_message)
+    #        self.shared_key = new_key
+    #        hkdf = invoke("pride.security.hkdf_expand", self.hash_function,
+    #                      length=self.authentication_table_size,
+    #                      info=self.hkdf_table_update_info_string) 
+    #            
+    #    new_table = hkdf.derive(auth_table + ':' + new_key)            
+    #    storage.save_to_file(self.authentication_table_file, new_table + new_key, 'wb', 
+    #                         file_system=self.file_system, crypto_provider=self.crypto_provider)
+    #    
+    #    self.session.id = self._hash_auth_table(new_table, new_key)
+    #    self.on_login(login_message)
+    #    
+    #def on_login(self, login_message):
+    #    self.logged_in = True
+    #    self._logging_in = False
+    #    self.alert("{}", [login_message], level=self.verbosity["login_message"])        
+    #    for instruction, callback in self._delayed_requests:
+    #        self.alert("Making delayed request: {}",
+    #                  [(instruction.component_name, instruction.method)],
+    #                  level=self.verbosity["delayed_request_sent"])
+    #        self.session.execute(instruction, callback)
+    #    self._delayed_requests = []
+    #    
+    #def _reset_login_flags(self):
+    #    self.logged_in = False
+    #    self.session.id = '0'
+    #    
+    #@pride.decorators.call_if(logged_in=True)
+    #@pride.decorators.exit(_reset_login_flags)
+    #@remote_procedure_call(callback=None)
+    #def logout(self): 
+    #    """ Logout self.username from the target service. If the user is logged in,
+    #        the logged_in flag will be set to False and the session.id set to '0'.
+    #        If the user is not logged in, this is a no-op. """
+    #
+    #def handle_not_logged_in(self, instruction, callback):        
+    #    if self.auto_login or pride.shell.get_permission("Login now? :"):
+    #        self._delayed_requests.append((instruction, callback))
+    #        if not self._logging_in:
+    #            self.alert("Not logged in")       
+    #            self.login()            
+    #            
+    #def delete(self):
+    #    if self.logged_in:
+    #        self.logout()
+    #    super(Authenticated_Client, self).delete()
+    #    
+    #def __getstate__(self):
+    #    attributes = super(Authenticated_Client, self).__getstate__()
+    #    del attributes["session"]
+    #    attributes["objects"] = {}
+    #    attributes["logged_in"] = False
+    #    attributes["session_id"] = '0'
+    #    return attributes
+    #
+    #def on_load(self, attributes):
+    #    super(Authenticated_Client, self).on_load(attributes)        
+    #    self.session = self.create("pride.rpc.Session", session_id='0', host_info=self.host_info)                               
+    #                                   
+    #    #if self.auto_login:
+    #    #    self.alert("Auto logging in", level=self.verbosity["auto_login"])
+    #    #    self.login()
+    
         
         
 def test_Authenticated_Service3():    

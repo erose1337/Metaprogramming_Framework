@@ -29,6 +29,7 @@ else:
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.backends import openssl
+    from cryptography.hazmat.primitives.constant_time import bytes_eq
     BACKEND = openssl.backend      
         
     def random_bytes(count):
@@ -183,6 +184,36 @@ else:
         else:
             return plaintext
             
+    def hash_password(password, iterations, algorithm="pbkdf2hmac", sub_algorithm="sha256",
+                                            salt=None, salt_size=16, output_size=32,
+                                            backend=BACKEND):
+        salt = os.urandom(salt_size)
+        header = save_data(algorithm, sub_algorithm, iterations, salt_size, output_size)
+        if algorithm == "pbkdf2hmac":          
+            hasher = PBKDF2HMAC(algorithm=getattr(hashes, sub_algorithm.upper())(),
+                                length=output_size, salt=salt, iterations=iterations,
+                                backend=backend)
+            
+            return save_data(header, salt, hasher.derive(header + password))
+        else:
+            raise ValueError()
+    
+    def verify_hashed_password(password, header_salt_hash, backend=BACKEND):
+        header, salt, correct_output = load_data(header_salt_hash)
+        algorithm, sub_algorithm, iterations, salt_size, output_size = load_data(header)
+        if algorithm == "pbkdf2hmac":            
+            hasher = PBKDF2HMAC(algorithm=getattr(hashes, sub_algorithm.upper())(),
+                                length=output_size, salt=salt, iterations=iterations,
+                                backend=backend)
+            output = hasher.derive(header + password)             
+        else:
+            return -1
+        return constant_time_comparison(output, correct_output)    
+        
+    def constant_time_comparison(data1, data2):
+        return bytes_eq(data1, data2)   
+    
+            
 def test_packed_encrypted_data():
     data = "This is some fantastic test data"
     key = random_bytes(32)
@@ -196,5 +227,16 @@ def test_packed_encrypted_data():
             plaintext = decrypt(packed_encrypted_data, key, mac_key=mac_key)            
             assert plaintext == data
     
+def test_hash_password():
+    password = "password"
+    iterations = 100000
+    _hash = hash_password(password, iterations)
+    assert verify_hashed_password(password, _hash)   
+    invalid_password = "passwore"
+    assert not verify_hashed_password(invalid_password, _hash)    
+    print "Passed hash_password/verify_password unit test"
+    
 if __name__ == "__main__":
     test_packed_encrypted_data()
+    test_hash_password()
+    

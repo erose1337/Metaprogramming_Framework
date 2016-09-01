@@ -221,5 +221,4 @@ class Idle_Process(Process):
             self.single_callbacks.append((reference, method_name))
         else:
             self.callbacks.append((reference, method_name))
-            
-                    
+                        

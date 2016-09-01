@@ -1,3 +1,4 @@
+import pprint
 import sys
 import argparse
 import types
@@ -30,30 +31,59 @@ class Documented(type):
     def make_docstring(attributes):
         attributes["__doc"] = attributes.get("__doc__", "No docstring found")
         attributes["__doc__"] = Docstring()
-        
+                        
+class alert_on_call(object):
+    
+    def __init__(self, method):
+        self.method = method        
+        self.method_name = self.get_method_name(method)
+    
+    @staticmethod
+    def get_method_name(method):
+        try:
+            return method.im_func.func_name
+        except AttributeError:
+            return method.func_name
+             
+    def __call__(self, *args, **kwargs):       
+        method_name = self.method_name
+        component = args[0]
+        component.alert("{}({}, {})".format(method_name, pprint.pformat(args), pprint.pformat(kwargs)), level=component.verbosity[method_name])
+        return self.method(*args, **kwargs)        
+    
 
+    
 class Method_Hook(type):
-    """ Provides a hook on all methods for the new class. This metaclass
-        uses this hook to wrap each method in a Runtime_Decorator if it
-        is enabled. """
+    """ Provides a hook for decorating methods for the new class. """
         
+    enabled = False
+    decorator = alert_on_call
+    default_verbosity = "debug"
+    
     def __new__(cls, name, bases, attributes):        
         new_class = super(Method_Hook, cls).__new__(cls, name, bases, attributes)
-        if Runtime_Decorator.enabled:
+        if cls.enabled:
             Method_Hook.decorate(new_class)
         return new_class
         
-    @staticmethod
-    def decorate(new_class):
-        for key, value in new_class.__dict__.items():
-            if key[0] != "_" and callable(value):
-                bound_method = types.MethodType(Runtime_Decorator(value), 
+    @classmethod
+    def decorate(cls, new_class):
+        decorator = cls.decorator
+        default_verbosity = cls.default_verbosity
+        for key, value in new_class.__dict__.items():            
+            if key[0] != "_" and callable(value) and not issubclass(type(value), BaseException):
+                print new_class, key, value, not issubclass(type(value), BaseException), issubclass(type(value), BaseException)
+                
+                if key == "alert":
+                    continue
+                bound_method = types.MethodType(decorator(value), 
                                                 None, 
                                                 new_class)
                 setattr(new_class, key, bound_method)
+                new_class.verbosity[key] = default_verbosity
         return new_class        
         
-        
+                 
 class Runtime_Decorator(object):
     """ Provides the ability to call a method with a decorator, decorators,
         or monkey patch specified via keyword argument. This decorator

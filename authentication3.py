@@ -83,10 +83,13 @@ class Authenticated_Service(pride.base.Base):
                    "    method_name: '{}'    method available remotely: {}\n" +                   
                    "    login allowed: {}    registration allowed: {}",
                 "allow_login" : True, "allow_registration" : True,
-                "login_message" : "Welcome to the {}, {} from {}"}                     
-    
+                "login_message" : "Welcome to the {}@{}, {}@{}",
+                "registration_success_message" : "Registered as '{}'@{}",                     
+                "registration_failure_message" : "Failed to register as '{}'@{}"}
+                
     verbosity = {"register" : "vv", "validate_success" : 'vvv',
                  "login" : "vv", "authentication_success" : "vv",
+                 "login_success" : 0, "login_failure" : 0,
                  "authentication_failure" : "v", "validate_failure" : "vvv",                
                  "authentication_failure_already_logged_in" : 'v'}
     
@@ -108,9 +111,11 @@ class Authenticated_Service(pride.base.Base):
                             "remotely_available_procedures" : tuple, "rate_limit" : dict}
     
     def _get_current_user(self):
-        return self.session_id[self.current_session[0]]
+        session_id = self.current_session[0]
+        return self.session_id[session_id], self.peer_ip[session_id]
         
-    def _set_current_user(self, session_id, ip, username):
+    def _set_current_user(self, session_id_ip_username):
+        session_id, ip, username = session_id_ip_username
         self.session_id[session_id] = username
         self.peer_ip[session_id] = ip
         
@@ -133,8 +138,7 @@ class Authenticated_Service(pride.base.Base):
             name = self.database_name
         self.database = self.create(self.database_type, database_name=name,
                                     database_structure=self.database_structure,
-                                    **self.database_flags)
-            
+                                    **self.database_flags)        
   #  def register(self, identifier, encrypted_private_key, public_key, keypair_tag):
   #      self.alert("Registering new user", level=self.verbosity["register"])
   #     
@@ -145,13 +149,18 @@ class Authenticated_Service(pride.base.Base):
   #  def get_public_key(self, identifier):
   #      public_key = self.database.query("Users", retrieve_fields=("public_key", ), 
   #                                                where={"identifier" : identifier})
-  #      return public_key
+  #      return public_key                 
     
-    def register(self, identifier, password_verifier):        
-        salt = os.urandom(self.salt_size)
-        verifier_hash = self._hash_password(password_verifier, salt)
-        self.database.insert_into("Users", (identifier, verifier_hash, salt))
-        return self.register_success(identifier)
+    def register(self, identifier, password_verifier): 
+        identifier_in_use = self.database.query("Users", retrieve_fields=("identifier", ), 
+                                                             where={"identifier" : identifier})
+        if identifier_in_use:
+            return self.register_failure(identifier)
+        else:
+            salt = os.urandom(self.salt_size)
+            verifier_hash = self._hash_password(password_verifier, salt)        
+            self.database.insert_into("Users", (identifier, verifier_hash, salt))
+            return self.register_success(identifier)
         
     def change_credentials(self, identifier, password_verifier, new_identifier, new_password_verifier):
         correct_verifier, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
@@ -161,16 +170,16 @@ class Authenticated_Service(pride.base.Base):
         else:
             return self.register_failure(identifier)
     
-    def register_success(self, username):
-        return self.registration_success_message.format(username)
+    def register_success(self, username):            
+        return True, self.registration_success_message.format(username, self.current_session[1])
     
-    def register_failure(self, username):
-        return self.registration_failure_message.format(username)
+    def register_failure(self, username):        
+        return False, self.registration_failure_message.format(username, self.current_session[1])
         
-    def login(self, username, password):      
+    def login(self, username, password):                    
         correct_hash, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"), 
-                                                          where={"username" : username})                                                          
-        password_hash = self._hash_password(password, salt)
+                                                          where={"identifier" : username})                                                                                   
+        password_hash = self._hash_password(password, salt)        
         if pride.security.constant_time_comparison(password_hash, correct_hash):
             return self.login_success(username)
         else:
@@ -261,23 +270,26 @@ class Authenticated_Service(pride.base.Base):
   
 class Authenticated_Client(pride.base.Base):   
     
-    verbosity = {"register" : 0, "login" : 'v', "answer_challenge" : 'vv',
-                 "login_stage_two" : 'vv', "register_sucess" : 0,
+    verbosity = {"register" : 0, "register_success" : 0, "register_failure" : 0,     
+                 "login" : 0, "login_success" : 0, "login_failure" : 0,
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "delayed_request_sent" : "vv", "login_failed" : 0}
                  
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
                 "password_prompt" : "{}: Please provide the pass phrase or word for {}@{}: ",
-                "ip" : "localhost", "port" : 40022, "auto_login" : True, 
+                "ip" : "localhost", "port" : 40022, "auto_login" : True, "auto_register" : False,
                  
                 "username" : '', "password" : None, "hash_password_clientside" : True,
                 "iterations" : 100000, "password_hashing_algorithm" : "pbkdf2hmac",
-                "sub_algorithm" : "sha512", "salt" : None, "salt_size" : 16, "output_size" : 32}
+                "sub_algorithm" : "sha512", "salt" : "\x00" * 16, "salt_size" : 16, "output_size" : 32,
+                
+                "registration_success_message" : "Registered with {}@{} as '{}'",                     
+                "registration_failed_message" : "Failed to register with {}@{} as '{}'"}
     
     mutable_defaults = {"_delayed_requests" : list}
     flags = {"_registering" : False, "logged_in" : False, "_logging_in" : False,
-             "_username" : '', "auto_register" : False, "_insert_new_user_into_site_config" : None,
+             "_username" : '', "_insert_new_user_into_site_config" : None,
              "_password_hash" : ''}       
                     
     def _get_password(self):
@@ -287,7 +299,9 @@ class Authenticated_Client(pride.base.Base):
     password = property(_get_password, _set_password)
             
     def _get_password_hash(self):
-        return self._password_hash or self._hash_password(self.password)
+        password_hash = self._password_hash or self._hash_password(self.password)
+        self._password_hash = password_hash
+        return password_hash
     def _set_password_hash(self, value):
         self._password_hash = value
     password_hash = property(_get_password_hash, _set_password_hash)
@@ -319,28 +333,34 @@ class Authenticated_Client(pride.base.Base):
         super(Authenticated_Client, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference, self.ip, self.target_service)
         self.session = self.create("pride.rpc.Session", session_id='0', host_info=self.host_info)
-                                                       
-        if self.auto_login:
+                          
+        if self.auto_register:
+            self.alert("Auto registering with '{}'".format(self.target_service), level=self.verbosity["auto_register"])
+            self.register()            
+            
+        elif self.auto_login:
             self.alert("Auto logging in", level=self.verbosity["auto_login"])
             self.login()
     
-    def get_credentials(self):
-        return (self, (self.username, self.password_hash if self.hash_password_clientside else self.password), {})
+    def get_credentials(self):        
+        return self.username, self.password_hash if self.hash_password_clientside else self.password
                 
-    @pride.decorators.with_arguments_from(get_credentials)
+    @pride.decorators.with_arguments_from(lambda self: ((self, ) + self.get_credentials(), {}))
     @remote_procedure_call(callback_name="register_results")
     def register(self, username, password_hash): 
         pass
     
     def register_results(self, server_response):
         self._registering = False  
-        if server_response == True:
+        success, message = server_response
+        if success:
             self.register_success()
         else:
             self.register_failure()                                                      
                         
     def register_success(self):
-        self.alert("Registered successfully", level=self.verbosity["register_success"])
+        self.alert(self.registration_success_message.format(self.target_service, self.ip, self.username), 
+                   level=self.verbosity["register_success"])
         
         if pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)):
             entry = '_'.join((self.__module__.replace('.', '_'),
@@ -352,15 +372,13 @@ class Authenticated_Client(pride.base.Base):
             self.login()
                 
     def register_failure(self):
-        self.alert("Registration failed", level=self.verbosity["register_failure"])
-        
-    def login(self):
-        return self.get_credentials()
-
+        self.alert(self.registration_failed_message.format(self.target_service, self.ip, self.username), 
+                   level=self.verbosity["register_failure"])
+                   
     def _login(self):                                
         self._logging_in = True    
         self.session.id = '0'
-        return self, self.get_credentials(), {}
+        return (self, ) + self.get_credentials(), {}
             
     @pride.decorators.with_arguments_from(_login)
     @remote_procedure_call(callback_name="login_result")
@@ -435,8 +453,9 @@ class Authenticated_Client(pride.base.Base):
                                                                        sub_algorithm=self.sub_algorithm,
                                                                        salt=self.salt, salt_size=self.salt_size, 
                                                                        output_size=self.output_size) 
-                                                                           
-
+ 
+ 
+        
 
 
 
@@ -562,11 +581,14 @@ class Authenticated_Client(pride.base.Base):
     
         
         
-def test_Authenticated_Service3():    
+def test_Authenticated_Service3():              
     service = objects["/Python"].create(Authenticated_Service)
-    client = objects["/Python"].create(Authenticated_Client, username="Authenticated_Service3_unit_test", 
-                                       auto_register=True, auto_login=True)
-    Instruction(client.reference, "delete").execute(priority=1.5, callback=lambda *args, **kwargs: service.delete)    
+    client = objects["/Python"].create(Authenticated_Client, username="Authenticated_Service3_unit_test", auto_login=False)
+    
+    client.register()
+    client.login()
+    
+    
     
 if __name__ == "__main__":
     test_Authenticated_Service3()

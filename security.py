@@ -187,7 +187,7 @@ else:
     def hash_password(password, iterations, algorithm="pbkdf2hmac", sub_algorithm="sha256",
                                             salt=None, salt_size=16, output_size=32,
                                             backend=BACKEND):
-        salt = os.urandom(salt_size)
+        salt = os.urandom(salt_size) if salt is None else salt
         header = save_data(algorithm, sub_algorithm, iterations, salt_size, output_size)
         if algorithm == "pbkdf2hmac":          
             hasher = PBKDF2HMAC(algorithm=getattr(hashes, sub_algorithm.upper())(),

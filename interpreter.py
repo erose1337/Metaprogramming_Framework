@@ -12,7 +12,7 @@ except ImportError:
 
 import pride
 import pride.base as base
-import pride.authentication2 as authentication2
+import pride.authentication3 as authentication2
 import pride.shell
 import pride.user
 import pride.site_config
@@ -52,7 +52,7 @@ class Shell(authentication2.Authenticated_Client):
             self.startup_definitions = ''            
             self.execute_source(source)
                         
-    @pride.authentication2.remote_procedure_call(callback_name="handle_result")
+    @pride.authentication3.remote_procedure_call(callback_name="handle_result")
     def execute_source(self, source): 
         """ Sends source to the interpreter specified in self.target_service for execution """
                                     

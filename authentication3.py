@@ -11,31 +11,9 @@ import pride.contextmanagers
 import pride.utilities
 from pride.security import hash_function
 from pride.errors import SecurityError, UnauthorizedError             
-
-# generate encryption/signing key pairs
-# encrypt the private key symmetrically via a password
-    # private key can be stored on device, or on the server
-    
+       
 # send session key to partner
 # xor key with key sent by partner
-
-# server stores: identifier, encrypted private key, (possibly encrypted) public key, hmac(keypair, client_HMAC_key)
-
-#client --request public key-user:server----------------------------> server
-#client <----------------------------------------servers public key-- server
-#
-
-#client --.request private key
-
-
-#client --register-username-password-keypair_tag-encrypted_private_key-public_key-> server
-#
-#client --login-username--encrypted_session_secret1------------> server
-#client <--encrypted_private_key-encrypted_session_secret2------ server
-# |                                                                |
-# |                                                                |
-# |                                                                |
-#derive session secret                                       derive session secret
 #    - decrypt encrypted_session_secret via private key
 #    - xor both session secrets together to obtain final session secret
 
@@ -56,12 +34,16 @@ def remote_procedure_call(callback_name='', callback=None):
                 self.handle_not_logged_in(instruction, _callback)            
             else:
                 self.alert("Making request '{}.{}'", (self.target_service, call_name),
-                           level=0)#self.verbosity[call_name])   
+                           level=self.verbosity[call_name])   
                 if self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
                     local_service = pride.objects[self.target_service]
-                    output = local_service.execute_remote_procedure_call(self.session.id, self.ip, call_name, args, kwargs)                    
-                    if _callback:
-                        _callback(output)
+                    session_id = self.session.id
+                    if local_service.validate(session_id, self.ip, call_name) or call_name == "register":                    
+                        output = local_service.execute_remote_procedure_call(session_id, self.ip, call_name, args, kwargs)                    
+                        if _callback:
+                            _callback(output)
+                    else:
+                        raise UnauthorizedError()
                 else:
                     self.session.execute(instruction, _callback)
         return _make_rpc
@@ -242,7 +224,7 @@ class Authenticated_Service(pride.base.Base):
                        session_id in self.session_id,
                        method_name, method_name in self.remotely_available_procedures,
                        self.allow_login, self.allow_registration),
-                       level=0)#self.verbosity["validate_failure"])
+                       level=self.verbosity["validate_failure"])
             return False         
         if self.rate_limit and method_name in self.rate_limit:
             _new_connection = False
@@ -291,7 +273,8 @@ class Authenticated_Client(pride.base.Base):
     verbosity = {"register" : 0, "register_success" : 0, "register_failure" : 0,     
                  "login" : 0, "login_success" : 0, "login_failure" : 0,
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
-                 "delayed_request_sent" : "vv", "login_failed" : 0}
+                 "delayed_request_sent" : "vv", "login_failed" : 0,
+                 "logout_success" : 0}
                  
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -363,7 +346,7 @@ class Authenticated_Client(pride.base.Base):
     def get_credentials(self):        
         return self.username, self.password_hash if self.hash_password_clientside else self.password
                 
-    @pride.decorators.with_arguments_from(lambda self: ((self, ) + self.get_credentials(), {}))    
+    @pride.decorators.with_arguments_from(lambda self: ((self, ) + self.get_credentials(), {}))        
     @remote_procedure_call(callback_name="register_results")
     def register(self, username, password_hash): 
         pass                
@@ -438,12 +421,15 @@ class Authenticated_Client(pride.base.Base):
 
     @pride.decorators.call_if(logged_in=True)
     @pride.decorators.exit(_reset_login_flags)
-    @remote_procedure_call(callback=None)
+    @remote_procedure_call(callback_name="logout_success")
     def logout(self): 
         """ Logout self.username from the target service. If the user is logged in,
             the logged_in flag will be set to False and the session.id set to '0'.
             If the user is not logged in, this is a no-op. """
     
+    def logout_success(self, server_response):
+        self.alert("Logout success: {}".format(server_response), level=self.verbosity["logout_success"])        
+        
     def handle_not_logged_in(self, instruction, callback):        
         if self.auto_login or pride.shell.get_permission("Login now? :"):
             self._delayed_requests.append((instruction, callback))

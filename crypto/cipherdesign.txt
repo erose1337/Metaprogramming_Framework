@@ -72,8 +72,113 @@ The way round keys are derived can influence both the security and efficiency of
 
 Designing a round function
 -----------
-There are a variety of functions and operations that are useful for designing the round function for a cipher. The simplest are combinations of substitution tables and permutations. 
+In order to know what to operations to use, we need to know what we need to accomplish: 
+    
+- Diffusion (https://en.wikipedia.org/wiki/Confusion_and_diffusion)
+    - Flipping one input bit anywhere should flip (about) half the output bits on average
+    - Bytewise shifts, rotations, and transpositions can help spread the influence of a given subsection of bits
+    - Bitwise transpositions can be used too, but can be relatively slow in software (but potentially fast in hardware)
+            
+- Confusion/Non-linearity (http://crypto.stackexchange.com/questions/2820/why-do-block-ciphers-need-a-non-linear-component-like-an-s-box?rq=1)
+    - The relationship between the key and ciphertext should be complex
+    - A linear cipher can be broken by gaussian elimination https://en.wikipedia.org/wiki/Gaussian_elimination
+    - Mixing arithmetic in different fields can provide non-linearity (i.e. xor and addition modulo 256)
+    - Boolean functions can provide non-linearity
 
+- Invertible only with the correct key
+    - The cipher will only provide confidentiality if secret (key) material is introduced at some point.            
+        - Applying a key on the input before applying any rounds and after applying all rounds is called key whitening and is common (https://en.wikipedia.org/wiki/Key_whitening)
+        - Otherwise a key is added every N rounds, where N is often 1 (i.e. after every round)
+        - Key addition is often times done via xor and addition modulo (2**wordsize_in_bits), or both
+    - There should be no "weak keys" (http://crypto.stackexchange.com/questions/12214/can-you-explain-weak-keys-for-des)
+    
+So our goals are to combine the message with a key, and flip lots of bits in a diffusing and non-linear fashion.
+Ideally, we would like the composition of our operations to produce output similar to that of a random permutation.        
+        
+Some available instructions are:
+    
+- Xor
+    - Useful for combining two inputs (i.e. message and key)
+    - Is its own inverse (an involution)
+        - No subtraction instruction required to invert
+    - Bit sliced        
+    - Needs addition/boolean function/s-box lookup for non-linearity  (http://crypto.stackexchange.com/questions/12634/reason-why-xor-is-a-linear-operation-but-ordinary-addition-isn-t?rq=1)
+    
+- Addition (http://crypto.stackexchange.com/q/2608/29554)
+    - Useful for combining two inputs
+    - Useful for breaking xor differentials
+    - Requires separate subtraction instruction to invert
+    
+- Lookup tables
+    - Useful for good differential/linear properties
+    - Effectively equivalent to the cached inputs/outputs of a non-linear function       
+    - Can be vulnerable to timing attacks on machines that utilize a cache (http://crypto.stackexchange.com/q/5526/29554)
+    
+- Boolean functions
+    - Useful for non-linearity
+    - Some examples are the Choice and Majority functions http://crypto.stackexchange.com/q/5358/29554
+        - Choice
+            - Logically, If C then B, else A
+            - c ^ (a & (b ^ c))
+            - Bit sliced operation
+        - Majority
+            - (a & b) | (a & c) | (b & c) 
+            
+- Rotations/Shifts (http://crypto.stackexchange.com/q/8533/29554) 
+    - Useful for diffusion and carrying/spreading differences through a word (http://crypto.stackexchange.com/a/25239/29554)
+    - Generally done by fixed amounts  (http://crypto.stackexchange.com/q/20325/2955)
+        
+- Transposition
+    - Shuffling the order of state words can help provide diffusion
+    - Transposing bytes according to secret data can be vulnerable to timing attacks (secret dependent memory access is the concern) (https://www.di.ens.fr/~fouque/pub/acns11.pdf)
+    - Includes rotations    
+    
+- Composed bitwise and bytewise transposition:
+    - Acts like a shuffle (permutation) of the input bits
+    - Only modifies a given bits position, not its value (Does not modify hamming weight)
+    - Is a linear transformation
+    - Example: The keccak permutation (https://en.wikipedia.org/wiki/SHA-3), specifically the Rho and pi steps
+    - Can provide "weak alignment" (http://crypto.stackexchange.com/a/39253/29554)       
+       
+- Pseudo-Hadamard transform: https://en.wikipedia.org/wiki/Pseudo-Hadamard_transform   
+    - Provides diffusion
+    - Used by SAFER (https://en.wikipedia.org/wiki/SAFER) and Twofish (https://en.wikipedia.org/wiki/Twofish)
+    
+    
+Some example ciphers:
 
+- AES consists of addRoundKey, mixColumns, shiftRows, subBytes on the message https://en.wikipedia.org/wiki/Advanced_Encryption_Standard :
+    - subBytes is a lookup table
+    - shiftRows is a bytewise transposition
+    - mixColumns is a linear transformation that, in conjunction with shiftRows, provides diffusion
+    - addRoundKey xors the key with the state
+- DES round function consists of an expansion permutation, key mixing, s-box application, and bit permutation http://crypto.stackexchange.com/a/31675/29554
+    - Expansion compensates the S-boxes going from 6 to 4 bits. 
+    - Keys are applied every round via xor
+    - S-boxes provide resistance against differential cryptanalysis
+    - Bit permutation provides diffusion
+- Serpent round function consists of key-mixing XOR, a 4×4 S-box, and a linear transformation https://en.wikipedia.org/wiki/Serpent_(cipher)
+    - Keys are applied every round via xor
+    - S-boxes are applied in parallel (bit sliced design)
+    - Linear mixing provides diffusion
+- Tea uses only addition, shift, and XOR: https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm                                         
+    - xor/addition create nonlinearity
+    - shifts/additions provide diffusion
+                                             
 Breaking a round function
 ----------
+Before you resort to applying linear and/or differential cryptanalysis to your design, considering running some statistical tests. Statistical tests can tell you very quickly whether your latest design is totally broken.
+
+Some example tests might be:
+    
+- Avalanche test   
+    - Encrypt successive values (i.e. an incrementing counter) with a given key and measure the hamming distance between successive outputs (measures diffusion of data)
+    - Encrypt the same series of successive values with a different key, and measure the hamming distance between the previous samples and the new ones (measures diffusion of key)    
+- Randomness test    
+    - Generate a sizeable (>1MB) amount of psuedorandom data with the cipher (i.e. by encrypting an incrementing counter)
+    - Pass the data to a tool such as ent, dieharder, or the NIST test suite (https://sites.google.com/site/astudyofentropy/background-information/the-tests)
+
+Run the mentioned tests on both your design and on os.urandom: ideally the two results should be indistinguishable.
+Note that statistical tests cannot confirm whether a design is cryptographically secure, it can only confirm whether a design is insecure.
+
+When devising a new attack, try attacking a reduced round version of the cipher first. Look for the weakest points in the design.

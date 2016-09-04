@@ -274,7 +274,7 @@ class Authenticated_Client(pride.base.Base):
                  "login" : 0, "login_success" : 0, "login_failure" : 0,
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "delayed_request_sent" : "vv", "login_failed" : 0,
-                 "logout_success" : 0}
+                 "logout_success" : 0, "auto_register" : "vv"}
                  
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -335,7 +335,7 @@ class Authenticated_Client(pride.base.Base):
         self.password_prompt = self.password_prompt.format(self.reference, self.target_service, self.ip)
         self.session = self.create("pride.rpc.Session", session_id='0', host_info=self.host_info)
                           
-        if self.auto_register:
+        if self.username not in pride.site_config._locally_registered_users and self.auto_register:
             self.alert("Auto registering with '{}'".format(self.target_service), level=self.verbosity["auto_register"])
             self.register()            
             
@@ -368,6 +368,8 @@ class Authenticated_Client(pride.base.Base):
     def register_success(self):
         self.alert(self.registration_success_message.format(self.target_service, self.ip, self.username), 
                    level=self.verbosity["register_success"])
+        if self.ip in ("localhost", "127.0.0.1"):                        
+            pride.site_config.write_to("_locally_registered_users", **{self.username : True})
         
         if pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)):
             entry = '_'.join((self.__module__.replace('.', '_'),
@@ -467,10 +469,10 @@ class Authenticated_Client(pride.base.Base):
         
 def test_Authenticated_Service3():              
     service = objects["/Python"].create(Authenticated_Service)
-    client = objects["/Python"].create(Authenticated_Client, username="Authenticated_Service3_unit_test", auto_login=False)
+    client = objects["/Python"].create(Authenticated_Client, username="Authenticated_Service3_unit_test", auto_register=True, auto_login=True)
     
-    client.register()
-    client.login()
+    #client.register()
+    #client.login()
     client.logout()
     
     

@@ -26,7 +26,7 @@ Whatever method is used to encrypt, the information may be subject to attack by 
             - Choose messages to encrypt or decrypt at will.
             - Can adapt or modify future encryption/decryption queries in response to past queries.
     
-Most of the complexity of a modern cipher comes from the attempt at protecting the key, and by extension, the plaintext. Designing a cipher with a reusable will require an understanding of the ways that the cipher and key can be attacked. In order to design a cipher, you must learn to think like the adversary, and study how ciphers are broken. 
+Most of the complexity of a modern cipher comes from the attempt at protecting the key, and by extension, the plaintext. Designing a cipher with a reusable key will require an understanding of the ways that the cipher and key can be attacked. In order to design a cipher, you must learn to think like the adversary, and study how ciphers are broken. 
 
 Standard attacks
 ------------
@@ -108,6 +108,7 @@ Some available instructions are:
     - Useful for combining two inputs
     - Useful for breaking xor differentials
     - Requires separate subtraction instruction to invert
+    - Tends to flip low order bits more then high order bits
     
 - Lookup tables
     - Useful for good differential/linear properties
@@ -165,6 +166,24 @@ Some example combinations of the above operations:
     - xor/addition create nonlinearity and apply key material
     - shifts/additions provide diffusion
                                              
+As we can see from some examples, there appear to be at least two different approaches:
+- S-box based designs
+    - Can offer very good linear/differential properties with good performance
+    - Can be hard to find good large s-boxes because of the huge search space
+    - Tend to be used in conjunction with a linear mixing layer for diffusion
+    - AES strategy: 
+        - Use an s-box with the optimal worst case differential/linear properties
+        - Use a mixing layer that aims at increase the lower bound of the rate of diffusion
+        - Notice how it's designed around the worst case scenario
+    - Can provide clear proofs of resistance to differential/linear attack
+        
+- ARX based designs (addition, rotation, xor) (https://www.cosic.esat.kuleuven.be/ecrypt/courses/albena11/slides/nicky_mouha_arx-slides.pdf)
+    - Are inherently less conducive to timing based side channel attacks then s-box based constructions
+        - Addition, XOR and rotation by fixed amount are often times implemented in constant time
+    - Fast performance on PCs (especially if you can avoid memory accesses/stick to the registers)
+    - Compact/simple implementation (does not require the space that lookup tables need)              
+    - Not as straightforward to analyze security to differential/linear attack compared to s-box based design
+        
 Breaking a round function
 ----------
 Before you resort to applying linear and/or differential cryptanalysis to any new design, considering running some statistical tests. Statistical tests can tell you very quickly whether your latest design is totally broken. Note that statistical tests cannot confirm whether a design is cryptographically secure, it can only confirm that a design is insecure.
@@ -181,8 +200,10 @@ Some example tests might be:
 Run the mentioned tests on both your design and on os.urandom: ideally the two results should be indistinguishable.
 
 When devising an attack, try attacking a reduced (single?) round version of the cipher first. Look for the weakest points in the design.
-Try practising against FEAL (http://www.theamazingking.com/crypto-feal.php) , it has a major weak point and is useful for learning differential cryptanalysis.
+Try practising against FEAL (http://www.theamazingking.com/crypto-feal.php) , it has a major weak point and is useful for learning differential/linear cryptanalysis, and slide attacks.
 Some of the attacks against DES would probably be helpful ways to learn about linear cryptanalysis and brute force search (http://lasec.epfl.ch/memo/memo_des.shtml) (https://en.wikipedia.org/wiki/Brute-force_search)
+
+Once you've got a handle on those, there are actually many different attacks besides generic linear/differential cryptanalysis (http://crypto.stackexchange.com/a/38148/29554)
 
 Math and visualization
 -----------
@@ -195,5 +216,3 @@ Some of the subjects that will prove useful when reading papers and in cryptanal
 - Basic linear algebra (https://en.wikipedia.org/wiki/Linear_algebra)
 - Boolean logic (https://en.wikipedia.org/wiki/Boolean_algebra)
 - Finite fields (https://en.wikipedia.org/wiki/Finite_field)
-
-

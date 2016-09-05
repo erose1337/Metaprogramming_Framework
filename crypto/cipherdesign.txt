@@ -204,6 +204,7 @@ Try practising against FEAL (http://www.theamazingking.com/crypto-feal.php) , it
 Some of the attacks against DES would probably be helpful ways to learn about linear cryptanalysis and brute force search (http://lasec.epfl.ch/memo/memo_des.shtml) (https://en.wikipedia.org/wiki/Brute-force_search)
 
 Once you've got a handle on those, there are actually many different attacks besides generic linear/differential cryptanalysis (http://crypto.stackexchange.com/a/38148/29554)
+You may find some software related to cryptanalysis here http://www.ecrypt.eu.org/tools/overview
 
 Math and visualization
 -----------

@@ -10,7 +10,7 @@ def round_function(a, b, c, d):
     # rotate each row left by row#
     register0, register1, register2, register3 = shift_rows(register0, register1, register2, register3) 
     # vertically mix each 4 bit high column of each quarter, doing each quarter in parallel
-    register0, register1, register2, register3 = mix_quarters(register0, register1, register2, register3) 
+    #register0, register1, register2, register3 = mix_quarters(register0, register1, register2, register3) 
     return register0, register1, register2, register3
    
 def mix_quarters(register0, register1, register2, register3):   
@@ -121,29 +121,45 @@ def shuffle(a, b, c, d, word_0=0xFFFF000000000000, word_1=0x0000FFFF00000000, wo
     temp = a
     tempb = b
     tempc = c
-    #3  2  1  0
-    #7  6  5  4
-    #11 10 9  8
-    #15 14 13 12
     a = ((d & word_0) >> 0 )   | ((b & word_3) << 32) | ((b & word_2) >> 0 )    | ((c & word_0) >> 48)
     b = ((temp & word_3) << 48)| ((c & word_2) << 16) | ((b & word_1) >> 16)    | ((d & word_3) >> 0 )    
     c = ((c & word_3) << 48)   | ((d & word_1) << 0 ) | ((temp & word_0) >> 32) | ((d & word_2) >> 16)
     d = ((tempb & word_0) << 0)| ((temp & word_1) <<0)| ((tempc & word_1) >> 16)| ((temp & word_2) >> 16)
-    
-    #a = rotl16(((d & word_0) >> 0    ), 3 ) | rotl16(((b & word_3) << 32 ), 2 ) | rotl16(((b & word_2) >> 0     ), 1 ) | rotl16(((c & word_0) >> 48   ), 0)
-    #b = rotl16(((temp & word_3) << 48), 7 ) | rotl16(((c & word_2) << 16 ), 6 ) | rotl16(((b & word_1) >> 16    ), 5 ) | rotl16(((d & word_3) >> 0    ), 4)    
-    #c = rotl16(((c & word_3) << 48   ), 11) | rotl16(((d & word_1) << 0  ), 10) | rotl16(((temp & word_0) >> 32 ), 9 ) | rotl16(((d & word_2) >> 16   ), 8)
-    #d = rotl16(((tempb & word_0) << 0), 15) | rotl16(((temp & word_1) <<0), 14) | rotl16(((tempc & word_1) >> 16), 11) | rotl16(((temp & word_2) >> 16), 12)
-    
     return a, b, c, d
+
+def shift_rows(a, b, c, d, word_0=0xFFFF000000000000, word_1=0x0000FFFF00000000, word_2=0x00000000FFFF0000, word_3=0x000000000000FFFF):
+    register0 = (rotl16((a & word_0) >> 48, 0 ) << 48) | (rotl16((a & word_1) >> 32, 1 ) << 32) | (rotl16((a & word_2) >> 16, 2 ) << 16) | rotl16(a & word_3, 3 )
+    register1 = (rotl16((b & word_0) >> 48, 4 ) << 48) | (rotl16((b & word_1) >> 32, 5 ) << 32) | (rotl16((b & word_2) >> 16, 6 ) << 16) | rotl16(b & word_3, 7 )
+    register2 = (rotl16((c & word_0) >> 48, 8 ) << 48) | (rotl16((c & word_1) >> 32, 9 ) << 32) | (rotl16((c & word_2) >> 16, 10) << 16) | rotl16(c & word_3, 11)
+    register3 = (rotl16((d & word_0) >> 48, 12) << 48) | (rotl16((d & word_1) >> 32, 13) << 32) | (rotl16((d & word_2) >> 16, 14) << 16) | rotl16(d & word_3, 15)
+    return register0, register1, register2, register3
+
+def shuffle_and_shift(a, b, c, d, word_0=0xFFFF000000000000, word_1=0x0000FFFF00000000, word_2=0x00000000FFFF0000, word_3=0x000000000000FFFF):   
+    temp = a
+    tempb = b
+    tempc = c
+    register0 = (rotl16((d & word_0)    >> 48, 0 ) << 48) | (rotl16((b & word_3)    << 0 , 1 ) << 32) | (rotl16((b & word_2)    >> 16, 2 ) << 16) | rotl16((c & word_0) >> 48, 3 )
+    register1 = (rotl16((temp & word_3) >> 0 , 4 ) << 48) | (rotl16((c & word_2)    >> 16, 5 ) << 32) | (rotl16((b & word_1)    >> 32, 6 ) << 16) | rotl16((d & word_3) >> 0 , 7 )
+    register2 = (rotl16((c & word_3)    >> 0 , 8 ) << 48) | (rotl16((d & word_1)    >> 32, 9 ) << 32) | (rotl16((temp & word_0) >> 48, 10) << 16) | rotl16((d & word_2) >> 16, 11)
+    register3 = (rotl16((tempb & word_0)>> 48, 12) << 48) | (rotl16((temp & word_1) >> 32, 13) << 32) | (rotl16((tempc & word_1)>> 32, 14) << 16) | rotl16((temp & word_2) >> 16, 15)
+    return register0, register1, register2, register3
     
+def test_shuffle_and_shift():
+    inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]   
+    inputs[0] = 1
+    print("Testing shuffle and shift: ")
+    print_state_4x64(inputs)
+    while not raw_input("any key+enter to finish, enter to continue: "):
+        inputs = shuffle_and_shift(*inputs)
+        print("\n")
+        print_state_4x64(inputs)          
+        
+        
 def shuffle_mix(a, b, c, d):
-    a, b, c, d = shuffle(a, b, c, d)
-    a, b, c, d = shift_rows(a, b, c, d)
-    a ^= choice(b, c, d)
-    b ^= choice(c, d, a)
-    c ^= choice(d, a, b)
-    d ^= choice(a, b, c)
+    #a, b, c, d = shuffle(a, b, c, d)
+    #a, b, c, d = shift_rows(a, b, c, d)
+    a, b, c, d = shuffle_and_shift(a, b, c, d)
+    a, b, c, d = mix_quarters(a, b, c, d)
     return a, b, c, d
     
 def test_shuffle():
@@ -165,18 +181,31 @@ def test_shuffle():
     
 def test_shuffle_mix():
     inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]   
+    inputs[0] = 1
     print("Testing shuffle mix: ")
     print_state_4x64(inputs)
     while not raw_input("any key+enter to finish, enter to continue: "):
         inputs = shuffle_mix(*inputs)
         print("\n")
         print_state_4x64(inputs)   
+     
+def test_round_function():
+    inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]   
+    inputs[0] = 1
+    print("Testing round function: ")
+    print_state_4x64(inputs)
+    while not raw_input("any key+enter to finish, enter to continue: "):
+        inputs = round_function(*inputs)
+        print("\n")
+        print_state_4x64(inputs)  
         
 if __name__ == "__main__":
+    #test_round_function()
     #test_mix_quarters()
-    test_mix_rows()
+    #test_mix_rows()
     #test_mix_quarters_mix_rows()
     #test_mix_columns16()
     #test_shuffle()
-    #test_shuffle_mix()
+    test_shuffle_mix()    
+    #test_shuffle_and_shift()
     

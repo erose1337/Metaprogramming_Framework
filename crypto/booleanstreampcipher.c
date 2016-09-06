@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #define WORDSIZE unsigned long long
-#define ROUNDS 1
+#define ROUNDS 4
 
 #ifndef memcpy_s
 void memcpy_s(WORDSIZE* s1, WORDSIZE* s2, size_t n)
@@ -24,7 +24,7 @@ void xor_subroutine(WORDSIZE* data1, WORDSIZE* data2, WORDSIZE size)
 {
     WORDSIZE index = 0;
     for (index = 0; index < size; index++)
-    {
+    {        
         data1[index] ^= data2[index];
     }
 }
@@ -82,40 +82,43 @@ void _stream_cipher(WORDSIZE* nonce, WORDSIZE* key, WORDSIZE* keystream, WORDSIZ
         s2 ^= k2;
         s3 ^= k3;
         s4 ^= k4;
-        printf("pre memcpy\n");
+     
         memcpy_s(keystream + 0, &s1, sizeof(s1));
         memcpy_s(keystream + 1, &s2, sizeof(s2));
         memcpy_s(keystream + 2, &s3, sizeof(s3));
         memcpy_s(keystream + 3, &s4, sizeof(s4));     
-        printf("Post memcpy\n");
+        keystream += 4;     
     }
 }
     
 void crypt_stream(WORDSIZE* plaintext, WORDSIZE* key, WORDSIZE* nonce, WORDSIZE* constants, WORDSIZE blocks)
-{
-    printf("Allocating memory\n");
-    WORDSIZE* keystream = (WORDSIZE*)malloc(blocks * 32 * sizeof(WORDSIZE)); 
+{    
+    WORDSIZE* keystream = (WORDSIZE*)malloc(blocks * 11 * sizeof(WORDSIZE));  // idk why it works with 11 but not with 4?
     if (keystream == NULL)
     {
         printf("Failed to allocate memory\n");
-    }
-    printf("Entering stream cipher\n");
+    } 
     _stream_cipher(nonce, key, keystream, constants, blocks);  
-    printf("combining with keystream\n");
-    xor_subroutine(plaintext, keystream, blocks);
-    printf("after xor\n");
-    free(keystream);
-    printf("Freed keystream\n");
+    xor_subroutine(plaintext, keystream, blocks * 4);        
+    free(keystream);    
 }    
        
-void test_crypt_stream()
+void print_state(WORDSIZE* message)
 {
-    WORDSIZE message[4], key[4], nonce[4], _message[4], constants[256];
     int index = 0;
     for (index = 0; index < 4; index++)
     {
-        message[index] = 0;
-        _message[index] = 0;
+        printf("%I64u\n", message[index]);        
+    }    
+}
+  
+void test_crypt_stream()
+{
+    WORDSIZE message[4], key[4], nonce[4], constants[256];
+    int index = 0;
+    for (index = 0; index < 4; index++)
+    {
+        message[index] = 0;        
         key[index] = 0;
         nonce[index] = 0;
     }
@@ -123,32 +126,12 @@ void test_crypt_stream()
     {
         constants[index] = index;
     }
-    //nonce[-1] = 1
-    //message[1] = 2
-    printf("Encrypting\n");    
+    nonce[0] = 0;
+        
     crypt_stream(message, key, nonce, constants, 1);
-    printf("Decrypting\n");
-
-    for (index = 0; index < 4; index++)
-    {
-        printf("%I64u\n", message[index]);        
-    }    
-    printf("\n");
-    
-    crypt_stream(message, key, nonce, constants, 1);
-    printf("....Done\n");
-    for (index = 0; index < 4; index++)
-    {
-        if (message[index] != _message[index])
-        {
-            printf("Failed\n");
-        }
-        else
-        {
-            printf("%I64u", message[index]);
-        }
-    }    
-    printf("\n");
+    print_state(message);
+    crypt_stream(message, key, nonce, constants, 1);        
+    print_state(message);
 }
 
 int main()

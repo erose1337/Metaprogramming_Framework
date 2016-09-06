@@ -18,7 +18,14 @@ def nonlinear_mixing(a, b, c, d):
     c ^= rotate_left(choice(d, a, b), 5, bit_width=64)
     d ^= rotate_left(choice(a, b, c), 7, bit_width=64)
     return a, b, c, d                   
-                    
+                   
+def bitwise_mix_columns(a, b, c, d):
+    a ^= choice(b, c, d)
+    b ^= choice(c, d, a)
+    c ^= choice(d, a, b)
+    d ^= choice(a, b, c)
+    return a, b, c, d
+    
 def _stream_cipher(nonce, key, output, data_size, rounds, wordsize=64, constants=range(256)):
     k1, k2, k3, k4 = bytes_to_long_longs(key)
     s1, s2, s3, s4 = bytes_to_long_longs(nonce)

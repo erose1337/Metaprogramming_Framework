@@ -1,5 +1,3 @@
-This answer assumes the asker and/or reader is interested in the design of ciphers for the purposes of learning, and not to protect information in the real world. 
-
 In order to design and analyze a cipher, we have to establish what a cipher is supposed to accomplish. Put simply, we would like to be able to transform information in such a way that only those who are authorized may perform or invert the transformation. We can refer to this transformation as "encryption". Unauthorized parties may exist that should not be able to obtain any information protected by the encryption method, despite the fact that they can/will try to do so, if given the opportunity. This applies even if the work that would be involved is a large, nontrivial amount. We can refer to unauthorized parties as adversaries.
 
 Ideally, we would like the mutual information required by the authorized parties to be minimal, and for it to be obtainable with some level of convenience. If it were not for these two extremely practical aspects, the One Time Pad (https://en.wikipedia.org/wiki/One-time_pad) would be literally unbeatable, with information-theoretic security (https://en.wikipedia.org/wiki/Information_theoretic_security), implementation simplicity, and maximum efficiency (just a single addition per character!). A OTP is not a block cipher, but it makes for a good reference point to measure against.
@@ -69,7 +67,6 @@ Many, if not all modern block ciphers besides the OTP, are made of repeatedly it
 
 The way round keys are derived can influence both the security and efficiency of the cipher (http://crypto.stackexchange.com/questions/33975/what-are-the-requirements-of-a-key-schedule). Ideally, recovery of any round key information should reveal as little as possible about other rounds keys or the master key. This is one of the strengths of the OTP: recovery of a byte of key material (i.e. via known plaintext attack) provides no assistance in the recovery of any other bytes of the key. It is also generally considered beneficial for the generation of round key material to be quick, as a cipher with a slow key schedule may have greater latency and/or lower throughput.
 
-
 Designing a round function
 -----------
 In order to know what to operations to use, we need to know what we need to accomplish: 
@@ -105,8 +102,7 @@ Some available instructions are:
     - Needs addition/boolean function/s-box lookup for non-linearity  (http://crypto.stackexchange.com/questions/12634/reason-why-xor-is-a-linear-operation-but-ordinary-addition-isn-t?rq=1)
     
 - Addition (http://crypto.stackexchange.com/q/2608/29554)
-    - Useful for combining two inputs
-    - Useful for breaking xor differentials
+    - Useful for combining two inputs    
     - Requires separate subtraction instruction to invert
     - Tends to flip low order bits more then high order bits
     
@@ -144,8 +140,7 @@ Some available instructions are:
 - Pseudo-Hadamard transform: https://en.wikipedia.org/wiki/Pseudo-Hadamard_transform   
     - Provides diffusion
     - Used by SAFER (https://en.wikipedia.org/wiki/SAFER) and Twofish (https://en.wikipedia.org/wiki/Twofish)
-    
-    
+        
 Some example combinations of the above operations:
 
 - AES consists of addRoundKey, mixColumns, shiftRows, subBytes on the message https://en.wikipedia.org/wiki/Advanced_Encryption_Standard :
@@ -183,7 +178,9 @@ As we can see from some examples, there appear to be at least two different appr
     - Fast performance on PCs (especially if you can avoid memory accesses/stick to the registers)
     - Compact/simple implementation (does not require the space that lookup tables need)              
     - Not as straightforward to analyze security to differential/linear attack compared to s-box based design
-        
+
+Many ciphers use a set of constants. Every round, a new constant is introduced to the state via addition/xor. This can help against slide attacks by making successive rounds different.
+    
 Breaking a round function
 ----------
 Before you resort to applying linear and/or differential cryptanalysis to any new design, considering running some statistical tests. Statistical tests can tell you very quickly whether your latest design is totally broken. Note that statistical tests cannot confirm whether a design is cryptographically secure, it can only confirm that a design is insecure.

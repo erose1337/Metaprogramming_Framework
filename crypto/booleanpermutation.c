@@ -46,7 +46,8 @@ void round_function(WORDSIZE16* state)
     _state[2] = c;
     _state[3] = d;
 }    
-  
+
+// testing + visualization stuff  
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c"
 #define WORD_TO_BINARY(byte)  \
   (byte & 0x8000 ? '1' : '0'), \

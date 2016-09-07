@@ -155,8 +155,9 @@ def test_shuffle_and_shift():
         print_state_4x64(inputs)          
                 
 def shuffle_mix(a, b, c, d):    
-    a, b, c, d = shuffle_and_shift(a, b, c, d)
     a, b, c, d = mix_quarters(a, b, c, d)
+    a, b, c, d = shuffle_and_shift(a, b, c, d)
+    #a, b, c, d = mix_quarters(a, b, c, d)
     return a, b, c, d
     
 def test_shuffle():
@@ -177,7 +178,8 @@ def test_shuffle():
     print count
     
 def test_shuffle_mix():
-    inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]               
+    inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]      
+    inputs[0] = 1
     print("Testing shuffle mix: ")
     print_state_4x64(inputs)
     while not raw_input("any key+enter to finish, enter to continue: "):

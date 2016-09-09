@@ -134,6 +134,31 @@ void test_crypt_stream()
     print_state(message);
 }
 
+void test_encrypt_performance() {
+	int index, index2;
+	WORD_TYPE key[DATA_SIZE], round_keys[(rounds + 1) * DATA_SIZE];
+
+	WORD_TYPE* data = (WORD_TYPE*)malloc(DATA_SIZE * blocks * WORD_SIZE);
+	WORD_TYPE* plaintext = (WORD_TYPE*)malloc(DATA_SIZE * blocks * WORD_SIZE);
+
+	
+	
+	Stopwatch s;
+    
+	for (index2 = 0; index2 < measurements; index2++) {
+		for (index = 0; index < blocks; index++) {
+			crypt_stream(data, key, nonce, constants, data_byte_count / 8 / 4);
+		}        
+	}
+    
+    double timee = s.Lap();
+    
+    long long mega_bytes_of_data = (measurements * blocks * DATA_SIZE * WORD_SIZE) / (1024.0 * 1024.0);
+    printf("%.2f MB/s\n", (mega_bytes_of_data / timee));
+    //double bps = 100.0 * (blocks * DATA_SIZE * WORD_SIZE) / timee;
+	//printf("%.2f MB/s\n", bps / 1024.0 / 1024.0);
+}
+
 int main()
 {
     test_crypt_stream();

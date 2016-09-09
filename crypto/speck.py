@@ -87,6 +87,16 @@ def test_speck_Cipher():
     cipher.decrypt_block(data, key)
     #print data
     
+def visualize_speck():
+    left = 0
+    right = 1
+    key = 2
+    modulus = 0xFFFFFFFFFFFFFFFF
+    from visualizationtest import test_4x64_function, print_state_4x64_256
+    test_4x64_function(speck_round, (left, right, key, modulus), print_function=lambda data: print_state_4x64_256(data))
+    
 if __name__ == "__main__":
     #test_speck_round()
     test_speck_Cipher()
+    #visualize_speck()
+    

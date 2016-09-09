@@ -131,7 +131,13 @@ def test_bit_byte_transposition_words():
   #  print
   #  print bits2
     assert output1 == output2, (output1, output2)    
-    
+
+def visualize_choice_rotate_mixrow():
+    from visualizationtest import test_4x32_function
+    test_4x32_function(choice_rotate_mixRow, (0, 0, 0, 1))
+        
+        
 if __name__ == "__main__":
-    test_bit_byte_transposition_words()
+    #test_bit_byte_transposition_words()
+    visualize_choice_rotate_mixrow()
     

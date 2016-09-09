@@ -23,5 +23,5 @@ def test_choice():
     summarize_sbox(sbox)
     
 if __name__ == "__main__":
-    #test_choice()    
+    test_choice()    
     

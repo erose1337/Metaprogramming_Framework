@@ -59,7 +59,7 @@ void add_key(WORDSIZE64* state, WORDSIZE64* key)
 }
         
         
-void encrypt(unsigned char* message, unsigned char* _key)
+void encrypt_block_256(unsigned char* message, unsigned char* _key)
 {    
     unsigned long long* state =(unsigned long long*)message;
     unsigned long long* key = (unsigned long long*)_key;
@@ -76,6 +76,8 @@ void encrypt(unsigned char* message, unsigned char* _key)
         add_key(state, key);                
     }
 }
+
+
 
 // end of cipher code. begin testing + visualization stuff  
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c"

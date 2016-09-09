@@ -70,7 +70,7 @@ def generate_function_combinations(input_count, operation_count, operator_list, 
             name = _hash(str(_inputs) + str(operations))
             source = "def function_{}(".format(name) + ''.join("input{}, ".format(count) for count in _inputs) + "):\n"    
             for operation in operations:
-                source += "    input0 {} input1\n".format(operation)
+                source += "    input{} {} input{}\n".format(operation)
             source += "    return " + ''.join("input{}, ".format(index) for index in range(input_count))
             source = source.format("function_name")
         print("Created:\n{}".format(source))

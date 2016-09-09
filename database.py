@@ -297,11 +297,11 @@ def test_db():
     class Test_Database(Database):
         
         defaults = {"database_name" : "test_database.db"}
-        database_structure = {"Test" : ("test1 TEXT PRIMARY_KEY", "test2 BLOB")}
-        primary_key = {"Test" : "test1"}
+        database_structure = {"Test_Table" : ("test_name TEXT PRIMARY_KEY", "test_data BLOB")}
+        primary_key = {"Test_table" : "test_name"}        
         
     test = Test_Database()
-    insert_string = "INSERT INTO Test VALUES (?, ?)"
+            
     entry = ("first_entry", "\x00" * 10)
     test.insert_into("Test", entry)
     test.insert_into("Test", [entry, entry, entry], batch=True)

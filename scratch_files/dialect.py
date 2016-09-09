@@ -1,3 +1,4 @@
+import inspect
 import pickle
 import tokenize
 import string
@@ -163,16 +164,21 @@ class Dialect(object):
             _file.flush()
             _file.close()
             
-
+def translate_module(module, dialect=verbose_dialect):
+    source = inspect.getsource(module)
+    translator = Dialect(**dialect)
+    _file = StringIO(source)
+    return translator.translate(_file)    
+        
+        
 if __name__ == "__main__":
     import sys
-    translator = Dialect(**verbose_dialect)
+    translator = Dialect(**lol_dialect)
     filename = sys.modules["__main__"].__file__
-    with open('network.py', 'r') as _file:
+    with open(filename, 'r') as _file:
         source = _file.read()
         _file.seek(0)
         translated = translator.translate(_file)    
-        with open("translated_network.py", 'w') as new_file:
-            new_file.write(translated)
+        
     print translated
 

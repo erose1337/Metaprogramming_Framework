@@ -1,5 +1,6 @@
 from utilities import slide, integer_to_bytes
 from ciphercomponents import choice, rotate_left
+from visualizationtest import test_4x64_function
 
 def rotl16(word, amount):
     return rotate_left(word, amount, bit_width=16)
@@ -160,6 +161,7 @@ def shuffle_mix(a, b, c, d):
     #a, b, c, d = mix_quarters(a, b, c, d)
     return a, b, c, d
     
+    
 def test_shuffle():
     inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]   
     outputs = [inputs[:]]
@@ -180,13 +182,15 @@ def test_shuffle():
 def test_shuffle_mix():
     inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]      
     inputs[0] = 1
-    print("Testing shuffle mix: ")
-    print_state_4x64(inputs)
-    while not raw_input("any key+enter to finish, enter to continue: "):
-        inputs = shuffle_mix(*inputs)
-        print("\n")
-        print_state_4x64(inputs)   
-     
+    test_4x64_function(shuffle_mix, inputs)
+    
+    #print("Testing shuffle mix: ")
+    #print_state_4x64(inputs)
+    #while not raw_input("any key+enter to finish, enter to continue: "):
+    #    inputs = shuffle_mix(*inputs)
+    #    print("\n")
+    #    print_state_4x64(inputs)   
+        
 def test_round_function():
     inputs = [1 | (1 << 16) | (1 << 32) | (1 << 48), 0, 0, 0]   
     inputs[0] = 1
@@ -196,7 +200,7 @@ def test_round_function():
         inputs = round_function(*inputs)
         print("\n")
         print_state_4x64(inputs)  
-        
+                
 if __name__ == "__main__":
     #test_round_function()
     #test_mix_quarters()

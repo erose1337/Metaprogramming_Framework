@@ -10,7 +10,7 @@ def round_function(a, b, c, d):
     b ^= rotl64(choice(c, d, a), 2)
     c ^= rotl64(choice(d, a, b), 3)
     d ^= rotl64(choice(a, b, c), 5)    
-   #         
+            
     a ^= rotl64(choice(b, c, d), 16)
     b ^= rotl64(choice(c, d, a), 20)
     c ^= rotl64(choice(d, a, b), 24)
@@ -20,6 +20,41 @@ def round_function(a, b, c, d):
     
     return a, b, c, d
 
+def round_function2(a, b, c, d, k):   
+    a ^= rotl64(choice(b, c, d), 29);
+    b ^= rotl64(choice(c, d, a), 31);    
+    c ^= rotl64(choice(d, a, b), 37);    
+    d ^= rotl64(choice(a, b, c), 1); 
+    
+    t = a;
+    a = rotl64(choice(k, a, b), 1);
+    b = rotl64(choice(k, b, t), 2);
+    
+    t = c;
+    c = rotl64(choice(k, c, d), 3);
+    d = rotl64(choice(k, d, t), 5);
+
+    a ^= rotl64(choice(b, c, d), 29);
+    b ^= rotl64(choice(c, d, a), 31);    
+    c ^= rotl64(choice(d, a, b), 37);    
+    d ^= rotl64(choice(a, b, c), 1);     
+    
+    t = b;
+    b = rotl64(choice(k, b, c), 16);
+    c = rotl64(choice(k, c, t), 20);
+    
+    t = d;
+    d = rotl64(choice(k, d, a), 24);
+    a = rotl64(choice(k, t, d), 28);
+
+    #a ^= rotl64(choice(b, c, d), 29);
+    #b ^= rotl64(choice(c, d, a), 31);    
+    #c ^= rotl64(choice(d, a, b), 37);    
+    #d ^= rotl64(choice(a, b, c), 1);    
+    
+    
+    return a, b, c, d, k ^ a
+    
 def round_function_unrolled(a, b, c, d,  _mask=0xFFFFFFFFFFFFFFFF):
     t = d ^ (b & (c ^ d))
     a ^= ((t << 1) | (t >> (64 - 1))) & _mask
@@ -51,6 +86,11 @@ def test_round_function():
     from visualizationtest import test_4x64_function
     test_4x64_function(round_function, (1, 0, 0, 0))
     
+def test_round_function2():
+    from visualizationtest import test_4x64_function
+    test_4x64_function(round_function2, (1, 0, 0, 0, 1))
+    
 if __name__ == "__main__":
     test_round_function()
+    test_round_function2()
     

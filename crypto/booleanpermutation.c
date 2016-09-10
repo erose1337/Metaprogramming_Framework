@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "constructions.c"
 
-#define MASK16 0xFFFF
 #define WORDSIZE16 unsigned short
 #define WORDSIZE64 unsigned long long
+#define ROUNDS 16
 
-inline WORDSIZE16 rotl16(WORDSIZE16 word, unsigned char amount){return ((word << amount) | (word >> (16 - amount))) & MASK16;}
+inline WORDSIZE16 rotl16(WORDSIZE16 word, unsigned char amount){return (word << amount) | (word >> (16 - amount));}
 inline WORDSIZE64 choice(WORDSIZE64 a, WORDSIZE64 b, WORDSIZE64 c){return c ^ (a & (b ^ c));} 
            
 void permutation(WORDSIZE64* _state)
 {           
-    unsigned long long a, b, c, d;
+    WORDSIZE64 a, b, c, d;
     a = _state[0];
     b = _state[1];
     c = _state[2];
@@ -26,7 +27,7 @@ void permutation(WORDSIZE64* _state)
     _state[2] = c;
     _state[3] = d;
 
-    unsigned short * state = (unsigned short*)_state;
+    WORDSIZE16 * state = (WORDSIZE16*)_state;
     
     WORDSIZE16 temp = 0;
     temp = state[0];
@@ -49,35 +50,14 @@ void permutation(WORDSIZE64* _state)
     state[7]  = rotl16(temp     , 0 );          
 }            
 
-void add_key(WORDSIZE64* state, WORDSIZE64* key)
+void cipher_encrypt(WORDSIZE64* message, WORDSIZE64* key)
 {
-    int index;
-    for (index = 0; index < 4; index++)
-    {
-        state[index] ^= key[index];
-    }
-}
-        
-        
-void encrypt_block_256(unsigned char* message, unsigned char* _key)
-{    
-    unsigned long long* state =(unsigned long long*)message;
-    unsigned long long* key = (unsigned long long*)_key;
-
-    permutation(key);
-    add_key(state, key);
+    int size = 4;
+    WORDSIZE64 round_keys[size * ROUNDS];    
     
-    int round;
-    for (round = 0; round < 16; round++)
-    {                    
-        permutation(state);
-        
-        permutation(key);  
-        add_key(state, key);                
-    }
-}
-
-
+    key_schedule(&permutation, key, round_keys, ROUNDS, size);        
+    key_alternating_cipher(&permutation, round_keys, message, ROUNDS, size);
+}    
 
 // end of cipher code. begin testing + visualization stuff  
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c"
@@ -145,33 +125,30 @@ void test_shuffle_and_shift()
     }   
 }        
 
-//void test_encrypt_performance() {
-//	int index, index2;
-//	WORDSIZE16 key[DATA_SIZE], round_keys[(rounds + 1) * DATA_SIZE];
-//
-//	WORD_TYPE* data = (WORD_TYPE*)malloc(DATA_SIZE * blocks * WORD_SIZE);
-//	WORD_TYPE* plaintext = (WORD_TYPE*)malloc(DATA_SIZE * blocks * WORD_SIZE);
-//
-//	
-//	
-//	Stopwatch s;
-//    
-//	for (index2 = 0; index2 < measurements; index2++) {
-//		for (index = 0; index < blocks; index++) {
-//			crypt_stream(data, key, nonce, constants, data_byte_count / 8 / 4);
-//		}        
-//	}
-//    
-//    double timee = s.Lap();
-//    
-//    long long mega_bytes_of_data = (measurements * blocks * DATA_SIZE * WORD_SIZE) / (1024.0 * 1024.0);
-//    printf("%.2f MB/s\n", (mega_bytes_of_data / timee));
-//    //double bps = 100.0 * (blocks * DATA_SIZE * WORD_SIZE) / timee;
-//	//printf("%.2f MB/s\n", bps / 1024.0 / 1024.0);
-//}
+void test_encrypt_performance() {
+	WORDSIZE64 message[4], key[4];
+    memset(message, 0, 4);
+    memset(key, 0, 4);
+    key[0] = 1;
+  	
+	Stopwatch s;
+    
+    WORDSIZE64 index, measurements = (1024 * 1024 * 1024) / 32
+	for (index = 0; index < measurements; index++) 
+    {
+	    cipher_encrypt(data, key);        
+	}        	    
+    double timee = s.Lap();
+    
+    long long mega_bytes_of_data = measurements * 32
+    printf("%.2f MB/s\n", (mega_bytes_of_data / timee));
+    //double bps = 100.0 * (blocks * DATA_SIZE * WORD_SIZE) / timee;
+	//printf("%.2f MB/s\n", bps / 1024.0 / 1024.0);
+}
 
 int main()
 {
     test_shuffle_and_shift();
+    test_encrypt_performance();
     return 0;
 }

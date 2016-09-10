@@ -5,16 +5,6 @@
 #define WORDSIZE unsigned long long
 #define ROUNDS 2
 
-void print_state(WORDSIZE* state)
-{
-    int index;
-    for (index = 0; index < 4; index++)
-    {
-        printf("%I64u ", state[index]);
-    }
-    printf("\n");
-}
-
 void crx_permutation(WORDSIZE* state)
 {
     WORDSIZE a=state[0], b=state[1], c=state[2], d=state[3], t;    
@@ -47,14 +37,18 @@ void crx_permutation(WORDSIZE* state)
         t = c ^ (a & (b ^ c));             
         d ^= ((t << 56) | (t >> (64 - 56)));
     }
-    state[0] = a;
-    state[1] = b;
-    state[2] = c;
-    state[3] = d;   
-    printf("State at end of permutation:\n");
-    print_state(state);
+    state[0] = a; state[1] = b; state[2] = c; state[3] = d;       
 }
   
+void print_state(WORDSIZE* state)
+{
+    int index;
+    for (index = 0; index < 4; index++)
+    {
+        printf("%I64u ", state[index]);
+    }
+    printf("\n");
+}
 
        
 void test_crx_permutation()

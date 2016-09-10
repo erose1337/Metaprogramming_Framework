@@ -25,3 +25,17 @@ void key_alternating_cipher(void (*permutation)(WORDSIZE*),
         }               
     }
 }
+
+void key_schedule(void (*permutation)(WORDSIZE*),
+                  WORDSIZE* key, WORDSIZE* round_keys,
+                  int rounds, int size)
+{                  
+    int round;
+    memcpy(round_keys, key, size);
+    for (round = 0; round < rounds; round++)
+    {        
+        permutation(key);
+        round_keys += size;        
+        memcpy(round_keys, key, size);
+    }
+}

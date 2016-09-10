@@ -38,14 +38,15 @@ def test_create_sign_verify():
     message = "An excellent test message"
     
     signature = sign(message, private_key)
-    _message = message[:-1]
-    for ending in str(bytearray(range(256))):
-        message = _message + ending
-    
-        if verify(message, signature, public_key):
-            print "Signature valid"
-        else:
-            print "Signature invalid"
+    _message = message[:-2]
+    for ending2 in str(bytearray(range(256))):
+        for ending in str(bytearray(range(256))):
+            message = _message + ending2 + ending
+        
+            if verify(message, signature, public_key):
+                print "Signature valid", message[-2], message[-1], ending2, ending
+           # else:
+           #     print "Signature invalid"
     
 if __name__ == "__main__":
     test_create_sign_verify()

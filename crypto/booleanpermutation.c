@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
 #include "constructions.c"
 
 #define WORDSIZE16 unsigned short
@@ -130,25 +132,22 @@ void test_encrypt_performance() {
     memset(message, 0, 4);
     memset(key, 0, 4);
     key[0] = 1;
-  	
-	Stopwatch s;
-    
-    WORDSIZE64 index, measurements = (1024 * 1024 * 1024) / 32
+  		
+    WORDSIZE64 index, measurements = (1024 * 1024 * 1024) / 256;
+    clock_t begin = clock();
 	for (index = 0; index < measurements; index++) 
     {
-	    cipher_encrypt(data, key);        
+	    cipher_encrypt(message, key);    
+        //permutation(message);
 	}        	    
-    double timee = s.Lap();
-    
-    long long mega_bytes_of_data = measurements * 32
-    printf("%.2f MB/s\n", (mega_bytes_of_data / timee));
-    //double bps = 100.0 * (blocks * DATA_SIZE * WORD_SIZE) / timee;
-	//printf("%.2f MB/s\n", bps / 1024.0 / 1024.0);
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;    
+    printf("Time required: %.2fs\n", time_spent);
 }
 
 int main()
 {
-    test_shuffle_and_shift();
+    //test_shuffle_and_shift();
     test_encrypt_performance();
     return 0;
 }

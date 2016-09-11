@@ -1,11 +1,32 @@
-#include <stdio.h>
-#include <string.h> // memset
-#include "constructions.c"
+#include <stdio.h> // for testing
+#include "constructions.c" // for testing
 
+// cipher code
 #define WORDSIZE unsigned long long
 #define ROUNDS 2
 
-void crx_permutation(WORDSIZE* state)
+inline WORDSIZE rotl64(WORDSIZE x, WORDSIZE r){return ((x << r) | (x >> (64 - r)));}
+inline WORDSIZE choice(WORDSIZE a, WORDSIZE b, WORDSIZE c){return c ^ (a & (b ^ c));}
+    
+void crx(WORDSIZE* state)
+{
+    a = state[0]; b = state[1]; c = state[2]; d = state[3];
+    
+    a ^= rotl64(choice(b, c, d), 1);
+    b ^= rotl64(choice(c, d, a), 2);
+    c ^= rotl64(choice(d, a, b), 3);
+    d ^= rotl64(choice(a, b, c), 5);    
+            
+    a ^= rotl64(choice(b, c, d), 16);
+    b ^= rotl64(choice(c, d, a), 20);
+    c ^= rotl64(choice(d, a, b), 24);
+    d ^= rotl64(choice(a, b, c), 28);    
+    
+    state[0] = a; state[1] = b; state[2] = c; state[3] = d;
+}
+// end cipher code
+
+void crx_unrolled(WORDSIZE* state)
 {
     WORDSIZE a=state[0], b=state[1], c=state[2], d=state[3], t;    
     
@@ -51,7 +72,7 @@ void print_state(WORDSIZE* state)
 }
 
        
-void test_crx_permutation()
+void test_crx_unrolled()
 {
     WORDSIZE state[4], key[4 * (ROUNDS + 1)];
     int index;
@@ -65,16 +86,16 @@ void test_crx_permutation()
         key[index] = 0;
     }
     key[0] = 2;    
-    crx_permutation(state);
+    crx_unrolled(state);
     print_state(state);
     
-    key_alternating_cipher(&crx_permutation, key, state, 2, 4);
+    key_alternating_cipher(&crx_unrolled, key, state, 2, 4);
     print_state(state);
 }
 
 int main()
 {
-    test_crx_permutation();    
+    test_crx_unrolled();    
     return 0;
 }
     

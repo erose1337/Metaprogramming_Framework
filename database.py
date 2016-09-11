@@ -5,6 +5,7 @@ import os
 
 import pride
 import pride.base
+from pride.errors import ArgumentError
 
 def create_assignment_string(items):
     keys = items.keys()
@@ -44,7 +45,8 @@ class Database(pride.base.Wrapper):
                  "query_issued" : "vvv", "query_result" : "vvv",
                  "insert_into" : "vvv", "delete_from" : "vvv",
                  "drop_table" : "v", "table_info" : "vvv",
-                 "update_table" : "vvv", "finalizer_unavailable" : 0}
+                 "update_table" : "vvv", "finalizer_unavailable" : 0,
+                 "insert_or_replace" : "vvv"}
     
     mutable_defaults = {"in_memory" : dict}
     
@@ -220,6 +222,14 @@ class Database(pride.base.Wrapper):
                 self.commit()
             return cursor
                                              
+    def insert_or_replace(self, table_name, new_values):         
+        query = "INSERT OR REPLACE INTO {} VALUES ({})".format(table_name, ', '.join('?' for value in new_values))
+        self.alert("{}".format(query), level=self.verbosity["insert_or_replace"])
+        cursor = self.cursor.execute(query, new_values)
+        if self.auto_commit:
+            self.commit()
+        return cursor        
+    
     def drop_table(self, table_name):
         """ Removes a table from the underlying sqlite3 database. Note
             that this will remove all entries in the specified table, and
@@ -297,15 +307,19 @@ def test_db():
     class Test_Database(Database):
         
         defaults = {"database_name" : "test_database.db"}
-        database_structure = {"Test_Table" : ("test_name TEXT PRIMARY_KEY", "test_data BLOB")}
-        primary_key = {"Test_table" : "test_name"}        
+        database_structure = {"Test" : ("test_name TEXT PRIMARY_KEY UNIQUE", "test_data BLOB")}
+        primary_key = {"Test" : "test_name"}        
         
     test = Test_Database()
             
     entry = ("first_entry", "\x00" * 10)
-    test.insert_into("Test", entry)
-    test.insert_into("Test", [entry, entry, entry], batch=True)
-    test.query("Test")
+    test.insert_into("Test", entry)    
+    assert test.query("Test") == entry, (entry, test.query("Test"))
         
+    test.insert_into("Test", ("no_duplicates", "0"))
+    test.insert_or_replace("Test", ("no_duplicates", '1'))
+    test.query("Test", retrieve_fields=("test_name", "test_data"), where={"test_name" : "no_duplicates"})
+    
 if __name__ == "__main__":
     test_db()
+    

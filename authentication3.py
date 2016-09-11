@@ -16,8 +16,6 @@ from pride.errors import SecurityError, UnauthorizedError
 # xor key with key sent by partner
 #    - decrypt encrypted_session_secret via private key
 #    - xor both session secrets together to obtain final session secret
-
-    
                     
 @pride.decorators.required_arguments(no_args=True)
 def remote_procedure_call(callback_name='', callback=None):
@@ -274,7 +272,8 @@ class Authenticated_Client(pride.base.Base):
                  "login" : 0, "login_success" : 0, "login_failure" : 0,
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "delayed_request_sent" : "vv", "login_failed" : 0,
-                 "logout_success" : 0, "auto_register" : "vv"}
+                 "logout_success" : 0, "auto_register" : "vv",
+                 "not_registered" : 0}
                  
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -335,8 +334,10 @@ class Authenticated_Client(pride.base.Base):
         self.password_prompt = self.password_prompt.format(self.reference, self.target_service, self.ip)
         self.session = self.create("pride.rpc.Session", session_id='0', host_info=self.host_info)
                           
-        if self.username not in pride.site_config._locally_registered_users and self.auto_register:
-            self.alert("Auto registering with '{}'".format(self.target_service), level=self.verbosity["auto_register"])
+        registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+        user_info = (self.target_service, self.ip, self.username)
+        if user_info not in registered_users and self.auto_register:
+            self.alert("Auto registering with {}@{} as {}".format(*user_info), level=self.verbosity["auto_register"])
             self.register()            
             
         elif self.auto_login:
@@ -368,10 +369,12 @@ class Authenticated_Client(pride.base.Base):
     def register_success(self):
         self.alert(self.registration_success_message.format(self.target_service, self.ip, self.username), 
                    level=self.verbosity["register_success"])
-        if self.ip in ("localhost", "127.0.0.1"):                        
-            pride.site_config.write_to("_locally_registered_users", **{self.username : True})
         
-        if pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)):
+        registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+        registered_users.append((self.target_service, self.ip, self.username))
+        pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users
+            
+        if pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)): # what if registration was for a machine and not a person
             entry = '_'.join((self.__module__.replace('.', '_'),
                               self.__class__.__name__,
                               "defaults"))                            
@@ -420,7 +423,16 @@ class Authenticated_Client(pride.base.Base):
     def login_failure(self, server_response):        
         self.logged_in = False
         self.alert("{}".format(server_response, level=self.verbosity['login_failure']))
-
+        
+        if self.ip in ("localhost", "127.0.0.1"):
+            registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+            user_info = (self.target_service, self.ip, self.username)
+            if user_info not in registered_users:
+                self.alert("Not registered for {}@{} as '{}'".format(*user_info), 
+                           level=self.verbosity["not_registered"])
+                if pride.shell.get_permission("{}: Register now? : ".format(self.reference)):
+                    self.register()
+                
     @pride.decorators.call_if(logged_in=True)
     @pride.decorators.exit(_reset_login_flags)
     @remote_procedure_call(callback_name="logout_success")

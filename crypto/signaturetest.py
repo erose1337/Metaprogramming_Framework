@@ -13,7 +13,7 @@ def choice(a, b, c):
                     
 def create_keypair():
     key1, key2 = bytearray(urandom(32)), bytearray(urandom(32))
-    public_key = hash(key1 + key2)
+    public_key = hash(key1), hash(key2)
     return (bytes_to_integer(key1), bytes_to_integer(key2)), public_key
     
 def sign(message, private_key):
@@ -28,7 +28,7 @@ def verify(message, signature, public_key):
     signature_a, signature_b = signature    
     key1 = choice(message_hash, signature_a, signature_b)
     key2 = choice(message_hash, signature_b, signature_a)
-    if hash(integer_to_bytes(key1, 32) + integer_to_bytes(key2, 32)) == public_key:
+    if (hash(integer_to_bytes(key1, 32)), hash(integer_to_bytes(key2, 32))) == public_key:
         return True
     else:
         return False

@@ -82,12 +82,13 @@ class Interpreter(authentication2.Authenticated_Service):
                                persistent=False).reference
         self._logger = invoke(self._logger_type)
         
-    def on_login(self):
-        session_id, sender = self.current_session
+    def login_success(self, username):
+        flag, message, session_id = super(Interpreter, self).login_success(username)        
+        session_id, sender = self.current_session        
         username = self.session_id[session_id]
         self.user_session[username] = ''
         string_info = (username, sender, sys.version, sys.platform, self.help_string)
-        return self.login_message.format(*string_info)
+        return (flag, self.login_message.format(*string_info), session_id)
         
     def execute_source(self, source):
         log = pride.objects[self.log]
@@ -150,6 +151,7 @@ class Python(base.Base):
                                        os.path.sep + "gui" + os.path.sep, ),
                 "startup_components" : ("pride.vcs.Version_Control",
                                         "pride.vmlibrary.Processor",
+                                        "pride.storage.Persistent_Storage",
                                         "pride.fileio.File_System",
                                         "pride.network.Network_Connection_Manager",
                                         "pride.network.Network", 

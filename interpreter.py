@@ -12,7 +12,7 @@ except ImportError:
 
 import pride
 import pride.base as base
-import pride.authentication3 as authentication2
+import pride.authentication3
 import pride.shell
 import pride.user
 import pride.site_config
@@ -26,7 +26,7 @@ def main_as_name():
     finally:
         globals()["__name__"] = backup        
     
-class Shell(authentication2.Authenticated_Client):
+class Shell(pride.authentication3.Authenticated_Client):
     """ Handles keystrokes and sends python source to the Interpreter to 
         be executed. This requires authentication via username/password."""
     defaults = {"username" : "", "password" : "", "startup_definitions" : '', 
@@ -34,9 +34,10 @@ class Shell(authentication2.Authenticated_Client):
     
     verbosity = {"login" : 0, "execute_source" : "vv"}
                 
-    def on_login(self, message):
-        super(Shell, self).on_login(message)        
-        sys.stdout.write(">>> ")        
+    def login_success(self, message):
+        super(Shell, self).login_success(message)        
+        sys.stdout.write(">>> ")     
+        sys.stdout.flush()
         if self.startup_definitions:
             self.handle_startup_definitions()                
              
@@ -61,7 +62,7 @@ class Shell(authentication2.Authenticated_Client):
             (self.stdout or sys.stdout).write('\r' + packet)                            
             
 
-class Interpreter(authentication2.Authenticated_Service):
+class Interpreter(pride.authentication3.Authenticated_Service):
     """ Executes python source. Requires authentication from remote hosts. 
         The source code and return value of all requests are logged. """
     
@@ -149,9 +150,10 @@ class Python(base.Base):
                 "environment_setup" : ("PYSDL2_DLL_PATH = " + 
                                        pride.site_config.PRIDE_DIRECTORY +
                                        os.path.sep + "gui" + os.path.sep, ),
-                "startup_components" : ("pride.vcs.Version_Control",
+                "startup_components" : ("pride.storage.Persistent_Storage",
+                                        "pride.vcs.Version_Control",
                                         "pride.vmlibrary.Processor",
-                                        "pride.storage.Persistent_Storage",
+                                        
                                         "pride.fileio.File_System",
                                         "pride.network.Network_Connection_Manager",
                                         "pride.network.Network", 

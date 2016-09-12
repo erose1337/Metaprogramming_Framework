@@ -2,7 +2,7 @@
     Constructs a service for the transfer of arbitrary data from one registered 
     party to another. """
     
-import pride.authentication2
+import pride.authentication3
 import pride.shell
 import pride.utilities
 import pride.vmlibrary
@@ -35,7 +35,7 @@ class Background_Refresh(pride.vmlibrary.Process):
             client.refresh()
         
         
-class Data_Transfer_Client(pride.authentication2.Authenticated_Client):
+class Data_Transfer_Client(pride.authentication3.Authenticated_Client):
     """ Client program for sending data to a party registered with the target service. 
         
         Security is provided by TLS, which provides end to end security between
@@ -49,7 +49,7 @@ class Data_Transfer_Client(pride.authentication2.Authenticated_Client):
         super(Data_Transfer_Client, self).__init__(**kwargs)
         pride.objects["/Python/Background_Refresh"].add(self)
         
-    @pride.authentication2.remote_procedure_call(callback_name="receive")
+    @pride.authentication3.remote_procedure_call(callback_name="receive")
     def send_to(self, receiver, message): 
         """ Sends message to receiver via remote procedure call through 
             self.target_service@self.ip. Automatically returns any messages
@@ -70,7 +70,7 @@ class Data_Transfer_Client(pride.authentication2.Authenticated_Client):
         self.send_to('', '')
         
         
-class Data_Transfer_Service(pride.authentication2.Authenticated_Service):
+class Data_Transfer_Service(pride.authentication3.Authenticated_Service):
     """ Service for transferring arbitrary data from one registered client to another """        
     mutable_defaults = {"messages" : dict}
     remotely_available_procedures = ("send_to", )
@@ -172,3 +172,4 @@ def test_File_Transfer():
     
 if __name__ == "__main__":
     test_File_Transfer()
+    

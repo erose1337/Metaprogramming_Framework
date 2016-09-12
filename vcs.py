@@ -1,6 +1,6 @@
-import pride.authentication2
+import pride.authentication3
 
-class Version_Control(pride.authentication2.Authenticated_Service):
+class Version_Control(pride.authentication3.Authenticated_Service):
     
     database_structure = {"Repository" : ("module_id PRIMARY_KEY BLOB", "module_name TEXT",
                                           "module_source TEXT", "repo_id BLOB")}

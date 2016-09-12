@@ -1,6 +1,6 @@
-import pride.authentication2
+import pride.authentication3
 
-class Rpc_Hello_World_Service(pride.authentication2.Authenticated_Service):
+class Rpc_Hello_World_Service(pride.authentication3.Authenticated_Service):
     
     remotely_available_procedures = ("hello_world", )
     
@@ -8,11 +8,11 @@ class Rpc_Hello_World_Service(pride.authentication2.Authenticated_Service):
         return "Hello world" + ' ' + argument
         
 
-class Rpc_Hello_World_Client(pride.authentication2.Authenticated_Client):
+class Rpc_Hello_World_Client(pride.authentication3.Authenticated_Client):
             
     defaults = {"target_service" : "/Rpc_Hello_World_Service"}
     
-    @pride.authentication2.remote_procedure_call(callback_name="alert")
+    @pride.authentication3.remote_procedure_call(callback_name="alert")
     def hello_world(self, argument, *args, **kwargs):
         pass
         

@@ -3,7 +3,7 @@
     in the form of keystrokes, mouse clicks, and potentially audio,
     operate on the input in a manner opaque to the client, and return output
     to the client. """
-import pride.authentication2
+import pride.authentication3
 import pride.utilities
 
 class Event_Structure(object):
@@ -24,18 +24,18 @@ class Mouse_Structure(object):
         return "Mouse(x={}, y={}, clicks={}, button={})".format(self.x, self.y, self.clicks, self.button)
         
     
-class Black_Box_Service(pride.authentication2.Authenticated_Service):    
+class Black_Box_Service(pride.authentication3.Authenticated_Service):    
 
     defaults = {"input_types" : ("keyboard", "mouse", "audio"), "window_type" : "pride.gui.sdllibrary.Window_Context"}
     remotely_available_procedures = ("handle_input", )
     verbosity = {"handle_keyboard" : 0, "handle_mouse" : 'v', "handle_audio" : 0, "refresh" : 'v'}
     mutable_defaults = {"windows" : dict}
     
-    def on_login(self):
-        username = self.current_user
+    def login_success(self, username):        
         window =  self.create(self.window_type)
         self.windows[username] = window.reference
         window.create("pride.gui.widgetlibrary.Homescreen")
+        return super(Black_Box_Service, self).login_success(username)
         
     def handle_input(self, packed_user_input):
         input_type, input_values = packed_user_input.split(' ', 1)
@@ -65,7 +65,7 @@ class Black_Box_Service(pride.authentication2.Authenticated_Service):
                    level=self.verbosity["handle_audio"])
         
         
-class Black_Box_Client(pride.authentication2.Authenticated_Client):
+class Black_Box_Client(pride.authentication3.Authenticated_Client):
                     
     defaults = {"target_service" : "/Python/Black_Box_Service", 
                 "mouse_support" : False, "refresh_interval" : .95,
@@ -86,7 +86,7 @@ class Black_Box_Client(pride.authentication2.Authenticated_Client):
         if self.audio_support:
             pride.objects[self.audio_source].add_listener(self.reference)
             
-    @pride.authentication2.remote_procedure_call(callback_name="receive_response")
+    @pride.authentication3.remote_procedure_call(callback_name="receive_response")
     def handle_input(self, packed_user_input): 
         pass
         
@@ -124,6 +124,7 @@ class Black_Box_Client(pride.authentication2.Authenticated_Client):
             self.handle_mouse_input('')
         self.refresh_instruction.execute(priority=self.refresh_interval)
         self._refresh_flag = True
+        
         
 def test_black_box_service():
     import pride

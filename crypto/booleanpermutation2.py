@@ -3,6 +3,10 @@ from utilities import slide
 def rotl16(word, amount, _mask=0xFFFF):
     amount %= 16
     return ((word << amount) | (word >> (16 - amount))) & _mask 
+  
+def rotl64(word, amount, _mask=0xFFFFFFFFFFFFFFFF):
+    amount %= 64
+    return ((word << amount) | (word >> (64 - amount))) & _mask 
     
 def choice(a, b, c):
     return c ^ (a & (b ^ c))  
@@ -45,12 +49,75 @@ def mix_quarters(a, b, c, d):
     c ^= choice(d, a, b)
     d ^= choice(a, b, c)   
     return a, b, c, d
-    
+  
 def shuffle_mix(a, b, c, d):    
     a, b, c, d = shuffle_and_shift(a, b, c, d)
     a, b, c, d = mix_quarters(a, b, c, d)
     return a, b, c, d
+ 
+from ciphercomponents import mixRow, rotate_left
+from utilities import integer_to_bytes    
+    
+def shift_rows(a, b, c, d, MASK16=0xFFFF):        
+    a = (rotl16((a >> 48) & MASK16, 0) << 48) | (rotl16((a >> 32) & MASK16, 1) << 32) | (rotl16((a >> 16) & MASK16, 2) << 16) | (rotl16((a >> 0 ) & MASK16, 3) << 0 )
+    b = (rotl16((b >> 48) & MASK16, 0) << 48) | (rotl16((b >> 32) & MASK16, 1) << 32) | (rotl16((b >> 16) & MASK16, 2) << 16) | (rotl16((b >> 0 ) & MASK16, 3) << 0 )
+    c = (rotl16((c >> 48) & MASK16, 0) << 48) | (rotl16((c >> 32) & MASK16, 1) << 32) | (rotl16((c >> 16) & MASK16, 2) << 16) | (rotl16((c >> 0 ) & MASK16, 3) << 0 ) 
+    d = (rotl16((d >> 48) & MASK16, 0) << 48) | (rotl16((d >> 32) & MASK16, 1) << 32) | (rotl16((d >> 16) & MASK16, 2) << 16) | (rotl16((d >> 0 ) & MASK16, 3) << 0 ) 
+    return a, b, c, d
+    
+def test_shift_rows():
+    from visualizationtest import test_4x64_function
+    test_4x64_function(shift_rows, [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])            
+            
+def _test_mixer(a, b, c, d):  
+    a, b, c, d = shift_rows(a, b, c, d)
        
+    a ^= rotl64(choice(b, c, d), 0 )
+    b ^= rotl64(choice(c, d, a), 4 )
+    c ^= rotl64(choice(d, a, b), 8 )
+    d ^= rotl64(choice(a, b, c), 12)
+    
+    a = rotl64((a + (b ^ c ^ d)) & 0xFFFFFFFFFFFFFFFF, 1)
+    b = rotl64((b + (a ^ c ^ d)) & 0xFFFFFFFFFFFFFFFF, 3)
+    c = rotl64((c + (a ^ b ^ d)) & 0xFFFFFFFFFFFFFFFF, 5)
+    d = rotl64((d + (a ^ b ^ c)) & 0xFFFFFFFFFFFFFFFF, 7)
+    #a = (mixRow(a >> 32) << 32) | mixRow(a & 0xFFFFFFFF)
+    #b = (mixRow(b >> 32) << 32) | mixRow(b & 0xFFFFFFFF)
+    #c = (mixRow(c >> 32) << 32) | mixRow(c & 0xFFFFFFFF)
+    #d = (mixRow(d >> 32) << 32) | mixRow(d & 0xFFFFFFFF)
+    
+    return a, b, c, d    
+    
+def test_test_mixer():
+    from visualizationtest import test_4x64_function
+    test_4x64_function(_test_mixer, (0, 0, 0, 1))# [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])
+    
+def test_round_differentials():
+    rounds = 2
+    sboxes = dict()
+    for sbox_entry in range(256):
+        a, b, c, d = 0, 0, 0, sbox_entry                          
+        for round in range(rounds):
+            a, b, c, d = _test_mixer(a, b, c, d)
+        
+        
+        #print format(d, 'b').zfill(64)        
+        for word in "abcd":
+            for shift in reversed(range(0, 64, 8)): 
+                _word = locals()[word]
+                try:
+                    sboxes[(word, shift)].append((_word >> shift) & 255)                    
+                except KeyError:                                        
+                    sboxes[(word, shift)] = bytearray()
+                    sboxes[(word, shift)].append((_word >> shift) & 255)
+                
+    from cryptanalysis import summarize_sbox
+    
+    for sbox in sboxes.values():                
+        #print type(sbox), len(sbox), sbox
+        summarize_sbox(sbox)
+        
+    
 def print_state_4x64(inputs_4x64):    
     for word in inputs_4x64:
         print '\n'.join(slide(format(word, 'b').zfill(64), 16))
@@ -75,5 +142,8 @@ def test_shuffle_mix():
         print_state_4x64(inputs)  
 
 if __name__ == "__main__":
-    test_shuffle_mix()
+    #test_shuffle_mix()
+    test_round_differentials()
+    #test_shift_rows()
+    #test_test_mixer()#
     

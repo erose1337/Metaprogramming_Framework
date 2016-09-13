@@ -100,7 +100,7 @@ class Authenticated_Service(pride.base.Base):
     rate_limit = {"login" : 2, "register" : 2}       
     
     mutable_defaults = {"_rate" : dict, "ip_whitelist" : list, "ip_blacklist" : list,
-                        "_challenge_answer" : dict, "session_id" : dict}
+                        "session_id" : dict}
                         
     inherited_attributes = {"database_structure" : dict, "database_flags" : dict,
                             "remotely_available_procedures" : tuple, "rate_limit" : dict}
@@ -127,18 +127,7 @@ class Authenticated_Service(pride.base.Base):
             name = self.database_name
         self.database = self.create(self.database_type, database_name=name,
                                     database_structure=self.database_structure,
-                                    **self.database_flags)        
-  #  def register(self, identifier, encrypted_private_key, public_key, keypair_tag):
-  #      self.alert("Registering new user", level=self.verbosity["register"])
-  #     
-  #      self.database.insert_into("Users", (identifier, encrypted_private_key, public_key, 
-  #                                          keypair_tag, "\x00" * self.shared_key_size))
-  #      return True
-  #      
-  #  def get_public_key(self, identifier):
-  #      public_key = self.database.query("Users", retrieve_fields=("public_key", ), 
-  #                                                where={"identifier" : identifier})
-  #      return public_key                 
+                                    **self.database_flags)                      
     
     def register(self, identifier, password_verifier): 
         """ usage: 
@@ -168,11 +157,21 @@ class Authenticated_Service(pride.base.Base):
             return self.register_success(identifier)
         
     def change_credentials(self, identifier, password_verifier, new_identifier, new_password_verifier):
-        correct_verifier, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
-                                                              where={"identifier" : identifier})
+        query_result = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
+                                                    where={"identifier" : identifier})
+        if query_result:
+            correct_verifier, salt = query_result
+            print "Credential change for registered user", identifier, password_verifier, correct_verifier
+        else:            
+            correct_verifier, password_verifier = "\x00" * 32, "\x11" * 32 # two unequal strings to cause register_failure
+            
         if pride.security.constant_time_comparison(correct_verifier, password_verifier):
+            print "Updating identifier"
             return self.register(new_identifier, new_password_verifier)
         else:
+            print "Correct  :", correct_verifier
+            print "Incorrect:", password_verifier
+            print "New one  :", new_password_verifier
             return self.register_failure(identifier)
     
     def register_success(self, username):            
@@ -338,7 +337,7 @@ class Authenticated_Client(pride.base.Base):
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "delayed_request_sent" : "vv", "login_failed" : 0,
                  "logout_success" : 0, "auto_register" : "vv",
-                 "not_registered" : 0}
+                 "not_registered" : 0, "change_credentials" : 0}
                  
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -354,16 +353,16 @@ class Authenticated_Client(pride.base.Base):
     
     mutable_defaults = {"_delayed_requests" : list}
     flags = {"_registering" : False, "logged_in" : False, "_logging_in" : False,
-             "_username" : '', "_insert_new_user_into_site_config" : None,
-             "_password_hash" : '', "bypass_network_stack" : True}       
+             "_username" : '', "_password_hash" : '', "bypass_network_stack" : True}       
                     
     def _get_password(self):
-        return self._password or getpass.getpass(self.password_prompt)
+        return getpass.getpass(self.password_prompt) if self._password is None else self._password
     def _set_password(self, value):
         self._password = value
+        self.password_hash = ''                
     password = property(_get_password, _set_password)
             
-    def _get_password_hash(self):
+    def _get_password_hash(self):        
         password_hash = self._password_hash or self._hash_password(self.password)
         self._password_hash = password_hash
         return password_hash
@@ -383,17 +382,10 @@ class Authenticated_Client(pride.base.Base):
                                                                    self.target_service,
                                                                    self.ip))
         return self._username
-    def _set_username(self, value):        
-        self._username = value
+    def _set_username(self, value):         
+        self._username = value        
     username = property(_get_username, _set_username)
                 
-    def _get_insert_new_user_into_site_config(self):
-        if self._insert_new_user_into_site_config is None:
-            return pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference))
-        else:
-            return self._insert_new_user_into_site_config
-    register_username_as_default = property(_get_insert_new_user_into_site_config)
-    
     def __init__(self, **kwargs):
         super(Authenticated_Client, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference, self.target_service, self.ip)
@@ -420,16 +412,11 @@ class Authenticated_Client(pride.base.Base):
     def register_results(self, server_response):
         self._registering = False  
         success, message = server_response
+        self.alert("{}".format(message), level=0)
         if success:
             self.register_success()
         else:
             self.register_failure()                                                      
-                        
-       # if not self._registering:
-       #     self.alert("Login token for '{}' not found ({})", (self.username, self.authentication_table_file), level=0)            
-       #     if self.auto_register or pride.shell.get_permission("Register now? "):                                                     
-       #         else:
-       #             self.register()
                     
     def register_success(self):
         self.alert(self.registration_success_message.format(self.target_service, self.ip, self.username), 
@@ -438,12 +425,6 @@ class Authenticated_Client(pride.base.Base):
         registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
         registered_users.append((self.target_service, self.ip, self.username))
         pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users
-            
-        if pride.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)): # what if registration was for a machine and not a person
-            entry = '_'.join((self.__module__.replace('.', '_'),
-                              self.__class__.__name__,
-                              "defaults"))                            
-            pride.site_config.write_to(entry, username=self.username)
 
         if self.auto_login:
             self.login()
@@ -515,7 +496,29 @@ class Authenticated_Client(pride.base.Base):
             if not self._logging_in:
                 self.alert("Not logged in")       
                 self.login()            
-                
+    
+    def _get_new_credentials(self):
+        output = self.get_credentials()        
+        self.username = None
+        output += (self.username, )        
+        self.password = None        
+        output += (self.password_hash if self.hash_password_clientside else self.password, )
+        print "Sending replacement credentials: ", output
+        return output
+        
+    @pride.decorators.with_arguments_from(lambda self: ((self, ) + self._get_new_credentials(), {}))
+    @remote_procedure_call(callback_name="change_credential_result")
+    def change_credentials(self, identifier, password_verifier, new_identifier, new_password_verifier):
+        pass        
+        
+    def change_credential_result(self, server_response):
+        success, message = server_response
+        self.alert("{}".format(message), level=0)
+        if success:
+            self.register_success()
+        else:
+            self.register_failure()
+        
     def delete(self):
         if self.logged_in:
             self.logout()

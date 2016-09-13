@@ -10,7 +10,9 @@ class Persistent_Storage(pride.database.Database):
         or
         data = storage["my_persistent_data"]
         
-        Acts like a dictionary, but stores data persistently.
+        Acts like a dictionary, but stores data persistently. 
+        Can store basic python objects, i.e. ints, floats, strings, sets, lists, and dicts
+        
         Similar to anydbm:
             - Uses pride.persistence instead of pickle for serialization (safer)
             - Stored in a sqlite3 database 

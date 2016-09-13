@@ -152,8 +152,7 @@ class Python(base.Base):
                                        os.path.sep + "gui" + os.path.sep, ),
                 "startup_components" : ("pride.storage.Persistent_Storage",
                                         "pride.vcs.Version_Control",
-                                        "pride.vmlibrary.Processor",
-                                        
+                                        "pride.vmlibrary.Processor",                                        
                                         "pride.fileio.File_System",
                                         "pride.network.Network_Connection_Manager",
                                         "pride.network.Network", 

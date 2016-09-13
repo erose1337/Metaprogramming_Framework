@@ -1,5 +1,7 @@
-from utilities import rotate_left
-
+def rotate_left(x, r, bit_width=8, _mask=dict((bit_width, ((2 ** bit_width) - 1)) for bit_width in (8, 16, 32, 64, 128))):  
+    r %= bit_width
+    return ((x << r) | (x >> (bit_width - r))) & _mask[bit_width]
+    
 def permutation(x, bit_width=128):
     modulus = 2 ** bit_width    
     for t in (3, 5, 7, 13, 23, 43):
@@ -38,7 +40,7 @@ def test_sub_sboxes():
     sboxes = dict()
     for sbox_entry in range(256):                              
         output = permutation(sbox_entry)
-        #print format(output, 'b').zfill(128)[:24]
+        print format(output, 'b').zfill(128)
         for shift in reversed(range(0, 128, 8)):    
             try:
                 sboxes[shift].append((output >> shift) & 255)                    

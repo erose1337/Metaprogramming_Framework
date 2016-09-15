@@ -48,6 +48,30 @@ def test_create_sign_verify():
            # else:
            #     print "Signature invalid"
     
+#Alice generates signatures as necessary and send them to Bob via a signed message
+#
+#- Generate an amount of signature pairs and make the public keys available
+#    - Long term signature keys
+#    - Use to verify signature on a package of public keys
+#    - Signer  : Remember secret key and seed (512 bits)
+#    - Verifier: Remember 256 bits per signature keypair
+#    
+#- Distribute a signed set of public keys
+#    - Generate an amount of signature pairs
+#    - Sign a hash of the newly created public keys + the seed that was used in keypair generation
+#        - Signed using a keypair from the long term signature keys
+#    - Distribute the seed that was used alongside the public keys and signature    
+#    - Signer  : Remember seed (256 bits)
+#    - Verifier: Remember 256 bits per signature keypair + 256 bit seed
+#        
+#- "Generate an amount of signature pairs"
+#    - Generate random data via a CSPRNG
+#        - Key: secret
+#        - Seed: 256 bit value 
+#        - Output: N private keys, where N = length(CSPRNG_output) / signature_size 
+#    - Hash each private key with a 256 bit hashing function to produce the corresponding public keys
+    
+        
 if __name__ == "__main__":
     test_create_sign_verify()
     

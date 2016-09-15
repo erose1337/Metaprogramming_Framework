@@ -58,39 +58,49 @@ def shuffle_mix(a, b, c, d):
 from ciphercomponents import mixRow, rotate_left
 from utilities import integer_to_bytes    
     
-def shift_rows(a, b, c, d, MASK16=0xFFFF):        
+def invert(a):
+    return ~a & 0xFFFFFFFFFFFFFFFF
+    
+def shift_rows(a, b, c, d, MASK16=0xFFFF):           
+    #a = (rotl16((a >> 48) & MASK16, 0) << 48) | (rotl16((a >> 32) & MASK16, 0) << 32) | (rotl16((a >> 16) & MASK16, 0) << 16) | (rotl16((a >> 0 ) & MASK16, 0) << 0 )
+    #b = (rotl16((b >> 48) & MASK16, 1) << 48) | (rotl16((b >> 32) & MASK16, 1) << 32) | (rotl16((b >> 16) & MASK16, 1) << 16) | (rotl16((b >> 0 ) & MASK16, 1) << 0 )    
+    #c = (rotl16((c >> 48) & MASK16, 2) << 48) | (rotl16((c >> 32) & MASK16, 2) << 32) | (rotl16((c >> 16) & MASK16, 2) << 16) | (rotl16((c >> 0 ) & MASK16, 2) << 0 )    
+    #d = (rotl16((d >> 48) & MASK16, 3) << 48) | (rotl16((d >> 32) & MASK16, 3) << 32) | (rotl16((d >> 16) & MASK16, 3) << 16) | (rotl16((d >> 0 ) & MASK16, 3) << 0 )  
+
+    # rotate each row of a 16x16 matrix of bits by row number % 4
+    
     a = (rotl16((a >> 48) & MASK16, 0) << 48) | (rotl16((a >> 32) & MASK16, 1) << 32) | (rotl16((a >> 16) & MASK16, 2) << 16) | (rotl16((a >> 0 ) & MASK16, 3) << 0 )
     b = (rotl16((b >> 48) & MASK16, 0) << 48) | (rotl16((b >> 32) & MASK16, 1) << 32) | (rotl16((b >> 16) & MASK16, 2) << 16) | (rotl16((b >> 0 ) & MASK16, 3) << 0 )
-    c = (rotl16((c >> 48) & MASK16, 0) << 48) | (rotl16((c >> 32) & MASK16, 1) << 32) | (rotl16((c >> 16) & MASK16, 2) << 16) | (rotl16((c >> 0 ) & MASK16, 3) << 0 ) 
-    d = (rotl16((d >> 48) & MASK16, 0) << 48) | (rotl16((d >> 32) & MASK16, 1) << 32) | (rotl16((d >> 16) & MASK16, 2) << 16) | (rotl16((d >> 0 ) & MASK16, 3) << 0 ) 
-    return a, b, c, d
+    c = (rotl16((c >> 48) & MASK16, 0) << 48) | (rotl16((c >> 32) & MASK16, 1) << 32) | (rotl16((c >> 16) & MASK16, 2) << 16) | (rotl16((c >> 0 ) & MASK16, 3) << 0 )
+    d = (rotl16((d >> 48) & MASK16, 0) << 48) | (rotl16((d >> 32) & MASK16, 1) << 32) | (rotl16((d >> 16) & MASK16, 2) << 16) | (rotl16((d >> 0 ) & MASK16, 3) << 0 )
+   
+    
+    a = rotl64(a, 0 ) # inter-row mixing
+    b = rotl64(b, 16)
+    c = rotl64(c, 32)
+    d = rotl64(d, 48)
+    return b, c, d, a
     
 def test_shift_rows():
     from visualizationtest import test_4x64_function
     test_4x64_function(shift_rows, [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])            
             
-def _test_mixer(a, b, c, d):  
-    a, b, c, d = shift_rows(a, b, c, d)
-       
-    a ^= rotl64(choice(b, c, d), 0 )
-    b ^= rotl64(choice(c, d, a), 4 )
-    c ^= rotl64(choice(d, a, b), 8 )
-    d ^= rotl64(choice(a, b, c), 12)
+def _test_mixer(a, b, c, d, mask=0xFFFFFFFFFFFFFFFF):     
+    a = rotl64((a + (b ^ c ^ d)) & mask, 1)
+    b = rotl64((b + (a ^ c ^ d)) & mask, 3)
+    c = rotl64((c + (a ^ b ^ d)) & mask, 5)
+    d = rotl64((d + (a ^ b ^ c)) & mask, 7)    
     
-    a = rotl64((a + (b ^ c ^ d)) & 0xFFFFFFFFFFFFFFFF, 1)
-    b = rotl64((b + (a ^ c ^ d)) & 0xFFFFFFFFFFFFFFFF, 3)
-    c = rotl64((c + (a ^ b ^ d)) & 0xFFFFFFFFFFFFFFFF, 5)
-    d = rotl64((d + (a ^ b ^ c)) & 0xFFFFFFFFFFFFFFFF, 7)
-    #a = (mixRow(a >> 32) << 32) | mixRow(a & 0xFFFFFFFF)
-    #b = (mixRow(b >> 32) << 32) | mixRow(b & 0xFFFFFFFF)
-    #c = (mixRow(c >> 32) << 32) | mixRow(c & 0xFFFFFFFF)
-    #d = (mixRow(d >> 32) << 32) | mixRow(d & 0xFFFFFFFF)
+    a = rotl64(a ^ choice(b, c, d), 11)
+    b = rotl64(b ^ choice(c, d, a), 17)
+    c = rotl64(c ^ choice(d, a, b), 23)
+    d = rotl64(d ^ choice(a, b, c), 29)
     
     return a, b, c, d    
     
 def test_test_mixer():
-    from visualizationtest import test_4x64_function
-    test_4x64_function(_test_mixer, (0, 0, 0, 1))# [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])
+    from visualizationtest import test_4x64_function, print_state_4x64_256_as_4x64
+    test_4x64_function(_test_mixer, (0, 0, 0, 1 << 1), print_state_4x64_256_as_4x64)# [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])
     
 def test_round_differentials():
     rounds = 2
@@ -143,7 +153,7 @@ def test_shuffle_mix():
 
 if __name__ == "__main__":
     #test_shuffle_mix()
-    test_round_differentials()
+    #test_round_differentials()
     #test_shift_rows()
-    #test_test_mixer()#
+    test_test_mixer()#
     

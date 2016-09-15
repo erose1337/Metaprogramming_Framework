@@ -293,3 +293,12 @@ def longs_to_bytes(*longs):
         output.extend(integer_to_bytes(long, 4))
     return output
     
+def bytes_to_long_longs(data):
+    return [bytes_to_integer(word) for word in slide(data, 8)]          
+    
+def long_longs_to_bytes(*longs):
+    output = bytearray()
+    for long in longs:
+        output.extend(integer_to_bytes(long, 8))
+    return output
+    

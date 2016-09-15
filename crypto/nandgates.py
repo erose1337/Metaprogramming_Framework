@@ -1,5 +1,5 @@
-def _not(a):
-    return ~a + 2 # pythons complementation sets 1 to -2 and 0 to -1
+def _not(a, mask=0xFFFFFFFFFFFFFFFF):
+    return ~a & mask
     
 def _and(a, b):
     return a & b

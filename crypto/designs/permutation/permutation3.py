@@ -1,4 +1,4 @@
-from utilities import bytes_to_longs, longs_to_bytes
+from pride.crypto.utilities import bytes_to_longs, longs_to_bytes
 
 def rotl32(word, amount, _mask=0xFFFFFFFF):    
     return ((word << amount) | (word >> (32 - amount))) & _mask 
@@ -9,7 +9,7 @@ def rotr32(word, amount, _mask=0xFFFFFFFF):
 def choice(a, b, c):
     return c ^ (a & (b ^ c))  
     
-from pride.crypto.visualization import print_state_4x32_128_as_4x32    
+from pride.crypto.analysis.visualization import print_state_4x32_128_as_4x32    
 def permutation(a, b, c, d, mask=0xFFFFFFFF):    
     for round in range(1):
         a = rotl32((a + (b ^ c ^ d)) & mask, 1)
@@ -52,11 +52,11 @@ def invert_permutation_subroutine(data, mask=0xFFFFFFFFFFFFFFFF):
     data[:] = bytes(longs_to_bytes(a, b, c, d))  
     
 def test_permutation():
-    from pride.crypto.metrics import test_permutation             
+    from pride.crypto.analysis.metrics import test_permutation             
     test_permutation(permutation_on_state, 16)
     
 def visualize_permutation():
-    from pride.crypto.visualization import test_4x32_function
+    from pride.crypto.analysis.visualization import test_4x32_function
     test_4x32_function(permutation, (0, 0, 0, 1))
        
 def test_invert_permutation():

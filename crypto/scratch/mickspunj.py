@@ -1,4 +1,4 @@
-from utilities import bytes_to_integer, integer_to_bytes, replacement_subroutine, slide
+from pride.crypto.utilities import bytes_to_integer, integer_to_bytes, replacement_subroutine, slide
 from pride.crypto.analysis.metrics import test_hash_function
 
 def mick_sponge_64_subroutine(state, mask=0xFFFFFFFFFFFFFFFF):    

@@ -1,4 +1,4 @@
-from utilities import  longs_to_bytes, bytes_to_longs
+from pride.crypto.utilities import  longs_to_bytes, bytes_to_longs
 from ciphercomponents import optimized_bit_byte_transposition_words as branching_step
 from ciphercomponents import choice_rotate_mixRow as nonlinear_mixing_step
    

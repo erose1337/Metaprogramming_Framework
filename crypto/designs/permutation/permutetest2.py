@@ -1,4 +1,4 @@
-from utilities import xor_subroutine, rotate_left, rotate_right, find_long_cycle_length, find_long_cycle_length_subroutine
+from pride.crypto.utilities import xor_subroutine, rotate_left, rotate_right, find_long_cycle_length, find_long_cycle_length_subroutine
 
 def n_byte_addition(amount, _bytes):
     last_byte = _bytes[-1] + amount
@@ -95,7 +95,7 @@ permute_hash = sponge_factory(lambda data: keyed_permute_diffusion(data, tweak),
 #    if not data:
 #        return data
 #    
-#   # from utilities import xor_sum
+#   # from pride.crypto.utilities import xor_sum
 #   # state = xor_sum(data) | 1
 #    tweak = list(set((x | 1 for x in range(256))))[-len(data):] # some odd numbers
 #    for round in range(1):                

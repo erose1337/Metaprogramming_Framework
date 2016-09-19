@@ -1,4 +1,4 @@
-from utilities import rotate_left, rotate_right
+from pride.crypto.utilities import rotate_left, rotate_right
 
 def shuffle_bytes(_state):   
     temp = bytearray(16)

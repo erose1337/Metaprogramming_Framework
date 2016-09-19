@@ -1,4 +1,4 @@
-from utilities import rotate_left
+from pride.crypto.utilities import rotate_left
 
 def bit_shuffle(word0, key):
     current_bit = 1

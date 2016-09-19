@@ -1,5 +1,5 @@
 import pprint
-from utilities import hamming_weight
+from pride.crypto.utilities import hamming_weight
 
 #def build_test(sbox):
 #    approximations = {}

@@ -1,4 +1,4 @@
-from utilities import xor_subroutine, xor_sum, rotate_left, rotate_right
+from pride.crypto.utilities import xor_subroutine, xor_sum, rotate_left, rotate_right
 
 def bit_transposition(self):
     output = bytearray(16)

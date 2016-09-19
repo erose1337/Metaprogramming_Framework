@@ -68,7 +68,7 @@ def test_prp():
 def test_prp_sponge():
     import sponge
     import streamcipher2
-    from utilities import xor_sum
+    from pride.crypto.utilities import xor_sum
     
     #prp_hash = sponge.sponge_factory(lambda data: streamcipher2.prp(data, xor_sum(data)), capacity=8, rate=8)
     #print prp_hash("Testing")

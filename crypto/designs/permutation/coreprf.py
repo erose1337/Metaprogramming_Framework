@@ -1,4 +1,4 @@
-from utilities import bytes_to_integer, integer_to_bytes, rotate_left, xor_subroutine, slide
+from pride.crypto.utilities import bytes_to_integer, integer_to_bytes, rotate_left, xor_subroutine, slide
 
 def decorrelation_layer(state, state2):
     # top half   

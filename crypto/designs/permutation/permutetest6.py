@@ -1,4 +1,4 @@
-from utilities import xor_sum, rotate_right, rotate_left
+from pride.crypto.utilities import xor_sum, rotate_right, rotate_left
 
 def permute(left_byte, right_byte, key_byte, modifier):                             
     right_byte = (right_byte + key_byte + modifier) & 65535

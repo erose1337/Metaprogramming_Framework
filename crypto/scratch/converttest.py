@@ -1,7 +1,7 @@
 import os    
 
 import pride.crypto
-from utilities import xor_sum, xor_subroutine, replacement_subroutine
+from pride.crypto.utilities import xor_sum, xor_subroutine, replacement_subroutine
 
 def convert(old_value, old_base, new_base):
     old_base_size = len(old_base)    

@@ -1,4 +1,4 @@
-from utilities import rotate_left, slide, integer_to_bytes, bytes_to_integer, xor_subroutine, longs_to_bytes, bytes_to_longs
+from pride.crypto.utilities import rotate_left, slide, integer_to_bytes, bytes_to_integer, xor_subroutine, longs_to_bytes, bytes_to_longs
 from ciphercomponents import choice_rotate_mixRow as nonlinear_mixing       
 from ciphercomponents import invert_choice_rotate_mixRow as invert_nonlinear_mixing
 

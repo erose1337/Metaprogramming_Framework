@@ -1,4 +1,4 @@
-from utilities import slide, pad_input, rotate_left
+from pride.crypto.utilities import slide, pad_input, rotate_left
 
 def hamming_weight(byte):
     # from http://stackoverflow.com/a/109025/3103584

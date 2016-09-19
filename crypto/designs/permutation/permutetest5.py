@@ -1,4 +1,4 @@
-from utilities import pad_input, slide
+from pride.crypto.utilities import pad_input, slide
 
 def permute(left_byte, right_byte, key_byte, modifier):        
     right_byte = (right_byte + key_byte + modifier) & 65535

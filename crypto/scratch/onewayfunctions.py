@@ -1,6 +1,6 @@
 import sponge
 from sponge import symmetric_primitive_factory
-from utilities import slide, xor_sum, generate_s_box
+from pride.crypto.utilities import slide, xor_sum, generate_s_box
 
 ASCII_CONSTANT = ''.join(chr(x) for x in xrange(256))
                                 

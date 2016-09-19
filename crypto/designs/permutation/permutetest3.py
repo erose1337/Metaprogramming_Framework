@@ -1,4 +1,4 @@
-from utilities import xor_sum
+from pride.crypto.utilities import xor_sum
 def permute(left_byte, right_byte, key_byte, modifier):        
     """ Psuedorandom function. left_byte, right_byte, and key_byte are all
         16-bit unsigned integers. 

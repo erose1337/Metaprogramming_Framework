@@ -1,7 +1,7 @@
 import operator
 import pprint
 
-from utilities import rotate, cast, rotate_left 
+from pride.crypto.utilities import rotate, cast, rotate_left 
 
 function_names = ['and_', 
                   'floordiv',    

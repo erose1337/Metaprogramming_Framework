@@ -2,7 +2,7 @@ import sys
 import pprint
 
 from cryptanalysis import summarize_sbox
-from utilities import integer_to_bytes
+from pride.crypto.utilities import integer_to_bytes
 
 def choice(a, b, c):
     return c ^ (a & (b ^ c))

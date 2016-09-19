@@ -1,5 +1,5 @@
-from utilities import cast, replacement_subroutine, xor_subroutine
-from utilities import rotate_left, rotate_right
+from pride.crypto.utilities import cast, replacement_subroutine, xor_subroutine
+from pride.crypto.utilities import rotate_left, rotate_right
 import pride.crypto
 
 NUMBER_OF_ROUNDS = {(64, 2) : 32, (64, 3) : 33, (64, 4) : 34,
@@ -92,7 +92,7 @@ def visualize_speck():
     right = 1
     key = 2
     modulus = 0xFFFFFFFFFFFFFFFF
-    from pride.crypto.visualization import test_4x64_function, print_state_4x64_256
+    from pride.crypto.analysis.visualization import test_4x64_function, print_state_4x64_256
     test_4x64_function(speck_round, (left, right, key, modulus), print_function=lambda data: print_state_4x64_256(data))
     
 if __name__ == "__main__":

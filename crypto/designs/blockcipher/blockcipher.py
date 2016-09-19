@@ -2,7 +2,7 @@ import pride.functions.utilities
 import pride.crypto
 
 import itertools
-from utilities import cast, slide, xor_sum, xor_subroutine, generate_s_box
+from pride.crypto.utilities import cast, slide, xor_sum, xor_subroutine, generate_s_box
 
 import random
 
@@ -328,7 +328,7 @@ def test_generate_round_key():
     #    generate_round_key(key, constants)
     #    key_material.extend(key[:])
     #   # print key
-    #from pride.crypto.metrics import test_randomness, test_avalanche
+    #from pride.crypto.analysis.metrics import test_randomness, test_avalanche
     #test_randomness(bytes(key_material))
     #    
     #constants = generate_default_constants(16)
@@ -358,7 +358,7 @@ def test_extract_round_key():
     #   # print key
     #    key_material.extend(key[:])
     #            
-    #from pride.crypto.metrics import test_randomness, test_avalanche
+    #from pride.crypto.analysis.metrics import test_randomness, test_avalanche
     #test_randomness(bytes(key_material))       
     #
     #def _test_interface(data):

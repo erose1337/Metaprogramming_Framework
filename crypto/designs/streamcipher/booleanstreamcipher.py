@@ -1,4 +1,4 @@
-from utilities import xor_subroutine, rotate_left, bytes_to_words, integer_to_bytes
+from pride.crypto.utilities import xor_subroutine, rotate_left, bytes_to_words, integer_to_bytes
 
 def choice(a, b, c):
     return c ^ (a & (b ^ c))

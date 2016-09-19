@@ -1,5 +1,5 @@
 import sponge    
-from utilities import xor_sum, rotate_left
+from pride.crypto.utilities import xor_sum, rotate_left
 from pride.crypto.analysis.metrics import test_hash_function    
 
 def round_function(left, right, key, index, 

@@ -1,4 +1,4 @@
-from utilities import slide
+from pride.crypto.utilities import slide
 
 class AES(object):
 

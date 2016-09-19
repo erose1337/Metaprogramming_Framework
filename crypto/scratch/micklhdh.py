@@ -1,5 +1,5 @@
 import os
-from utilities import bytes_to_integer, integer_to_bytes
+from pride.crypto.utilities import bytes_to_integer, integer_to_bytes
 
 # Bit Sizes: 128, 256, 4096
 Q_128=0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff43

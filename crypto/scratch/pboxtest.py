@@ -1,4 +1,4 @@
-from utilities import rotate_right, print_state_4x4, hamming_weight, modular_subtraction, xor_sum, integer_to_bytes, bytes_to_integer, rotate_left
+from pride.crypto.utilities import rotate_right, print_state_4x4, hamming_weight, modular_subtraction, xor_sum, integer_to_bytes, bytes_to_integer, rotate_left
 
 def bit_transposition_involution(state, state_offset):
     output = bytearray(8)    

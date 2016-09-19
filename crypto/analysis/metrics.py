@@ -330,7 +330,7 @@ def test_aes_metrics(test_options):
     import pride.crypto
     from pride.functions.security import encrypt as aes_encrypt
     from pride.functions.security import random_bytes
-    from utilities import replacement_subroutine
+    from pride.crypto.utilities import replacement_subroutine
         
     class Aes_Cipher(pride.crypto.Cipher):
         
@@ -352,7 +352,7 @@ def test_sha_metrics():
     test_hash_function(lambda data: sha256(data).digest())
     
 def test_random_metrics():
-    from utilities import random_oracle_hash_function
+    from pride.crypto.utilities import random_oracle_hash_function
     print "Testing metrics of a random oracle hash function... "
     test_hash_function(random_oracle_hash_function)
     

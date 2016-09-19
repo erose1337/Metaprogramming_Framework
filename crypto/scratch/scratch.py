@@ -1,6 +1,6 @@
 import itertools
 
-from utilities import slide, cast, rotate, replacement_subroutine
+from pride.crypto.utilities import slide, cast, rotate, replacement_subroutine
 
 DEFAULT_FUNCTION_NAME = "S-BOX"
 

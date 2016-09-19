@@ -1,6 +1,6 @@
 import functools
 
-from utilities import cast, slide, xor_subroutine, replacement_subroutine, pad_input
+from pride.crypto.utilities import cast, slide, xor_subroutine, replacement_subroutine, pad_input
             
 def example_mixing_subroutine(_bytes):    
     byte_length = len(_bytes)

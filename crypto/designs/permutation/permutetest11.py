@@ -1,4 +1,4 @@
-from utilities import (rotate_left, rotate_right, bytes_to_words, 
+from pride.crypto.utilities import (rotate_left, rotate_right, bytes_to_words, 
                        words_to_bytes, high_order_byte, low_order_byte,
                        bytes_to_integer, integer_to_bytes)             
 
@@ -274,7 +274,7 @@ def test_mix_rows():
 def test_shift_and_mix():
     left = right =  (1 << 8) | 1
     lefts, rights = [], []
-    from utilities import integer_to_bytes
+    from pride.crypto.utilities import integer_to_bytes
     _print_state(left, right, "Before: ")
     for round in range(65536):
         left, right = shift_rows(left, right)             

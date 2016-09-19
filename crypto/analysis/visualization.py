@@ -1,4 +1,4 @@
-from utilities import slide
+from pride.crypto.utilities import slide
 
 def hamming_weight(word):
     return format(word, 'b').count('1')

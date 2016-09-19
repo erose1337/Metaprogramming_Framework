@@ -1,4 +1,4 @@
-from utilities import rotate_left
+from pride.crypto.utilities import rotate_left
 
 def xor_sum(data):
     output = 0

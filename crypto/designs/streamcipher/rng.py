@@ -137,7 +137,7 @@ else:
             
         @classmethod
         def test_metrics(cls, *args, **kwargs):        
-            pride.crypto.metrics.test_stream_cipher(lambda data, key, seed: cls(key).encrypt(data, seed),
+            pride.crypto.analysis.metrics.test_stream_cipher(lambda data, key, seed: cls(key).encrypt(data, seed),
                                                     *args, **kwargs)    
     
             

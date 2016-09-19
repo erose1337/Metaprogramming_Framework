@@ -1,4 +1,4 @@
-from utilities import hamming_weight, xor_sum, rotate_right
+from pride.crypto.utilities import hamming_weight, xor_sum, rotate_right
 
 def calculate_branch_number(substitution_diffusion_substitution_layer, datasize):
     raise NotImplementedError()

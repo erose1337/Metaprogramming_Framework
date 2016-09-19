@@ -1,4 +1,4 @@
-from utilities import xor_subroutine
+from pride.crypto.utilities import xor_subroutine
 from ciphercomponents import choice
 
 def swap_or_not(message, key, key2):

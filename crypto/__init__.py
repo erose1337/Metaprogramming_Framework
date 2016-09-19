@@ -2,7 +2,7 @@
 # be taken to imply that the modules located in pride.crypto are suitable for
 # use to protect data in the real world.
 
-from utilities import slide, xor_subroutine, replacement_subroutine, cast
+from pride.crypto.utilities import slide, xor_subroutine, replacement_subroutine, cast
 from pride.crypto.analysis.metrics import test_block_cipher, test_cipher_performance
 from pride.errors import InvalidTag
                 

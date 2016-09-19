@@ -1,4 +1,4 @@
-from utilities import rotate, null_pad, slide
+from pride.crypto.utilities import rotate, null_pad, slide
 
 def shuffle_extract(data, key, state):    
     """ State update and round key extraction function. """

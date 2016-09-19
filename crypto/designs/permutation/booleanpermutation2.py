@@ -1,4 +1,4 @@
-from utilities import slide
+from pride.crypto.utilities import slide
 
 def rotl16(word, amount, _mask=0xFFFF):
     amount %= 16
@@ -56,7 +56,7 @@ def shuffle_mix(a, b, c, d):
     return a, b, c, d
  
 from ciphercomponents import mixRow, rotate_left
-from utilities import integer_to_bytes    
+from pride.crypto.utilities import integer_to_bytes    
     
 def invert(a):
     return ~a & 0xFFFFFFFFFFFFFFFF
@@ -82,7 +82,7 @@ def shift_rows(a, b, c, d, MASK16=0xFFFF):
     return b, c, d, a
     
 def test_shift_rows():
-    from pride.crypto.visualization import test_4x64_function
+    from pride.crypto.analysis.visualization import test_4x64_function
     test_4x64_function(shift_rows, [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])            
             
 def _test_mixer(a, b, c, d, mask=0xFFFFFFFFFFFFFFFF):     
@@ -99,7 +99,7 @@ def _test_mixer(a, b, c, d, mask=0xFFFFFFFFFFFFFFFF):
     return a, b, c, d    
     
 def test_test_mixer():
-    from pride.crypto.visualization import test_4x64_function, print_state_4x64_256_as_4x64
+    from pride.crypto.analysis.visualization import test_4x64_function, print_state_4x64_256_as_4x64
     test_4x64_function(_test_mixer, (0, 0, 0, 1 << 1), print_state_4x64_256_as_4x64)# [1 | (1 << 16) | (1 << 32) | (1 << 48) for count in range(4)])
     
 def test_round_differentials():

@@ -1,8 +1,8 @@
 import pride
 
-class Export_Service(pride.base.Base):
+class Export_Service(pride.objectlibrary.base.Base):
         
-    defaults = {"client_type" : "pride.interpreter.Shell"}
+    defaults = {"client_type" : "pride.objectlibrary.interpreter.Shell"}
     mutable_defaults = {"connections" : dict}
     
     def export_to(self, ip, module_source, as_name):

@@ -107,7 +107,7 @@ objects = objects
 
 # Things must be done in this order for Alert_Handler to exist inside this file
 # and reuse Base machinery, namely for argument parsing. 
-import base
+import pride.objectlibrary.base as base
 
 class Alert_Handler(base.Base):
     """ Provides the backend for the base.alert method. The print_level
@@ -241,7 +241,7 @@ class Finalizer(base.Base):
         
 finalizer = Finalizer()        
 
-import patch
+import pride.objectlibrary.patch as patch
 for name in patch.patches:
     getattr(patch, name)()
     

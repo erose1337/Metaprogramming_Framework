@@ -1,7 +1,7 @@
-import pride.utilities
-import pride.base
+import pride.functions.utilities
+import pride.objectlibrary.base
 
-class Documentation_Creator(pride.base.Base):
+class Documentation_Creator(pride.objectlibrary.base.Base):
         
     defaults = {"object_name" : '', "parse_args" : True}
 

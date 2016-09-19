@@ -67,7 +67,7 @@ def base_decoder(loaded_json):
     return instance
     
 if __name__ == "__main__":
-    import pride.interpreter
-    m = pride.interpreter.Python()
+    import pride.objectlibrary.interpreter
+    m = pride.objectlibrary.interpreter.Python()
     s = json.dumps(m, cls=Base_Encoder)
     base_decoder(json.loads(s))

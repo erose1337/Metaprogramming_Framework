@@ -1,4 +1,4 @@
-class Save(pride.base.Base):
+class Save(pride.objectlibrary.base.Base):
     
     def __init__(self, **kwargs):
         super(Save, self).__init__(**kwargs)

@@ -1,4 +1,4 @@
-# pride.decorators
+# pride.functions.decorators
 import sys
 import trace
 import time

@@ -5,11 +5,11 @@ from multiprocessing import Process
 from contextlib import contextmanager
 
 import pride
-import pride.base as base
+import pride.objectlibrary.base as base
 
-import pride.vmlibrary as vmlibrary
-import pride.network as network
-from pride.datastructures import Latency
+import pride.objectlibrary.vmlibrary as vmlibrary
+import pride.objectlibrary.network as network
+from pride.objectlibrary.datastructures import Latency
 Instruction = pride.Instruction
 
 """def trace_function(frame, instruction, args):

@@ -4,8 +4,8 @@ import ast
 import cPickle as pickle
 from itertools import izip
 
-import pride.base as base
-import pride.fileio as fileio
+import pride.objectlibrary.base as base
+import pride.objectlibrary.fileio as fileio
 
 
 class Struct(object):
@@ -217,8 +217,8 @@ class Persistent_Reactor(base.Base):
 if __name__ == "__main__":
     import unittest
     import pride.decoratrs
-    import pride.base
-    Base = pride.base.Base
+    import pride.objectlibrary.base
+    Base = pride.objectlibrary.base.Base
     Timed = pride.decoratrs.Timed
     
     b = Base(none=None)

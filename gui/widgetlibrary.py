@@ -3,7 +3,7 @@ import time
 import pride
 import pride.gui.gui as gui
 import pride.gui
-import pride.base as base
+import pride.objectlibrary.base as base
 Instruction = pride.Instruction
 
 import sdl2

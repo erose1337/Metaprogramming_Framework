@@ -1,13 +1,13 @@
 import os
 import hashlib
 
-import pride.network
+import pride.objectlibrary.network
 
 NULL_RECEIVED = ["None"]
 
-class Reliable_Udp(pride.network.Udp_Socket):
+class Reliable_Udp(pride.objectlibrary.network.Udp_Socket):
     
-    defaults = pride.network.Udp_Socket.defaults.copy()
+    defaults = pride.objectlibrary.network.Udp_Socket.defaults.copy()
     defaults.update({"hash_function_name" : "sha1"})
     
     def __init__(self, **kwargs):

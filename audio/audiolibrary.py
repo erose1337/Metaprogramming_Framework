@@ -3,11 +3,11 @@ import sys
 import os
 
 import pride
-import pride.base as base
-import pride.vmlibrary as vmlibrary
-import pride.fileio as fileio
-import pride.utilities
-from pride.datastructures import Latency
+import pride.objectlibrary.base as base
+import pride.objectlibrary.vmlibrary as vmlibrary
+import pride.objectlibrary.fileio as fileio
+import pride.functions.utilities
+from pride.objectlibrary.datastructures import Latency
 #objects = pride.objects
 Instruction = pride.Instruction
 
@@ -151,7 +151,7 @@ class Config_Utility(vmlibrary.Process):
         with open(self.config_file_name, "wb") as config_file:
             for device in device_list:
                 print device
-            config_file.write(pride.utilities.save_data(device_list))            
+            config_file.write(pride.functions.utilities.save_data(device_list))            
             config_file.flush()
             config_file.close()
 
@@ -308,7 +308,7 @@ class Audio_Manager(base.Base):
         
     def load_config_file(self):
         with open(self.config_file_name, "rb") as config_file:
-            for device_info in pride.utilities.load_data(config_file):
+            for device_info in pride.functions.utilities.load_data(config_file):
                 device = self.create(self.Audio_Input, **device_info)
                 self.device_names[device.reference] = device
                 self.device_names[device.name] = device

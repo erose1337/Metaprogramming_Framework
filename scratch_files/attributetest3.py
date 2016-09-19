@@ -1,8 +1,8 @@
 import mmap
 import cPickle as pickle
 
-import pride.base as base
-import pride.fileio as fileio
+import pride.objectlibrary.base as base
+import pride.objectlibrary.fileio as fileio
 
 
 class Persistent_Reactor(base.Base):

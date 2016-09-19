@@ -2,12 +2,12 @@ import random
 import sys
 
 import pride
-import pride.vmlibrary
-import pride.utilities
+import pride.objectlibrary.vmlibrary
+import pride.functions.utilities
 
 
-class Ca_Test(pride.vmlibrary.Process):
-    defaults = pride.vmlibrary.Process.defaults.copy()
+class Ca_Test(pride.objectlibrary.vmlibrary.Process):
+    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
     defaults.update({"priority" : .5,
                      "size" : 8,
                      "grid" : None})
@@ -28,7 +28,7 @@ class Ca_Test(pride.vmlibrary.Process):
                 self.grid[midpoint + left_adjustment][midpoint + right_adjustment] = 1
                 
     def run(self):
-        pride.utilities.shell("cls", True)    
+        pride.functions.utilities.shell("cls", True)    
         grid = self.grid
         
         grid_size = len(grid)
@@ -68,8 +68,8 @@ class Ca_Test(pride.vmlibrary.Process):
                 new_grid[row_index][cell_index] = state
 
 
-class Ca_Test2(pride.vmlibrary.Process):
-    defaults = pride.vmlibrary.Process.defaults.copy()
+class Ca_Test2(pride.objectlibrary.vmlibrary.Process):
+    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
     defaults.update({"priority" : .5,
                      "size" : 8,
                      "grid" : None,
@@ -93,7 +93,7 @@ class Ca_Test2(pride.vmlibrary.Process):
                 self.grid[midpoint + left_adjustment][midpoint + right_adjustment] = self.alive_symbol
                 
     def run(self):
-        pride.utilities.shell("cls", True)    
+        pride.functions.utilities.shell("cls", True)    
         grid = self.grid
         
         grid_size = len(grid)
@@ -138,8 +138,8 @@ class Ca_Test2(pride.vmlibrary.Process):
                 new_grid[row_index][cell_index] = state
 
 
-class Ca_Test3(pride.vmlibrary.Process):
-    defaults = pride.vmlibrary.Process.defaults.copy()
+class Ca_Test3(pride.objectlibrary.vmlibrary.Process):
+    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
     defaults.update({"priority" : .5,
                      "size" : 8,
                      "grid" : None})
@@ -161,7 +161,7 @@ class Ca_Test3(pride.vmlibrary.Process):
                 self.grid[midpoint + left_adjustment][midpoint + right_adjustment] = 1
                 
     def run(self):
-        pride.utilities.shell("cls", True)    
+        pride.functions.utilities.shell("cls", True)    
         grid = self.grid
         
         grid_size = len(grid)

@@ -2,7 +2,7 @@ import collections
 import time
 
 import pride.authentication2
-from pride.security import random_bytes
+from pride.functions.security import random_bytes
 
 def random_oracle(input_bytes, output_size=16, 
                   memo=collections.defaultdict(lambda: random_bytes(output_size))):

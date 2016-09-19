@@ -8,9 +8,9 @@ import collections
 import traceback
 
 import pride
-import pride.base as base
-import pride.vmlibrary as vmlibrary
-import pride.utilities as utilities
+import pride.objectlibrary.base as base
+import pride.objectlibrary.vmlibrary as vmlibrary
+import pride.functions.utilities as utilities
 import pride.gui
 Instruction = pride.Instruction
 #objects = pride.objects
@@ -167,7 +167,7 @@ class Window_Context(SDL_Window):
         pass
         
         
-class Window_Handler(pride.base.Base):
+class Window_Handler(pride.objectlibrary.base.Base):
     
     def __init__(self, **kwargs):
         super(Window_Handler, self).__init__(**kwargs)
@@ -489,7 +489,7 @@ class SDL_User_Input(vmlibrary.Process):
         pass
 
     def save(self):        
-        with pride.contextmanagers.backup(self, "handlers", "_coordinate_tracker"):
+        with pride.functions.contextmanagers.backup(self, "handlers", "_coordinate_tracker"):
             self.handlers = None
             self._coordinate_tracker = self._coordinate_tracker.items()
             attributes = super(SDL_User_Input, self).save()
@@ -616,7 +616,7 @@ class Font_Manager(SDL_Component):
         
     def save(self):        
         raise NotImplementedError()
-        with pride.contextmanagers.backup(self, "_bgcolor", "_textcolor", "_default_font", "fonts"):
+        with pride.functions.contextmanagers.backup(self, "_bgcolor", "_textcolor", "_default_font", "fonts"):
             color = self._bgcolor
             self._bgcolor = (color.r, color.g, color.b, color.a)
             

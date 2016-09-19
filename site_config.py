@@ -11,7 +11,7 @@
     The above line effectively does the following at runtime, before the class
     is constructed:
     
-        pride.user.User.defaults["username"] = "localhost"
+        pride.objectlibrary.user.User.defaults["username"] = "localhost"
         
     This feature is facilitated by the Base metaclass and will work for all
     objects that inherit from Base.
@@ -21,7 +21,7 @@
     explicitly).
     
     For more information on Base objects and default attributes, please see the
-    documentation for pride.base.Base 
+    documentation for pride.objectlibrary.base.Base 
     
     Temporary customization
     ---------
@@ -57,10 +57,10 @@ def write_to(entry, **values):
         _file.flush()
         
 pride_interpreter_Shell_defaults = {"startup_definitions" : \
-r"""import pride.base
+r"""import pride.objectlibrary.base
 import pride
 
-from pride.utilities import documentation, usage
+from pride.functions.utilities import documentation, usage
 
 def open_firefox():
     try:
@@ -93,6 +93,6 @@ import pride.gui
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
 """}
 
-pride_user_User_defaults = {'username': 'localhost'}
+pride_objectlibrary_user_User_defaults = {'username': 'localhost'}
 
-pride_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.crt'}
+pride_objectlibrary_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.crt'}

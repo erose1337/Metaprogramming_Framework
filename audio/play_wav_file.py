@@ -1,7 +1,7 @@
 import sys
 
 import pride
-import pride.base as base
+import pride.objectlibrary.base as base
 import pride.audio.audiolibrary as audiolibrary
 Instruction = pride.Instruction
 

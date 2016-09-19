@@ -43,7 +43,7 @@ def _prime_generator(n=3):
         n += 1
         
 if __name__ == "__main__":
-    from pride.decorators import Timed
+    from pride.functions.decorators import Timed
     def test_break():
         primes = prime_generator(n=100000)
         for x in xrange(100):

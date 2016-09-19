@@ -3,10 +3,10 @@ import getpass
 
 import pride
 import pride.gui.gui
-import pride.datatransfer
-import pride.database
+import pride.objectlibrary.datatransfer
+import pride.objectlibrary.database
 
-class Client(pride.datatransfer.Data_Transfer_Client):
+class Client(pride.objectlibrary.datatransfer.Data_Transfer_Client):
     
     def receive(self, messages):
         for sender, message in messages:
@@ -52,7 +52,7 @@ class Contacts(pride.gui.gui.Window):
         self.create(Add_Contact_Button)        
         
         
-class Message_Database(pride.database.Database):
+class Message_Database(pride.objectlibrary.database.Database):
      
     defaults = {"indexable" : False, "hash_function" : "SHA256"}
     
@@ -64,7 +64,7 @@ class Message_Database(pride.database.Database):
         if not self.indexable:            
             assert user.file_system_key, sender
             assert user.salt, sender
-            hasher = pride.security.hash_function(self.hash_function)
+            hasher = pride.functions.security.hash_function(self.hash_function)
             hasher.update(user.file_system_key + user.salt + sender)
             sender = hasher.finalize()  
         self.insert_into("Messages", (sender, user.encrypt(timestamp + ": " + message)),
@@ -75,7 +75,7 @@ class Message_Database(pride.database.Database):
         if not self.indexable:
             assert user.file_system_key, sender
             assert user.salt, sender
-            hasher = pride.security.hash_function(self.hash_function)
+            hasher = pride.functions.security.hash_function(self.hash_function)
             hasher.update(user.file_system_key + user.salt + sender)
             sender = hasher.finalize()  
         

@@ -4,7 +4,7 @@ import ast
 import struct
 import ctypes
 
-import pride.base
+import pride.objectlibrary.base
 import utilities
 
 type_conversion = {int : ctypes.c_longlong, float : ctypes.c_double,
@@ -213,7 +213,7 @@ def test_serialize_deserialize():
     print _data
     assert _data == data
         
-class Persistent_Object(pride.base.Base):
+class Persistent_Object(pride.objectlibrary.base.Base):
     
     store_in_dict = ("memory", "size", "defaults", "flags", "mutable_defaults", "verbosity",
                      "startup_components", "required_attributes", "alert", "reference",

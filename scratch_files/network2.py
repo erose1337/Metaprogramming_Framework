@@ -8,10 +8,10 @@ import pickle
 import traceback
 
 import pride
-import pride.base as base
-import pride.network as network
-import pride.fileio as fileio
-from pride.datastructures import Latency, timestamp
+import pride.objectlibrary.base as base
+import pride.objectlibrary.network as network
+import pride.objectlibrary.fileio as fileio
+from pride.objectlibrary.datastructures import Latency, timestamp
 Instruction = pride.Instruction
 #objects = pride.objects
            

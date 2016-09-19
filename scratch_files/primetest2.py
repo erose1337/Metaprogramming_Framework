@@ -154,7 +154,7 @@ def test_generator():
     generator = prime_generator_test()#(number=1000)
     for x in xrange(1000):
         next(generator)
-from pride.decorators import Timed
+from pride.functions.decorators import Timed
 #print Timed(test_generator, 1)()
         
 N = int(''.join(str(ord(char)) for char in 

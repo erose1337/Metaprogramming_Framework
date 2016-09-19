@@ -6,11 +6,11 @@ import getpass
 
 import pride
 import pride.errors
-import pride.base
-import pride.datastructures
-import pride.database
-import pride.utilities
-import pride.shell
+import pride.objectlibrary.base
+import pride.objectlibrary.datastructures
+import pride.objectlibrary.database
+import pride.functions.utilities
+import pride.objectlibrary.shell
 Instruction = pride.Instruction
 #objects = pride.objects
 
@@ -191,7 +191,7 @@ class Authentication_Table(object):
         return cls(rows=[row for row in _x_bytes_at_a_time(text)])
 
         
-class Authenticated_Service(pride.base.Base):
+class Authenticated_Service(pride.objectlibrary.base.Base):
     """ Provides functionality for user registration and login, and
         provides interface for use with blacklisted/whitelisted/authenticated
         decorators. Currently uses the secure remote password protocol
@@ -206,7 +206,7 @@ class Authenticated_Service(pride.base.Base):
                    "    session_id logged in: {}\n    method_name: '{}'\n    " +
                    "login allowed: {}    registration allowed: {}",
                 "hkdf_table_update_string" : "updating the authentication table",
-                "hash_function" : "sha512", "database_type" : "pride.database.Database"}
+                "hash_function" : "sha512", "database_type" : "pride.objectlibrary.database.Database"}
     
     parser_ignore = ("protocol_component", "current_sesion", "session_id_size")
     
@@ -385,7 +385,7 @@ class Authenticated_Service(pride.base.Base):
             try:
                 self._rate[session_id][method_name].mark()
             except KeyError:
-                latency = pride.datastructures.Latency("{}_{}".format(session_id, method_name))
+                latency = pride.objectlibrary.datastructures.Latency("{}_{}".format(session_id, method_name))
                 try:
                     self._rate[session_id][method_name] = latency
                 except KeyError:
@@ -426,7 +426,7 @@ class Authenticated_Service(pride.base.Base):
         self._load_database()
         
         
-class Authenticated_Client(pride.base.Base):
+class Authenticated_Client(pride.objectlibrary.base.Base):
     
     defaults = {"username" : '', "password" : '', "target_service" : '',
                 "password_prompt" : "{}: Please provide the pass phrase or word: ",
@@ -472,7 +472,7 @@ class Authenticated_Client(pride.base.Base):
             raise pride.errors.ArgumentError("target_service for {} not supplied".format(self))
                 
         self.password_prompt = self.password_prompt.format(self.reference)
-        self.session = self.create("pride.rpc.Session", '0', self.host_info)
+        self.session = self.create("pride.objectlibrary.rpc.Session", '0', self.host_info)
         name = self.reference.replace("/", '_')
         self.authentication_table_file = self.authentication_table_file or "{}_auth_table.key".format(name)
         self.history_file = self.history_file or "{}_history.key".format(name)
@@ -506,7 +506,7 @@ class Authenticated_Client(pride.base.Base):
             self.alert("Registered successfully", 
                        level=self.verbosity["registration_success"])
             if (self.auto_login or 
-                pride.shell.get_selection("Registration success. Login now? ", bool)):
+                pride.objectlibrary.shell.get_selection("Registration success. Login now? ", bool)):
                 self.login()
         else:
             self.alert("Failed to register with {};\n{}", 

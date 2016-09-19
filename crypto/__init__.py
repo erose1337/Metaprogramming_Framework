@@ -3,7 +3,7 @@
 # use to protect data in the real world.
 
 from utilities import slide, xor_subroutine, replacement_subroutine, cast
-from metrics import test_block_cipher, test_cipher_performance
+from pride.crypto.analysis.metrics import test_block_cipher, test_cipher_performance
 from pride.errors import InvalidTag
                 
 def cbc_encrypt(block, iv, key, cipher, tag=None, tweak=None):     
@@ -185,11 +185,11 @@ class Cipher(object):
 #        pass  
         
 def test_encrypt_decrypt():
-    data = "TestData" * 4
+    data = bytearray("TestData" * 4)
     _data = data[:]
     key = bytearray("\x00" * 16)
-    iv = "\x00" * 16
-    from blockcipher import Test_Cipher
+    iv = bytearray("\x00" * 16)
+    from pride.crypto.designs.blockcipher.blockcipher import Test_Cipher
     #print data
     for mode in ("ctr", "ofb", "cbc", "ecb"):    
         print "Testing: ", mode
@@ -201,7 +201,7 @@ def test_encrypt_decrypt():
         
         ciphertext2 = encrypt(data, cipher, iv)             
         assert ciphertext2 == ciphertext
-        plaintext2 = decrypt(ciphertext2, cipher, iv)   
+        plaintext2 = decrypt(bytearray(ciphertext2), cipher, iv)   
         assert plaintext2 == plaintext, (mode, plaintext2, plaintext)
     
     print "Beginning mac test..."

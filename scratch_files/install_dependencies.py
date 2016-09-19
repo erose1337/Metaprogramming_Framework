@@ -1,4 +1,4 @@
-import pride.utilities as utilities
+import pride.functions.utilities as utilities
 
 def install_python_dev():
     """ usage: install_python_dev()

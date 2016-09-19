@@ -143,7 +143,7 @@ def get_variable_types(method):
 if __name__ == "__main__":
 
     
-    import pride.base as base
+    import pride.objectlibrary.base as base
     method = base.Base.create
     
  #   dis.dis(method)  

@@ -2,12 +2,12 @@
 import unittest
 
 import pride
-import pride.rpc
+import pride.objectlibrary.rpc
 import pride.authentication
 
 HOST_INFO = ("192.168.1.240", 40022)
 
-class Test_Responder(pride.base.Base):
+class Test_Responder(pride.objectlibrary.base.Base):
     """ Runs on the remote machine """
     def test_method(self, arguments, test_flag=False):
         self.alert("Received: {}, test_flag={}".format(arguments, test_flag))

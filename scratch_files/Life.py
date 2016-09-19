@@ -28,9 +28,9 @@ class Cell(pride.gui.gui.Window_Object):
         self.size = self.texture_size
         
             
-class Game_Of_Life(pride.vmlibrary.Process):
+class Game_Of_Life(pride.objectlibrary.vmlibrary.Process):
              
-    defaults = pride.vmlibrary.Process.defaults.copy()
+    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
     defaults.update({"cell_count_width" : 10,
                      "cell_count_height" : 10,
                      "priority" : 1})

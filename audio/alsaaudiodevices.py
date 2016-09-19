@@ -3,7 +3,7 @@ import wave
 import contextlib
 
 import pride
-import pride.base as base
+import pride.objectlibrary.base as base
 import pride.audio.audiolibrary as audiolibrary
 
 # to install alsaaudio, use pride.audio.utilities.install_pyalsaaudio

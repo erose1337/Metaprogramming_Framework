@@ -18,7 +18,7 @@ import os
 import additional_builtins
 import additional_keywords
 import site_config
-import contextmanagers
+import pride.functions.contextmanagers
 resolve_string = additional_builtins.resolve_string
 
 OPERATORS = ('+', '-', '*', '**', '/', '//', '%', '<<', '>>', '&', '|', '^',
@@ -142,11 +142,11 @@ class Compiler(object):
         
     def compile_module(self, module_name, source, path):
         if module_name in self._outdated:
-            with contextmanagers.file_contents_swapped(source, path):
+            with pride.functions.contextmanagers.file_contents_swapped(source, path):
                 py_compile.compile(path)
             self._outdated.remove(module_name)
             
-        with contextmanagers.backup(self, "_loading"):
+        with pride.functions.contextmanagers.backup(self, "_loading"):
             self._loading = module_name
             try:
                 sys.modules[module_name] = importlib.import_module(module_name)

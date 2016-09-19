@@ -9,7 +9,7 @@ try:
     import hmac  
 except ImportError:
     try:
-        from pride.security import apply_mac, verify_mac
+        from pride.functions.security import apply_mac, verify_mac
     except ImportError:
         raise
 else:
@@ -105,6 +105,6 @@ if __name__ == "__main__":
     assert extra_data == "Authentication and Integrity guaranteed!", extra_data
     assert key == _key
     assert server_secret == client_secret    
-    from pride.decorators import Timed
+    from pride.functions.decorators import Timed
     print Timed(solve_challenge, 1)(_initial_value, mac_challenge, mac_key)
     

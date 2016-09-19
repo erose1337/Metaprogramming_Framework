@@ -1,12 +1,12 @@
 import getpass
 
-import pride.base
-import pride.shell
+import pride.objectlibrary.base
+import pride.objectlibrary.shell
 Instruction = pride.Instruction
 
-class Authenticated_Service(pride.base.Base):
+class Authenticated_Service(pride.objectlibrary.base.Base):
 
-    defaults = pride.base.Base.defaults.copy()
+    defaults = pride.objectlibrary.base.Base.defaults.copy()
     defaults.update({"allow_registration" : True})
     
     def __init__(self, **kwargs):
@@ -30,9 +30,9 @@ class Authenticated_Service(pride.base.Base):
         return response
         
     
-class Authenticated_Client(pride.base.Base):
+class Authenticated_Client(pride.objectlibrary.base.Base):
     
-    defaults = pride.base.Base.defaults.copy()
+    defaults = pride.objectlibrary.base.Base.defaults.copy()
     defaults.update({"username" : '',
                      "target_service" : '',
                      "password_prompt" : "Please provide the pass phrase or word: ",
@@ -54,7 +54,7 @@ class Authenticated_Client(pride.base.Base):
     def register_results(self, success):
         if success:
             if (self.login_after_registration or 
-                pride.shell.get_selection("Registration success. Login now? ", bool)):
+                pride.objectlibrary.shell.get_selection("Registration success. Login now? ", bool)):
                 self.login()
         else:
             self.alert("Failed to register with {};\n{}", [self.host_info, success])

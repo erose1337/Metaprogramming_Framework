@@ -81,7 +81,7 @@ class Function(pride.base.Wrapper):
         return objects["/Bytecode_Interpreter"].execute_code(self._code, frame)
           
         
-class Bytecode_Interpreter(pride.base.Base):
+class Bytecode_Interpreter(pride.objectlibrary.base.Base):
             
     flags = {"_bytecode_counter" : None, "_delta" : 0}.items()
     

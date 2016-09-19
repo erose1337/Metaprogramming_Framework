@@ -1,20 +1,20 @@
-import pride.network
-import pride.vmlibrary
-import pride.datastructures
-import pride.utilities
-print_in_place = pride.utilities.print_in_place
+import pride.objectlibrary.network
+import pride.objectlibrary.vmlibrary
+import pride.objectlibrary.datastructures
+import pride.functions.utilities
+print_in_place = pride.functions.utilities.print_in_place
 
-class Connection_Tester(pride.network.Tcp_Client):
+class Connection_Tester(pride.objectlibrary.network.Tcp_Client):
     
     def on_connect(self):
         self.delete()
         
 
-class Connection_Flood(pride.vmlibrary.Process):
+class Connection_Flood(pride.objectlibrary.vmlibrary.Process):
             
     defaults = {"target" : None, "priority" : .01, "swarm_size" : 25}
     required_arguments = ("target", )
-    mutable_defaults = {"latency" : pride.datastructures.Latency}
+    mutable_defaults = {"latency" : pride.objectlibrary.datastructures.Latency}
     
     def run(self):
         target = self.target

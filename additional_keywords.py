@@ -2,7 +2,6 @@ __all__ = []#"_export"]#, "_improt"]
 
 from socket import gethostbyname as get_ip_address
 
-import importlib
 import inspect
 import os
 
@@ -33,7 +32,7 @@ def _export(*args):
             shell.handle_input(module_source)
             break
     else:
-        pride.objects["/User"].create("pride.interpreter.Shell", ip=ip, 
+        pride.objects["/User"].create("pride.objectlibrary.interpreter.Shell", ip=ip, 
                                        startup_definitions=module_source)
                   
 def _improt(module_name):        

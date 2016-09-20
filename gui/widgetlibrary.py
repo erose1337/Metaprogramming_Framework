@@ -20,9 +20,9 @@ class Attribute_Modifier_Button(gui.Button):
         old_value = getattr(instance, attribute)
         new_value = getattr(old_value, self.operation)(self.amount)
         setattr(instance, attribute, new_value)
-        self.alert("Modified {}.{}; {}.{}({}) = {}",
-                   (reference, attribute, old_value, 
-                    self.operation, self.amount, getattr(instance, attribute)),
+        self.alert("Modified {}.{}; {}.{}({}) = {}".format(reference, attribute, old_value, 
+                                                           self.operation, self.amount, 
+                                                           getattr(instance, attribute)),
                    level=self.verbosity["left_click"])  
                     
  

@@ -62,7 +62,7 @@ class Scanner(pride.objectlibrary.vmlibrary.Process):
                 for field_two in xrange(subnet_two, subnet_two_range + 1):
                     for field_three in xrange(subnet_three, subnet_three_range + 1):
                         address = ".".join((str(field_zero), str(field_one), str(field_two), str(field_three)))
-                        self.alert("Scanning address: {}", [address], 
+                        self.alert("Scanning address: {}".format(address), 
                                    level=self.verbosity["next_address"])
                         for port in ports:                            
                             self.create(Tcp_Port_Tester, host_info=(address, port))
@@ -74,7 +74,8 @@ class Scanner(pride.objectlibrary.vmlibrary.Process):
     def host_discovered(self, address):
         if address[0] not in self.discovered_hosts:
             self.discovered_hosts.append(address)
-            self.alert("Discovered a host at {}:{}", address, 
+            self.alert("Discovered a host at {}:{}".format(*address), 
                        level=self.verbosity["host_discovered"])
-        self.alert("Found a service at {}:{}", address, 
+        self.alert("Found a service at {}:{}".format(*address), 
                    level=self.verbosity["port_open"])
+                   

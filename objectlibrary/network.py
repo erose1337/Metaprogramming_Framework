@@ -230,7 +230,8 @@ class Socket(base.Wrapper):
             try:
                 instance.recv()
             except Exception:
-                instance.alert("Caught non socket.error during recv:\n{}", (traceback.format_exc(), ), level=0)                
+                message = "Caught non socket.error during recv:\n{}".format(traceback.format_exc())
+                instance.alert(message, level=0)                
                 instance.delete()            
         else:            
             # send through the socket using the network stack
@@ -445,7 +446,7 @@ class Tcp_Client(Tcp_Socket):
             self.bind((self.interface, self.as_port))            
         if not self.host_info:
             if not self.ip:
-                self.alert("Attempted to create Tcp_Client with no host ip or host_info", tuple(), 0)
+                self.alert("Attempted to create Tcp_Client with no host ip or host_info", level=0)
             self.host_info = (self.ip, self.port)
             
         if self.auto_connect:
@@ -575,7 +576,8 @@ class Network(vmlibrary.Process):
                 error_handler.dispatch(_socket, error, ERROR_CODES[error.errno].lower())
             except Exception as error:                
                 _socket = readable[read_progress + read_counter]
-                _socket.alert("Caught non socket.error during recv: {}", (traceback.format_exc(), ), level=0)                
+                message = "Caught non socket.error during recv: {}".format(traceback.format_exc())
+                _socket.alert(message, level=0)                
                 _socket.delete()
               #  raise
                 read_progress += (read_counter + 1)

@@ -187,9 +187,10 @@ class Rpc_Client(Packet_Client):
             try:
                 _call, callback = pride.objects[callback_owner].next_callback()
             except KeyError:
-                self.alert("Could not resolve callback_owner '{}' for {} {}",
-                           (callback_owner, "callback with arguments {}",
-                            _response), level=self.verbosity["unresolved_callback"])
+                self.alert("Could not resolve callback_owner '{}' for {} {}".format(callback_owner, 
+                                                                                    "callback with arguments {}",
+                                                                                    _response), 
+                           level=self.verbosity["unresolved_callback"])
             else:
                 if isinstance(_response, BaseException):
                     self.handle_exception(_call, callback, _response)
@@ -201,9 +202,9 @@ class Rpc_Client(Packet_Client):
             isinstance(response, KeyboardInterrupt)):            
             raise response
         else:
-            self.alert("\nRemote Traceback: Exception calling {}\n{}: {}\nUnable to proceed with callback {}",
-                       ('.'.join(_call), response.__class__.__name__, 
-                        getattr(response, "traceback", response), callback), 
+            message = "\nRemote Traceback: Exception calling {}\n{}: {}\nUnable to proceed with callback {}"
+            self.alert(message.format('.'.join(_call), response.__class__.__name__, 
+                                      getattr(response, "traceback", response), callback), 
                         level=self.verbosity["handle_exception"])            
             
     def deserealize(self, response):
@@ -249,12 +250,11 @@ class Rpc_Socket(Packet_Socket):
                     stack_trace = traceback.format_exc()
                     result.traceback = stack_trace  
                     if not isinstance(result, SystemExit):
-                        self.alert("Exception processing request {}.{}: \n{}",
-                                   [component_name, method, stack_trace],
+                        self.alert("Exception processing request {}.{}: \n{}".format(component_name, 
+                                                                                     method, stack_trace),
                                    level=self.verbosity["request_exception"])                    
             else:                
-                self.alert("Sending result of {}.{}: {}",
-                           (component_name, method, result), 
+                self.alert("Sending result of {}.{}: {}".format(component_name, method, result), 
                            level=self.verbosity["request_result"])               
                            
             self.send(self.serialize(result))

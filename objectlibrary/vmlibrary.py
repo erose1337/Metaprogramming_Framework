@@ -143,12 +143,9 @@ class Processor(Process):
         reraise_exceptions = (SystemExit, KeyboardInterrupt)
         alert = self.alert
         verbosity = self.verbosity
-        component_alert = partial(alert, "{0}:\n    {1}", level=verbosity["component_alert"])
-        exception_alert = partial(alert, 
-                                  "\nException encountered when processing {0}.{1}\n{2}", 
-                                  level=verbosity["exception_alert"])
-        execution_alert = partial(alert, "executing instruction {}")
-        callback_exception_alert = partial(alert, "Exception in callback '{}'", level=verbosity["callback_exception"])
+        exception_message = "\nException encountered when processing {0}.{1}\n{2}"
+        callback_message = "Exception in callback '{}'"
+                
         format_traceback = traceback.format_exc
         result = null_result = [] # a unique object
         while instructions and self.running:   
@@ -165,7 +162,8 @@ class Processor(Process):
                         if time_until:
                             sleep(time_until)
                                             
-                        execution_alert([instruction], level=verbosity["instruction_execution"])
+                        alert("executing instruction {}".format(instruction), 
+                              level=verbosity["instruction_execution"])
                         
                         if callback:
                             result = call(*args, **kwargs)
@@ -177,30 +175,35 @@ class Processor(Process):
                 if component_name in objects:
                     if callback:
                         if result is not null_result:
-                            callback_exception_alert((callback, ))
+                            self.alert(callback_alert.format(callback), level=verbosity["callback_exception"])
                             continue
-                    exception_alert((component_name, method, format_traceback()))
+                    self.alert(exception_message.format(component_name, method, format_traceback()),
+                               level=verbosity["exception_alert"])
                 else:
-                    error = "'{}' component does not exist".format(component_name)                        
-                    component_alert((str(instruction), error)) 
+                    error = "'{}' component does not exist".format(component_name)   
+                    self.alert("{0}:\n    {1}".format(str(instruction), error), 
+                               level=verbosity["component_alert"])                                        
                     
             except AttributeError as error:                
                 if hasattr(objects[component_name], method):
                     if callback and result is not null_result:
-                        callback_exception_alert((callback, ))
+                        self.alert(callback_alert.format(callback), level=verbosity["callback_exception"])
                     else:
-                        exception_alert((component_name, method, format_traceback()))
+                        self.alert(exception_message.format(component_name, method, format_traceback()),
+                                   level=verbosity["exception_alert"])                                            
                 else:
-                    component_alert((str(instruction), error))   
+                    self.alert("{0}:\n    {1}".format(str(instruction), error), 
+                               level=verbosity["component_alert"])     
                     
             except BaseException as error:                   
                 if type(error) in reraise_exceptions:                                        
                     raise
                 else:                                        
                     if callback and result is not null_result:
-                        callback_exception_alert((callback, ))
+                        self.alert(callback_alert.format(callback), level=verbosity["callback_exception"])
                     else:
-                        exception_alert((component_name, method, format_traceback()))
+                        self.alert(exception_message.format(component_name, method, format_traceback()),
+                                   level=verbosity["exception_alert"])
                     try:
                         objects[component_name].handle_instruction_exception(method, error, callback, result)
                     except AttributeError:

@@ -393,7 +393,7 @@ class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):
             ancestor version that performs bookkeeping.
             
             Make sure to overload remove if you modify add (if necessary)"""   
-        self.alert("Adding: {}", (instance, ), level=self.verbosity["add"])
+        self.alert("Adding: {}".format(instance), level=self.verbosity["add"])
         self_objects = self.objects
         instance_class = type(instance).__name__
         try:
@@ -414,19 +414,18 @@ class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):
             and instance.references_to.
             
             The default alert level for object removal is 'vv'"""    
-        self.alert("Removing {}", [instance], level=self.verbosity["remove"])  
+        self.alert("Removing {}".format(instance), level=self.verbosity["remove"])  
         self.objects[type(instance).__name__].remove(instance)
         instance.references_to.remove(self.reference)                    
     
-    def alert(self, message, format_args=tuple(), level=0):
-        """usage: base.alert(message, format_args=tuple(), level=0)
+    def alert(self, message, level=0):
+        """usage: base.alert(message, level=0)
 
         Display/log a message according to the level given. The alert may 
         be printed for immediate attention and/or logged, depending on
         the current Alert_Handler print_level and log_level.
 
-        - message is a string that will be logged and/or displayed
-        - format_args are any string formatting args for message.format()
+        - message is a string that will be logged and/or displayed        
         - level is an integer indicating the severity of the alert.
 
         alert severity is relative to Alert_Handler log_level and print_level;
@@ -434,23 +433,14 @@ class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):
         indicates a message that should not be suppressed. log_level and
         print_level may passed in as command line arguments to globally control verbosity.
         
-        An objects verbosity can be modified without modifying the source code
-        via the site_config module.
-        
-        format_args can sometimes make alerts more readable, depending on the
-        length of the message and the length of the format arguments.
-            - It is arguably better to do: 
-                [code]
-                message = 'string stuff {} and more string stuff {}'.format(variable1, variable2)
-                my_object.alert(message, level=level)[/code]""" 
+        An objects verbosity can be modified via the site_config module. """ 
         alert_handler = objects["/Alert_Handler"]          
-        message = "{}: ".format(self.reference) + (message.format(*format_args) if format_args else message)
+        message = "{}: {}".format(self.reference, message)
         if level in alert_handler._print_level or level is 0:                    
             sys.stdout.write(message + "\n")
             sys.stdout.flush()                           
         if level in alert_handler._log_level or level is 0:
-            alert_handler.log.seek(0, 1) # windows might complain about files in + mode if this isn't done
-            alert_handler.log.write(str(level) + message + "\n")    
+            alert_handler.append_to_log(message, level)            
                                                  
     def __getstate__(self):
         return self.__dict__.copy()
@@ -556,7 +546,7 @@ class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):
                 - Classes that instantiate base objects as a class attribute
                   will produce an additional object each time the class is
                   updated. Solution: instantiate base objects in __init__ """
-        self.alert("Beginning Update ({})...", (id(self), ), level=self.verbosity["update"])          
+        self.alert("Beginning Update ({})...".format(id(self)), level=self.verbosity["update"])          
         _already_updated = _already_updated or [self.reference]
         class_base = pride.functions.utilities.updated_class(type(self))        
         class_base._required_modules.append(self.__class__.__name__)        

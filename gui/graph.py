@@ -37,7 +37,7 @@ class Graph(pride.gui.gui.Application):
     def left_click(self, mouse):
         x = (mouse.x - self.x) / self.x_spacing        
         y = self.points[x] = mouse.y - self.y
-        self.alert("Inserted point at: ({}, {})", (x, y), level=0)
+        self.alert("Inserted point at: ({}, {})".format(x, y), level=0)
         self.texture_invalid = True
         
     def draw_texture(self):   

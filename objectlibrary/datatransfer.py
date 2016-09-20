@@ -63,7 +63,8 @@ class Data_Transfer_Client(pride.objectlibrary.authentication3.Authenticated_Cli
             self.verbosity may feature usernames of other clients; entries not
             found default to 0. """
         for sender, message in messages:
-            self.alert("{}: {}", (sender, message), level=self.verbosity.get(sender, 0))
+            self.alert("{}: {}".format(sender, message), 
+                       level=self.verbosity.get(sender, 0))
             
     def refresh(self):
         """ Checks for new data from the server """
@@ -79,15 +80,14 @@ class Data_Transfer_Service(pride.objectlibrary.authentication3.Authenticated_Se
     def send_to(self, receiver, message):        
         sender = self.session_id[self.current_session[0]]
         if receiver:
-            self.alert("{} Sending {} bytes to {}", 
-                       (sender, len(message), receiver),
+            self.alert("{} Sending {} bytes to {}".format(sender, len(message), receiver),            
                        level=self.verbosity["data_transfer"])
             try:
                 self.messages[receiver].append((sender, message))
             except KeyError:
                 self.messages[receiver] = [(sender, message)]
         else:
-            self.alert("Sending messages back to: {}", (sender, ), 
+            self.alert("Sending messages back to: {}".format(sender), 
                        level=self.verbosity["refresh"])
         return self.messages.pop(sender, tuple())
         
@@ -109,8 +109,7 @@ class File_Transfer(Data_Transfer_Client):
                 ip = self.ip
                 port = self.port
                 for receiver in self.receivers:
-                    self.alert("Sending packet to: {}@{}:{}",
-                               (receiver, ip, port), level=0)
+                    self.alert("Sending packet to: {}@{}:{}".format(receiver, ip, port), level=0)
                     self.send_to(receiver, packet)
             else:
                 raise NotImplementedError()
@@ -146,8 +145,9 @@ class File_Storage_Daemon(Data_Transfer_Client):
                 if filename in self.file_access[sender]:
                     self.send_to(sender, file_operation(filename, "rb", "read", self.file_type, offset, data))
             else:
-                self.alert("Received unsupported request_type '{}' from '{}'\npacket: {}",
-                           (request_type, sender, packet), level=self.verbosity["invalid_request_type"])
+                message = "Received unsupported request_type '{}' from '{}'\npacket: {}".format(request_type, 
+                                                                                                sender, packet)
+                self.alert(message, level=self.verbosity["invalid_request_type"])
             
     
 class Proxy(Data_Transfer_Client):

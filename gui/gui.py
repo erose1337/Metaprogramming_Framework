@@ -74,7 +74,7 @@ class Organizer(base.Base):
         old_size = item.size
         pack(parent, item, self._pack_index[reference], 
              len(self._pack_modes[parent.reference][pack_mode]))
-        item.alert("Packed into: {} {}", [item.area, item.z], 
+        item.alert("Packed into: {} {}".format(item.area, item.z), 
                    level=item.verbosity["packed"])
     
     def pack_main(self, parent, item, count, length):
@@ -439,7 +439,7 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
     def mousemotion(self, x_change, y_change, top_level=True):
         if self.movable and self.held:
             self._ignore_click = True
-            #self.alert("Mousemotion {} {}", [x_change, y_change], level=0)
+            #self.alert("Mousemotion {} {}".format(x_change, y_change), level=0)
             _x, _y = self.position       
             self.x += x_change
             self.y += y_change

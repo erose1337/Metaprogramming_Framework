@@ -68,8 +68,8 @@ class Audio_Reactor(base.Base):
         try:
             self.listeners.remove(reference)
         except ValueError:
-            self.alert("Failed to remove listener '{}'; Not in listeners list",
-                       (reference, ), level=self.verbosity["remove_listener_error"])
+            self.alert("Failed to remove listener '{}'; Not in listeners list".format(reference),
+                       level=self.verbosity["remove_listener_error"])
                     
 
 class Wav_File(Audio_Reactor):
@@ -105,7 +105,7 @@ class Wav_File(Audio_Reactor):
             _file.setparams((self.channels, self.sample_width, self.rate, 0, 'NONE', 'not compressed'))
             
         message = "opened wav file with channels: {0}, format: {1}, rate: {2}"
-        self.alert(message, (self.channels, self.sample_width, self.rate), level="vv")
+        self.alert(message.format(self.channels, self.sample_width, self.rate), level="vv")
             
     def read(self, size=None): # accepts size in bytes and converts to frame count   
         size = (size / 4) if size is not None else (self.audio_size / 4)

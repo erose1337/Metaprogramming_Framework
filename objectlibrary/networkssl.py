@@ -140,8 +140,8 @@ class SSL_Client(pride.objectlibrary.network.Tcp_Client):
             self.ssl_socket.do_handshake()
         except ssl.SSLError as error:
             if error.errno != ssl.SSL_ERROR_WANT_READ:
-                self.alert("Unhandled SSLError when performing handshake: {}",
-                           [error], level=0)
+                self.alert("Unhandled SSLError when performing handshake: {}".format(error),
+                           level=0)
                 raise
         else:
             self.ssl_authenticated = True
@@ -183,8 +183,7 @@ class SSL_Socket(pride.objectlibrary.network.Tcp_Socket):
             self.ssl_socket.do_handshake()
         except ssl.SSLError as error:
             if error.errno != ssl.SSL_ERROR_WANT_READ:
-                self.alert("Unhandled SSLError when performing handshake: {}",
-                           [error], level=0)  
+                self.alert("Unhandled SSLError when performing handshake: {}".format(error), level=0)  
                 raise
         else:
             self.ssl_authenticated = True
@@ -211,7 +210,7 @@ class SSL_Server(pride.objectlibrary.network.Server):
         # some stuff to streamline the first run/install process
         if not os.path.exists(self.certfile) or not os.path.exists(self.keyfile):            
             if self.certfile or self.keyfile:
-                self.alert("Certificate/Key file not found: '{}''{}'\n", (self.certfile, self.keyfile),
+                self.alert("Certificate/Key file not found: '{}''{}'\n".format(self.certfile, self.keyfile),
                            level=self.verbosity["certfile_not_found"])
             else:
                 self.alert("Usage of ssl requires certificates and key files.", level=0)

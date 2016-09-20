@@ -37,9 +37,7 @@ class Audio_Device(audiolibrary.Audio_Reactor):
 
     def __init__(self, **kwargs):
         super(Audio_Device, self).__init__(**kwargs)
-        self.alert("{} {} initializing",
-                  (self.name, self.card),
-                  level='v')
+        self.alert("{} {} initializing".format(self.name, self.card), level='v')
                   
         self.pcm = alsaaudio.PCM(type=self.type, mode=self.mode, card=self.card)
         self.pcm.setchannels(self.channels)

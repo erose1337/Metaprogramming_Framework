@@ -169,8 +169,8 @@ class Database(pride.base.Wrapper):
         # range is len(values[0]) if batch is True, else range is len(values)
         query = "INSERT INTO {}{} VALUES({})".format(table_name, columns or '',
                                                      ", ".join('?' for count in range(len(values[0 if batch else slice(len(values))]))))
-        self.alert("Inserting data into table {}; {}, {}",
-                  (table_name, query, values), level=self.verbosity["insert_into"])
+        self.alert("Inserting data into table {}; {}, {}".format(table_name, query, values), 
+                   level=self.verbosity["insert_into"])
         if batch:
             cursor = self.cursor.executemany(query, values)
         else:
@@ -261,8 +261,8 @@ class Database(pride.base.Wrapper):
         """ Returns a generator which yields field information for the
             specified table. Entries consist of the field index, field name,
             field type, and more."""
-        self.alert("Retrieving table information for: {}",
-                   (table_name, ), level=self.verbosity["table_info"])
+        self.alert("Retrieving table information for: {}".format(table_name), 
+                   level=self.verbosity["table_info"])
         return self.cursor.execute("PRAGMA table_info({})".format(table_name))
     
     def get_last_auto_increment_value(self, table_name):        

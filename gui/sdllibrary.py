@@ -187,7 +187,7 @@ class Window_Handler(pride.objectlibrary.base.Base):
                              sdl2.SDL_WINDOWEVENT_CLOSE : self.handle_close}
     
     def handle_event(self, event):
-     #   self.alert("Handling {}", [self.event_switch[event.window.event]], level=0)
+     #   self.alert("Handling {}".format(self.event_switch[event.window.event]), level=0)
         self.event_switch[event.window.event](event)
         
     def handle_shown(self, event):
@@ -317,15 +317,15 @@ class SDL_User_Input(vmlibrary.Process):
                 handlers[event.type](event)
             except KeyError:
                 if event.type in handlers:
-                    self.alert("Exception handling {};\n{}", (self.event_names[event.type], 
-                                                            traceback.format_exc()), 
-                            level=0)                
+                    self.alert("Exception handling {};\n{}".format(self.event_names[event.type],
+                                                                   traceback.format_exc()), 
+                               level=0)                
                     #raise
                 else:
                     self.alert("Unhandled event: {}".format(event.type))
             except Exception as error:
-                self.alert("Exception handling {};\n{}", (self.event_names[event.type], 
-                                                          traceback.format_exc()), 
+                self.alert("Exception handling {};\n{}".format(self.event_names[event.type], 
+                                                               traceback.format_exc()), 
                            level=0)
                 
     def _update_coordinates(self, item, area, z):
@@ -353,8 +353,8 @@ class SDL_User_Input(vmlibrary.Process):
         text = event.edit.text
         cursor = event.edit.start
         selection_length = event.edit.length
-        self.alert("Handling textinput {} {} {}",
-                   (text, cursor, selection_length), level=self.verbosity["handle_text_input"])
+        self.alert("Handling textinput {} {} {}".format(text, cursor, selection_length), 
+                   level=self.verbosity["handle_text_input"])
         if self.active_item:
             instance = objects[self.active_item]            
             instance.text_entry(text)
@@ -362,7 +362,7 @@ class SDL_User_Input(vmlibrary.Process):
             #    instance.text += text
         
     def handle_unhandled_event(self, event):        
-        self.alert("{0} passed unhandled", [event.type], 'vv')
+        self.alert("{0} passed unhandled".format(event.type), 'vv')
 
     def handle_quit(self, event):
         self.parent.delete()
@@ -372,7 +372,7 @@ class SDL_User_Input(vmlibrary.Process):
     def handle_mousebuttondown(self, event):        
         mouse = event.button
         mouse_position = (mouse.x, mouse.y)
-        self.alert("mouse button down at {}", [mouse_position], level='v')        
+        self.alert("mouse button down at {}".format(mouse_position), level='v')        
         active_item = None
         max_z = 0
         coordinates = self.coordinate_tracker
@@ -415,7 +415,7 @@ class SDL_User_Input(vmlibrary.Process):
                     if active_item in pride.objects:
                         raise
                     else:                        
-                        self.alert("Active item has been deleted {}", (active_item, ), level=0)
+                        self.alert("Active item has been deleted {}".format(active_item, ), level=0)
                         self.active_item = None
 
     def handle_mousebuttonup(self, event):

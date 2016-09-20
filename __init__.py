@@ -154,6 +154,10 @@ class Alert_Handler(base.Base):
         super(Alert_Handler, self).__init__(**kwargs)
         self.log = open(self.log_name, 'a+')
 
+    def append_to_log(self, message, level):
+        self.log.seek(0, 1) # windows might complain about files in + mode if this isn't done
+        self.log.write(str(level) + message + "\n")   
+            
     def dump_log(self, byte_count=0, lines=0):
         log = self.log
         backup_position = log.tell()
@@ -218,13 +222,13 @@ class Finalizer(base.Base):
                     self.alert("Unable to get method: '{}.{}'".format(reference, method), 
                                level=verbosity["unable_to_get_method"])
                                
-            self.alert("Executing finalizer callback: {}({}, {})", (callback, args, kwargs), 
+            self.alert("Executing finalizer callback: {}({}, {})".format(callback, args, kwargs), 
                        level=verbosity["execute_callback"])            
             try:
                 callback(*args, **kwargs)
             except Exception as error:
-                self.alert("Unhandled exception running finalizer method '{}.{}'\n{}",
-                           (reference, method, traceback.format_exc()),
+                message = "Unhandled exception running finalizer method '{}.{}'\n{}"
+                self.alert(message.format(reference, method, traceback.format_exc()),
                            level=verbosity["callback_exception"]) 
             else:
                 self.alert("Finalizer callback success", level=verbosity["callback_success"])

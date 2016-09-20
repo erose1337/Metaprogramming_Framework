@@ -150,7 +150,7 @@ class Package(pride.objectlibrary.base.Base):
             self.documentation[package_name] = self.create("pride.package.Documentation", module)  
         
     def find_module(self, module_name, path=None):
-        self.alert("{} Looking for module: {}", [self.package_name, module_name], level=0)
+        self.alert("{} Looking for module: {}".format(self.package_name, module_name), level=0)
         if module_name in self.required_modules:
             loader = self        
         else:

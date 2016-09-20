@@ -31,7 +31,7 @@ def remote_procedure_call(callback_name='', callback=None):
             if not self.logged_in and call_name not in ("register", "login", "login_stage_two"):                 
                 self.handle_not_logged_in(instruction, _callback)            
             else:
-                self.alert("Making request '{}.{}'", (self.target_service, call_name),
+                self.alert("Making request '{}.{}'".format(self.target_service, call_name),
                            level=self.verbosity[call_name])   
                 if self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
                     local_service = pride.objects[self.target_service]
@@ -281,11 +281,12 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
         #    print
         #    print self.session_id.keys()[0]
        #     return False
-            self.alert(self.validation_failure_string,
-                      (peername[0] in self.ip_blacklist, peername[0] in self.ip_whitelist,
-                       session_id in self.session_id,
-                       method_name, method_name in self.remotely_available_procedures,
-                       self.allow_login, self.allow_registration),
+            self.alert(self.validation_failure_string.format(peername[0] in self.ip_blacklist, 
+                                                             peername[0] in self.ip_whitelist,
+                                                             session_id in self.session_id,
+                                                             method_name, 
+                                                             method_name in self.remotely_available_procedures,
+                                                             self.allow_login, self.allow_registration),
                        level=self.verbosity["validate_failure"])
             return False         
         if self.rate_limit and method_name in self.rate_limit:
@@ -302,16 +303,16 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
             if not _new_connection:
                 current_rate = self._rate[session_id][method_name].last_measurement                
                 if current_rate < self.rate_limit[method_name]:
-                    self.alert("Rate of {} calls exceeded 1/{}s ({}); Denying request",
-                            (method_name, self.rate_limit[method_name], current_rate),                           
-                            level=self.verbosity["validate_failure"])
+                    message = "Rate of {} calls exceeded 1/{}s ({}); Denying request".format(method_name, 
+                                                                                             self.rate_limit[method_name], 
+                                                                                             current_rate)
+                    self.alert(message, level=self.verbosity["validate_failure"])
                     return False
 
  #       if self.enforce_idle_timeout:
  #           self.not_idle.add(session_id)            
             
-        self.alert("Authorizing: {} for {}", 
-                  (peername, method_name), 
+        self.alert("Authorizing: {} for {}".format(peername, method_name), 
                   level=self.verbosity["validate_success"])
         return True        
 
@@ -456,8 +457,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
         self.logged_in = True        
         
         for instruction, callback in self._delayed_requests:
-            self.alert("Making delayed request: {}",
-                      [(instruction.component_name, instruction.method)],
+            self.alert("Making delayed request: {}".format((instruction.component_name, instruction.method)),
                       level=self.verbosity["delayed_request_sent"])
             self.session.execute(instruction, callback)
         self._delayed_requests = []

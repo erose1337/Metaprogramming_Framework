@@ -46,9 +46,7 @@ class Shell(pride.objectlibrary.authentication3.Authenticated_Client):
         try:
             compile(source, "Shell", 'exec')
         except:
-            self.alert("Startup defintions failed to compile:\n{}",
-                       [traceback.format_exc()],
-                       level=0)
+            self.alert("Startup defintions failed to compile:\n{}".format(traceback.format_exc()), level=0)
         else:
             self.startup_definitions = ''            
             self.execute_source(source)
@@ -233,7 +231,7 @@ class Python(base.Base):
                 environment_value = os.environ[variable]
                 method = modes[mode]
                 result = getattr(environment_value, method)(value)
-            self.alert("Setting os.environ[{}] = {}", (variable, result),
+            self.alert("Setting os.environ[{}] = {}".format(variable, result),
                        level=self.verbosity["os_environ_set"])
             os.environ[variable] = result
             

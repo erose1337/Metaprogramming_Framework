@@ -141,7 +141,7 @@ class Bytecode_Interpreter(pride.objectlibrary.base.Base):
             operation = bytecode[index]
             if operation == 83: # return top of stack item
                 return stack.pop()
-            self.alert("Performing: {}", (opname[operation], ), level=0)
+            self.alert("Performing: {}".format(opname[operation]), level=0)
             try:
                 self.operation_handlers[operation]((bytecode[index + 1] if operation not in 
                                                     function_call_operations else

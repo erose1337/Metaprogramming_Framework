@@ -1,6 +1,6 @@
 """
   A python implementation of the secure remote password protocol for the
-  metapython runtime environment. Authenticated_Service and
+  pride. Authenticated_Service and
   Authenticated_Client objects default to using SRP for authentication, 
   and in most cases those objects will be used instead of the
   Secure_Remote_Password objects directly.

@@ -1,4 +1,4 @@
-""" Builds the metapython runtime environment package """
+""" Builds the pride package """
 import importlib
 import sys
 import setuptools
@@ -68,14 +68,15 @@ with open("readme.md", 'r') as _file:
     long_description = _file.read()
     
 options = {"name" : "pride",
-           "version" : "5.9.43",
+           "version" : "7.0.0",
            "description" : "Python runtime and integrated development environment",
            "long_description" : long_description,
            "url" : "https://github.com/erose1337/pride",
            "download_url" : "https://github.com/erose1337/pride/archive/master.zip",
            "author" : "Ella Rose",
            "author_email" : "python_pride@protonmail.com",
-           "packages" : ["pride", "pride.audio", "pride.gui", "pride.programs"],
+           "packages" : ["pride", "pride.audio", "pride.gui", "pride.programs",
+                         "pride.crypto", "pride.functions", "pride.objectlibrary"],
            "scripts" : ["main.py"],
            "package_data" : {"pride.gui" : ["gui\\libfreetype-6.dll", 
                                             "gui\\SDL2.dll", "gui\\SDL2_ttf.dll",
@@ -89,8 +90,7 @@ options = {"name" : "pride",
                             "Programming Language :: Python :: 2.7",
                             "Topic :: Desktop Environment", "Topic :: Documentation",
                             "Topic :: Games/Entertainment", "Topic :: Multimedia :: Sound/Audio",
-                            "Topic :: Software Development :: Compilers", 
-                            "Topic :: Software Development :: Code Generators",
+                            "Topic :: Software Development :: Compilers",                             ,
                             "Topic :: Software Development :: Build Tools",
                             "Topic :: Software Development :: Libraries :: Application Frameworks",
                             "Topic :: Software Development :: Libraries :: Python Modules",

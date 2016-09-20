@@ -1,5 +1,5 @@
 from pride.crypto.utilities import slide, integer_to_bytes
-from ciphercomponents import choice, rotate_left
+from pride.crypto.designs.ciphercomponents import choice, rotate_left
 from pride.crypto.analysis.visualization import test_4x64_function
 
 def rotl16(word, amount):

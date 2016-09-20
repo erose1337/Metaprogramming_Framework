@@ -76,7 +76,7 @@ class Interpreter(pride.objectlibrary.authentication3.Authenticated_Service):
     
     def __init__(self, **kwargs):
         super(Interpreter, self).__init__(**kwargs)
-        filename = os.path.join(pride.site_config.PRIDE_DIRECTORY, 
+        filename = os.path.join(pride.site_config.LOG_DIRECTORY, 
                                 '_'.join(word for word in self.reference.split("/") if word))
         self.log = self.create("pride.objectlibrary.fileio.File", 
                                "{}.log".format(filename), 'a+',
@@ -148,8 +148,7 @@ class Python(base.Base):
         starts the execution of the Processor component."""
     defaults = {"command" : '',
                 "environment_setup" : ("PYSDL2_DLL_PATH = " + 
-                                       pride.site_config.PRIDE_DIRECTORY +
-                                       os.path.sep + "gui" + os.path.sep, ),
+                                       pride.site_config.GUI_DIRECTORY + os.path.sep, ),
                 "startup_components" : ("pride.objectlibrary.storage.Persistent_Storage",
                                         "pride.objectlibrary.vcs.Version_Control",
                                         "pride.objectlibrary.vmlibrary.Processor",                                        

@@ -86,7 +86,7 @@ def shuffle(data, key):
         #    else:
         #        data[i], data[i] = data[i], data[i]
         
-from sponge import sponge_factory
+from pride.crypto.designs.hash.sponge import pride.crypto.designs.hash.sponge_factory
 tweak = list(set((x | 1 for x in range(256)))) # some odd numbers
 permute_hash = sponge_factory(lambda data: keyed_permute_diffusion(data, tweak),
                               output_size=2, rate=2, capacity=1)      

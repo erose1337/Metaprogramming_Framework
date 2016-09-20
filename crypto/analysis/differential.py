@@ -152,7 +152,7 @@ def test_find_impossible_differentials():
 def test_build_difference_distribution_table():
     import pprint
     #from pride.crypto.designs.blockcipher.blockcipher import S_BOX  
-    from scratch import aes_s_box as S_BOX       
+    from pride.crypto.designs.blockcipher.aes_procedures import S_BOX       
     table1, table2 = build_difference_distribution_table(S_BOX, ((xor, None), (rotate_left, rotational_difference)))    
    # print max(table1[1].values())
     print find_best_differential_in_table(table1)

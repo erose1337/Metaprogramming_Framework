@@ -41,6 +41,18 @@
 # defaults specified here will override defaults defined in the source code
 import os
 PRIDE_DIRECTORY = os.path.split(os.path.abspath(__file__))[0]
+AUDIO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "audio")
+CRYPTO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "crypto")
+
+DATA_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "data")
+DATABASE_DIRECTORY = os.path.join(DATA_DIRECTORY, "database")
+LOG_DIRECTORY = os.path.join(DATA_DIRECTORY, "log")
+
+FUNCTIONS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "functions")
+GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")
+OBJECTLIBRARY_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "objectlibrary")
+PROGRAMS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "programs")
+
 SITE_CONFIG_FILE = __file__ if __file__[-1] != 'c' else __file__[:-1]
 del os
 
@@ -95,4 +107,4 @@ import pride.gui
 
 pride_objectlibrary_user_User_defaults = {'username': 'localhost'}
 
-pride_objectlibrary_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\rpc_server.crt'}
+pride_objectlibrary_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

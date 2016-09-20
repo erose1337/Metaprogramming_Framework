@@ -220,18 +220,18 @@ class SSL_Server(pride.objectlibrary.network.Server):
                 if not filename:
                     filename = "ssl_server"
                 if not os.path.split(filename)[0]: # no directory supplied or no filename
-                    filename = os.path.join(pride.site_config.PRIDE_DIRECTORY, filename)
+                    filename = os.path.join(pride.site_config.DATA_DIRECTORY, filename)
                                         
                 certificate = self.create(Self_Signed_Certificate, name=filename)
                 self.alert("Self signed certificate generated; Continuing.", 
                            level=self.verbosity["certfile_generated"])
                 self.certfile = certificate.crt_filename
-                self.keyfile = certficiate.key_filename
+                self.keyfile = certificate.key_filename
                 
                 if (self.update_site_config_on_new_certfile and
-                    not hasattr(pride.site_config, "pride_rpc_Rpc_Server_defaults")):
+                    not hasattr(pride.site_config, "pride_objectlibrary_rpc_Rpc_Server_defaults")):
                     
-                    pride.site_config.write_to("pride_rpc_Rpc_Server_defaults", 
+                    pride.site_config.write_to("pride_objectlibrary_rpc_Rpc_Server_defaults", 
                                                certfile=certificate.crt_filename,
                                                keyfile=certificate.key_filename)
             else:

@@ -20,7 +20,7 @@ def summarize_sbox(sbox, differential_types=STANDARD_DIFFERENTIAL):
     print "Linearity: {} ({})".format(linearity[1], linearity[0])
     
 def test_cryptanalyze_sbox_worst_case():
-    from aes_procedures import S_BOX       
+    from pride.crypto.designs.blockcipher.aes_procedures import S_BOX       
     summarize_sbox(S_BOX)
     
 if __name__ == "__main__":

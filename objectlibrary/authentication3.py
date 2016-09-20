@@ -121,7 +121,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
     def _load_database(self):
         if not self.database_name:
             _reference = '_'.join(name for name in self.reference.split("/") if name)
-            name = self.database_name = os.path.join(pride.site_config.PRIDE_DIRECTORY,
+            name = self.database_name = os.path.join(pride.site_config.DATABASE_DIRECTORY,
                                                      "{}.db".format(_reference))
         else:
             name = self.database_name

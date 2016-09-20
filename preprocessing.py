@@ -48,7 +48,7 @@ class Compiler(object):
         Caching is a performance optimization and not functionality critical. """
         
     def __init__(self, preprocessors=tuple(), modify_builtins=None, 
-                 cache_filename=os.path.join(site_config.PRIDE_DIRECTORY, ".py.cache")):
+                 cache_filename=os.path.join(site_config.DATA_DIRECTORY, ".py.cache")):
         self._loading = ''
         self.cache_filename = cache_filename
         self._database_finalizer = lambda: self.database.close()

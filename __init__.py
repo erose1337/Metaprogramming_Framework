@@ -122,7 +122,7 @@ class Alert_Handler(base.Base):
                 'vvvv' : "extremely verbose notification "}
 
     defaults = {"log_level" : '0+v', "print_level" : '0',
-                "log_name" : os.path.join(site_config.PRIDE_DIRECTORY, "Alerts.log"), 
+                "log_name" : os.path.join(site_config.LOG_DIRECTORY, "Alerts.log"), 
                 "log_is_persistent" : False, "parse_args" : True}
 
     parser_ignore = ("parse_args", "log_is_persistent", "verbosity")

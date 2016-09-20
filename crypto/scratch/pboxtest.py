@@ -245,7 +245,7 @@ def test_prf_words():
     
       
 def test_prf_sponge():
-    import sponge
+    import pride.crypto.designs.hash.sponge
     from pride.crypto.analysis.metrics import test_hash_function
     hasher = sponge.sponge_factory(prf, rate=8, capacity=8, output_size=8)
     test_hash_function(hasher)

@@ -1,4 +1,4 @@
-from ciphercomponents import choice
+from pride.crypto.designs.ciphercomponents import choice
 
 __all__ = ["choice_diffusion", ]
 

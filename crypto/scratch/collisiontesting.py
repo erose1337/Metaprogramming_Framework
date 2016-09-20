@@ -66,7 +66,7 @@ def test_prp():
     print test_xor_difference(lambda data: prp(data, xor_sum(data)), 16)
         
 def test_prp_sponge():
-    import sponge
+    import pride.crypto.designs.hash.sponge
     import streamcipher2
     from pride.crypto.utilities import xor_sum
     

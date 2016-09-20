@@ -86,7 +86,7 @@ def cube_prf(state, rounds=1):
     state[:] = integer_to_bytes(a, 8) + integer_to_bytes(b, 8) + integer_to_bytes(c, 8) + integer_to_bytes(d, 8)    
     
 def test_cube_prf():
-    from sponge import sponge_factory
+    from pride.crypto.designs.hash.sponge import pride.crypto.designs.hash.sponge_factory
     cube_hash = sponge_factory(cube_prf, rate=32, capacity=0, output_size=32)
     
     from pride.crypto.analysis.metrics import test_hash_function

@@ -51,7 +51,7 @@ def diffusion_layer(data):
     polarize(data)
     shuffle_bytes(data)
     
-from aes_procedures import S_BOX, subBytes, shiftRows, mixColumns
+from pride.crypto.designs.blockcipher.aes_procedures import S_BOX, subBytes, shiftRows, mixColumns
     
 def substitution_layer(data):    
     for index, byte in enumerate(data):

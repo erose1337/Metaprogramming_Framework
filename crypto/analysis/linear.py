@@ -62,7 +62,7 @@ def dump_linear_approximation_table(sbox, filename, exhaustive=True):
         _file.write(pprint.pformat(table))
         
 def test_dump_linear_approximation_table():
-    from aes_procedures import S_BOX
+    from pride.crypto.designs.blockcipher.aes_procedures import S_BOX
     dump_linear_approximation_table(S_BOX, "aes_sbox_lat", False)
     
 def test_build_linear_approximation_table():
@@ -72,8 +72,8 @@ def test_build_linear_approximation_table():
     pprint.pprint(approximations)
     
 def test_find_best_linear_approximation():
-    from scratch import aes_s_box as sbox
-    best_approximation = find_best_linear_approximation(sbox)
+    from pride.crypto.designs.blockcipher.aes_procedures import S_BOX
+    best_approximation = find_best_linear_approximation(S_BOX)
     print "Best approximation: ", best_approximation
     
 if __name__ == "__main__":

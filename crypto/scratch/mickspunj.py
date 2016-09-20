@@ -44,7 +44,7 @@ def mick_hash(data, sponge_function=mick_sponge_64):
     return integer_to_bytes(out)
     
 def test_mick_sponge_64():
-    from sponge import sponge_factory    
+    from pride.crypto.designs.hash.sponge import pride.crypto.designs.hash.sponge_factory    
     hash_function = sponge_factory(mick_sponge_64_subroutine, rate=1, capacity=7)
     test_hash_function(hash_function, avalanche_test=False, randomness_test=True)
     

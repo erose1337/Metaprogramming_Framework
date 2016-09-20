@@ -55,7 +55,7 @@ def shuffle_mix(a, b, c, d):
     a, b, c, d = mix_quarters(a, b, c, d)
     return a, b, c, d
  
-from ciphercomponents import mixRow, rotate_left
+from pride.crypto.designs.ciphercomponents import mixRow, rotate_left
 from pride.crypto.utilities import integer_to_bytes    
     
 def invert(a):

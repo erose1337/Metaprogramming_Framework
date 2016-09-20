@@ -1,6 +1,6 @@
 from pride.crypto.designs.blockcipher.blockcipher2 import prp as old_prp
 from streamcipher2 import prp as new_prp, xor_sum
-from sponge import sponge_factory
+from pride.crypto.designs.hash.sponge import pride.crypto.designs.hash.sponge_factory
 
 def test_for_collisions():
     data1 = bytearray(16)

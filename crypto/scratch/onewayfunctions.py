@@ -1,5 +1,5 @@
-import sponge
-from sponge import symmetric_primitive_factory
+import pride.crypto.designs.hash.sponge
+from pride.crypto.designs.hash.sponge import symmetric_primitive_factory
 from pride.crypto.utilities import slide, xor_sum, generate_s_box
 
 ASCII_CONSTANT = ''.join(chr(x) for x in xrange(256))

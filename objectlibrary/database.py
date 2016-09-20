@@ -55,7 +55,7 @@ class Database(pride.base.Wrapper):
         
     def __init__(self, **kwargs):
         super(Database, self).__init__(**kwargs)
-        self.database_name = self.database_name or os.path.join(pride.site_config.PRIDE_DIRECTORY,
+        self.database_name = self.database_name or os.path.join(pride.site_config.DATABASE_DIRECTORY,
                                                                 (self.reference.replace("/", '_') + ".db"))
         connection, self.cursor = self.open_database(self.database_name, 
                                                      self.text_factory)

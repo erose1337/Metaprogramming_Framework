@@ -39,7 +39,7 @@ def find_duplicate_via_prng():
     import random
     import itertools
     from pride.crypto.utilities import slide, bytes_to_longs
-    from ciphercomponents import optimized_bit_byte_transposition_words as prng_of_hamming_weight
+    from pride.crypto.designs.ciphercomponents import optimized_bit_byte_transposition_words as prng_of_hamming_weight
     sample_size = 16
     weight = 64
     test_sample = list(('1' * weight).zfill(128))

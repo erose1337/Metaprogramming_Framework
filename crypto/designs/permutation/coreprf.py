@@ -160,7 +160,7 @@ def test_prp_active_sboxes():
     bottom = 1
     key = top ^ bottom
     
-    from aes_procedures import mixColumns
+    from pride.crypto.designs.blockcipher.aes_procedures import mixColumns
     
     def prp_8_bit(top, bottom, key, index):
         return prp(top, bottom, key, index, mask=0xFF, rotations=5, bit_width=8)

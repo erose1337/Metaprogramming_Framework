@@ -1,4 +1,4 @@
-from aes_procedures import mixColumns
+from pride.crypto.designs.blockcipher.aes_procedures import mixColumns
 from pride.crypto.utilities import print_state_4x4
 
 def shuffle_bytes(state, section=slice(0, 16), temp=list(range(16))):          

@@ -7,7 +7,7 @@ class Documentation_Creator(pride.objectlibrary.base.Base):
 
     def __init__(self, **kwargs):
         super(Documentation_Creator, self).__init__(**kwargs)        
-        self.create("pride.package.Documentation", resolve_string(self.object_name))
+        self.create("pride.objectlibrary.package.Documentation", resolve_string(self.object_name))
     
 if __name__ == "__main__":  
     documentation_creator = Documentation_Creator()

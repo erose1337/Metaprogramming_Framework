@@ -1,4 +1,4 @@
-audio.portaudiodevices
+pride.audio.portaudiodevices
 ==============
 
 
@@ -59,9 +59,9 @@ Instance defaults:
 
 Method resolution order: 
 
-	(<class 'audio.portaudiodevices.Audio_Device'>,
+	(<class 'pride.audio.portaudiodevices.Audio_Device'>,
 	 <class 'pride.audio.audiolibrary.Audio_Reactor'>,
-	 <class 'pride.base.Base'>,
+	 <class 'pride.objectlibrary.base.Base'>,
 	 <type 'object'>)
 
 - **open_stream**(self):
@@ -101,11 +101,16 @@ Instance defaults:
 
 Method resolution order: 
 
-	(<class 'audio.portaudiodevices.Audio_Input'>,
-	 <class 'audio.portaudiodevices.Audio_Device'>,
+	(<class 'pride.audio.portaudiodevices.Audio_Input'>,
+	 <class 'pride.audio.portaudiodevices.Audio_Device'>,
 	 <class 'pride.audio.audiolibrary.Audio_Reactor'>,
-	 <class 'pride.base.Base'>,
+	 <class 'pride.objectlibrary.base.Base'>,
 	 <type 'object'>)
+
+- **refresh**(self):
+
+				No documentation available
+
 
 - **stop_file**(self, _file):
 
@@ -113,11 +118,6 @@ Method resolution order:
 
 
 - **play_file**(self, _file, listeners):
-
-				No documentation available
-
-
-- **refresh**(self):
 
 				No documentation available
 
@@ -148,10 +148,10 @@ Instance defaults:
 
 Method resolution order: 
 
-	(<class 'audio.portaudiodevices.Audio_Output'>,
-	 <class 'audio.portaudiodevices.Audio_Device'>,
+	(<class 'pride.audio.portaudiodevices.Audio_Output'>,
+	 <class 'pride.audio.portaudiodevices.Audio_Device'>,
 	 <class 'pride.audio.audiolibrary.Audio_Reactor'>,
-	 <class 'pride.base.Base'>,
+	 <class 'pride.objectlibrary.base.Base'>,
 	 <type 'object'>)
 
 - **handle_audio_input**(self, audio_data):
@@ -315,7 +315,7 @@ Latency
 
 Method resolution order: 
 
-	(<class 'pride.datastructures.Latency'>, <type 'object'>)
+	(<class 'pride.objectlibrary.datastructures.Latency'>, <type 'object'>)
 
 - **mark**(self):
 

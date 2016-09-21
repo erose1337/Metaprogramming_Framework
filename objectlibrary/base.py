@@ -29,7 +29,7 @@ def rebuild_object(saved_data):
     class_name = module_info.pop()
     for module_name, module_id in module_info:
         source = version_control.load_module(module_name, module_id, repo_id)        
-        module_object = pride.module_utilities.create_module(module_name, source)
+        module_object = pride.functions.module_utilities.create_module(module_name, source)
         _required_modules.append((module_name, module_id, module_object))     
     
     self_class = getattr(module_object, class_name)
@@ -483,7 +483,7 @@ class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):
                 attributes[key] = value.save()
                 attribute_type[key] = "saved"  
                 
-        required_modules = pride.module_utilities.get_all_modules_for_class(type(self))
+        required_modules = pride.functions.module_utilities.get_all_modules_for_class(type(self))
         version_control = objects["/Python/Version_Control"]     
         user = objects["/User"]
         hash_function = user.generate_tag

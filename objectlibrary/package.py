@@ -49,8 +49,12 @@ class Package(pride.objectlibrary.base.Base):
         self.path = path
         
         get_source = module_utilities.get_module_source       
-        sources = self.sources
-        sources[package_name] = get_source(module)        
+        sources = self.sources      
+        try:
+            sources[package_name] = get_source(module)        
+        except IOError:
+            print("No source available for: {}".format(module))
+            sources[package_name] = ''
         
         self.required_modules = required_modules = self.required_modules or set()
         self.required_modules = required_packages = self.required_packages or set()
@@ -92,12 +96,13 @@ class Package(pride.objectlibrary.base.Base):
                     required_modules.update(_modules)
                     required_packages.update(_packages)
                     if include_documentation:
-                        documentation[module_name] = self.create("pride.package.Documentation", 
+                        documentation[module_name] = self.create("pride.objectlibrary.package.Documentation", 
                                                                  _module, path=path,
                                                                  top_level_package=top_level_package) 
                         
             elif os.path.exists(os.path.join(path, _file, "__init__.py")):
                 # do subpackages later so modules in appear grouped by package in mkdocs.yml
+                _file = '.'.join((package_name, _file))                
                 _module = importlib.import_module(_file)
                 _module.__dict__.setdefault("__package__", _file)
                 _subpackages.append(_module)                
@@ -109,7 +114,7 @@ class Package(pride.objectlibrary.base.Base):
                            "required_packages" : required_packages,
                            "required_modules" : required_modules}
   
-        for subpackage in _subpackages:
+        for subpackage in _subpackages:            
             _package = self.create(Package, subpackage, **package_options)            
             required_packages.update(_package.required_packages)
             required_modules.update(_package.required_modules)            
@@ -147,7 +152,7 @@ class Package(pride.objectlibrary.base.Base):
                         sources[module_name] = None
         
         if top_level_package == package_name and include_documentation:
-            self.documentation[package_name] = self.create("pride.package.Documentation", module)  
+            self.documentation[package_name] = self.create("pride.objectlibrary.package.Documentation", module)  
         
     def find_module(self, module_name, path=None):
         self.alert("{} Looking for module: {}".format(self.package_name, module_name), level=0)

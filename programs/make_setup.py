@@ -4,7 +4,7 @@ import sys
 import setuptools
 
 import pride.objectlibrary.base
-import pride.package
+import pride.objectlibrary.package
 import pride.functions.contextmanagers
 
 class Version_Manager(pride.objectlibrary.base.Base):
@@ -29,7 +29,7 @@ class Version_Manager(pride.objectlibrary.base.Base):
     
     def run_setup(self, argv="sdist"):
         module = importlib.import_module(self.name)
-        package = pride.package.Package(module, include_documentation=True)
+        package = pride.objectlibrary.package.Package(module, include_documentation=True)
         
         with pride.functions.contextmanagers.current_working_directory(self.setuppy_directory):
             backup = sys.argv
@@ -90,7 +90,7 @@ options = {"name" : "pride",
                             "Programming Language :: Python :: 2.7",
                             "Topic :: Desktop Environment", "Topic :: Documentation",
                             "Topic :: Games/Entertainment", "Topic :: Multimedia :: Sound/Audio",
-                            "Topic :: Software Development :: Compilers",                             ,
+                            "Topic :: Software Development :: Compilers",
                             "Topic :: Software Development :: Build Tools",
                             "Topic :: Software Development :: Libraries :: Application Frameworks",
                             "Topic :: Software Development :: Libraries :: Python Modules",
@@ -106,7 +106,7 @@ try:
     with open("Version_Manager.sav", 'rb') as saved_file:
         # for pickle reasons it doesn't work if this isn't done
         sys.modules["__main__"].Version_Manager = Version_Manager
-        version_manager = pride.base.load(_file=saved_file)
+        version_manager = pride.base.load(saved_file.read())
 except IOError:
     version_manager = Version_Manager(**options)    
         

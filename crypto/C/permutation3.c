@@ -4,8 +4,20 @@
 #define WORDSIZE32 unsigned long
 #define ROUNDS 2
 
-inline WORDSIZE32 rotl32(WORDSIZE32 x, unsigned int amount){return x << amount | (x >> (32 - amount));}
-inline WORDSIZE32 choice(WORDSIZE32 a, WORDSIZE32 b, WORDSIZE32 c){return c ^ (a & (b ^ c));}
+#define rotl32(x, amount)(x << amount | (x >> (32 - amount)))
+#define choice(a, b, c)(c ^ (a & (b ^ c)))
+#define horizontal_mixing(a, b, c, d, rotate_amount)({a += b ^ c ^ d; a = rotl32(a, rotate_amount);})   
+#define vertical_mixing(a, b, c, d, rotate_amount)({a ^= choice(b, c, d); a = rotl32(a, rotate_amount);})
+
+#define round_function(a, b, c, d)({horizontal_mixing(a, b, c, d, 1 ); \
+                                    horizontal_mixing(b, a, c, d, 2 ); \
+                                    horizontal_mixing(c, a, b, d, 5 ); \
+                                    horizontal_mixing(d, a, b, c, 7 ); \
+                                    vertical_mixing(a, b, c, d, 11); \
+                                    vertical_mixing(b, a, c, d, 13); \
+                                    vertical_mixing(c, a, b, d, 17); \
+                                    vertical_mixing(d, a, b, c, 19);});
+                                      
     
 void permutation(WORDSIZE32* state)
 {
@@ -13,41 +25,8 @@ void permutation(WORDSIZE32* state)
      
     int round;    
     for (round = 0; round < ROUNDS; round++)
-    {
-        //a = rotl32(a + (b ^ c ^ d), 1); // doing it this way requires 1 memory access 
-        //b = rotl32(b + (a ^ c ^ d), 3);
-        //c = rotl32(c + (a ^ b ^ d), 5);
-        //d = rotl32(d + (a ^ b ^ c), 7);
-        //
-        //a = rotl32(a ^ choice(b, c, d), 11);
-        //b = rotl32(a ^ choice(c, d, a), 17);
-        //c = rotl32(a ^ choice(d, a, b), 23);
-        //d = rotl32(a ^ choice(a, b, c), 29);                        
-           
-        a += b ^ c ^ d;              //  doesn't require memory access
-        a = (a << 1) | (a >> 31); // rotl32
-                
-        b += a ^ c ^ d;
-        b = (b << 3) | (b >> (29));
-        
-        c += a ^ b ^ d;
-        c = (c << 5) | (c >> (27));
-        
-        d += a ^ b ^ c;
-        d = (d << 7) | (d >> (25));                    
-                        
-                
-        a ^= d ^ (b & (c ^ d)); // choice(b, c, d)
-        a = (a << 11) | (a >> (21));
-            
-        b ^= a ^ (c & (d ^ a)); 
-        b = (b << 17) | (b >> (15));
-            
-        c ^= b ^ (d & (a ^ b)); 
-        c = (c << 23) | (c >> (9));
-            
-        d ^= c ^ (a & (b ^ c)); 
-        d = (d << 29) | (d >> (3));     
+    {                                
+        round_function(a, b, c, d);  
     }
     
     state[0] = a; state[1] = b; state[2] = c; state[3] = d;

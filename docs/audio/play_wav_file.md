@@ -1,4 +1,4 @@
-audio.play_wav_file
+pride.audio.play_wav_file
 ==============
 
 

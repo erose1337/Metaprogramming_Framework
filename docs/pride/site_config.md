@@ -14,7 +14,7 @@ pride.site_config
     The above line effectively does the following at runtime, before the class
     is constructed:
     
-        pride.user.User.defaults["username"] = "localhost"
+        pride.objectlibrary.user.User.defaults["username"] = "localhost"
         
     This feature is facilitated by the Base metaclass and will work for all
     objects that inherit from Base.
@@ -24,7 +24,7 @@ pride.site_config
     explicitly).
     
     For more information on Base objects and default attributes, please see the
-    documentation for pride.base.Base 
+    documentation for pride.objectlibrary.base.Base 
     
     Temporary customization
     ---------

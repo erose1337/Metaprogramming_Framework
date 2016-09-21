@@ -18,7 +18,7 @@ Instance defaults:
 	 'dont_save': False,
 	 'log_is_persistent': False,
 	 'log_level': '0+v',
-	 'log_name': 'c:\\users\\_\\pythonbs\\pride\\Alerts.log',
+	 'log_name': 'c:\\users\\_\\pythonbs\\pride\\data\\log\\Alerts.log',
 	 'parse_args': True,
 	 'print_level': '0',
 	 'replace_reference_on_load': True,
@@ -26,7 +26,14 @@ Instance defaults:
 
 Method resolution order: 
 
-	(<class 'pride.Alert_Handler'>, <class 'pride.base.Base'>, <type 'object'>)
+	(<class 'pride.Alert_Handler'>,
+	 <class 'pride.objectlibrary.base.Base'>,
+	 <type 'object'>)
+
+- **append_to_log**(self, message, level):
+
+				No documentation available
+
 
 - **dump_log**(self, byte_count, lines):
 
@@ -49,7 +56,9 @@ Instance defaults:
 
 Method resolution order: 
 
-	(<class 'pride.Finalizer'>, <class 'pride.base.Base'>, <type 'object'>)
+	(<class 'pride.Finalizer'>,
+	 <class 'pride.objectlibrary.base.Base'>,
+	 <type 'object'>)
 
 - **run**(self):
 

@@ -9,18 +9,20 @@ def rotr32(word, amount, _mask=0xFFFFFFFF):
 def choice(a, b, c):
     return c ^ (a & (b ^ c))  
     
-from pride.crypto.analysis.visualization import print_state_4x32_128_as_4x32    
 def permutation(a, b, c, d, mask=0xFFFFFFFF):    
     for round in range(1):
         a = rotl32((a + (b ^ c ^ d)) & mask, 1)
-        b = rotl32((b + (a ^ c ^ d)) & mask, 2)
-        c = rotl32((c + (a ^ b ^ d)) & mask, 3)
-        d = rotl32((d + (a ^ b ^ c)) & mask, 5)               
-#        print_state_4x32_128_as_4x32((a, b, c, d))
         a = rotl32(a ^ choice(b, c, d), 11)
-        b = rotl32(b ^ choice(c, d, a), 17)
-        c = rotl32(c ^ choice(d, a, b), 23)
-        d = rotl32(d ^ choice(a, b, c), 29)             
+        
+        b = rotl32((b + (a ^ c ^ d)) & mask, 2)
+        b = rotl32(b ^ choice(c, d, a), 7)
+        
+        c = rotl32((c + (a ^ b ^ d)) & mask, 3)
+        c = rotl32(c ^ choice(d, a, b), 13)
+        
+        d = rotl32((d + (a ^ b ^ c)) & mask, 5)  
+        d = rotl32(d ^ choice(a, b, c), 17)                
+                     
     return a, b, c, d    
     
 def invert_permutation(a, b, c, d, mask=0xFFFFFFFF, modulus=2 ** 32):
@@ -57,7 +59,7 @@ def test_permutation():
     
 def visualize_permutation():
     from pride.crypto.analysis.visualization import test_4x32_function
-    test_4x32_function(permutation, (0, 0, 0, 1))
+    test_4x32_function(permutation, (0, 0, 1, 0))
        
 def test_invert_permutation():
     from os import urandom
@@ -81,10 +83,35 @@ def test_active_bits():
     print("Median  # active bits: {}".format(active_bits[len(active_bits) / 2]))
     print("Average # active bits: {}".format(sum(active_bits) / len(active_bits)))
     print("Maximum # active bits: {}".format(max(active_bits)))
-    print sorted(active_bits)[:20]    
+    print sorted(active_bits)[:20] 
+    
+def search_minimum_active_bits():   
+    from pride.crypto.utilities import integer_to_bytes
+    active_bits = set()
+    weights = []
+    last_output = permutation(0, 0, 0, 1)
+    minimum_weight = 0
+    minimum_weight2 = 0
+    
+    for x in xrange(2, 2 ** 24):
+        output = permutation(*integer_to_bytes(x, 4))        
+        weights.append(sum(format(word, 'b').count('1') for word in output))        
+        weight = sum(format(word, 'b').count('1') for word in (last_output[index] ^ output[index] for index in xrange(4)))
+        active_bits.add(weight)
+        if not x % 65536:
+            minimum_weight = min(active_bits) 
+            print("\n" + ('-' * 79))
+            print("Minimum # active bits: {}".format(min(active_bits)))
+            print("Median  # active bits: {}".format(sorted(active_bits)[len(active_bits) / 2]))
+            print("Average # active bits: {}".format(sum(active_bits) / len(active_bits)))
+            print("Maximum # active bits: {}".format(max(active_bits)))
+            
+            print("Minimum state weight : {}".format(min(weights)))
+    
 if __name__ == "__main__":
     #test_permutation()
     #visualize_permutation()
     #test_invert_permutation()
-    test_active_bits()
+    #test_active_bits()
+    search_minimum_active_bits()
     

@@ -207,6 +207,12 @@ def aes_round(state, key):
     mixColumns(state)
     addRoundKey(state, key)
     
+def aes_round_no_key(state):
+    subBytes(state)
+    shiftRows(state)
+    mixColumns(state)
+    return state
+    
 def rotate(word):
     """ Rijndael's key schedule rotate operation.
 

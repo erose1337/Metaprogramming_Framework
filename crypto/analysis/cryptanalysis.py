@@ -23,6 +23,15 @@ def test_cryptanalyze_sbox_worst_case():
     from pride.crypto.designs.blockcipher.aes_procedures import S_BOX       
     summarize_sbox(S_BOX)
     
+def test_random_sbox():
+    from pride.crypto.utilities import shuffle
+    from os import urandom
+    sbox = range(256)
+    shuffle(sbox, bytearray(urandom(256)))
+    summarize_sbox(sbox)
+    summarize_sbox(bytearray(urandom(256)))
+    
 if __name__ == "__main__":
     test_cryptanalyze_sbox_worst_case()
+    #test_random_sbox()
     

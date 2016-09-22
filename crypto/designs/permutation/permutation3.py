@@ -12,20 +12,21 @@ def choice(a, b, c):
 def permutation(a, b, c, d, mask=0xFFFFFFFF):    
     for round in range(1):
         a = rotl32((a + (b ^ c ^ d)) & mask, 1)
-        a = rotl32(a ^ choice(b, c, d), 11)
+        a = rotl32((a ^ choice(b, c, d)) & mask, 11)
         
         b = rotl32((b + (a ^ c ^ d)) & mask, 2)
-        b = rotl32(b ^ choice(c, d, a), 7)
+        b = rotl32((b ^ choice(c, d, a)) & mask, 7)
         
         c = rotl32((c + (a ^ b ^ d)) & mask, 3)
-        c = rotl32(c ^ choice(d, a, b), 13)
+        c = rotl32((c ^ choice(d, a, b)) & mask, 13)
         
         d = rotl32((d + (a ^ b ^ c)) & mask, 5)  
-        d = rotl32(d ^ choice(a, b, c), 17)                
+        d = rotl32((d ^ choice(a, b, c)) & mask, 17)                
                      
     return a, b, c, d    
     
 def invert_permutation(a, b, c, d, mask=0xFFFFFFFF, modulus=2 ** 32):
+    raise NotImplementedError()
     for round in range(20):
         d = rotr32(d, 29) ^ choice(a, b, c)
         c = rotr32(c, 23) ^ choice(d, a, b)
@@ -59,7 +60,7 @@ def test_permutation():
     
 def visualize_permutation():
     from pride.crypto.analysis.visualization import test_4x32_function
-    test_4x32_function(permutation, (0, 0, 1, 0))
+    test_4x32_function(permutation, (0, 0, 0, 1))
        
 def test_invert_permutation():
     from os import urandom

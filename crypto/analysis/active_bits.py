@@ -42,7 +42,7 @@ def search_minimum_active_bits(permutation, argument_function, output_function, 
     for x in xrange(1, test_length + 1): # itertools.product isn't as useful because of the print statements every 65536 iterations
         for y in xrange(256):
             for z in xrange(256):
-                output = output_function(permutation(argument_function(0, x, y, z)))                
+                output = output_function(permutation(argument_function(0, x, y, z)))               
                 output_hamming_weight = sum(hamming_weight(word) for word in output)                
                 weights.append(output_hamming_weight)
                 
@@ -68,7 +68,7 @@ def search_minimum_active_bits(permutation, argument_function, output_function, 
     
 def test_search_minimum_active_bits():
     from pride.crypto.designs.permutation import permutation3
-    search_minimum_active_bits(lambda args: permutation3.permutation(*args), lambda *args: args, lambda args: args, 1, False)
+    search_minimum_active_bits(lambda args: permutation3.permutation(*args), lambda *args: args, lambda args: args)
     
 def demo_aes_active_bits():    
     from pride.crypto.designs.blockcipher.aes_procedures import aes_round_no_key
@@ -88,5 +88,5 @@ def demo_aes_active_bits():
     
 if __name__ == "__main__":
     test_search_minimum_active_bits()
-    demo_aes_active_bits()
+    #demo_aes_active_bits()
     

@@ -302,3 +302,9 @@ def long_longs_to_bytes(*longs):
         output.extend(integer_to_bytes(long, 8))
     return output
     
+def shuffle(data, key):
+    for i in reversed(range(1, 256)):
+        # Fisher-Yates shuffle
+        j = key[i] & (i - 1)                
+        data[i], data[j] = data[j], data[i]           
+            

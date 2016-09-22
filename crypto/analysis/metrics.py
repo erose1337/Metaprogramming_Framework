@@ -241,8 +241,8 @@ def test_permutation(permutation, state_size, avalanche_test=True, randomness_te
     if period_test:
         test_period(permutation, blocksize=state_size)
     if performance_test:
-        test_prng_performance_permutation(permutation, state_size)
-                            
+        test_prng_performance_permutation(permutation, state_size)            
+        
 def test_hash_function(hash_function, avalanche_test=True, randomness_test=True, bias_test=True,
                        period_test=True, performance_test=True, randomize_key=False, collision_test=True,
                        compression_test=True):

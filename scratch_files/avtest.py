@@ -1,8 +1,8 @@
 import struct
 
-import pride.objectlibrary.network
+import pride.components.network
 
-class Clamd_Connection(pride.objectlibrary.network.Tcp_Client):
+class Clamd_Connection(pride.components.network.Tcp_Client):
     
     defaults = {"ip" : "127.0.0.1", "port" : 3310, "max_chunk_size" : 1024}
     

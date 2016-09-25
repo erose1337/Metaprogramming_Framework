@@ -1,6 +1,6 @@
 import selenium.webdriver
 
-import pride.objectlibrary.base
+import pride.components.base
 
 class Browser(pride.base.Wrapper):
     defaults = pride.base.Wrapper.defaults.copy()

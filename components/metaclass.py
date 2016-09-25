@@ -429,7 +429,7 @@ class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
         
 if __name__ == "__main__":
     import unittest
-    import pride.objectlibrary.base as base
+    import pride.components.base as base
           
     
     class Test_Metaclass(unittest.TestCase):
@@ -455,7 +455,7 @@ if __name__ == "__main__":
                 
             sock = test_base.create("socket.socket", decorator=test_decorator1)
             
-            other_base = test_base.create("pride.objectlibrary.base.Base", decorators=(test_decorator1, test_decorator2))
+            other_base = test_base.create("pride.components.base.Base", decorators=(test_decorator1, test_decorator2))
             
             def monkey_patch(*args, **kwargs):
                 print "inside monkey patch"

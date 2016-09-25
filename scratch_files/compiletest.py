@@ -3,7 +3,7 @@ import os
 import sys
 import ctypes
 
-import pride.objectlibrary.base
+import pride.components.base
 
 if 'win' in sys.platform:
     IS_WINDOWS = True
@@ -24,9 +24,9 @@ class Compiled(object):
             source_file.write(source)
         os.system("gcc {}.c -o {}.{}".format(name, name, SHARED_OBJECT_TYPE))
     
-class Interpreter(pride.objectlibrary.base.Base):
+class Interpreter(pride.components.base.Base):
      
-    defaults = pride.objectlibrary.base.Base.defaults.copy()
+    defaults = pride.components.base.Base.defaults.copy()
     defaults.update({"shared_object_type" : 'dll' if IS_WINDOWS else 'so',
                      "loader" : ctypes.windll if IS_WINDOWS else ctypes.cdll})
                      

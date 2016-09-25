@@ -8,8 +8,8 @@ import collections
 import traceback
 
 import pride
-import pride.objectlibrary.base as base
-import pride.objectlibrary.vmlibrary as vmlibrary
+import pride.components.base as base
+import pride.components.scheduler as scheduler
 import pride.functions.utilities as utilities
 import pride.gui
 Instruction = pride.Instruction
@@ -167,7 +167,7 @@ class Window_Context(SDL_Window):
         pass
         
         
-class Window_Handler(pride.objectlibrary.base.Base):
+class Window_Handler(pride.components.base.Base):
     
     def __init__(self, **kwargs):
         super(Window_Handler, self).__init__(**kwargs)
@@ -239,7 +239,7 @@ class Window_Handler(pride.objectlibrary.base.Base):
         pass
         
         
-class SDL_User_Input(vmlibrary.Process):
+class SDL_User_Input(scheduler.Process):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None}
     mutable_defaults = {"coordinate_tracker" : dict, "_coordinate_tracker" : collections.OrderedDict}

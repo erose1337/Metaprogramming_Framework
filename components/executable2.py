@@ -1,8 +1,8 @@
 import os
 
-import pride.objectlibrary.base
+import pride.components.base
 
-class Exe(pride.objectlibrary.base.Base):
+class Exe(pride.components.base.Base):
     
     defaults = {"filename" : ''}
     required_attributes = ("filename", )

@@ -129,7 +129,7 @@ def find_best_differential_in_table(difference_table):
         Output consists of the input difference, output difference, and
         probability that the difference will hold. """    
     best_differential = (None, None, 0)
-    for difference in range(1, 256):
+    for difference in range(1, len(difference_table)):
         info = find_best_output_differential(difference_table, difference)        
         if info[-1] > best_differential[-1]:
             best_differential = info

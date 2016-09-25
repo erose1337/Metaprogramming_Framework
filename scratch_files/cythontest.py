@@ -1,13 +1,13 @@
 import os
 import platform
 
-import pride.objectlibrary.base
+import pride.components.base
 import pride.functions.utilities
 
 os_type = platform.system()
 
 COMPILE_COMMAND = "gcc {} -IC:\Python27\include -LC:\Python27\libs\ -lpython27 -o {}" if "Windows" == os_type else "gcc {} -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o {}"
-class Cython(pride.objectlibrary.base.Base):
+class Cython(pride.components.base.Base):
 
     def handle_source(self, source, module_name, 
                       mode="pyd"):
@@ -30,7 +30,7 @@ class Cython(pride.objectlibrary.base.Base):
         
 if __name__ == "__main__":
     import inspect
-    import pride.objectlibrary.base
+    import pride.components.base
     source = inspect.getsource(pride.base)
     cython = Cython()
     cython.handle_source(source, "pride.base")

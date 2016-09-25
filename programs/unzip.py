@@ -1,7 +1,7 @@
 import zipfile
-import pride.objectlibrary.base
+import pride.components.base
 
-class Unzipper(pride.objectlibrary.base.Base):
+class Unzipper(pride.components.base.Base):
     
     defaults = {"filename" : '', "target_directory" : ''}
     required_attributes = ("filename", )

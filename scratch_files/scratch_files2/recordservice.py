@@ -1,7 +1,7 @@
-import pride.objectlibrary.authentication3
+import pride.components.authentication3
 import pride.functions.security
 
-class Record_Service(pride.objectlibrary.authentication3.Authenticated_Service):
+class Record_Service(pride.components.authentication3.Authenticated_Service):
     
     defaults = {"hash_type" : "SHA512"}
     
@@ -39,17 +39,17 @@ class Record_Service(pride.objectlibrary.authentication3.Authenticated_Service):
         return hasher.finalize()        
         
         
-class Record_Service_Client(pride.objectlibrary.authentication3.Authenticated_Client):
+class Record_Service_Client(pride.components.authentication3.Authenticated_Client):
             
     defaults = {"target_service" : "/Python/Record_Service",
                 "token_file_encrypted" : False, "token_file_indexable" : True}
     
     verbosity = {"save_record" : 0, "load_record" : 0, "auto_login" : 0}
     
-    @pride.objectlibrary.authentication3.remote_procedure_call(callback_name="display_record")
+    @pride.components.authentication3.remote_procedure_call(callback_name="display_record")
     def save_record(self, access, file_data, filename, file_description=''): pass
     
-    @pride.objectlibrary.authentication3.remote_procedure_call(callback_name="display_record")
+    @pride.components.authentication3.remote_procedure_call(callback_name="display_record")
     def load_record(self, access, filename, file_description=''): pass
     
     def display_record(self, records):

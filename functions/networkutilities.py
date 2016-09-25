@@ -1,7 +1,7 @@
-import pride.objectlibrary.base
-import pride.objectlibrary.network
+import pride.components.base
+import pride.components.network
 import pride.functions.utilities
-import pride.objectlibrary.datastructures
+import pride.components.datastructures
 shell = pride.functions.utilities.shell
 
 def tune_tcp_performance(minimum_size=10240, initial_size=87830,
@@ -57,11 +57,11 @@ def set_max_connection(limit):
     shell("sysctl -w net.core.somaxconn = {}".format(limit))
     
     
-class RTT_Test(pride.objectlibrary.network.Tcp_Client):
+class RTT_Test(pride.components.network.Tcp_Client):
     
     def connect(self, address):
         super(RTT_Test, self).connect((address))
-        latency = self.latency = pride.objectlibrary.datastructures.Latency()
+        latency = self.latency = pride.components.datastructures.Latency()
         latency.mark()
         
     def on_connect(self):

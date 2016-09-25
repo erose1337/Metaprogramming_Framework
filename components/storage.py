@@ -1,7 +1,7 @@
-import pride.objectlibrary.database
+import pride.components.database
 import pride.functions.persistence
 
-class Persistent_Storage(pride.objectlibrary.database.Database):
+class Persistent_Storage(pride.components.database.Database):
     """ Usage: 
             
         storage = pride.objects["/Python/Persistent_Storage"]

@@ -61,7 +61,7 @@ def decrypt_block(ciphertext, key, block_size, round_function, round_count):
     return left_half + right_half
 
     
-class Feistel_Network(pride.objectlibrary.base.Base):
+class Feistel_Network(pride.components.base.Base):
     
     defaults = {"round_function" : "sha512", "round_count" : 4}
     

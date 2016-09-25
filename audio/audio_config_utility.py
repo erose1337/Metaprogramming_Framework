@@ -1,4 +1,4 @@
-import pride.objectlibrary.base
+import pride.components.base
 
 launch_utility = pride.Instruction("/Python", "create",            
                              "pride.audio.audiolibrary.Config_Utility", exit_when_finished=True)

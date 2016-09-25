@@ -8,11 +8,11 @@ if python_version_tuple()[0] == '3':
     from past.builtins import xrange
     
 def main(): 
-    import pride.objectlibrary.interpreter
+    import pride.components.interpreter
     running = True
     while running:
         assert "/Python" not in pride.objects
-        python = pride.objectlibrary.interpreter.Python(parse_args=True)                
+        python = pride.components.interpreter.Python(parse_args=True)                
         try:            
             python.start_machine()                
         except BaseException as error:                        

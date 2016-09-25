@@ -9,11 +9,11 @@ import datetime
 import sqlite3
 
 import pride    
-import pride.objectlibrary.database
-import pride.objectlibrary.vmlibrary as vmlibrary
-import pride.objectlibrary.base as base
+import pride.components.database
+import pride.components.scheduler as scheduler
+import pride.components.base as base
 import pride.functions.utilities as utilities
-import pride.objectlibrary.shell
+import pride.components.shell
 #objects = pride.objects
 
 def ensure_folder_exists(pathname, file_system="disk"):
@@ -155,7 +155,7 @@ class File(base.Wrapper):
         if not self.file:
             if self.file_type == "file":      
                 self.file = open(path, self.mode)    
-                self.properties = self.create("pride.objectlibrary.fileio.File_Attributes",
+                self.properties = self.create("pride.components.fileio.File_Attributes",
                                               filename=path)              
                 self.filesize = self.properties.file_size
             else:
@@ -237,7 +237,7 @@ class File(base.Wrapper):
         super(File, self).on_load(attributes)
         if self.file_type == "file":
             self.file = _file = open(self.filename, self.mode)
-            self.properties = self.create("pride.objectlibrary.fileio.File_Attributes", filename=path)             
+            self.properties = self.create("pride.components.fileio.File_Attributes", filename=path)             
         else:
             self.file = _file = resolve_string(self.file_type)()
         self.wraps(_file)
@@ -329,8 +329,8 @@ class Encrypted_File(Database_File):
         file = self.file
         position = file.tell()
         file.seek(0)
-        data = pride.objects["/Python/Encryption_Service"].encrypt(data, self.crypto_provider)
-        pride.objects["/Python/File_System"].save_file(self.get_filename, data, self.tags)        
+        data = pride.objects["/Python/Encryption_Service"].encrypt(file.read(), self.crypto_provider)
+        pride.objects["/Python/File_System"].save_file(self.get_filename(), data, self.tags)        
         file.seek(position)
         
     def get_filename(self):                    
@@ -338,9 +338,9 @@ class Encrypted_File(Database_File):
         return user.generate_tag(user.file_system_key + user.salt + self.filename)        
                 
     
-class File_System(pride.objectlibrary.database.Database):
+class File_System(pride.components.database.Database):
     """ Database object for managing database file objects. """    
-    defaults = {"database_name" : '', "database_file_type" : "pride.objectlibrary.fileio.Database_File"}
+    defaults = {"database_name" : '', "database_file_type" : "pride.components.fileio.Database_File"}
     
     verbosity = {"file_modified" : "vv", "file_created" : "vv"}
     

@@ -2,11 +2,11 @@ import itertools
 import hashlib
 import random
 
-import pride.objectlibrary.base
+import pride.components.base
 
-class _Object(pride.objectlibrary.base.Base):
+class _Object(pride.components.base.Base):
     
-    defaults = pride.objectlibrary.base.Base.defaults.copy()
+    defaults = pride.components.base.Base.defaults.copy()
     
     def __add__(self, other_self):
         self_class, other_class = self.__class__, other_self.__class__

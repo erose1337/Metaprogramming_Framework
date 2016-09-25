@@ -1,7 +1,7 @@
 import platform
 
 import pride
-import pride.objectlibrary.base
+import pride.components.base
 
 if platform.system() == "Windows":
     import pride.functions.dpapi
@@ -13,10 +13,10 @@ else:
     os_encrypt = _not_implemented
     os_decrypt = _not_implemented
 
-class Encryption_Service(pride.objectlibrary.base.Base):
+class Encryption_Service(pride.components.base.Base):
 
-    defaults = {"pride_file_type" : "pride.objectlibrary.fileio.Database_File",
-                "os_file_type" : "pride.objectlibrary.fileio.File"}
+    defaults = {"pride_file_type" : "pride.components.fileio.Database_File",
+                "os_file_type" : "pride.components.fileio.File"}
     
     verbosity = {"unit_test_pass" : 0}
     

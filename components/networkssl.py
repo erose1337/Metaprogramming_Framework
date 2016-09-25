@@ -2,10 +2,10 @@ import sys
 import os
 import ssl
 
-import pride.objectlibrary.base
-import pride.objectlibrary.network
+import pride.components.base
+import pride.components.network
 import pride.functions.utilities
-import pride.objectlibrary.shell
+import pride.components.shell
 
 SSL_DEFAULTS = {"keyfile" : None, 
                 "certfile" : None,
@@ -63,7 +63,7 @@ def generate_rsa_keypair(name=''):
     shell("openssl rsa -pubout -in {}_private_key.pem -out {}_public_key.pem".format(
           name))
 
-class TLS_Certificate(pride.objectlibrary.base.Base):
+class TLS_Certificate(pride.components.base.Base):
     
     defaults = {"name" : '', "name_prompt" : "Please provide the name for the .key and .crt files: "}                               
                 
@@ -94,18 +94,18 @@ class Self_Signed_Certificate(TLS_Certificate):
     crt_filename = property(_get_crt_file)
     
     def _get_key(self):
-        return self.create("pride.objectlibrary.fileio.File", self.key_filename, 'rb')
+        return self.create("pride.components.fileio.File", self.key_filename, 'rb')
     key = property(_get_key)
     
     def _get_crt(self):
-        return self.create("pride.objectlibrary.fileio.File", self.crt_filename, 'rb')
+        return self.create("pride.components.fileio.File", self.crt_filename, 'rb')
     crt = property(_get_crt)
     
     def generate_certificate(self):
         generate_self_signed_certificate(self.name)
                            
     
-class SSL_Client(pride.objectlibrary.network.Tcp_Client):
+class SSL_Client(pride.components.network.Tcp_Client):
     
     """ An asynchronous client side Tcp socket wrapped in an ssl socket.
         Users should extend on_ssl_authentication instead of on_connect to
@@ -157,7 +157,7 @@ class SSL_Client(pride.objectlibrary.network.Tcp_Client):
         self.alert("Authenticated", level=0)
             
         
-class SSL_Socket(pride.objectlibrary.network.Tcp_Socket):    
+class SSL_Socket(pride.components.network.Tcp_Socket):    
     """ An asynchronous server side client socket wrapped in an ssl socket.
         Users should override the on_ssl_authentication method instead of
         on_connect. """
@@ -193,10 +193,10 @@ class SSL_Socket(pride.objectlibrary.network.Tcp_Socket):
         self.alert("Authenticated", level='v')
                 
         
-class SSL_Server(pride.objectlibrary.network.Server):
+class SSL_Server(pride.components.network.Server):
     
     defaults = SSL_DEFAULTS
-    defaults.update({"port" : 443, "Tcp_Socket_type" : "pride.objectlibrary.networkssl.SSL_Socket",
+    defaults.update({"port" : 443, "Tcp_Socket_type" : "pride.components.networkssl.SSL_Socket",
                      "dont_save" : False, "server_side" : True,                     
                      # configurable
                      "certfile" : '', "keyfile" : '', #.crt and .key filenames # can be set in site_config
@@ -214,7 +214,7 @@ class SSL_Server(pride.objectlibrary.network.Server):
                            level=self.verbosity["certfile_not_found"])
             else:
                 self.alert("Usage of ssl requires certificates and key files.", level=0)
-            if pride.objectlibrary.shell.get_permission("{}: Generate a new self signed certificate and key now?: ".format(self.reference)):
+            if pride.components.shell.get_permission("{}: Generate a new self signed certificate and key now?: ".format(self.reference)):
                 filename = raw_input("(Optional) Please provide the filepaths for the .key and .crt files: ")  
                 if not filename:
                     filename = "ssl_server"
@@ -228,13 +228,13 @@ class SSL_Server(pride.objectlibrary.network.Server):
                 self.keyfile = certificate.key_filename
                 
                 if (self.update_site_config_on_new_certfile and
-                    not hasattr(pride.site_config, "pride_objectlibrary_rpc_Rpc_Server_defaults")):
+                    not hasattr(pride.site_config, "pride_components_rpc_Rpc_Server_defaults")):
                     
-                    pride.site_config.write_to("pride_objectlibrary_rpc_Rpc_Server_defaults", 
+                    pride.site_config.write_to("pride_components_rpc_Rpc_Server_defaults", 
                                                certfile=certificate.crt_filename,
                                                keyfile=certificate.key_filename)
             else:
-                raise ValueError("pride.objectlibrary.network.SSL_Server requires a certificate and key;" +
+                raise ValueError("pride.components.network.SSL_Server requires a certificate and key;" +
                                  " Unable to load certificate file; Unable to continue")            
         try:
             raise AttributeError

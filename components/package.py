@@ -9,15 +9,15 @@ import traceback
 import pride.functions.utilities as utilities
 import pride.functions.module_utilities as module_utilities
 
-import pride.objectlibrary.base
-import pride.objectlibrary.fileio
+import pride.components.base
+import pride.components.fileio
 create_module = module_utilities.create_module 
     
 def build_documentation_site(module):
     package = Package(module, include_documentation=True)
     utilities.shell("mkdocs build")
     
-class Package(pride.objectlibrary.base.Base):
+class Package(pride.components.base.Base):
     
     defaults = {"python_extensions" : (".py", ".pyx", ".pyd", ".pso", ".so"),
                 "package_name" : None,
@@ -96,7 +96,7 @@ class Package(pride.objectlibrary.base.Base):
                     required_modules.update(_modules)
                     required_packages.update(_packages)
                     if include_documentation:
-                        documentation[module_name] = self.create("pride.objectlibrary.package.Documentation", 
+                        documentation[module_name] = self.create("pride.components.package.Documentation", 
                                                                  _module, path=path,
                                                                  top_level_package=top_level_package) 
                         
@@ -152,7 +152,7 @@ class Package(pride.objectlibrary.base.Base):
                         sources[module_name] = None
         
         if top_level_package == package_name and include_documentation:
-            self.documentation[package_name] = self.create("pride.objectlibrary.package.Documentation", module)  
+            self.documentation[package_name] = self.create("pride.components.package.Documentation", module)  
         
     def find_module(self, module_name, path=None):
         self.alert("{} Looking for module: {}".format(self.package_name, module_name), level=0)
@@ -190,7 +190,7 @@ class Package(pride.objectlibrary.base.Base):
         return self.reference + ": " + self.package_name
         
         
-class Documentation(pride.objectlibrary.base.Base):
+class Documentation(pride.components.base.Base):
     
     defaults = {"top_level_package" : ''}
     
@@ -235,7 +235,7 @@ class Documentation(pride.objectlibrary.base.Base):
                 _file.flush()                                                            
         
     def write_markdown_file(self, markdown_text, filename):
-        pride.objectlibrary.fileio.ensure_file_exists(filename, markdown_text)
+        pride.components.fileio.ensure_file_exists(filename, markdown_text)
             
             
 if __name__ == "__main__":

@@ -116,7 +116,7 @@ def test_nonlinear_mixing():
         return integer_to_bytes(t, 4) + integer_to_bytes(y, 4) + integer_to_bytes(t2, 4) + integer_to_bytes(y2, 4)
     t, y, t2, y2 = (0, 0, 0, 1)
     output = nonlinear_mixing(t, y, t2, y2)
-#    from pride.objectlibrary.datastructures import Average
+#    from pride.components.datastructures import Average
     hamming_weight = Average(size=2 ** 16)
     for sample in range(2 ** 8):
         for chunk in range(2 ** 8):        

@@ -54,7 +54,7 @@ def _split_byte(byte):
     a, b = int(bits[:4], 2), int(bits[4:], 2)
     return a, b     
         
-class Authenticated_Service(pride.objectlibrary.base.Base):
+class Authenticated_Service(pride.components.base.Base):
    
     defaults = {# security related configuration options
                 "iterations" : 100000, "password_hashing_algorithm" : "pbkdf2hmac",
@@ -66,7 +66,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
                 "constant_time_registration" : True, 
                 
                 # non security related configuration options
-                "database_type" : "pride.objectlibrary.database.Database", "database_name" : '',
+                "database_type" : "pride.components.database.Database", "database_name" : '',
                 "validation_failure_string" :\
                    ".validate: Authorization Failure:\n" +
                    "    ip blacklisted: {}    ip whitelisted: {}\n" +
@@ -215,9 +215,9 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
             return self.login_failure(username)
         else:
             password_hash = self._hash_password(password, salt)        
-            if pride.functions.security.constant_time_comparison(password_hash, correct_hash):
+            if pride.functions.security.constant_time_comparison(password_hash, correct_hash):                
                 return self.login_success(username)
-            else:
+            else:                
                 return self.login_failure(username)
             
     def login_success(self, username):
@@ -294,7 +294,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
             try:
                 self._rate[session_id][method_name].mark()
             except KeyError:
-                latency = pride.objectlibrary.datastructures.Latency("{}_{}".format(session_id, method_name))
+                latency = pride.components.datastructures.Latency("{}_{}".format(session_id, method_name))
                 try:
                     self._rate[session_id][method_name] = latency
                 except KeyError:
@@ -331,7 +331,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
         self._load_database()
 
   
-class Authenticated_Client(pride.objectlibrary.base.Base):   
+class Authenticated_Client(pride.components.base.Base):   
     
     verbosity = {"register" : 0, "register_success" : 0, "register_failure" : 0,     
                  "login" : 0, "login_success" : 0, "login_failure" : 0,
@@ -390,7 +390,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
     def __init__(self, **kwargs):
         super(Authenticated_Client, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference, self.target_service, self.ip)
-        self.session = self.create("pride.objectlibrary.rpc.Session", session_id='0', host_info=self.host_info)
+        self.session = self.create("pride.components.rpc.Session", session_id='0', host_info=self.host_info)
                           
         registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
         user_info = (self.target_service, self.ip, self.username)
@@ -476,7 +476,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
             if user_info not in registered_users:
                 self.alert("Not registered for {}@{} as '{}'".format(*user_info), 
                            level=self.verbosity["not_registered"])
-                if pride.objectlibrary.shell.get_permission("{}: Register now?: ".format(self.reference)):
+                if pride.components.shell.get_permission("{}: Register now?: ".format(self.reference)):
                     self.register()
                 
     @pride.functions.decorators.call_if(logged_in=True)
@@ -491,7 +491,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
         self.alert("Logout success: {}".format(server_response), level=self.verbosity["logout_success"])        
         
     def handle_not_logged_in(self, instruction, callback):        
-        if self.auto_login or pride.objectlibrary.shell.get_permission("Login now? :"):
+        if self.auto_login or pride.components.shell.get_permission("Login now? :"):
             self._delayed_requests.append((instruction, callback))
             if not self._logging_in:
                 self.alert("Not logged in")       
@@ -534,7 +534,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
     
     def on_load(self, attributes):
         super(Authenticated_Client, self).on_load(attributes)        
-        self.session = self.create("pride.objectlibrary.rpc.Session", session_id='0', host_info=self.host_info)                               
+        self.session = self.create("pride.components.rpc.Session", session_id='0', host_info=self.host_info)                               
                                        
         #if self.auto_login:
         #    self.alert("Auto logging in", level=self.verbosity["auto_login"])

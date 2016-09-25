@@ -1,7 +1,7 @@
-import pride.objectlibrary.datatransfer
+import pride.components.datatransfer
 import pride.audio
 
-class Messenger(pride.objectlibrary.datatransfer.Data_Transfer_Client):
+class Messenger(pride.components.datatransfer.Data_Transfer_Client):
     
     defaults = {"audio_input_device" : "/Python/Audio_Manager/Audio_Input",
                 "audio_output_device" : "/Python/Audio_Manager/Audio_Output"}

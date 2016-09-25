@@ -1,7 +1,7 @@
 from math import floor, sqrt, ceil
 
 import pride
-import pride.objectlibrary.base as base
+import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
 Instruction = pride.Instruction

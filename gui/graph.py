@@ -1,7 +1,7 @@
 import itertools
 
 import pride.gui.gui
-import pride.objectlibrary.vmlibrary
+import pride.components.scheduler
 
 class Graph(pride.gui.gui.Application):
     
@@ -90,7 +90,7 @@ class Graph(pride.gui.gui.Application):
         if self.draw_lines:
             window.draw("line", lines, color=color)            
         if self.draw_average:
-            average_object = pride.objectlibrary.datastructures.Average(values=self.points)
+            average_object = pride.components.datastructures.Average(values=self.points)
             minimum, _average, maximum = average_object.range
             _average = self_h - int(average_object.meta_average)
             minimum = self_h - minimum
@@ -118,7 +118,7 @@ class Audio_Visualizer(Graph):
         super(Audio_Visualizer, self).delete()
                 
                 
-class Grapher(pride.objectlibrary.vmlibrary.Process):
+class Grapher(pride.components.scheduler.Process):
     
     defaults = {"priority" : .02}
     mutable_defaults = {"counter" : itertools.count, "graph" : Graph}

@@ -1,16 +1,15 @@
 import sys
-import os
 import getpass
-import random
+from os import urandom
 
-import pride.objectlibrary.base
+import pride.components.base
 import pride.functions.security
-import pride.objectlibrary.shell
+import pride.components.shell
 import pride.functions.persistence
 
 class InvalidUsername(BaseException): pass
 
-class User(pride.objectlibrary.base.Base):
+class User(pride.components.base.Base):
     """ A User object for managing secure information and client accounts.
         A user is capable of performing manipulation of secure data,
         including encryption and decryption. The user object is responsible
@@ -41,8 +40,8 @@ class User(pride.objectlibrary.base.Base):
                 
                 # the salt and verifier file are stored in the /Python/File_System
                 # nonindexable files have the filename hashed upon storing/search
-                "salt_filetype" : "pride.objectlibrary.fileio.Database_File",
-                "verifier_filetype" : "pride.objectlibrary.fileio.Database_File",
+                "salt_filetype" : "pride.components.fileio.Database_File",
+                "verifier_filetype" : "pride.components.fileio.Database_File",
                 "verifier_indexable" : False,
                 
                 "open_command_line" : True}
@@ -76,7 +75,7 @@ class User(pride.objectlibrary.base.Base):
         super(User, self).__init__(**kwargs)        
         
         login_success = self.encryption_key and self.mac_key and self.file_system_key and self.salt
-        while not login_success:    
+        while not login_success:                
             try:
                 self.login()
             except (InvalidUsername, pride.functions.security.InvalidTag): # failed to open password verifier file
@@ -92,7 +91,7 @@ class User(pride.objectlibrary.base.Base):
         assert self.encryption_key and self.mac_key and self.file_system_key and self.salt
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
         if self.open_command_line:
-            self.create("pride.objectlibrary.shell.Command_Line")       
+            self.create("pride.components.shell.Command_Line")       
                         
     def login(self):
         """ Attempt to login as username using a password. Upon success, the
@@ -105,15 +104,12 @@ class User(pride.objectlibrary.base.Base):
                 _file.seek(0)
                 salt = _file.read(self.salt_size)
                 if not salt:
-                    salt = random._urandom(self.salt_size)
+                    salt = urandom(self.salt_size)
                     _file.write(salt)
             self.salt = salt
         else:
-            salt = self.salt            
-        key_length = self.key_length
-        if key_length < 16:
-            raise ValueError("Invalid key length supplied ({})".format(key_length))
-        
+            salt = self.salt 
+            
         kdf = invoke("pride.functions.security.key_derivation_function", 
                      algorithm=self.hash_function, length=key_length, 
                      salt=salt, iterations=self.kdf_iteration_count)
@@ -136,32 +132,19 @@ class User(pride.objectlibrary.base.Base):
             mac_kdf = invoke("pride.functions.security.hkdf_expand", **hkdf_options)
             self.mac_key = mac_kdf.derive(master_key)
             self._reset_mac_key = True
-            
-        # Create a password verifier by creating/finding a nonindexable encrypted file.
-        verifier_filename = "{}_password_verifier.bin".format(self.username)        
+          
         try:
-            verifier_file = self.create(self.verifier_filetype, verifier_filename,
-                                        'rb', indexable=False, encrypted=True)
+            with self.create(self.verifier_filetype, file_name, 'rb') as _file:
+                keys = self.decrypt(_file.read())
+                self.data_encryption_key = keys[:self.keysize]
+                self.private_key = keys[self.keysize:]
         except IOError:
             message = "{}: username '{}' does not exist. Create it?: (y/n) ".format(self, self.username)
-            if pride.objectlibrary.shell.get_permission(message):
-                verifier_file = self.create(self.verifier_filetype, verifier_filename,
-                                            "wb", indexable=False, encrypted=True)
-                verifier_file.write(self.username)
-                verifier_file.flush()                
-                
-                if not hasattr(pride.site_config, "pride_user_User_defaults"):
-                    message = "{}: Insert username into site config?: (y/n) ".format(self)
-                    if pride.objectlibrary.shell.get_permission(message):
-                        pride.site_config.write_to("pride_user_User_defaults", username=self.username)
-            else:
-                raise InvalidUsername
-        else:
-            verifier_file.seek(0)
-            verifier = verifier_file.read()
-            assert verifier == self.username
-        verifier_file.close()             
-                                        
+            if pride.components.shell.get_permission(message):
+                with self.create(self.verifier_filetype, file_name, "wb") as _file:
+                    _file.write(os.u
+                    
+            
     def encrypt(self, data, extra_data='', return_mode="cryptogram"):
         """ usage: pride.objects["/User"].encrypt(data, extra_data='', 
                                                   return_mode="cryptogram") => cryptogram or unpacked cryptogram
@@ -177,7 +160,7 @@ class User(pride.objectlibrary.base.Base):
             Default cipher and mode of operation is AES-256-GCM.
             Modes not recognized as providing authenticity or integrity (i.e. CTR) will be authenticated via HMAC."""        
         return pride.functions.security.encrypt(data=data, key=self.encryption_key, mac_key=self.mac_key, 
-                                      iv=random._urandom(self.iv_size), extra_data=extra_data, 
+                                      iv=urandom(self.iv_size), extra_data=extra_data, 
                                       algorithm=self.encryption_algorithm, mode=self.encryption_mode,
                                       return_mode=return_mode)
                                       

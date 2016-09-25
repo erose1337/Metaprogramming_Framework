@@ -1,10 +1,10 @@
 import time
 
-import pride.objectlibrary.vmlibrary
+import pride.components.scheduler
 
 import asciimatics.screen
 
-class Terminal(pride.objectlibrary.vmlibrary.Process):
+class Terminal(pride.components.scheduler.Process):
     
     defaults = {"cursor" : chr(95)}
     mutable_defaults = {"line" : bytearray}

@@ -182,12 +182,12 @@ def test_random_number_generator():
     import os
     key = bytearray(os.urandom(256))#"\x00" * 256)
     tweak = range(256)    
-    import pride.objectlibrary.datastructures
+    import pride.components.datastructures
     from pride.crypto.analysis.metrics import hamming_distance, cast, test_randomness, test_prng_performance, test_bias_of_data
     random_megabyte = bytes(random_bytes(1024 * 1024, "\x00" * 256, key=key))
     test_randomness(random_megabyte)
     random_megabyte2 = bytes(random_bytes(1024 * 1024, "\x00" * 255 + "\x01", key=key))
-    ratio = pride.objectlibrary.datastructures.Average(size=65535)
+    ratio = pride.components.datastructures.Average(size=65535)
     for chunk in range((1024 * 1024) / 256):
         _slice = slice(chunk * 256, (chunk + 1) * 256)
         distance = hamming_distance(random_megabyte[_slice], random_megabyte2[_slice])

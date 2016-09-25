@@ -32,7 +32,7 @@ def _export(*args):
             shell.handle_input(module_source)
             break
     else:
-        pride.objects["/User"].create("pride.objectlibrary.interpreter.Shell", ip=ip, 
+        pride.objects["/User"].create("pride.components.interpreter.Shell", ip=ip, 
                                        startup_definitions=module_source)
                   
 def _improt(module_name):        

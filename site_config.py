@@ -11,7 +11,7 @@
     The above line effectively does the following at runtime, before the class
     is constructed:
     
-        pride.objectlibrary.user.User.defaults["username"] = "localhost"
+        pride.components.user.User.defaults["username"] = "localhost"
         
     This feature is facilitated by the Base metaclass and will work for all
     objects that inherit from Base.
@@ -21,7 +21,7 @@
     explicitly).
     
     For more information on Base objects and default attributes, please see the
-    documentation for pride.objectlibrary.base.Base 
+    documentation for pride.components.base.Base 
     
     Temporary customization
     ---------
@@ -50,7 +50,7 @@ LOG_DIRECTORY = os.path.join(DATA_DIRECTORY, "log")
 
 FUNCTIONS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "functions")
 GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")
-OBJECTLIBRARY_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "objectlibrary")
+OBJECTLIBRARY_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "components")
 PROGRAMS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "programs")
 
 SITE_CONFIG_FILE = __file__ if __file__[-1] != 'c' else __file__[:-1]
@@ -69,7 +69,7 @@ def write_to(entry, **values):
         _file.flush()
         
 pride_interpreter_Shell_defaults = {"startup_definitions" : \
-r"""import pride.objectlibrary.base
+r"""import pride.components.base
 import pride
 
 from pride.functions.utilities import documentation, usage
@@ -105,6 +105,6 @@ import pride.gui
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
 """}
 
-pride_objectlibrary_user_User_defaults = {'username': 'localhost'}
+pride_components_user_User_defaults = {'username': 'localhost'}
 
-pride_objectlibrary_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}
+pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

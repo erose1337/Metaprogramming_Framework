@@ -14,10 +14,11 @@ from pride.crypto.utilities import hamming_weight
     
 def build_linear_approximation_table(sbox, exhaustive=False):
     approximations = {}
+    sbox_size = len(sbox)
     if exhaustive:
-        for byte in range(256):        
-            for mask1 in range(1, 256):                       
-                for mask2 in range(1, 256):                    
+        for byte in range(sbox_size):        
+            for mask1 in range(1, sbox_size):                       
+                for mask2 in range(1, sbox_size):                    
                     input = byte
                     input_parity = hamming_weight(input & mask1) % 2
                     output_parity = hamming_weight(sbox[input] & mask2) % 2
@@ -28,8 +29,8 @@ def build_linear_approximation_table(sbox, exhaustive=False):
                         except KeyError:
                             approximations[(mask1, mask2)] = 1
     else:
-        for byte in range(256):        
-            for mask1 in range(1, 256):                       
+        for byte in range(sbox_size):        
+            for mask1 in range(1, sbox_size):                     
                 mask2 = mask1 
                 input = byte
                 input_parity = hamming_weight(input & mask1) % 2
@@ -54,7 +55,7 @@ def find_best_linear_approximation(sbox):
 def calculate_linearity(sbox, bits=8, max_key_max_value=None):
     if not max_key_max_value:
         max_key_max_value = find_best_linear_approximation(sbox)
-    return max_key_max_value[0], abs(max_key_max_value[1] - (2 ** 8) / 2)
+    return max_key_max_value[0], abs(max_key_max_value[1] - ((2 ** bits) / 2))
 
 def dump_linear_approximation_table(sbox, filename, exhaustive=True):
     table = build_linear_approximation_table(sbox, exhaustive)

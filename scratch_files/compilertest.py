@@ -45,5 +45,5 @@ class Compiler(object):
 compiler = Compiler()
 sys.meta_path.insert(0, compiler)
 
-import pride.objectlibrary.base
+import pride.components.base
 print pride.base

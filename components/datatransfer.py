@@ -1,11 +1,11 @@
-""" pride.objectlibrary.datatransfer - Authenticated services for transferring data on a network
+""" pride.components.datatransfer - Authenticated services for transferring data on a network
     Constructs a service for the transfer of arbitrary data from one registered 
     party to another. """
     
-import pride.objectlibrary.authentication3
-import pride.objectlibrary.shell
+import pride.components.authentication3
+import pride.components.shell
 import pride.functions.utilities
-import pride.objectlibrary.vmlibrary
+import pride.components.scheduler
 
 def file_operation(filename, mode, method, file_type="open", offset=None, data=None):
     with invoke(file_type, filename, mode) as _file:
@@ -20,7 +20,7 @@ def file_operation(filename, mode, method, file_type="open", offset=None, data=N
             assert method == "read"
             return _file.read(data)            
             
-class Background_Refresh(pride.objectlibrary.vmlibrary.Process):
+class Background_Refresh(pride.components.scheduler.Process):
     """ Usage: pride.objects['/Python/Background_Refresh'].add(client_object)
     
         Calls client.refresh for all clients in Background_Refresh.children.
@@ -35,7 +35,7 @@ class Background_Refresh(pride.objectlibrary.vmlibrary.Process):
             client.refresh()
         
         
-class Data_Transfer_Client(pride.objectlibrary.authentication3.Authenticated_Client):
+class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client):
     """ Client program for sending data to a party registered with the target service. 
         
         Security is provided by TLS, which provides end to end security between
@@ -49,7 +49,7 @@ class Data_Transfer_Client(pride.objectlibrary.authentication3.Authenticated_Cli
         super(Data_Transfer_Client, self).__init__(**kwargs)
         pride.objects["/Python/Background_Refresh"].add(self)
         
-    @pride.objectlibrary.authentication3.remote_procedure_call(callback_name="receive")
+    @pride.components.authentication3.remote_procedure_call(callback_name="receive")
     def send_to(self, receiver, message): 
         """ Sends message to receiver via remote procedure call through 
             self.target_service@self.ip. Automatically returns any messages
@@ -71,7 +71,7 @@ class Data_Transfer_Client(pride.objectlibrary.authentication3.Authenticated_Cli
         self.send_to('', '')
         
         
-class Data_Transfer_Service(pride.objectlibrary.authentication3.Authenticated_Service):
+class Data_Transfer_Service(pride.components.authentication3.Authenticated_Service):
     """ Service for transferring arbitrary data from one registered client to another """        
     mutable_defaults = {"messages" : dict}
     remotely_available_procedures = ("send_to", )
@@ -119,7 +119,7 @@ class File_Transfer(Data_Transfer_Client):
     def receive(self, messages):
         for sender, message in messages:
             filename, offset, data = pride.functions.utilities.load_data(message)
-            if pride.objectlibrary.shell.get_permission(self.permission_string.format(self.username, self.reference, 
+            if pride.components.shell.get_permission(self.permission_string.format(self.username, self.reference, 
                                                                         sender, filename, len(data))):
                 filename = raw_input("Please enter the filename or press enter to use '{}': ".format(filename)) or filename
                 file_operation(filename, "a+b", "write", self.file_type, offset, data)

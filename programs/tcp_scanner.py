@@ -1,7 +1,7 @@
-import pride.objectlibrary.network
-import pride.objectlibrary.vmlibrary
+import pride.components.network
+import pride.components.scheduler
 
-class Tcp_Port_Tester(pride.objectlibrary.network.Tcp_Client):
+class Tcp_Port_Tester(pride.components.network.Tcp_Client):
     
     def on_connect(self):
         super(Tcp_Port_Tester, self).on_connect()
@@ -9,7 +9,7 @@ class Tcp_Port_Tester(pride.objectlibrary.network.Tcp_Client):
         self.delete()   
         
         
-class Scanner(pride.objectlibrary.vmlibrary.Process):
+class Scanner(pride.components.scheduler.Process):
 
     defaults = {"subnet" : "127.0.0.1", "ports" : (22, ),
                 "range" : (0, 0, 0, 255), "yield_interval" : 100}

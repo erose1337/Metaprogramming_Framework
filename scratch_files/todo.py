@@ -1,4 +1,4 @@
-import pride.objectlibrary.network as network
+import pride.components.network as network
 
 
 class Tcp_Service_Proxy(network.Server):

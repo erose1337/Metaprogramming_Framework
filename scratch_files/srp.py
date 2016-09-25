@@ -37,7 +37,7 @@ import os
 import sqlite3
 
 import pride
-import pride.objectlibrary.base
+import pride.components.base
 import pride.errors
 
 class InsecureValueError(Warning): pass
@@ -66,7 +66,7 @@ N = int(''.join(str(ord(char)) for char in
 g = 2
 k = _hash_function(N, g)
 
-class Secure_Remote_Password(pride.objectlibrary.base.Base):
+class Secure_Remote_Password(pride.components.base.Base):
     """ Provides the server side for the secure remote password protocol. """
     defaults = {'N' : N,
                 'g' : g,
@@ -158,7 +158,7 @@ class Secure_Remote_Password(pride.objectlibrary.base.Base):
         self.login_threads = {}
         
         
-class SRP_Client(pride.objectlibrary.base.Base):
+class SRP_Client(pride.components.base.Base):
     """ Provides the client side of the secure remote password protocol. """
     defaults = {"username" : "",
                 "password" : '',

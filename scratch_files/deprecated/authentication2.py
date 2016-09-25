@@ -111,7 +111,7 @@ class Authentication_Table(object):
         return cls(rows=[row for row in slide(text, 16)])
 
         
-class Authenticated_Service(pride.objectlibrary.base.Base):
+class Authenticated_Service(pride.components.base.Base):
    
     defaults = {# security related configuration options
                 "hash_function" : "SHA256", "database_name" : '', "shared_key_size" : 32,
@@ -121,7 +121,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
                 "hkdf_table_update_info_string" : "Authentication Table Update",                             
                 
                 # non security related configuration options
-                "database_type" : "pride.objectlibrary.database.Database", 
+                "database_type" : "pride.components.database.Database", 
                 "validation_failure_string" :\
                    ".validate: Authorization Failure:\n" +
                    "    ip blacklisted: {}    ip whitelisted: {}\n" +
@@ -307,7 +307,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
             try:
                 self._rate[session_id][method_name].mark()
             except KeyError:
-                latency = pride.objectlibrary.datastructures.Latency("{}_{}".format(session_id, method_name))
+                latency = pride.components.datastructures.Latency("{}_{}".format(session_id, method_name))
                 try:
                     self._rate[session_id][method_name] = latency
                 except KeyError:
@@ -348,7 +348,7 @@ class Authenticated_Service(pride.objectlibrary.base.Base):
 #            del 
   
   
-class Authenticated_Client(pride.objectlibrary.base.Base):   
+class Authenticated_Client(pride.components.base.Base):   
     
     verbosity = {"register" : 0, "login" : 'v', "answer_challenge" : 'vv',
                  "login_stage_two" : 'vv', "register_sucess" : 0,
@@ -364,7 +364,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
                 # being passed to its constructor, and __enter__ and __exit__
                 # token files are encrypted by default and non indexable,
                 # meaning only a hash of the filename is stored
-                "token_file_type" : "pride.objectlibrary.fileio.Database_File",
+                "token_file_type" : "pride.components.fileio.Database_File",
                 "token_file_encrypted" : True, "token_file_indexable" : False,
                                 
                 # application specific needs may configure this when necessary
@@ -412,7 +412,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
     def __init__(self, **kwargs):
         super(Authenticated_Client, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference, self.ip, self.target_service)
-        self.session = self.create("pride.objectlibrary.rpc.Session", session_id='0', host_info=self.host_info)
+        self.session = self.create("pride.components.rpc.Session", session_id='0', host_info=self.host_info)
         module = self.__module__
         if module == "__main__":
             self.alert("Using __main__ as module", level=0)
@@ -441,7 +441,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
         self.alert("Registered successfully", level=self.verbosity["register_sucess"])  
         self._registering = False
         
-        if pride.objectlibrary.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)):
+        if pride.components.shell.get_permission("{}: Insert username into site_config?: ".format(self.reference)):
             entry = '_'.join((self.__module__.replace('.', '_'),
                               self.__class__.__name__,
                               "defaults"))                            
@@ -461,7 +461,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
     def _token_not_registered(self): # called when login fails because user is not registered
         if not self._registering:
             self.alert("Login token for '{}' not found ({})", (self.username, self.authentication_table_file), level=0)            
-            if self.auto_register or pride.objectlibrary.shell.get_permission("Register now? "):                  
+            if self.auto_register or pride.components.shell.get_permission("Register now? "):                  
                 if self.ip in ("localhost", "127.0.0.1"):
                     local_service = objects[self.target_service]
                     authentication_table = local_service.register(self.username)
@@ -556,7 +556,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
             If the user is not logged in, this is a no-op. """
     
     def handle_not_logged_in(self, instruction, callback):        
-        if self.auto_login or pride.objectlibrary.shell.get_permission("Login now? :"):
+        if self.auto_login or pride.components.shell.get_permission("Login now? :"):
             self._delayed_requests.append((instruction, callback))
             if not self._logging_in:
                 self.alert("Not logged in")       
@@ -577,7 +577,7 @@ class Authenticated_Client(pride.objectlibrary.base.Base):
     
     def on_load(self, attributes):
         super(Authenticated_Client, self).on_load(attributes)        
-        self.session = self.create("pride.objectlibrary.rpc.Session", session_id='0', host_info=self.host_info)                               
+        self.session = self.create("pride.components.rpc.Session", session_id='0', host_info=self.host_info)                               
                                        
         #if self.auto_login:
         #    self.alert("Auto logging in", level=self.verbosity["auto_login"])

@@ -1,4 +1,4 @@
-#   mpf.vmlibrary - virtual machine - processor - instruction handler
+#   mpf.scheduler - virtual machine - processor - instruction handler
 #
 #    Copyright (C) 2014  Ella Rose
 #
@@ -23,12 +23,12 @@ import itertools
 from functools import partial
 
 import pride
-import pride.objectlibrary.base
+import pride.components.base
 
 Instruction = pride.Instruction
 timestamp = timeit.default_timer
         
-class Process(pride.objectlibrary.base.Base):
+class Process(pride.components.base.Base):
     """ usage: Process(target=function, args=..., kwargs=...) => process_object
     
         Create a virtual process. Note that while Process objects

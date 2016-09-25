@@ -5,11 +5,11 @@ from multiprocessing import Process
 from contextlib import contextmanager
 
 import pride
-import pride.objectlibrary.base as base
+import pride.components.base as base
 
-import pride.objectlibrary.vmlibrary as vmlibrary
-import pride.objectlibrary.network as network
-from pride.objectlibrary.datastructures import Latency
+import pride.components.scheduler as scheduler
+import pride.components.network as network
+from pride.components.datastructures import Latency
 Instruction = pride.Instruction
 
 """def trace_function(frame, instruction, args):
@@ -28,9 +28,9 @@ class Null_Connection(network.Tcp_Client):
         self.delete()        
             
         
-class DoS(vmlibrary.Process):
+class DoS(scheduler.Process):
 
-    defaults = vmlibrary.Process.defaults.copy()
+    defaults = scheduler.Process.defaults.copy()
     defaults.update({"salvo_size" : 100,
                      "ip" : "localhost",
                      "port" : 80,
@@ -68,9 +68,9 @@ class Tcp_Port_Tester(network.Tcp_Client):
         self.delete()      
         
         
-class Scanner(vmlibrary.Process):
+class Scanner(scheduler.Process):
 
-    defaults = vmlibrary.Process.defaults.copy()
+    defaults = scheduler.Process.defaults.copy()
     defaults.update({"subnet" : "127.0.0.1",
                      "ports" : (22, ),
                      "range" : (0, 0, 0, 255),

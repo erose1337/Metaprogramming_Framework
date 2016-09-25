@@ -1,10 +1,10 @@
-import pride.objectlibrary.datatransfer
+import pride.components.datatransfer
 import pride.crypto.micklhdh as micklhdh
 from pride.crypto.utilities import bytes_to_integer, integer_to_bytes
 
 raise NotImplementedError()
 
-class Secure_Data_Transfer_Client(pride.objectlibrary.datatransfer.Data_Transfer_Client):
+class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Client):
     
     defaults = {"parameters" : micklhdh.system_parameters_128}
     verbosity = {"secure_channel_to" : 0, "begin_exchange" : 0, "continue_exchange" : 0, 

@@ -2,12 +2,12 @@ import random
 import sys
 
 import pride
-import pride.objectlibrary.vmlibrary
+import pride.components.scheduler
 import pride.functions.utilities
 
 
-class Ca_Test(pride.objectlibrary.vmlibrary.Process):
-    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
+class Ca_Test(pride.components.scheduler.Process):
+    defaults = pride.components.scheduler.Process.defaults.copy()
     defaults.update({"priority" : .5,
                      "size" : 8,
                      "grid" : None})
@@ -68,8 +68,8 @@ class Ca_Test(pride.objectlibrary.vmlibrary.Process):
                 new_grid[row_index][cell_index] = state
 
 
-class Ca_Test2(pride.objectlibrary.vmlibrary.Process):
-    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
+class Ca_Test2(pride.components.scheduler.Process):
+    defaults = pride.components.scheduler.Process.defaults.copy()
     defaults.update({"priority" : .5,
                      "size" : 8,
                      "grid" : None,
@@ -138,8 +138,8 @@ class Ca_Test2(pride.objectlibrary.vmlibrary.Process):
                 new_grid[row_index][cell_index] = state
 
 
-class Ca_Test3(pride.objectlibrary.vmlibrary.Process):
-    defaults = pride.objectlibrary.vmlibrary.Process.defaults.copy()
+class Ca_Test3(pride.components.scheduler.Process):
+    defaults = pride.components.scheduler.Process.defaults.copy()
     defaults.update({"priority" : .5,
                      "size" : 8,
                      "grid" : None})

@@ -1,4 +1,4 @@
-#   pride.objectlibrary.network - Asynchronous socket operations
+#   pride.components.network - Asynchronous socket operations
 #
 #    Copyright (C) 2014  Ella Rose
 #
@@ -22,9 +22,9 @@ import traceback
 import sys
 
 import pride
-import pride.objectlibrary.datastructures
-import pride.objectlibrary.vmlibrary as vmlibrary
-import pride.objectlibrary.base as base
+import pride.components.datastructures
+import pride.components.scheduler as scheduler
+import pride.components.base as base
 import pride.functions.utilities
 
 ERROR_CODES = {}
@@ -56,7 +56,7 @@ ERROR_CODES.update({CALL_WOULD_BLOCK : "CALL_WOULD_BLOCK",
                
 HOST = socket.gethostbyname(socket.gethostname())
   
-class Socket_Error_Handler(pride.objectlibrary.base.Base):       
+class Socket_Error_Handler(pride.components.base.Base):       
                  
     def dispatch(self, sock, error, error_name):        
         sock.alert("socket.error: {}".format(error_name), 
@@ -257,7 +257,7 @@ class Socket(base.Wrapper):
                 self.on_connect()
             elif not self._connecting:
                 self._started_connecting_at = pride.functions.utilities.timestamp()
-                #self.latency = pride.objectlibrary.datastructures.Latency(size=10)
+                #self.latency = pride.components.datastructures.Latency(size=10)
                 self._connecting = True
                 objects["/Python/Network"].connecting.add(self)
             else:
@@ -506,7 +506,7 @@ class Multicast_Receiver(Udp_Socket):
         self.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, multicast_configuration)
            
 
-class Network_Connection_Manager(pride.objectlibrary.base.Base):
+class Network_Connection_Manager(pride.components.base.Base):
     """ Provides a record of sockets currently in use. 
     
         The inbound and outbound connections dictionary maps (ip, port) pairs
@@ -523,7 +523,7 @@ class Network_Connection_Manager(pride.objectlibrary.base.Base):
                         "servers" : dict, "socket_reference" : dict}            
         
         
-class Network(vmlibrary.Process):
+class Network(scheduler.Process):
     """ Manages socket objects and is responsible for calling select.select to determine
         readability/writability of sockets. Also responsible for non blocking connect logic. 
         This component is created by default upon application startup, and in most cases will

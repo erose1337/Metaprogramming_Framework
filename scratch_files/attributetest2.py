@@ -1,10 +1,10 @@
 import mmap
 import cPickle as pickle
 
-import pride.objectlibrary.base
-import pride.objectlibrary.fileio as fileio
+import pride.components.base
+import pride.components.fileio as fileio
 
-class Persistent_Reactor(pride.objectlibrary.base.Base):
+class Persistent_Reactor(pride.components.base.Base):
     
     def __init__(self, **kwargs):
         super(Persistent_Reactor, self).__init__(**kwargs)
@@ -83,14 +83,14 @@ if __name__ == "__main__":
                                          string="this is a shared memory string",
                                          integer=1337, 
                                          decimal=1.0, 
-                                         complex=pride.objectlibrary.base.Base())
+                                         complex=pride.components.base.Base())
             
             assert reactor.__getattribute__ is reactor.persistent_getattribute
             self.failUnless(reactor.boolean is True)
             self.failUnless(reactor.string is "this is a shared memory string")
             self.failUnless(reactor.integer is 1337)
             self.failUnless(reactor.decimal == 1.0)
-            self.failUnless(isinstance(reactor.complex, pride.objectlibrary.base.Base))
+            self.failUnless(isinstance(reactor.complex, pride.components.base.Base))
     
     unittest.main()
             

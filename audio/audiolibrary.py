@@ -3,11 +3,11 @@ import sys
 import os
 
 import pride
-import pride.objectlibrary.base as base
-import pride.objectlibrary.vmlibrary as vmlibrary
-import pride.objectlibrary.fileio as fileio
+import pride.components.base as base
+import pride.components.scheduler as scheduler
+import pride.components.fileio as fileio
 import pride.functions.utilities
-from pride.objectlibrary.datastructures import Latency
+from pride.components.datastructures import Latency
 #objects = pride.objects
 Instruction = pride.Instruction
 
@@ -129,7 +129,7 @@ class Wav_File(Audio_Reactor):
         self.write(audio_input)
         
 
-class Config_Utility(vmlibrary.Process):
+class Config_Utility(scheduler.Process):
 
     defaults = {"config_file_name" : "audiocfg",
                 "mode" : ("input",),

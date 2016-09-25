@@ -5,7 +5,7 @@ import sys as sys_module
 import importlib as _importlib
 import contextlib as _contextlib
 
-import pride.objectlibrary.base
+import pride.components.base
 
 patches = ("sys", )
 
@@ -22,14 +22,14 @@ class Patched_Module(pride.base.Wrapper):
         globals()[self.module_name] = self
             
  
-class Stdout(pride.objectlibrary.base.Base):
+class Stdout(pride.components.base.Base):
     
     defaults = {"file" : None, "log_type" : "StringIO.StringIO", 
                 "limit_log_size" : 1024 * 1024, "logging_enabled" : True}    
     
     def __init__(self, **kwargs):
         super(Stdout, self).__init__(**kwargs)
-        self.log = self.create("pride.objectlibrary.fileio.File", file_type=self.log_type)
+        self.log = self.create("pride.components.fileio.File", file_type=self.log_type)
         
     def write(self, data):
         if self.limit_log_size and self.log.tell() > self.limit_log_size:

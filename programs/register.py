@@ -2,16 +2,16 @@ import contextlib
 import sys
 
 import pride
-import pride.objectlibrary.shell
+import pride.components.shell
 import pride.errors
 import pride.functions.utilities
         
-class Registration(pride.objectlibrary.base.Base):
+class Registration(pride.components.base.Base):
     """ Launcher program for registering a new user with an 
         Authenticated_Service. Dispatches the appropriate 
         authenticated client to start registration. """
     defaults = {"name" : "registration",                 
-                "authentication_client_name" : "pride.objectlibrary.interpreter.Shell"}
+                "authentication_client_name" : "pride.components.interpreter.Shell"}
     
     parser_ignore = ("name", )
 
@@ -23,8 +23,8 @@ class Registration(pride.objectlibrary.base.Base):
         client.register()                   
         
 if __name__ == "__main__":
-    #import pride.objectlibrary.user
+    #import pride.components.user
   #  pride.Instruction("/User", "create", Registration, parse_args=True).execute(priority=.011)    
-    #user = pride.objectlibrary.user.User()
-    #python = pride.objectlibrary.interpreter.Python()
+    #user = pride.components.user.User()
+    #python = pride.components.interpreter.Python()
     registration = Registration(parse_args=True)

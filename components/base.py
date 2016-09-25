@@ -9,7 +9,7 @@ import inspect
 from six import with_metaclass
        
 import pride
-import pride.objectlibrary.metaclass
+import pride.components.metaclass
 import pride.functions.utilities
 import pride.functions.contextmanagers
 import pride.functions.module_utilities
@@ -39,7 +39,7 @@ def rebuild_object(saved_data):
     return self, attributes
     
 def restore_attributes(new_self, attributes):
-    """ Loads and instance from a bytestream or file produced by pride.objectlibrary.base.Base.save. 
+    """ Loads and instance from a bytestream or file produced by pride.components.base.Base.save. 
         Currently being reimplemented"""
             
     saved_objects = attributes["objects"]
@@ -63,7 +63,7 @@ def load(saved_object):
     new_self, attributes = rebuild_object(saved_object)
     return restore_attributes(new_self, attributes) 
         
-class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):  
+class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):  
     """ The root inheritance object. Provides many features:
 
     - When instantiating, arbitrary attributes may be assigned
@@ -304,7 +304,7 @@ class Base(with_metaclass(pride.objectlibrary.metaclass.Metaclass, object)):
                     raise ArgumentError("Required attribute '{}' not assigned".format(attribute))
         
         if self.allowed_values:
-            for key, values in allowed_values.items():            
+            for key, values in self.allowed_values.items():            
                 if getattr(self, key) not in values:
                     raise ValueError("Invalid {} value: '{}'; Valid values: {}".format(key, getattr(self, key), values))
                 

@@ -3,7 +3,7 @@ import platform
 import os
 
 import pride
-import pride.objectlibrary.datatransfer
+import pride.components.datatransfer
 
 if "Linux" == platform.system():
     def install_pyalsaaudio():
@@ -11,7 +11,7 @@ if "Linux" == platform.system():
                             "sudo apt-get install libasound2",
                             "sudo apt-get install libasound2-dev",
                             "sudo pip install pyalsaaudio"))
-        if pride.objectlibrary.shell.get_permission("{}\n\n".format(source) +
+        if pride.components.shell.get_permission("{}\n\n".format(source) +
                                      "allow the above commands? "):
             [os.system(command) for command in source.split("\n")]
                 
@@ -20,7 +20,7 @@ if "Linux" == platform.system():
         for dependency in ("libportaudio0", "libportaudio2", "libportaudiocpp0",
                            "portaudio19-dev"):
             source.append("sudo apt-get install {}".format(dependency))
-        if pride.objectlibrary.shell.get_permission('\n'.join(source) + "\n\n" +
+        if pride.components.shell.get_permission('\n'.join(source) + "\n\n" +
                                      "allow the above commands? "):        
             [os.system(command) for command in source]
 else:
@@ -48,7 +48,7 @@ def mix_signals(audio_data, bit_width):
         _data.append(audioop.avg(samples, bit_width))
     return _data
                                 
-class Audio_Transfer(pride.objectlibrary.datatransfer.Data_Transfer_Client):
+class Audio_Transfer(pride.components.datatransfer.Data_Transfer_Client):
     """ A data transfer client that outputs data from the specified audio 
         input to any specified receivers (default: Microphone).
         

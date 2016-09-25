@@ -56,7 +56,7 @@ class Stack_Frame(object):
         self.stack = []
         
         
-class Bytecode_Interpreter(pride.objectlibrary.base.Base):
+class Bytecode_Interpreter(pride.components.base.Base):
             
     flags = {"_bytecode_counter" : None, "_delta" : 0}.items()
     

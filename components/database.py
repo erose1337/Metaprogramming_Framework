@@ -4,7 +4,7 @@ import contextlib
 import os
 
 import pride
-import pride.objectlibrary.base
+import pride.components.base
 from pride.errors import ArgumentError
 
 def create_assignment_string(items):

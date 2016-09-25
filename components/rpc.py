@@ -1,14 +1,14 @@
-""" pride.objectlibrary.rpc - Remote Procedure Call portal built on top of pride.objectlibrary.networkssl ssl sockets. """
+""" pride.components.rpc - Remote Procedure Call portal built on top of pride.components.networkssl ssl sockets. """
 import struct
 import traceback
 import itertools
 import time
 
 import pride
-import pride.objectlibrary.base
-import pride.objectlibrary.vmlibrary
+import pride.components.base
+import pride.components.scheduler
 import pride.functions.utilities
-import pride.objectlibrary.networkssl
+import pride.components.networkssl
 #objects = pride.objects
 
 DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.utilities.save_data),
@@ -53,9 +53,9 @@ def packetize_recv(recv):
     return _recv
    
         
-class Session(pride.objectlibrary.base.Base):
+class Session(pride.components.base.Base):
     """ Maintains session id information and prepares outgoing requests """
-    defaults = {"requester_type" : "pride.objectlibrary.rpc.Rpc_Client",
+    defaults = {"requester_type" : "pride.components.rpc.Rpc_Client",
                 "session_id" : None, "host_info" : None}
     
     flags = {"_id" : None}
@@ -96,26 +96,26 @@ class Session(pride.objectlibrary.base.Base):
         return self._callbacks.pop(0)
                 
         
-class Packet_Client(pride.objectlibrary.networkssl.SSL_Client):
+class Packet_Client(pride.components.networkssl.SSL_Client):
     """ An SSL_Client that uses packetized send and recv (client side) """        
     defaults = {"_old_data" : bytes()}
     
-    send = packetize_send(pride.objectlibrary.networkssl.SSL_Client.send)
-    recv = packetize_recv(pride.objectlibrary.networkssl.SSL_Client.recv)
+    send = packetize_send(pride.components.networkssl.SSL_Client.send)
+    recv = packetize_recv(pride.components.networkssl.SSL_Client.recv)
 
     
-class Packet_Socket(pride.objectlibrary.networkssl.SSL_Socket):
+class Packet_Socket(pride.components.networkssl.SSL_Socket):
     """ An SSL_Socket that uses packetized send and recv (server side) """        
     defaults = {"_old_data" : bytes()}
     
-    send = packetize_send(pride.objectlibrary.networkssl.SSL_Socket.send)
-    recv = packetize_recv(pride.objectlibrary.networkssl.SSL_Socket.recv)
+    send = packetize_send(pride.components.networkssl.SSL_Socket.send)
+    recv = packetize_recv(pride.components.networkssl.SSL_Socket.recv)
                        
                         
-class Rpc_Connection_Manager(pride.objectlibrary.base.Base):
+class Rpc_Connection_Manager(pride.components.base.Base):
     """ Creates Rpc_Clients for making rpc requests. Used to facilitate the
         the usage of a single connection for arbitrary requests to the host. """
-    defaults = {"requester_type" : "pride.objectlibrary.rpc.Rpc_Client"}
+    defaults = {"requester_type" : "pride.components.rpc.Rpc_Client"}
     mutable_defaults = {"hosts" : dict}
     
     def get_host(self, host_info):
@@ -141,12 +141,12 @@ class Rpc_Connection_Manager(pride.objectlibrary.base.Base):
         return attributes
         
         
-class Rpc_Server(pride.objectlibrary.networkssl.SSL_Server):
+class Rpc_Server(pride.components.networkssl.SSL_Server):
     """ Creates Rpc_Sockets for handling rpc requests. By default, this
         server runs on the localhost only, meaning it is not accessible 
         from the network. """
     defaults = {"port" : 40022, "interface" : "localhost",
-                "Tcp_Socket_type" : "pride.objectlibrary.rpc.Rpc_Socket"}
+                "Tcp_Socket_type" : "pride.components.rpc.Rpc_Socket"}
         
         
 class Rpc_Client(Packet_Client):
@@ -267,7 +267,7 @@ class Rpc_Socket(Packet_Socket):
         super(Rpc_Socket, self).delete()
         
         
-class Rpc_Worker(pride.objectlibrary.base.Base):
+class Rpc_Worker(pride.components.base.Base):
     """ Performs remote procedure call requests """
     verbosity = {"request_result" : "vvv"}
                  

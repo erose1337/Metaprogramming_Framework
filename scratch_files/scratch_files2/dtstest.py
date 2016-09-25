@@ -1,10 +1,10 @@
-import pride.objectlibrary.datatransfer
+import pride.components.datatransfer
 import pride.functions.security
 import pride.asymmetrictest
 
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
-class Secure_Data_Transfer_Client(pride.objectlibrary.datatransfer.Data_Transfer_Client):
+class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Client):
     
     defaults = {"ecdh_curve_name" : "SECP384R1", "keysize" : 384}
     mutable_defaults = {"key_for" : dict}

@@ -19,7 +19,7 @@ class Prompt(pride.gui.widgetlibrary.Text_Box):
         self.end_of_field = len(self.text)
         
 # input interface -> interpreter connection -> interpret input -> output and prompt
-# pride.objectlibrary.shell.Python_Shell -> pride.objectlibrary.interpreter.Shell -> /Python/Interpreter -> .../Python_Shell/Prompt   
+# pride.components.shell.Python_Shell -> pride.components.interpreter.Shell -> /Python/Interpreter -> .../Python_Shell/Prompt   
      
 class Python_Shell(pride.gui.gui.Application):
                
@@ -29,11 +29,11 @@ class Python_Shell(pride.gui.gui.Application):
                 
     def __init__(self, **kwargs):
         super(Python_Shell, self).__init__(**kwargs)
-        shell_connection = self.create("pride.objectlibrary.interpreter.Shell", username=self.username, 
+        shell_connection = self.create("pride.components.interpreter.Shell", username=self.username, 
                                        startup_definitions=self.startup_definitions,
                                        ip=self.ip, port=self.port, target_service=self.target_service,
                                        stdout=self)
-        shell_interface = self.create("pride.objectlibrary.shell.Python_Shell", shell=shell_connection.reference)        
+        shell_interface = self.create("pride.components.shell.Python_Shell", shell=shell_connection.reference)        
         self.prompt = self.create("pride.gui.shell.Prompt", program=shell_interface.reference)
         
         self._children.remove(shell_connection) # don't try to pack/draw

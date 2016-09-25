@@ -1,8 +1,8 @@
-import pride.objectlibrary.base
+import pride.components.base
 
 import sdl2.ext # for Color
 
-class Shape(pride.objectlibrary.base.Base):
+class Shape(pride.components.base.Base):
     
     flags = {"transparency_enabled" : True}
     coordinates = ('x', 'y', 'w', 'h', 'z')  

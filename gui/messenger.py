@@ -3,10 +3,10 @@ import getpass
 
 import pride
 import pride.gui.gui
-import pride.objectlibrary.datatransfer
-import pride.objectlibrary.database
+import pride.components.datatransfer
+import pride.components.database
 
-class Client(pride.objectlibrary.datatransfer.Data_Transfer_Client):
+class Client(pride.components.datatransfer.Data_Transfer_Client):
     
     def receive(self, messages):
         for sender, message in messages:
@@ -52,7 +52,7 @@ class Contacts(pride.gui.gui.Window):
         self.create(Add_Contact_Button)        
         
         
-class Message_Database(pride.objectlibrary.database.Database):
+class Message_Database(pride.components.database.Database):
      
     defaults = {"indexable" : False, "hash_function" : "SHA256"}
     

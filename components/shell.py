@@ -7,9 +7,9 @@ import codeop
 import traceback
 
 import pride
-import pride.objectlibrary.vmlibrary
+import pride.components.scheduler
 import pride.functions.utilities
-import pride.objectlibrary._termsize
+import pride.components._termsize
 
 try:
     from msvcrt import getwch, kbhit
@@ -62,17 +62,17 @@ def is_affirmative(input, affirmative_words=("affirmative", "true")):
             is_positive = None
     return is_positive
     
-class Command_Line(pride.objectlibrary.vmlibrary.Process):
+class Command_Line(pride.components.scheduler.Process):
     """ Captures user input and provides the input to the specified or default program.
     
         Available programs can be modified via the add_program, remove_program,
         set_default_program, and get_program methods."""
     defaults = {"thread_started" : False, "write_prompt" : True,
                 "prompt" : ">>> ", "programs" : None,
-                "default_programs" : ("pride.objectlibrary.shell.OS_Shell", 
-                                      "pride.objectlibrary.shell.Switch_Program"),
+                "default_programs" : ("pride.components.shell.OS_Shell", 
+                                      "pride.components.shell.Switch_Program"),
                 "idle_threshold" : 10000, 
-                "screensaver_type" : "pride.objectlibrary.shell.CA_Screensaver"}
+                "screensaver_type" : "pride.components.shell.CA_Screensaver"}
                      
     def __init__(self, **kwargs):
         self._idle = True
@@ -194,7 +194,7 @@ class Command_Line(pride.objectlibrary.vmlibrary.Process):
         os.system(command)
         
         
-class Program(pride.objectlibrary.base.Base):
+class Program(pride.components.base.Base):
             
     defaults = {"set_as_default" : False, "name" : '', 
                 "command_line" : "/User/Command_Line"}
@@ -309,7 +309,7 @@ class Messenger_Program(Program):
                                                   self.reference)
         
         
-class Terminal_Screensaver(pride.objectlibrary.vmlibrary.Process):
+class Terminal_Screensaver(pride.components.scheduler.Process):
     
     defaults = {"rate" : 3, "priority" : .08, "newline_scalar" : 1.5,
                 "file_text" : ''}
@@ -341,7 +341,7 @@ class Terminal_Screensaver(pride.objectlibrary.vmlibrary.Process):
          
 class Random_Screensaver(Terminal_Screensaver):
             
-    choices = ["pride.objectlibrary.shell.Terminal_Screensaver", "pride.objectlibrary.shell.Matrix_Screensaver", "pride.objectlibrary.shell.CA_Screensaver"]
+    choices = ["pride.components.shell.Terminal_Screensaver", "pride.components.shell.Matrix_Screensaver", "pride.components.shell.CA_Screensaver"]
     
     def __new__(cls, *args, **kwargs):
         _type = random.choice(cls.choices)
@@ -356,7 +356,7 @@ class Matrix_Screensaver(Terminal_Screensaver):
     def __init__(self, **kwargs):
         super(Matrix_Screensaver, self).__init__(**kwargs)
         self.characters = []
-        self.width, self.height = pride.objectlibrary._termsize.getTerminalSize()
+        self.width, self.height = pride.components._termsize.getTerminalSize()
         self.row = None
         for x in xrange(self.height):
             self.characters.append(bytearray(self.width))            

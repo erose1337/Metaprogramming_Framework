@@ -12,10 +12,10 @@ from ctypes import *
 import pyaudio
 
 import pride
-import pride.objectlibrary.base as base
-import pride.objectlibrary.vmlibrary as vmlibrary
+import pride.components.base as base
+import pride.components.scheduler as scheduler
 import pride.audio.audiolibrary as audiolibrary
-from pride.objectlibrary.datastructures import Latency
+from pride.components.datastructures import Latency
 Instruction = pride.Instruction
 #objects = pride.objects
 
@@ -113,7 +113,7 @@ class Audio_Device(audiolibrary.Audio_Reactor):
         super(Audio_Device, self).__init__(**kwargs)
         
      #   import pride.functions.utilities
-       # self.latency = pride.objectlibrary.datastructures.Latency("audio input")
+       # self.latency = pride.components.datastructures.Latency("audio input")
         
     def open_stream(self):
         return PORTAUDIO.open(**self.options)

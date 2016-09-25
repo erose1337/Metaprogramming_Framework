@@ -1,4 +1,4 @@
-import pride.objectlibrary.base
+import pride.components.base
 import pride.functions.security
 
 import cryptography.exceptions

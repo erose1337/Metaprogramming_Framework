@@ -3,13 +3,13 @@ import importlib
 import sys
 import setuptools
 
-import pride.objectlibrary.base
-import pride.objectlibrary.package
+import pride.components.base
+import pride.components.package
 import pride.functions.contextmanagers
 
-class Version_Manager(pride.objectlibrary.base.Base):
+class Version_Manager(pride.components.base.Base):
     
-    defaults = pride.objectlibrary.base.Base.defaults.copy()
+    defaults = pride.components.base.Base.defaults.copy()
     defaults.update({"name" : '',
                      "version" : '',
                      "description" : '',
@@ -29,7 +29,7 @@ class Version_Manager(pride.objectlibrary.base.Base):
     
     def run_setup(self, argv="sdist"):
         module = importlib.import_module(self.name)
-        package = pride.objectlibrary.package.Package(module, include_documentation=True)
+        package = pride.components.package.Package(module, include_documentation=True)
         
         with pride.functions.contextmanagers.current_working_directory(self.setuppy_directory):
             backup = sys.argv
@@ -76,7 +76,7 @@ options = {"name" : "pride",
            "author" : "Ella Rose",
            "author_email" : "python_pride@protonmail.com",
            "packages" : ["pride", "pride.audio", "pride.gui", "pride.programs",
-                         "pride.crypto", "pride.functions", "pride.objectlibrary"],
+                         "pride.crypto", "pride.functions", "pride.components"],
            "scripts" : ["main.py"],
            "package_data" : {"pride.gui" : ["gui\\libfreetype-6.dll", 
                                             "gui\\SDL2.dll", "gui\\SDL2_ttf.dll",

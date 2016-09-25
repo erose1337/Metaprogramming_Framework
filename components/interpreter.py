@@ -11,10 +11,10 @@ except ImportError:
     import StringIO
 
 import pride
-import pride.objectlibrary.base as base
-import pride.objectlibrary.authentication3
-import pride.objectlibrary.shell
-import pride.objectlibrary.user
+import pride.components.base as base
+import pride.components.authentication3
+import pride.components.shell
+import pride.components.user
 import pride.site_config
 
 @contextlib.contextmanager
@@ -26,7 +26,7 @@ def main_as_name():
     finally:
         globals()["__name__"] = backup        
     
-class Shell(pride.objectlibrary.authentication3.Authenticated_Client):
+class Shell(pride.components.authentication3.Authenticated_Client):
     """ Handles keystrokes and sends python source to the Interpreter to 
         be executed. This requires authentication via username/password."""
     defaults = {"username" : "", "password" : "", "startup_definitions" : '', 
@@ -51,7 +51,7 @@ class Shell(pride.objectlibrary.authentication3.Authenticated_Client):
             self.startup_definitions = ''            
             self.execute_source(source)
                         
-    @pride.objectlibrary.authentication3.remote_procedure_call(callback_name="handle_result")
+    @pride.components.authentication3.remote_procedure_call(callback_name="handle_result")
     def execute_source(self, source): 
         """ Sends source to the interpreter specified in self.target_service for execution """
                                     
@@ -60,7 +60,7 @@ class Shell(pride.objectlibrary.authentication3.Authenticated_Client):
             (self.stdout or sys.stdout).write('\r' + packet)                            
             
 
-class Interpreter(pride.objectlibrary.authentication3.Authenticated_Service):
+class Interpreter(pride.components.authentication3.Authenticated_Service):
     """ Executes python source. Requires authentication from remote hosts. 
         The source code and return value of all requests are logged. """
     
@@ -76,7 +76,7 @@ class Interpreter(pride.objectlibrary.authentication3.Authenticated_Service):
         super(Interpreter, self).__init__(**kwargs)
         filename = os.path.join(pride.site_config.LOG_DIRECTORY, 
                                 '_'.join(word for word in self.reference.split("/") if word))
-        self.log = self.create("pride.objectlibrary.fileio.File", 
+        self.log = self.create("pride.components.fileio.File", 
                                "{}.log".format(filename), 'a+',
                                persistent=False).reference
         self._logger = invoke(self._logger_type)
@@ -147,21 +147,21 @@ class Python(base.Base):
     defaults = {"command" : '',
                 "environment_setup" : ("PYSDL2_DLL_PATH = " + 
                                        pride.site_config.GUI_DIRECTORY + os.path.sep, ),
-                "startup_components" : ("pride.objectlibrary.storage.Persistent_Storage",
-                                        "pride.objectlibrary.vcs.Version_Control",
-                                        "pride.objectlibrary.vmlibrary.Processor",                                        
-                                        "pride.objectlibrary.fileio.File_System",
-                                        "pride.objectlibrary.network.Network_Connection_Manager",
-                                        "pride.objectlibrary.network.Network", 
-                                        "pride.objectlibrary.interpreter.Interpreter",
-                                        "pride.objectlibrary.rpc.Rpc_Connection_Manager",
-                                        "pride.objectlibrary.rpc.Rpc_Server",
-                                        "pride.objectlibrary.rpc.Rpc_Worker",
-                                        "pride.objectlibrary.datatransfer.Data_Transfer_Service",
-                                        "pride.objectlibrary.datatransfer.Background_Refresh",
-                                        "pride.objectlibrary.encryptedstorage.Encryption_Service"),
+                "startup_components" : ("pride.components.storage.Persistent_Storage",
+                                        "pride.components.vcs.Version_Control",
+                                        "pride.components.scheduler.Processor",                                        
+                                        "pride.components.fileio.File_System",
+                                        "pride.components.network.Network_Connection_Manager",
+                                        "pride.components.network.Network", 
+                                        "pride.components.interpreter.Interpreter",
+                                        "pride.components.rpc.Rpc_Connection_Manager",
+                                        "pride.components.rpc.Rpc_Server",
+                                        "pride.components.rpc.Rpc_Worker",
+                                        "pride.components.datatransfer.Data_Transfer_Service",
+                                        "pride.components.datatransfer.Background_Refresh",
+                                        "pride.components.encryptedstorage.Encryption_Service"),
                 "startup_definitions" : '',
-                "interpreter_type" : "pride.objectlibrary.interpreter.Interpreter"}
+                "interpreter_type" : "pride.components.interpreter.Interpreter"}
                      
     parser_ignore = ("environment_setup", "startup_components", 
                      "startup_definitions", "interpreter_type")
@@ -181,7 +181,7 @@ class Python(base.Base):
         self.setup_os_environ()
 
         session_id, key1, key2, key3, salt = [random_bytes for random_bytes in slide(os.urandom(80), 16)] # ephemeral keys for encrypted in memory only data storage
-        self.session = self.create("pride.objectlibrary.user.Session", username=session_id, 
+        self.session = self.create("pride.components.user.Session", username=session_id, 
                                    encryption_key=key1,  mac_key=key2, file_system_key=key3, salt=salt)
                                    
         if not self.command:
@@ -202,7 +202,7 @@ class Python(base.Base):
                 machine_info = machine_info_file.read()                
                 machine_id = machine_info[:16]
                 key1, key2, key3, salt = machine_info[16:32], machine_info[32:48], machine_info[48:64], machine_info[64:80]
-            user = pride.objectlibrary.user.User(username=machine_id, encryption_key=key1, mac_key=key2, 
+            user = pride.components.user.User(username=machine_id, encryption_key=key1, mac_key=key2, 
                                    file_system_key=key3, salt=salt, open_command_line=False)                    
             command = self.command  
         source = ''    

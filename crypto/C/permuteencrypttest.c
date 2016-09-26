@@ -77,13 +77,17 @@ void encrypt(WORDSIZE32* data, WORDSIZE32* key)
     load_abcd(data);
     key_schedule(key, round_keys);        
     
-    shuffle_words(a, b, c, d, round_keys, 0);    
     add_key(a, b, c, d, round_keys, 0);    
+    shuffle_words(a, b, c, d, round_keys, 0);    
+    
     iterate(permutation, a, b, c, d, ITERATIONS);
     add_key(a, b, c, d, round_keys, 1);
-    iterate(permutation, a, b, c, d, ITERATIONS);
+    
+    iterate(permutation, a, b, c, d, ITERATIONS);    
     add_key(a, b, c, d, round_keys, 2);
+    
     shuffle_words(a, b, c, d, round_keys, 2);
+    
     store(data, a, b, c, d);
 }
      

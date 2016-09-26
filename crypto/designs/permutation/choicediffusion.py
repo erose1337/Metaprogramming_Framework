@@ -60,24 +60,29 @@ def keyed_permutation(a, b, c, d, k0=1, k1=0, k2=0, k3=0, mask=0xFFFFFFFF):
 #    a = rotate_left(a ^ choice(b ^ k0, c, d), 7 , bit_width=32)           
 #    b = rotate_left(b ^ choice(c ^ k1, d, a), 11, bit_width=32)        
 #    c = rotate_left(c ^ choice(d ^ k2, a, b), 13, bit_width=32)          
-#    d = rotate_left(d ^ choice(a ^ k3, b, c), 17, bit_width=32)    
-    #_t = a
-    #a = choice(k0, a, b)
-    #b = choice(k0, b, _t)
-    #
-    #_t = c
-    #c = choice(k1, c, d)
-    #d = choice(k1, d, _t)
-    #
-    #_t = a
-    #a = choice(k2, a, c)
-    #c = rotate_left(choice(k2, c, _t), 1, bit_width=32)
-    #
-    #_t = b
-    #b = rotate_left(choice(k3, b, d) , 2, bit_width=32)
-    #d = rotate_left(choice(k3, d, _t), 3, bit_width=32)
+#    d = rotate_left(d ^ choice(a ^ k3, b, c), 17, bit_width=32)  
+  
+    _t = b
+    b = choice(k1, b, c)
+    c = choice(k1, c, _t)    
+               
+    _t = d
+    d = choice(k3, d, a) 
+    a = choice(k3, a, _t)
     
-    for round in range(1):
+    _t = a
+    a = choice(k0, a, b)
+    b = choice(k0, b, _t)
+   
+    _t = c
+    c = choice(k2, c, d)
+    d = choice(k2, d, _t)
+            
+    a = rotate_left(a, 0, bit_width=32)
+    b = rotate_left(b, 1 + 8, bit_width=32)
+    c = rotate_left(c, 2 + 16, bit_width=32)
+    d = rotate_left(d, 3 + 24, bit_width=32)    
+    #for round in range(1):
         #a = rotate_left((a + (b ^ c ^ d) & mask), 24, bit_width=32)
         #b = rotate_left((b + (a ^ c ^ d) & mask), 16, bit_width=32)
         #c = rotate_left((c + (b ^ a ^ d) & mask), 8, bit_width=32)
@@ -88,24 +93,26 @@ def keyed_permutation(a, b, c, d, k0=1, k1=0, k2=0, k3=0, mask=0xFFFFFFFF):
         #c = rotate_left((c + choice(b, d, a) & mask), 2, bit_width=32)
         #d = rotate_left((d + choice(c, a, b) & mask), 3, bit_width=32)
 
-        a = rotate_left((a + (b ^ c ^ d) & mask), 17, bit_width=32)
-        a = rotate_left((a + choice(d, b, c) & mask), 5, bit_width=32)
-        
-        b = rotate_left((b + (a ^ c ^ d) & mask), 13, bit_width=32)
-        b = rotate_left((b + choice(a, c, d) & mask), 1, bit_width=32)
-        
-        c = rotate_left((c + (b ^ a ^ d) & mask), 11, bit_width=32)
-        c = rotate_left((c + choice(b, d, a) & mask), 2, bit_width=32)
-        
-        d = rotate_left((d + (b ^ c ^ a) & mask), 7, bit_width=32)               
-        d = rotate_left((d + choice(c, a, b) & mask), 3, bit_width=32)        
+        #a = rotate_left((a + (b ^ c ^ d) & mask), 17, bit_width=32)
+        #a = rotate_left((a + choice(d, b, c) & mask), 5, bit_width=32)
+        #
+        #b = rotate_left((b + (a ^ c ^ d) & mask), 13, bit_width=32)
+        #b = rotate_left((b + choice(a, c, d) & mask), 1, bit_width=32)
+        #
+        #c = rotate_left((c + (b ^ a ^ d) & mask), 11, bit_width=32)
+        #c = rotate_left((c + choice(b, d, a) & mask), 2, bit_width=32)
+        #
+        #d = rotate_left((d + (b ^ c ^ a) & mask), 7, bit_width=32)               
+        #d = rotate_left((d + choice(c, a, b) & mask), 3, bit_width=32)        
 
             
     return a, b, c, d
     
 def visualize_keyed_permutation():
     from pride.crypto.analysis.visualization import test_4x32_function
-    test_4x32_function(keyed_permutation, (0, 0, 0, 1))
+    from os import urandom
+    from pride.crypto.utilities import bytes_to_integer
+    test_4x32_function(keyed_permutation, (0, 0, 0, 1) + tuple(bytes_to_integer(bytearray(urandom(4))) for count in range(4)))
     
 def test_active_bits():
     from pride.crypto.analysis.active_bits import search_minimum_active_bits
@@ -113,6 +120,6 @@ def test_active_bits():
     
     
 if __name__ == "__main__":
-    #visualize_keyed_permutation()
-    test_active_bits()
+    visualize_keyed_permutation()
+    #test_active_bits()
     

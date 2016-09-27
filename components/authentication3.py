@@ -8,47 +8,17 @@ from pride import Instruction
 import pride.components.rpc
 import pride.functions.security
 import pride.functions.decorators
-import pride.functions.contextmanagers
 import pride.functions.utilities
 from pride.functions.security import hash_function
 from pride.errors import SecurityError, UnauthorizedError             
-       
+
+
 # send session key to partner
 # xor key with key sent by partner
 #    - decrypt encrypted_session_secret via private key
 #    - xor both session secrets together to obtain final session secret
-                    
-@pride.functions.decorators.required_arguments(no_args=True)
-def remote_procedure_call(callback_name='', callback=None):
-    def decorate(function):       
-        call_name = function.__name__
-        def _make_rpc(self, *args, **kwargs):  
-            if callback_name:
-                _callback = getattr(self, callback_name)
-            else:
-                _callback = callback or None
-                
-            instruction = Instruction(self.target_service, call_name, *args, **kwargs)
-            if not self.logged_in and call_name not in ("register", "login", "login_stage_two"):                 
-                self.handle_not_logged_in(instruction, _callback)            
-            else:
-                self.alert("Making request '{}.{}'".format(self.target_service, call_name),
-                           level=self.verbosity[call_name])   
-                if self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
-                    local_service = pride.objects[self.target_service]
-                    session_id = self.session.id
-                    if local_service.validate(session_id, self.ip, call_name) or call_name == "register":                    
-                        output = local_service.execute_remote_procedure_call(session_id, self.ip, call_name, args, kwargs)                    
-                        if _callback:
-                            _callback(output)
-                    else:
-                        raise UnauthorizedError()
-                else:
-                    self.session.execute(instruction, _callback)
-        return _make_rpc
-    return decorate
-      
-      
+remote_procedure_call = pride.components.rpc.remote_procedure_call       
+                                
 class Authenticated_Service(pride.components.rpc.RPC_Service):
    
     defaults = {# security related configuration options

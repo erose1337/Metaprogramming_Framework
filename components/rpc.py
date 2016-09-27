@@ -8,8 +8,9 @@ from os import path
 import pride
 import pride.components.base
 import pride.components.scheduler
-import pride.functions.utilities
 import pride.components.networkssl
+import pride.functions.utilities
+import pride.functions.decorators
 #objects = pride.objects
 
 DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.utilities.save_data),
@@ -18,6 +19,36 @@ _old_data, _hosts = {}, {}
 
 class UnauthorizedError(Warning): pass  
 
+@pride.functions.decorators.required_arguments(no_args=True)
+def remote_procedure_call(callback_name='', callback=None):
+    def decorate(function):       
+        call_name = function.__name__
+        def _make_rpc(self, *args, **kwargs):  
+            if callback_name:
+                _callback = getattr(self, callback_name)
+            else:
+                _callback = callback or None
+                
+            instruction = pride.Instruction(self.target_service, call_name, *args, **kwargs)
+            if not self.logged_in and call_name not in ("register", "login", "login_stage_two"):                 
+                self.handle_not_logged_in(instruction, _callback)            
+            else:
+                self.alert("Making request '{}.{}'".format(self.target_service, call_name),
+                           level=self.verbosity[call_name])   
+                if self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
+                    local_service = pride.objects[self.target_service]
+                    session_id = self.session.id
+                    if local_service.validate(session_id, self.ip, call_name) or call_name == "register":                    
+                        output = local_service.execute_remote_procedure_call(session_id, self.ip, call_name, args, kwargs)                    
+                        if _callback:
+                            _callback(output)
+                    else:
+                        raise UnauthorizedError()
+                else:
+                    self.session.execute(instruction, _callback)
+        return _make_rpc
+    return decorate
+    
 def packetize_send(send):
     """ Decorator that transforms a tcp stream into packets. Requires the use
         of the packetize_recv decorator on the recv end. """

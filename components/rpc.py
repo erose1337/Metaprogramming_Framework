@@ -3,6 +3,7 @@ import struct
 import traceback
 import itertools
 import time
+from os import path
 
 import pride
 import pride.components.base
@@ -284,3 +285,119 @@ class Rpc_Worker(pride.components.base.Base):
     def deserealize(self, serialized_arguments):
         return DEFAULT_SERIALIZER.loads(serialized_arguments)  
         
+        
+class RPC_Service(pride.components.base.Base):
+        
+    defaults = {"database_type" : "pride.components.database.Database",
+                "database_name" : '',
+                "validation_failure_string" :\
+                   ".validate: Authorization Failure:\n" +
+                   "    ip blacklisted: {}    ip whitelisted: {}\n" +
+                   "    session_id logged in: {}\n" + 
+                   "    method_name: '{}'    method available remotely: {}\n" +                   
+                   "    login allowed: {}    registration allowed: {}"}
+    mutable_defaults = {"_rate" : dict, "ip_whitelist" : list, "ip_blacklist" : list,    
+                        "session_id" : dict}    
+    flags = {"current_session" : ('', None)}
+    
+    database_structure = {}
+    databse_flags = {}
+    remotely_available_procedures = tuple()
+    rate_limit = {}                        
+    inherited_attributes = {"database_structure" : dict, "database_flags" : dict,
+                            "remotely_available_procedures" : tuple, "rate_limit" : dict}
+        
+    def __init__(self, **kwargs):
+        super(RPC_Service, self).__init__(**kwargs)
+        self._load_database()    
+                
+    def _load_database(self):
+        if not self.database_name:
+            _reference = '_'.join(name for name in self.reference.split("/") if name)
+            name = self.database_name = path.join(pride.site_config.DATABASE_DIRECTORY,
+                                                     "{}.db".format(_reference))
+        else:
+            name = self.database_name
+        self.database = self.create(self.database_type, database_name=name,
+                                    database_structure=self.database_structure,
+                                    **self.database_flags)   
+                                    
+    def validate(self, session_id, peername, method_name):
+        """ Determines whether or not the peer with the supplied
+            session id is allowed to call the requested method.
+
+            Sets current_session attribute to (session_id, peername) if validation
+            is successful. """
+        if ((method_name not in self.remotely_available_procedures) or
+            (peername[0] in self.ip_blacklist) or 
+            (session_id == '0' and method_name not in ("register", "login")) or
+            (session_id not in self.session_id and method_name not in ("register", "login")) or
+            (method_name == "register" and not self.allow_registration) or
+            (method_name == "login" and not self.allow_login)):            
+
+            self.alert(self.validation_failure_string.format(peername[0] in self.ip_blacklist, 
+                                                             peername[0] in self.ip_whitelist,
+                                                             session_id in self.session_id,
+                                                             method_name, 
+                                                             method_name in self.remotely_available_procedures,
+                                                             self.allow_login, self.allow_registration),
+                       level=self.verbosity["validate_failure"])
+            return False         
+            
+        if self.rate_limit and method_name in self.rate_limit:
+            _new_connection = False
+            try:
+                self._rate[session_id][method_name].mark()
+            except KeyError:
+                latency = pride.components.datastructures.Latency("{}_{}".format(session_id, method_name))
+                try:
+                    self._rate[session_id][method_name] = latency
+                except KeyError:
+                    self._rate[session_id] = {method_name : latency}   
+                    _new_connection = True
+            if not _new_connection:
+                current_rate = self._rate[session_id][method_name].last_measurement                
+                if current_rate < self.rate_limit[method_name]:
+                    message = "Rate of {} calls exceeded 1/{}s ({}); Denying request".format(method_name, 
+                                                                                             self.rate_limit[method_name], 
+                                                                                             current_rate)
+                    self.alert(message, level=self.verbosity["validate_failure"])
+                    return False
+            
+        self.alert("Authorizing: {} for {}".format(peername, method_name), 
+                  level=self.verbosity["validate_success"])
+        return True        
+
+    def execute_remote_procedure_call(self, session_id, peername, method_name, args, kwargs):
+        with pride.functions.contextmanagers.backup(self, "current_session"):
+            self.current_session = (session_id, peername)            
+            return getattr(self, method_name)(*args, **kwargs) 
+                
+    def __getstate__(self):
+        state = super(Authenticated_Service, self).__getstate__()
+        del state["database"]
+        return state
+        
+    def on_load(self, attributes):
+        super(Authenticated_Service, self).on_load(attributes)
+        self._load_database()
+
+        
+class RPC_Client(pride.components.base.Base):
+        
+    defaults = {"target_service" : "/Python/RPC_Service", "ip" : "localhost", "port" : 40022}
+    mutable_defaults = {"_delayed_requests" : list}    
+    flags = {"bypass_network_stack" : True}
+    verbosity = {"delayed_request_sent" : "vv"}
+    
+    def _get_host_info(self):
+        return (self.ip, self.port)
+    def _set_host_info(self, value):
+        self.ip, self.port = value
+    host_info = property(_get_host_info, _set_host_info)   
+    
+    def __init__(self, **kwargs):
+        super(RPC_Client, self).__init__(**kwargs)
+        self.session = self.create("pride.components.rpc.Session", session_id='0', host_info=self.host_info)
+        
+                

@@ -142,7 +142,11 @@ class User(pride.components.base.Base):
             message = "{}: username '{}' does not exist. Create it?: (y/n) ".format(self, self.username)
             if pride.components.shell.get_permission(message):
                 with self.create(self.verifier_filetype, file_name, "wb") as _file:
-                    _file.write(os.u
+                    _file.write(urandom(keysize))
+                    _file.write(self.generate_private_key())
+            else:
+                raise InvalidUsername()
+        
                     
             
     def encrypt(self, data, extra_data='', return_mode="cryptogram"):

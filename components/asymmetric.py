@@ -4,7 +4,7 @@ import pride.functions.security
 import cryptography.exceptions
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa, ec
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key, NoEncryption
 
 def generate_rsa_keypair(public_exponent=65537, keysize=2048):
     private_key = RSA_Private_Key(public_exponent=65537, keysize=2048)
@@ -103,7 +103,8 @@ class RSA_Public_Key(pride.base.Wrapper):
         
 class EC_Private_Key(pride.base.Wrapper):
     
-    defaults = {"curve_name" : "SECP384R1", "hash_algorithm" : "SHA256"}
+    defaults = {"curve_name" : "SECP384R1", "hash_algorithm" : "SHA256",
+                "serialization_encoding" : "PEM", "serialization_format" : "PKCS8"}
     wrapped_object_name = "key"
     
     def __init__(self, **kwargs):
@@ -124,8 +125,14 @@ class EC_Private_Key(pride.base.Wrapper):
         
     def exchange(self, public_key):
         return self.key.exchange(ec.ECDH(), public_key)
+     
+    def private_bytes(self):
+        encoding = getattr(cryptography.hazmat.primitives.serialization.Encoding, self.serialization_encoding)
+        _format = getattr(cryptography.hazmat.primitives.serialization.PrivateFormat, self.serialization_format)
+        return self.key.private_bytes(encoding=encoding, format=_format,
+                                      encryption_algorithm=NoEncryption())   
         
-        
+    
 class EC_Public_Key(pride.base.Wrapper):
             
     defaults = {"serialization_encoding" : "PEM", "serialization_format" : "SubjectPublicKeyInfo",

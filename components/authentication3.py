@@ -205,7 +205,53 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
             Returns None. Forgets the current session associated with the currently logged in user."""
         del self.current_user     
         
-  
+    def validate(self, session_id, peername, method_name):
+        """ Determines whether or not the peer with the supplied
+            session id is allowed to call the requested method.
+
+            Sets current_session attribute to (session_id, peername) if validation
+            is successful. """
+        if ((method_name not in self.remotely_available_procedures) or
+            (peername[0] in self.ip_blacklist) or 
+            (peername[0] not in self.ip_whitelist and self.ip_whitelist) or 
+            (session_id == '0' and method_name not in ("register", "login")) or
+            (session_id not in self.session_id and method_name not in ("register", "login")) or
+            (method_name == "register" and not self.allow_registration) or
+            (method_name == "login" and not self.allow_login)):            
+
+            self.alert(self.validation_failure_string.format(peername[0] in self.ip_blacklist, 
+                                                             peername[0] in self.ip_whitelist,
+                                                             session_id in self.session_id,
+                                                             method_name, 
+                                                             method_name in self.remotely_available_procedures,
+                                                             self.allow_login, self.allow_registration),
+                       level=self.verbosity["validate_failure"])
+            return False         
+            
+        if self.rate_limit and method_name in self.rate_limit:
+            _new_connection = False
+            try:
+                self._rate[session_id][method_name].mark()
+            except KeyError:
+                latency = pride.components.datastructures.Latency("{}_{}".format(session_id, method_name))
+                try:
+                    self._rate[session_id][method_name] = latency
+                except KeyError:
+                    self._rate[session_id] = {method_name : latency}   
+                    _new_connection = True
+            if not _new_connection:
+                current_rate = self._rate[session_id][method_name].last_measurement                
+                if current_rate < self.rate_limit[method_name]:
+                    message = "Rate of {} calls exceeded 1/{}s ({}); Denying request".format(method_name, 
+                                                                                             self.rate_limit[method_name], 
+                                                                                             current_rate)
+                    self.alert(message, level=self.verbosity["validate_failure"])
+                    return False
+            
+        self.alert("Authorizing: {} for {}".format(peername, method_name), 
+                  level=self.verbosity["validate_success"])
+        return True        
+        
 class Authenticated_Client(pride.components.rpc.RPC_Client):
     
     verbosity = {"register" : 0, "register_success" : 0, "register_failure" : 0,     

@@ -116,7 +116,7 @@ else:
             parameter passed, depending on the mode of operation used. However,
             using two different fields for what are functionally the same would
             increase complexity needlessly. """
-        assert data and key
+        assert data and key, "data" if not data else "key"
         if algorithm.lower() in hashlib.algorithms_guaranteed:
             return cryptographyless.encrypt(data, key, iv, extra_data, algorithm, mode,
                                             backend, iv_size, mac_key, hash_algorithm)

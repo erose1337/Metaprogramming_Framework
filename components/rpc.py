@@ -30,7 +30,7 @@ def remote_procedure_call(callback_name='', callback=None):
                 _callback = callback or None
                 
             instruction = pride.Instruction(self.target_service, call_name, *args, **kwargs)
-            if not self.logged_in and call_name not in ("register", "login", "login_stage_two"):                 
+            if not getattr(self, "logged_in", True) and call_name not in ("register", "login", "login_stage_two"):
                 self.handle_not_logged_in(instruction, _callback)            
             else:
                 self.alert("Making request '{}.{}'".format(self.target_service, call_name),
@@ -323,13 +323,13 @@ class RPC_Service(pride.components.base.Base):
                 "database_name" : '',
                 "validation_failure_string" :\
                    ".validate: Authorization Failure:\n" +
-                   "    ip blacklisted: {}    ip whitelisted: {}\n" +
-                   "    session_id logged in: {}\n" + 
-                   "    method_name: '{}'    method available remotely: {}\n" +                   
-                   "    login allowed: {}    registration allowed: {}"}
+                   "    ip blacklisted: {}    ip whitelisted: {}\n" +                   
+                   "    method_name: '{}'    method available remotely: {}\n"}
     mutable_defaults = {"_rate" : dict, "ip_whitelist" : list, "ip_blacklist" : list,    
                         "session_id" : dict}    
     flags = {"current_session" : ('', None)}
+    
+    verbosity = {"validate_failure" : 0, "validate_success" : 0}
     
     database_structure = {}
     databse_flags = {}
@@ -361,17 +361,12 @@ class RPC_Service(pride.components.base.Base):
             is successful. """
         if ((method_name not in self.remotely_available_procedures) or
             (peername[0] in self.ip_blacklist) or 
-            (session_id == '0' and method_name not in ("register", "login")) or
-            (session_id not in self.session_id and method_name not in ("register", "login")) or
-            (method_name == "register" and not self.allow_registration) or
-            (method_name == "login" and not self.allow_login)):            
+            (peername[0] not in self.ip_whitelist and self.ip_whitelist)):            
 
             self.alert(self.validation_failure_string.format(peername[0] in self.ip_blacklist, 
-                                                             peername[0] in self.ip_whitelist,
-                                                             session_id in self.session_id,
+                                                             peername[0] in self.ip_whitelist,    
                                                              method_name, 
-                                                             method_name in self.remotely_available_procedures,
-                                                             self.allow_login, self.allow_registration),
+                                                             method_name in self.remotely_available_procedures),
                        level=self.verbosity["validate_failure"])
             return False         
             

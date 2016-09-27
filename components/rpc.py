@@ -87,7 +87,7 @@ def packetize_recv(recv):
         
 class Session(pride.components.base.Base):
     """ Maintains session id information and prepares outgoing requests """
-    defaults = {"requester_type" : "pride.components.rpc.Rpc_Client",
+    defaults = {"requester_type" : "pride.components.rpc.Rpc_Client_Socket",
                 "session_id" : None, "host_info" : None}
     
     flags = {"_id" : None}
@@ -107,7 +107,7 @@ class Session(pride.components.base.Base):
     context = property(_get_context)
                 
     def execute(self, instruction, callback):
-        """ Prepare instruction as a request to be sent by an Rpc_Client. A 
+        """ Prepare instruction as a request to be sent by an Rpc_Client_Socket. A 
             request consists of session id information (size and id#), 
             followed by the information from the supplied instruction. No
             information regarding the callback is included in the request. """
@@ -145,9 +145,9 @@ class Packet_Socket(pride.components.networkssl.SSL_Socket):
                        
                         
 class Rpc_Connection_Manager(pride.components.base.Base):
-    """ Creates Rpc_Clients for making rpc requests. Used to facilitate the
+    """ Creates Rpc_Client_Sockets for making rpc requests. Used to facilitate the
         the usage of a single connection for arbitrary requests to the host. """
-    defaults = {"requester_type" : "pride.components.rpc.Rpc_Client"}
+    defaults = {"requester_type" : "pride.components.rpc.Rpc_Client_Socket"}
     mutable_defaults = {"hosts" : dict}
     
     def get_host(self, host_info):
@@ -181,7 +181,7 @@ class Rpc_Server(pride.components.networkssl.SSL_Server):
                 "Tcp_Socket_type" : "pride.components.rpc.Rpc_Socket"}
         
         
-class Rpc_Client(Packet_Client):
+class Rpc_Client_Socket_Socket(Packet_Client):
     """ Client socket for making rpc requests using packetized tcp stream. """  
     verbosity = {"delayed_request_sent" : "vvv", "request_delayed" : "vvv",
                  "request_sent" : "vvv", "unresolved_callback" : 0, "handle_exception" : 0}
@@ -213,7 +213,7 @@ class Rpc_Client(Packet_Client):
             self.send(request)            
         
     def recv(self, packet_count=0):
-        for response in super(Rpc_Client, self).recv():         
+        for response in super(Rpc_Client_Socket, self).recv():         
             _response = self.deserealize(response)
             callback_owner = self._callbacks.pop(0)    
             try:

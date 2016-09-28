@@ -40,9 +40,12 @@ def generate_identity(identifier=None, keypair=None, secret=None,
 
 def encrypt(data, key, mac_key):
     return pride.functions.security.encrypt(data, key, mac_key)    
-        
+
+def decrypt(data, key, mac_key):
+    return pride.functions.security.decrypt(data, key, mac_key)
+    
 def encrypt_identity(identifier, keypair, secret, encryption_key, mac_key, encrypted_public_key=False):   
-    private_key, public_key  = keypair[0].private_bytes(), keypair[1].public_bytes()
+    private_key, public_key  = keypair[0].serialize(), keypair[1].serialize()
     if encrypted_public_key:
         public_key = encrypt(public_key, encryption_key, mac_key)
     private_key = encrypt(private_key, encryption_key, mac_key)
@@ -57,9 +60,9 @@ def decrypt_identity(identifier, keypair, secret, mac,
     if _mac != mac:
         return -1
     if encrypted_public_key:
-        public_key = decrypt(public_key, encryption_key)
-    private_key = decrypt(private_key, encryption_key)
-    secret = decrypt(secret, encryption_key)
+        public_key = decrypt(public_key, encryption_key, mac_key)
+    private_key = decrypt(private_key, encryption_key, mac_key)
+    secret = decrypt(secret, encryption_key, mac_key)
     return private_key, public_key, secret
     
     
@@ -67,16 +70,17 @@ class Identity_Service(pride.components.rpc.RPC_Service):
     
     database_structure = {"Users" : ("identifier BLOB PRIMARY_KEY UNIQUE",
                                      "private_key BLOB", "public_key BLOB", 
-                                     "secret BLOB", "mac BLOB")}                
+                                     "secret BLOB", "mac BLOB",
+                                     "certificate BLOB")}                
     remotely_available_procedures = ("store_identity", "retrieve_identity")
     
-    def store_identity(self, identifier, private_key, public_key, secret, mac):
-        self.database.insert_into("Users", (identifier, private_key, public_key, secret, mac))
+    def store_identity(self, identifier, private_key, public_key, secret, mac, certificate):
+        self.database.insert_into("Users", (identifier, private_key, public_key, secret, mac, certificate))
         return "Stored successfully"
         
     def retrieve_identity(self, identifier, contents="all"):
         if contents == "all":
-            fields = ("private_key", "public_key", "secret")        
+            fields = ("private_key", "public_key", "secret", "mac")        
         else:
             fields = ("public_key", )
         return self.database.query("Users", retrieve_fields=fields,
@@ -88,7 +92,10 @@ class Identity(pride.components.rpc.RPC_Client):
     defaults = {"target_service" : "/Identity_Service",
                 "identifier" : None, "keypair" : None, "secret" : None,
                 "encryption_key" : None, "mac_key" : None, "keypair" : None,
-                "encrypt_public_key" : True}
+                "encrypt_public_key" : True,
+                
+                "kdf_hash_algorithm" : "sha256",
+                "data_encryption_key_size" : 32, "data_mac_key_size" : 32}
    
     verbosity = {"store_identity" : 0, "retrieve_identity" : 0}
     
@@ -99,7 +106,7 @@ class Identity(pride.components.rpc.RPC_Client):
         private_key, public_key, secret, mac = encrypt_identity(identifier, keypair, secret, 
                                                                 self.encryption_key, self.mac_key, 
                                                                 self.encrypt_public_key)
-        return (self, identifier, private_key, public_key, secret, mac), {}
+        return (self, identifier, private_key, public_key, secret, mac, None), {}
     
     @pride.functions.decorators.with_arguments_from(_generate_credentials)
     @pride.components.rpc.remote_procedure_call(callback_name="store_results")
@@ -119,11 +126,30 @@ class Identity(pride.components.rpc.RPC_Client):
         
     def retrieve_results(self, response):
         self.alert("{}".format(response), level=0)
-        
+        if response:
+            private_key, public_key, secret, mac = response
+            private_key, public_key, secret = decrypt_identity(self.identifier, 
+                                                               (private_key, public_key), 
+                                                               secret, mac,
+                                                               self.encryption_key, self.mac_key, 
+                                                               self.encrypt_public_key)
+            self.private_key = private_key
+            self.public_key = public_key
+            self.derive_symmetric_keys(secret)
+            
+    def derive_symmetric_keys(self, secret):
+        key0_size = self.data_encryption_key_size
+        key1_size = self.data_mac_key_size
+        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, key0_size + key1_size,
+                                                   info=self.identifier + "encryption + mac")
+        output = kdf.derive(secret)
+        self.data_encryption_key = output[:key0_size]
+        self.data_mac_key = output[key0_size:key0_size + key1_size]
+            
         
 def test_Identity_Service():
     service = Identity_Service()
-    identity = Identity(identifier="Ella-land rocks!",
+    identity = Identity(identifier=urandom(16),
                         encryption_key=bytes(bytearray(16)),
                         mac_key=bytes(bytearray(16)))
     

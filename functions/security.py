@@ -52,7 +52,7 @@ else:
     def hkdf_expand(algorithm="SHA256", length=256, info='', backend=BACKEND):
         """ Returns an hmac based key derivation function (expand only) from
             cryptography.hazmat.primitives.hkdf. """
-        return HKDFExpand(algorithm=getattr(hashes, algorithm)(),
+        return HKDFExpand(algorithm=getattr(hashes, algorithm.upper())(),
                           length=length, info=info, backend=BACKEND)
     
     def apply_mac(key, data, algorithm="SHA256", backend=BACKEND):

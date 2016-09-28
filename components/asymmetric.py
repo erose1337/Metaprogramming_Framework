@@ -126,11 +126,16 @@ class EC_Private_Key(pride.base.Wrapper):
     def exchange(self, public_key):
         return self.key.exchange(ec.ECDH(), public_key)
      
-    def private_bytes(self):
+    def serialize(self):
         encoding = getattr(cryptography.hazmat.primitives.serialization.Encoding, self.serialization_encoding)
         _format = getattr(cryptography.hazmat.primitives.serialization.PrivateFormat, self.serialization_format)
         return self.key.private_bytes(encoding=encoding, format=_format,
                                       encryption_algorithm=NoEncryption())   
+           
+    @classmethod
+    def deserialize(cls, private_key_bytes):
+        key = load_pem_private_key(private_key_bytes, password=None, backend=self.backend)
+        return cls(key=key)
         
     
 class EC_Public_Key(pride.base.Wrapper):
@@ -152,11 +157,17 @@ class EC_Public_Key(pride.base.Wrapper):
     def verifier(self, signature):
         return self.key.verifier(signature, ec.ECDSA(getattr(hashes, self.hash_algorithm)()))
         
-    def public_bytes(self):
+    def serialize(self):
         encoding = getattr(cryptography.hazmat.primitives.serialization.Encoding, self.serialization_encoding)
         _format = getattr(cryptography.hazmat.primitives.serialization.PublicFormat, self.serialization_format)
         return self.key.public_bytes(encoding, _format)
-        
+    
+    @classmethod
+    def deserialize(cls, public_bytes):
+        key = load_pem_public_key(public_bytes, backend=self.backend)
+        return EC_Public_Key(key=key)
+    
+    
 def test_rsa():
     private_key, public_key = generate_rsa_keypair()
     message = "Test message!"
@@ -180,7 +191,12 @@ def test_ecc():
     shared_secret2 = private_key2.exchange(public_key)
     assert shared_secret == shared_secret2
     
-    assert public_key.public_bytes()
+    serialized_public_key = public_key.serialize()
+    _public_key = EC_Public_Key.deserialize(serialized_public_key)
+    
+    serialized_private_key = private_key.serialize()
+    _private_key = EC_Private_Key.deserialize(serialized_private_key)
+    
     
 if __name__ == "__main__":
     test_rsa()

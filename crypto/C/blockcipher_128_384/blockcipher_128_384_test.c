@@ -1,25 +1,4 @@
-#include "constants.c"
-#include "functions.c"
-#include "components.c"                     
-        
-void encrypt(WORDSIZE* data, WORDSIZE* key)
-{           
-    WORDSIZE a, b, c, d, _t;
-    load(data, a, b, c, d);        
-    
-    add_key(a, b, c, d, key, 0);    
-    shuffle_words(a, b, c, d, key, 0);    
-    
-    iterate(permutation, a, b, c, d, ITERATIONS);
-    add_key(a, b, c, d, key, 1);
-    
-    iterate(permutation, a, b, c, d, ITERATIONS);    
-    add_key(a, b, c, d, key, 2);
-    
-    shuffle_words(a, b, c, d, key, 2);
-    
-    store(data, a, b, c, d);
-}
+#include "blockcipher_128_384.c"
      
 #include <time.h>     
 #include <stdio.h>

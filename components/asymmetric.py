@@ -13,7 +13,7 @@ def generate_rsa_keypair(public_exponent=65537, keysize=2048):
 def generate_ec_keypair(curve_name="SECP384R1", hash_algorithm="SHA256"):
     private_key = EC_Private_Key(curve_name=curve_name, hash_algorithm=hash_algorithm)
     return private_key, private_key.public_key()
-    
+        
 class MGF(pride.base.Proxy): 
 
     defaults = {"hash_function" : "SHA256", "mgf_type" : "MGF1"}

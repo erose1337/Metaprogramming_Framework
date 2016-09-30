@@ -78,39 +78,52 @@ class User(pride.base.Base):
         super(User, self).__init__(**kwargs)
         self.login()
         
-        kdf = invoke("pride.functions.security.key_derivation_function", 
-                     algorithm=self.kdf_hash_algorithm, length=self.encryption_key_size + self.mac_key_size, 
-                     salt=salt, iterations=self.kdf_iteration_count)
-        master_key = kdf.derive(self.identifier + ':' + self.password)
-
-        
     def login(self):
-        identifier = self.identifier                
+        identifier = self.identifier   
+        salt, cryptogram = self.find_identity(identifier)
+        self.derive_master_keys(salt)
+        
+        private_key, public_key, secret = load_identity(cryptogram, self.master_encryption_key, self.master_mac_key)                    
+        self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
+        self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
+        
+        self.derive_login_tokens(secret)
+        self.derive_data_keys(secret)        
+ 
+    def find_identity(self, identifier):
         try:
-            cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]            
+            salt, cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]            
         except KeyError:    
             if self.storage_reference not in pride.objects:
                 raise
             else:
                 self.handle_not_registered(identifier)    
-                cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]            
-                                
-        private_key, public_key, secret = load_identity(cryptogram)
-            
-        self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
-        self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
+                salt, cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]            
+        return salt, cryptogram
         
+    def derive_master_keys(self, salt):
+        size1, size2 = self.encryption_key_size, self.mac_key_size        
+        kdf = invoke("pride.functions.security.key_derivation_function", 
+                     algorithm=self.kdf_hash_algorithm, length=size1 + size2, 
+                     salt=salt, iterations=self.kdf_iteration_count)                
+        master_key = kdf.derive(self.identifier + ':' + self.password)
+        
+        self.master_encryption_key = master_key[:size1]
+        self.master_mac_key = master_key[size1:size1 + size2]
+        
+    def derive_login_tokens(self, secret):
         kdf_hash_algorithm = self.kdf_hash_algorithm
         login_token_size = self.login_token_size
         for service in self.login_to_services:
             kdf = pride.functions.security.hkdf_expand(kdf_hash_algorithm, login_token_size,
                                                        info=identifier + ":" + service)                                                               
             self.login_token[service] = kdf.derive(secret)
-        
-        size1 = self.data_encryption_key_size
-        size2 = self.data_mac_key_size
-        kdf = pride.functions.security.hkdf_expand(kdf_hash_algorithm, size1 + size2, 
-                                                   info=identifier + ":" + "encryption and mac keys")
+            
+    def derive_data_keys(self, secret):
+        size1 = self.encryption_key_size
+        size2 = self.mac_key_size
+        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, size1 + size2, 
+                                                   info=self.identifier + ":" + "encryption and mac keys")
         keys = kdf.derive(secret)
         self.data_encryption_key = keys[:size1]
         self.data_mac_key = keys[size1:size1 + size2]
@@ -123,5 +136,7 @@ class User(pride.base.Base):
     def handle_not_registered(self, identifier):
         self.alert("Register as '{}'?: (y/n)".format(identifier))
         self.store_new_identity(identifier)
-        
-        
+                
+                
+def test_User():
+    pass

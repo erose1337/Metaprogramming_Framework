@@ -39,13 +39,13 @@ else:
     def hash_function(algorithm_name, backend=BACKEND):
         """ Returns a Hash object of type algorithm_name from 
             cryptography.hazmat.primitives.hashes """
-        return hashes.Hash(getattr(hashes, algorithm_name)(), backend=backend)
+        return hashes.Hash(getattr(hashes, algorithm_name.upper())(), backend=backend)
         
     def key_derivation_function(salt, algorithm="SHA256", length=32, 
                                 iterations=100000, backend=BACKEND):
         """ Returns an key derivation function object from
             cryptography.hazmat.primitives.kdf.pbkdf2 """
-        return PBKDF2HMAC(algorithm=getattr(hashes, algorithm)(),
+        return PBKDF2HMAC(algorithm=getattr(hashes, algorithm.upper())(),
                           length=length, salt=salt, iterations=iterations,
                           backend=backend)
         

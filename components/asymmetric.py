@@ -134,7 +134,7 @@ class EC_Private_Key(pride.base.Wrapper):
            
     @classmethod
     def deserialize(cls, private_key_bytes):
-        key = load_pem_private_key(private_key_bytes, password=None, backend=self.backend)
+        key = load_pem_private_key(private_key_bytes, password=None, backend=pride.functions.security.BACKEND)
         return cls(key=key)
         
     
@@ -164,7 +164,7 @@ class EC_Public_Key(pride.base.Wrapper):
     
     @classmethod
     def deserialize(cls, public_bytes):
-        key = load_pem_public_key(public_bytes, backend=self.backend)
+        key = load_pem_public_key(public_bytes, backend=pride.functions.security.BACKEND)
         return EC_Public_Key(key=key)
     
     

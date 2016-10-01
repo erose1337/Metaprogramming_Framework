@@ -216,15 +216,24 @@ class User(pride.components.base.Base):
         hasher.update(data)
         return hasher.finalize()
      
-    def generate_strong_login_token(self, client_program, username, login_token_size=32):        
-        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, login_token_size, 
+    def generate_strong_password(self, client_program, username, password_size=32):  
+        """ Usage: user = pride.objects["/User"]
+                   token = user.generate_strong_login_token(client_program, username, password_size)
+                   
+            Generates a cryptographically strong password, derived from the identity secret material.
+            This password is only available on the machine that /Python/Persistent_Storage resides on."""            
+        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, password_size, 
                                                    info=client_program + ':' + username)         
         return kdf.derive(self.secret)
     
-    def generate_universal_login_token(self, client_program, username, login_token_size=32):
+    def generate_portable_password(self, client_program, username, password_size=32):
+        """ Usage: user = pride.objects["/User"]
+                   token = user.generate_portable_password(client_program, username, password_size)
+                   
+            Generate a key stretched password for the target program and username, derived from the master password."""
         salt = client_program + username
         kdf = pride.functions.security.key_derivation_function(salt, algorithm=self.kdf_hash_algorithm,
-                                                               length=login_token_size,
+                                                               length=password_size,
                                                                iterations=self.kdf_iterations)
         return kdf.derive(self.password)
         

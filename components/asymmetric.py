@@ -135,7 +135,9 @@ class EC_Private_Key(pride.base.Wrapper):
     @classmethod
     def deserialize(cls, private_key_bytes):
         key = load_pem_private_key(private_key_bytes, password=None, backend=pride.functions.security.BACKEND)
-        return cls(key=key)
+        _key = cls()
+        _key.wraps(key)
+        return _key
         
     
 class EC_Public_Key(pride.base.Wrapper):
@@ -165,7 +167,7 @@ class EC_Public_Key(pride.base.Wrapper):
     @classmethod
     def deserialize(cls, public_bytes):
         key = load_pem_public_key(public_bytes, backend=pride.functions.security.BACKEND)
-        return EC_Public_Key(key=key)
+        return EC_Public_Key(wrapped_object=key)               
     
     
 def test_rsa():
@@ -196,6 +198,11 @@ def test_ecc():
     
     serialized_private_key = private_key.serialize()
     _private_key = EC_Private_Key.deserialize(serialized_private_key)
+    
+    # for some reason signatures fail after deserialization 
+    message = "Test message"
+    signature = _private_key.sign(message)
+    assert _public_key.verify(signature, message)
     
     
 if __name__ == "__main__":

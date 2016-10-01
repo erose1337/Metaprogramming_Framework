@@ -67,7 +67,7 @@ class User(pride.components.base.Base):
                 "public_key" : None, "private_key" : None,
                                 
                 "storage_reference" : "/Python/Persistent_Storage",
-                "password_prompt" : "{}: Please enter the password: ",
+                "password_prompt" : "{}: Please enter the password for {{}}: ",
                 "auto_register" : True}
     
     mutable_defaults = {"login_token" : dict}
@@ -76,7 +76,7 @@ class User(pride.components.base.Base):
     
     def _get_password(self):
         if self._password is None:
-            self._password = getpass.getpass(self.password_prompt)
+            self._password = getpass.getpass(self.password_prompt.format(self.username))
         return self._password
     def _set_password(self, value):
         self._password = value
@@ -246,7 +246,11 @@ class User(pride.components.base.Base):
                                                                iterations=self.kdf_iterations)
         return kdf.derive(self.password)
         
-    
+    def sign(self, data):
+        """ Signs a block of data using the Users private key """
+        return self.private_key.sign(data)
+            
+        
 class Session(User): 
 
     def delete(self):
@@ -254,20 +258,25 @@ class Session(User):
         super(Session, self).delete()
         
 def test_User():
-    user = User(username="localhost")
+    user = User(username="test_User_unit_test")
     cryptogram = user.encrypt("Test data", "Extra test data")
     assert user.decrypt(cryptogram) == ("Test data", "Extra test data")
     
     saved = user.save_data(cryptogram)
     reloaded = user.load_data(saved)
     tagged = user.authenticate(saved)
-    user.verify(tagged)
-    
+    user.verify(tagged)    
     user.hash(tagged)
+    
     user.generate_tag(tagged)
     user.generate_strong_password("/Python/Data_Transfer_Service", "test_User_unit_test")
     user.generate_portable_password("/Python/Data_Transfer_Service", "test_User_unit_test")
-    user.forget_identity(user.username)
+    
+    message = "sign here: "
+    signature = user.private_key.sign(message)
+    assert user.public_key.verify(signature, message)
+        
+    user.forget_identity(user.username)    
     user.alert("Unit test passed", level=0)
     
 if __name__ == "__main__":

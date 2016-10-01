@@ -1,23 +1,3 @@
- #generate master symmetric encryption and MAC key from password via slow hashing
- #generate random public/private keypair (identity keys)
- #generate random symmetric secret
- #generate identifier string associated with identity
- #
- #Using master encryption key, encrypt private key and optionally the associated public key, along with the symmetric secret
- #generate MAC via HMAC(identifier | (potentially encrypted) public key | encrypted private key | encrypted symmetric secret, 
- #                      MAC key)
- #
- #upload MAC, identifier, public key, encrypted private key, and encrypted symmetric secret to server
- #  
- #
- #--login steps:
- #   
- #   retrieve encrypted keys from server by sending identifier
- #   generate master symmetric keys from password
- #   verify MAC
- #   decrypt keys
- #   derive encryption/MAC keys from symmetric secret
-
 from os import urandom
 import getpass
 
@@ -32,6 +12,13 @@ decrypt = pride.functions.security.decrypt
 
 def generate_identity(identifier=None, keypair=None, secret=None,
                       identifier_size=32, secret_size=32):
+    """ usage: generate_identity(identifier=None, keypair=None, secret=None,
+                                 identifier_size=32, secret_size=32) => identifier, keypair, secret
+                                 
+        Create a new identifier/keypair/secret. 
+        Pre-determined values may be passed in as arguments.
+        If not, then the size of the generated parameters may be tuned. 
+        Asymmetric key pairs do not support alternative sizes"""
     if identifier is None:
         identifier = urandom(identifier_size)
     if keypair is None:
@@ -41,7 +28,7 @@ def generate_identity(identifier=None, keypair=None, secret=None,
         
     return identifier, keypair, secret
     
-def encrypt_identity(identifier, keypair, secret, encryption_key, mac_key):   
+def encrypt_identity(identifier, keypair, secret, encryption_key, mac_key):    
     private_key, public_key  = keypair[0].serialize(), keypair[1].serialize()
     message = save_data(identifier, private_key, public_key, secret)    
     return encrypt(message, encryption_key, mac_key)
@@ -52,26 +39,37 @@ def decrypt_identity(cryptogram, encryption_key, mac_key):
     return private_key, public_key, secret
     
 def store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, storage="/Python/Persistent_Storage"):
+    """ usage: store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, 
+                              storage="/Python/Persistent_Storage") => None
+                              
+        Encrypts the identifier/key pair/secret information and stores it in the object specified as storage.
+        The storage object must support __getitem__ and __setitem__"""
     cryptogram = encrypt_identity(identifier, (private_key, public_key), secret, encryption_key, mac_key)    
     pride.objects[storage]["/Users/{}".format(identifier)] = cryptogram
     
 def load_identity(identifier, encryption_key, mac_key, storage="/Python/Persistent_Storage"):    
+    """ usage: load_identity(identifier, encryption_key, mac_key, 
+                             storage="/Python/Persistent_Storage") => private_key, public_key, secret
+                             
+        Returns serialized private key, serialized public key, and secret bytes.
+        Raises KeyError if identifier is not found."""
     cryptogram = pride.objects[storage]["/Users/{}".format(identifier)]
     return decrypt_identity(cryptogram, encryption_key, mac_key)
         
 
 class User(pride.components.base.Base):
+    """ Handles the master username and password, as well as derived cryptographic materials, and provides an interface for utilizing them. """
     
     defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iterations" : 100000,
                 "encryption_key_size" : 32, "mac_key_size" : 32,
                 "iv_size" : 12, "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
                 "mac_hash_algorithm" : "sha256", 
+                
                 "identifier" : None, "private_key" : None, "public_key" : None, "secret" : None,
                 "master_encryption_key" : None, "master_mac_key" : None, 
                 "data_encryption_key" : None, "data_mac_key" : None, 
                 "public_key" : None, "private_key" : None,
-                "login_to_services" : tuple(),
-                
+                                
                 "storage_reference" : "/Python/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password: "}
     
@@ -100,9 +98,9 @@ class User(pride.components.base.Base):
         
         self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
         self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
-                
+        self.secret = secret        
         self.derive_data_keys(secret)        
-        self.secret = secret
+    
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
         
     def find_identity(self, identifier):
@@ -200,15 +198,19 @@ class User(pride.components.base.Base):
         return pride.functions.security.generate_mac(self.data_mac_key, data, self.mac_hash_algorithm)
         
     def save_data(self, *args):
+        """ Serializes and authenticates supplied arguments.
+            To reload, use load_data. """
         package = pride.functions.persistence.save_data(*args)
         return self.authenticate(package)
         
     def load_data(self, package):
+        """ Authenticate, then deserialize the supplied bytes.
+            Returns the arguments that were passed to save_data."""
         packed_bytes = self.verify(package)        
         if packed_bytes is not pride.functions.security.INVALID_TAG:
             return pride.functions.persistence.load_data(packed_bytes)
         else:            
-            return packed_bytes # == INVALID_TAG
+            raise InvalidTag()
     
     def hash(self, data):
         """ Hash data using the user objects specified hashing algorithm """
@@ -239,7 +241,7 @@ class User(pride.components.base.Base):
         
     
 def test_User():
-    user = User(identifier="localhost", login_to_services=("/Python/Interpreter", ))
+    user = User(identifier="localhost")
     cryptogram = user.encrypt("Test data", "Extra test data")
     assert user.decrypt(cryptogram) == ("Test data", "Extra test data")
     

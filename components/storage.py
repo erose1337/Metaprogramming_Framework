@@ -43,7 +43,12 @@ class Persistent_Storage(pride.components.database.Database):
     def __delitem__(self, item):
         self.delete_from("Entries", where={"identifier" : item})
         
-    
+    def pop(self, item):
+        output = self[item]
+        del self[item]
+        return output
+        
+       
 def test_Persistent_Storage():
     storage = Persistent_Storage()
     test_values = [0, 'a', '', None, 1.0, set(), dict(), list(), (1, 2, 3)]

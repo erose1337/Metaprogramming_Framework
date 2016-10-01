@@ -1,1 +1,0 @@
-#define WORDSIZE32 unsigned long

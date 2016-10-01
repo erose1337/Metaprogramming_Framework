@@ -60,11 +60,12 @@ def load_identity(identifier, encryption_key, mac_key, storage="/Python/Persiste
     return decrypt_identity(cryptogram, encryption_key, mac_key)
         
 
-class User(pride.base.Base):
+class User(pride.components.base.Base):
     
     defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iteration_count" : 100000,
                 "login_token_size" : 32, "encryption_key_size" : 32, "mac_key_size" : 32,
-
+                "iv_size" : 12, "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
+                "mac_hash_algorithm" : "sha256", 
                 "identifier" : None, "private_key" : None, "public_key" : None, "secret" : None,
                 "master_encryption_key" : None, "master_mac_key" : None, 
                 "data_encryption_key" : None, "data_mac_key" : None, 
@@ -86,8 +87,8 @@ class User(pride.base.Base):
         self._password = value
     password = property(_get_password, _set_password)
     
-    def __init__(self, **kwargs):
-        super(User, self).__init__(**kwargs)
+    def __init__(self, **kwargs):        
+        super(User, self).__init__(**kwargs)        
         self.password_prompt = self.password_prompt.format(self.reference)
         self.login()
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
@@ -153,10 +154,89 @@ class User(pride.base.Base):
         else:
             raise NotImplementedError()
                 
-                
+                                        
+    def encrypt(self, data, extra_data='', return_mode="cryptogram"):
+        """ usage: pride.objects["/User"].encrypt(data, extra_data='', 
+                                                  return_mode="cryptogram") => cryptogram or unpacked cryptogram
+        
+            Encrypt and authenticates the supplied data; 
+            Authenticates, but does not encrypt, any extra_data. 
+            
+            The data is encrypted using the Users encryption key. 
+            
+            If return_mode == "cryptogram", returns packed encrypted bytes. 
+            If return_mode == "values", returns unpacked header, ciphertext, iv, mac_tag, extra_data.
+            
+            Default cipher and mode of operation is AES-256-GCM.
+            Modes not recognized as providing authenticity or integrity (i.e. CTR) will be authenticated via HMAC."""        
+        return pride.functions.security.encrypt(data=data, key=self.data_encryption_key, mac_key=self.data_mac_key, 
+                                                iv=urandom(self.iv_size), extra_data=extra_data, 
+                                                algorithm=self.encryption_algorithm, mode=self.encryption_mode,
+                                                return_mode=return_mode)
+                                      
+    def decrypt(self, packed_encrypted_data):
+        """ Decrypts packed encrypted data as returned by encrypt. The Users 
+            encryption key is used to decrypt the data. """
+        return pride.functions.security.decrypt(packed_encrypted_data, self.data_encryption_key, self.data_mac_key)
+    
+    def authenticate(self, data):
+        """ Returns tagged data.
+            
+            Authenticates and provides integrity to a piece of data. 
+            Authentication and integrity are generally requirements for any data
+            that must be secured. Returns a message authentication code.
+            
+            Note that User.encrypt uses AES-GCM mode, which authenticates
+            data and extra_data automatically. 
+            
+            Combining encryption and authentication is not simple. This method 
+            should be used ONLY in conjunction with unencrypted data, unless 
+            you are certain you know what you are doing. """        
+        return pride.functions.security.apply_mac(self.data_mac_key, data, self.mac_hash_algorithm)
+        
+    def verify(self, macd_data):
+        """ Verifies data with the mac returned by authenticate. Data that is 
+            verified has two extremely probable guarantees: that it did indeed
+            come from who an authorized party, and that it was not manipulated 
+            by unauthorized parties in transit. 
+            
+            Returns data on successful verification; Returns False on failure. """
+        return pride.functions.security.verify_mac(self.data_mac_key, macd_data, self.mac_hash_algorithm)
+    
+    def generate_tag(self, data):
+        """ Generates a unique, unforgeable tag based on supplied data. """
+        return pride.functions.security.generate_mac(self.data_mac_key, data, self.mac_hash_algorithm)
+        
+    def save_data(self, *args):
+        package = pride.functions.persistence.save_data(*args)
+        return self.authenticate(package)
+        
+    def load_data(self, package):
+        packed_bytes = self.verify(package)        
+        if packed_bytes is not pride.functions.security.INVALID_TAG:
+            return pride.functions.persistence.load_data(packed_bytes)
+        else:            
+            return packed_bytes # == INVALID_TAG
+    
+    def hash(self, data):
+        """ Hash data using the user objects specified hashing algorithm """
+        hasher = pride.functions.security.hash_function(self.mac_hash_algorithm)    
+        hasher.update(data)
+        return hasher.finalize()
+        
 def test_User():
     user = User(identifier="localhost", login_to_services=("/Python/Interpreter", ))
+    cryptogram = user.encrypt("Test data", "Extra test data")
+    assert user.decrypt(cryptogram) == ("Test data", "Extra test data")
     
+    saved = user.save_data(cryptogram)
+    reloaded = user.load_data(saved)
+    tagged = user.authenticate(saved)
+    user.verify(tagged)
+    
+    user.hash(tagged)
+    user.generate_tag(tagged)
+    user.alert("Unit test passed", level=0)
     
 if __name__ == "__main__":
     test_User()

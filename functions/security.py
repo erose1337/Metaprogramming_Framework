@@ -79,7 +79,7 @@ else:
             only returns the mac itself. 
             
             The mac is generated via HMAC with the specified algorithm and key. """
-        hasher = HMAC(key, getattr(hashes, algorithm)(), backend=backend)
+        hasher = HMAC(key, getattr(hashes, algorithm.upper())(), backend=backend)
         hasher.update(algorithm + '::' + data)
         return hasher.finalize()
                         
@@ -88,7 +88,7 @@ else:
             Successful comparison indicates integrity and authenticity of the data. 
             Returns data is comparison succeeds; Otherwise returns pride.functions.security.INVALID_TAG. """        
         mac, data = load_data(packed_data)
-        hasher = HMAC(key, getattr(hashes, algorithm)(), backend=backend)
+        hasher = HMAC(key, getattr(hashes, algorithm.upper())(), backend=backend)
         hasher.update(algorithm + '::' + data)
         try:
             hasher.verify(mac)

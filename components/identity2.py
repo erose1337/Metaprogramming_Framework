@@ -62,8 +62,8 @@ def load_identity(identifier, encryption_key, mac_key, storage="/Python/Persiste
 
 class User(pride.components.base.Base):
     
-    defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iteration_count" : 100000,
-                "login_token_size" : 32, "encryption_key_size" : 32, "mac_key_size" : 32,
+    defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iterations" : 100000,
+                "encryption_key_size" : 32, "mac_key_size" : 32,
                 "iv_size" : 12, "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
                 "mac_hash_algorithm" : "sha256", 
                 "identifier" : None, "private_key" : None, "public_key" : None, "secret" : None,
@@ -77,7 +77,7 @@ class User(pride.components.base.Base):
     
     mutable_defaults = {"login_token" : dict}
     flags = {"_password" : None}
-    verbosity = {"login_success" : 'v'}
+    verbosity = {"login_success" : 0}
     
     def _get_password(self):
         if self._password is None:
@@ -89,11 +89,10 @@ class User(pride.components.base.Base):
     
     def __init__(self, **kwargs):        
         super(User, self).__init__(**kwargs)        
-        self.password_prompt = self.password_prompt.format(self.reference)
+        self.password_prompt = self.password_prompt.format(self.reference)        
         self.login()
-        self.alert("Logged in successfully", level=self.verbosity["login_success"])
-        
-    def login(self):        
+                
+    def login(self):                
         self.derive_master_keys()
         
         cryptogram = self.find_identity(self.identifier)                
@@ -101,9 +100,10 @@ class User(pride.components.base.Base):
         
         self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
         self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
-        
-        self.derive_login_tokens(secret)
+                
         self.derive_data_keys(secret)        
+        self.secret = secret
+        self.alert("Logged in successfully", level=self.verbosity["login_success"])
         
     def find_identity(self, identifier):
         try:
@@ -120,20 +120,12 @@ class User(pride.components.base.Base):
         size1, size2 = self.encryption_key_size, self.mac_key_size        
         kdf = invoke("pride.functions.security.key_derivation_function", 
                      algorithm=self.kdf_hash_algorithm, length=size1 + size2, 
-                     salt=self.identifier, iterations=self.kdf_iteration_count)                
+                     salt=self.identifier, iterations=self.kdf_iterations)                
         master_key = kdf.derive(self.password)
         
         self.master_encryption_key = master_key[:size1]
         self.master_mac_key = master_key[size1:size1 + size2]
-        
-    def derive_login_tokens(self, secret):
-        kdf_hash_algorithm = self.kdf_hash_algorithm
-        login_token_size = self.login_token_size
-        for service in self.login_to_services:
-            kdf = pride.functions.security.hkdf_expand(kdf_hash_algorithm, login_token_size,
-                                                       info=self.identifier + ":" + service)                                                               
-            self.login_token[service] = kdf.derive(secret)
-            
+                    
     def derive_data_keys(self, secret):
         size1 = self.encryption_key_size
         size2 = self.mac_key_size
@@ -223,7 +215,20 @@ class User(pride.components.base.Base):
         hasher = pride.functions.security.hash_function(self.mac_hash_algorithm)    
         hasher.update(data)
         return hasher.finalize()
+     
+    def generate_strong_login_token(self, client_program, username, login_token_size=32):        
+        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, login_token_size, 
+                                                   info=client_program + ':' + username)         
+        return kdf.derive(self.secret)
+    
+    def generate_universal_login_token(self, client_program, username, login_token_size=32):
+        salt = client_program + username
+        kdf = pride.functions.security.key_derivation_function(salt, algorithm=self.kdf_hash_algorithm,
+                                                               length=login_token_size,
+                                                               iterations=self.kdf_iterations)
+        return kdf.derive(self.password)
         
+    
 def test_User():
     user = User(identifier="localhost", login_to_services=("/Python/Interpreter", ))
     cryptogram = user.encrypt("Test data", "Extra test data")
@@ -236,6 +241,8 @@ def test_User():
     
     user.hash(tagged)
     user.generate_tag(tagged)
+    user.generate_strong_login_token("/Python/Data_Transfer_Service", "test_User_unit_test")
+    user.generate_universal_login_token("/Python/Data_Transfer_Service", "test_User_unit_test")
     user.alert("Unit test passed", level=0)
     
 if __name__ == "__main__":

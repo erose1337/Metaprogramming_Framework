@@ -1,154 +1,157 @@
-import sys
-import getpass
 from os import urandom
+import getpass
 
-import pride.components.base
 import pride.functions.security
+import pride.components.asymmetric
 import pride.components.shell
-import pride.functions.persistence
+from pride.functions.persistence import save_data, load_data
 
-class InvalidUsername(BaseException): pass
+def generate_identity(identifier=None, keypair=None, secret=None,
+                      identifier_size=32, secret_size=32):
+    """ usage: generate_identity(identifier=None, keypair=None, secret=None,
+                                 identifier_size=32, secret_size=32) => identifier, keypair, secret
+                                 
+        Create a new identifier/keypair/secret. 
+        Pre-determined values may be passed in as arguments.
+        If not, then the size of the generated parameters may be tuned. 
+        Asymmetric key pairs do not support alternative sizes"""
+    if identifier is None:
+        identifier = urandom(identifier_size)
+    if keypair is None:
+        keypair = pride.components.asymmetric.generate_ec_keypair()
+    if secret is None:
+        secret = urandom(secret_size)
+        
+    return identifier, keypair, secret
+    
+def encrypt_identity(identifier, keypair, secret, encryption_key, mac_key):    
+    private_key, public_key  = keypair[0].serialize(), keypair[1].serialize()
+    message = save_data(identifier, private_key, public_key, secret)    
+    return pride.functions.security.encrypt(message, encryption_key, mac_key)
+  
+def decrypt_identity(cryptogram, encryption_key, mac_key):    
+    serialized_data = pride.functions.security.decrypt(cryptogram, encryption_key, mac_key)
+    identifier, private_key, public_key, secret = load_data(serialized_data)
+    return private_key, public_key, secret
+    
+def store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, storage="/Python/Persistent_Storage"):
+    """ usage: store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, 
+                              storage="/Python/Persistent_Storage") => None
+                              
+        Encrypts the identifier/key pair/secret information and stores it in the object specified as storage.
+        The storage object must support __getitem__ and __setitem__"""
+    cryptogram = encrypt_identity(identifier, (private_key, public_key), secret, encryption_key, mac_key)    
+    pride.objects[storage]["/Users/{}".format(identifier)] = cryptogram
+    
+def load_identity(identifier, encryption_key, mac_key, storage="/Python/Persistent_Storage"):    
+    """ usage: load_identity(identifier, encryption_key, mac_key, 
+                             storage="/Python/Persistent_Storage") => private_key, public_key, secret
+                             
+        Returns serialized private key, serialized public key, and secret bytes.
+        Raises KeyError if identifier is not found."""
+    cryptogram = pride.objects[storage]["/Users/{}".format(identifier)]
+    return decrypt_identity(cryptogram, encryption_key, mac_key)
+        
 
 class User(pride.components.base.Base):
-    """ A User object for managing secure information and client accounts.
-        A user is capable of performing manipulation of secure data,
-        including encryption and decryption. The user object is responsible
-        for deriving and holding keys required for such manipulation. """
-    defaults = {# security configuration options    
-                # these may need to update with time. If so the site_config file can be used instead of changing this dictionary.
-                "hash_function" : "SHA256", "kdf_iteration_count" : 100000, 
-                "salt_size" : 16, "key_length" : 32, "iv_size" : 12,
-                
-                # these will probably be updated less frequently
-                "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
-                
-                # login/key derivation can be bypassed by supplying keys directly
-                # note that encryption key, salt, and mac key must be supplied to
-                # skip the login/key derivation process
-                # filesystem_key is used to access nonindexable files in /Python/File_System
-                "encryption_key" : bytes(), "salt" : bytes(), "mac_key" : bytes(),
-                "file_system_key" : bytes(),
-                
-                # similarly, username may be assigned instead of prompted. 
-                "username" : '', 
-                
-                # These may be changed for specific application needs
-                "hkdf_mac_info_string" : "{} Message Authentication Code Key",
-                "hkdf_encryption_info_string" : "{} Encryption Key",
-                "hkdf_file_system_info_string" : "{} File_System key",
-                "password_prompt" : "{}: Please provide the pass phrase or word: ",
-                
-                # the salt and verifier file are stored in the /Python/File_System
-                # nonindexable files have the filename hashed upon storing/search
-                "salt_filetype" : "pride.components.fileio.Database_File",
-                "verifier_filetype" : "pride.components.fileio.Database_File",
-                "verifier_indexable" : False,
-                
-                "open_command_line" : True}
+    """ Handles the master username and password, as well as derived cryptographic materials, and provides an interface for utilizing them. """
     
-    parser_ignore = ("mac_key", "encryption_key", "hkdf_mac_info_string", 
-                     "hkdf_encryption_info_string", "hkdf_file_system_info_string",
-                     "password_prompt", "iv_size", "verifier_filetype",
-                     "salt_indexable", "kdf_iteration_count",
-                     "encryption_mode", "encryption_algorithm", "verifier_indexable",
-                     "salt_size", "salt_filetype", "salt", "file_system_key")
+    defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iterations" : 100000,
+                "encryption_key_size" : 32, "mac_key_size" : 32,
+                "iv_size" : 12, "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
+                "mac_hash_algorithm" : "sha256", 
+                
+                "username" : None, "private_key" : None, "public_key" : None, "secret" : None,
+                "master_encryption_key" : None, "master_mac_key" : None, 
+                "data_encryption_key" : None, "data_mac_key" : None, 
+                "public_key" : None, "private_key" : None,
+                                
+                "storage_reference" : "/Python/Persistent_Storage",
+                "password_prompt" : "{}: Please enter the password: ",
+                "auto_register" : True}
     
-    flags = {"_password_verifier_size" : 32, "_reset_encryption_key" : False,
-             "_reset_file_system_key" : False, "_reset_mac_key" : False}
-    
-    verbosity = {"password_verified" : 'v', "invalid_password" : 0, "login_success" : 0}
+    mutable_defaults = {"login_token" : dict}
+    flags = {"_password" : None}
+    verbosity = {"login_success" : 0}
     
     def _get_password(self):
-        return getpass.getpass(self.password_prompt.format(self.reference))
-    password = property(_get_password)
-    
+        if self._password is None:
+            self._password = getpass.getpass(self.password_prompt)
+        return self._password
+    def _set_password(self, value):
+        self._password = value
+    password = property(_get_password, _set_password)        
+        
     def _get_username(self):
-        if not self._username:
-            username_prompt = "{}: Please provide a username: ".format(self.reference)
-            self._username = raw_input(username_prompt, must_reply=True)
+        if self._username is None:
+            self._username = raw_input("{}: Please provide username: ".format(self.reference))
         return self._username
     def _set_username(self, value):
         self._username = value
-    username = property(_get_username, _set_username)   
+    username = property(_get_username, _set_username)
     
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs):        
         super(User, self).__init__(**kwargs)        
+        self.password_prompt = self.password_prompt.format(self.reference)        
+        self.login()
+                
+    def login(self):                
+        self.derive_master_keys()
         
-        login_success = self.encryption_key and self.mac_key and self.file_system_key and self.salt
-        while not login_success:                
-            try:
-                self.login()
-            except (InvalidUsername, pride.functions.security.InvalidTag): # failed to open password verifier file
-                self.username = ''
-                if self._reset_encryption_key:
-                    self.encryption_key = bytes()
-                if self._reset_mac_key:
-                    self.mac_key = bytes()
-                self.alert("Login failed", level=self.verbosity["invalid_password"])
-                continue
-            else:
-                login_success = True      
-        assert self.encryption_key and self.mac_key and self.file_system_key and self.salt
+        cryptogram = self.find_identity(self.username)                
+        private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)                    
+        
+        self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
+        self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
+        self.secret = secret        
+        self.derive_data_keys(secret)        
+    
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
-        if self.open_command_line:
-            self.create("pride.components.shell.Command_Line")       
-                        
-    def login(self):
-        """ Attempt to login as username using a password. Upon success, the
-            users encryption and mac key are derived and stored in memory.
-            Upon failure, the prompt is repeated. """                
-        if not self.salt:
-            with self.create(self.salt_filetype, # uses Database_Files by default
-                             "{}_salt.bin".format(self.username), 
-                             "a+b", indexable=True) as _file:                 
-                _file.seek(0)
-                salt = _file.read(self.salt_size)
-                if not salt:
-                    salt = urandom(self.salt_size)
-                    _file.write(salt)
-            self.salt = salt
-        else:
-            salt = self.salt 
-            
-        kdf = invoke("pride.functions.security.key_derivation_function", 
-                     algorithm=self.hash_function, length=key_length, 
-                     salt=salt, iterations=self.kdf_iteration_count)
-        master_key = kdf.derive(self.username + ':' + self.password)
         
-        hkdf_options = {"algorithm" : self.hash_function, "length" : key_length}      
-        
-        if not self.file_system_key:
-            hkdf_options["info"] = self.hkdf_file_system_info_string.format(self.username + salt)
-            file_system_kdf = invoke("pride.functions.security.hkdf_expand", **hkdf_options)
-            self.file_system_key = file_system_kdf.derive(master_key)       
-            self._reset_file_system_key = True            
-        if not self.encryption_key:
-            hkdf_options["info"] = self.hkdf_encryption_info_string.format(self.username + salt)
-            encryption_kdf = invoke("pride.functions.security.hkdf_expand", **hkdf_options)
-            self.encryption_key = encryption_kdf.derive(master_key)                
-            self._reset_encryption_key = True
-        if not self.mac_key:
-            hkdf_options["info"] = self.hkdf_mac_info_string.format(self.username + salt)        
-            mac_kdf = invoke("pride.functions.security.hkdf_expand", **hkdf_options)
-            self.mac_key = mac_kdf.derive(master_key)
-            self._reset_mac_key = True
-          
+    def find_identity(self, identifier):        
         try:
-            with self.create(self.verifier_filetype, file_name, 'rb') as _file:
-                keys = self.decrypt(_file.read())
-                self.data_encryption_key = keys[:self.keysize]
-                self.private_key = keys[self.keysize:]
-        except IOError:
-            message = "{}: username '{}' does not exist. Create it?: (y/n) ".format(self, self.username)
-            if pride.components.shell.get_permission(message):
-                with self.create(self.verifier_filetype, file_name, "wb") as _file:
-                    _file.write(urandom(keysize))
-                    _file.write(self.generate_private_key())
+            cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]            
+        except KeyError:    
+            if self.storage_reference not in pride.objects:
+                raise
             else:
-                raise InvalidUsername()
+                self.handle_not_registered(identifier)    
+                cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]            
+        return cryptogram
         
+    def derive_master_keys(self):
+        size1, size2 = self.encryption_key_size, self.mac_key_size         
+        kdf = invoke("pride.functions.security.key_derivation_function", 
+                     algorithm=self.kdf_hash_algorithm, length=size1 + size2, 
+                     salt=self.username, iterations=self.kdf_iterations)                
+        master_key = kdf.derive(self.password)
+        
+        self.master_encryption_key = master_key[:size1]
+        self.master_mac_key = master_key[size1:size1 + size2]
                     
-            
+    def derive_data_keys(self, secret):
+        size1 = self.encryption_key_size
+        size2 = self.mac_key_size
+        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, size1 + size2, 
+                                                   info=self.username + ":" + "encryption and mac keys")
+        keys = kdf.derive(secret)
+        self.data_encryption_key = keys[:size1]
+        self.data_mac_key = keys[size1:size1 + size2]
+                
+    def handle_not_registered(self, identifier):
+        if self.auto_register or pride.components.shell.get_permission("{}: Register as '{}'? (y/n): ".format(self.reference, identifier)):
+            self.store_new_identity(identifier)
+        else:
+            raise NotImplementedError()                
+              
+    def store_new_identity(self, identifier):
+        identifier, keypair, secret = generate_identity(identifier)
+        store_identity(self.master_encryption_key, self.master_mac_key, identifier,
+                       keypair[0], keypair[1], secret, storage=self.storage_reference)
+
+    def forget_identity(self, identifier):
+        del pride.objects[self.storage_reference]["/Users/{}".format(identifier)]
+        
     def encrypt(self, data, extra_data='', return_mode="cryptogram"):
         """ usage: pride.objects["/User"].encrypt(data, extra_data='', 
                                                   return_mode="cryptogram") => cryptogram or unpacked cryptogram
@@ -163,15 +166,15 @@ class User(pride.components.base.Base):
             
             Default cipher and mode of operation is AES-256-GCM.
             Modes not recognized as providing authenticity or integrity (i.e. CTR) will be authenticated via HMAC."""        
-        return pride.functions.security.encrypt(data=data, key=self.encryption_key, mac_key=self.mac_key, 
-                                      iv=urandom(self.iv_size), extra_data=extra_data, 
-                                      algorithm=self.encryption_algorithm, mode=self.encryption_mode,
-                                      return_mode=return_mode)
+        return pride.functions.security.encrypt(data=data, key=self.data_encryption_key, mac_key=self.data_mac_key, 
+                                                iv=urandom(self.iv_size), extra_data=extra_data, 
+                                                algorithm=self.encryption_algorithm, mode=self.encryption_mode,
+                                                return_mode=return_mode)
                                       
     def decrypt(self, packed_encrypted_data):
         """ Decrypts packed encrypted data as returned by encrypt. The Users 
             encryption key is used to decrypt the data. """
-        return pride.functions.security.decrypt(packed_encrypted_data, self.encryption_key, self.mac_key)
+        return pride.functions.security.decrypt(packed_encrypted_data, self.data_encryption_key, self.data_mac_key)
     
     def authenticate(self, data):
         """ Returns tagged data.
@@ -186,7 +189,7 @@ class User(pride.components.base.Base):
             Combining encryption and authentication is not simple. This method 
             should be used ONLY in conjunction with unencrypted data, unless 
             you are certain you know what you are doing. """        
-        return pride.functions.security.apply_mac(self.mac_key, data, self.hash_function)
+        return pride.functions.security.apply_mac(self.data_mac_key, data, self.mac_hash_algorithm)
         
     def verify(self, macd_data):
         """ Verifies data with the mac returned by authenticate. Data that is 
@@ -195,52 +198,77 @@ class User(pride.components.base.Base):
             by unauthorized parties in transit. 
             
             Returns data on successful verification; Returns False on failure. """
-        return pride.functions.security.verify_mac(self.mac_key, macd_data, self.hash_function)
+        return pride.functions.security.verify_mac(self.data_mac_key, macd_data, self.mac_hash_algorithm)
     
     def generate_tag(self, data):
         """ Generates a unique, unforgeable tag based on supplied data. """
-        return pride.functions.security.generate_mac(self.mac_key, data, self.hash_function)
+        return pride.functions.security.generate_mac(self.data_mac_key, data, self.mac_hash_algorithm)
         
     def save_data(self, *args):
+        """ Serializes and authenticates supplied arguments.
+            To reload, use load_data. """
         package = pride.functions.persistence.save_data(*args)
         return self.authenticate(package)
         
     def load_data(self, package):
+        """ Authenticate, then deserialize the supplied bytes.
+            Returns the arguments that were passed to save_data."""
         packed_bytes = self.verify(package)        
         if packed_bytes is not pride.functions.security.INVALID_TAG:
             return pride.functions.persistence.load_data(packed_bytes)
         else:            
-            return packed_bytes # == INVALID_TAG
+            raise InvalidTag()
     
     def hash(self, data):
         """ Hash data using the user objects specified hashing algorithm """
-        hasher = pride.functions.security.hash_function(self.hash_function)    
+        hasher = pride.functions.security.hash_function(self.mac_hash_algorithm)    
         hasher.update(data)
         return hasher.finalize()
+     
+    def generate_strong_password(self, client_program, username, password_size=32):  
+        """ Usage: user = pride.objects["/User"]
+                   token = user.generate_strong_login_token(client_program, username, password_size)
+                   
+            Generates a cryptographically strong password, derived from the identity secret material.
+            This password is only available on the machine that /Python/Persistent_Storage resides on."""            
+        kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, password_size, 
+                                                   info=client_program + ':' + username)         
+        return kdf.derive(self.secret)
+    
+    def generate_portable_password(self, client_program, username, password_size=32):
+        """ Usage: user = pride.objects["/User"]
+                   token = user.generate_portable_password(client_program, username, password_size)
+                   
+            Generate a key stretched password for the target program and username, derived from the master password."""
+        salt = client_program + username
+        kdf = pride.functions.security.key_derivation_function(salt, algorithm=self.kdf_hash_algorithm,
+                                                               length=password_size,
+                                                               iterations=self.kdf_iterations)
+        return kdf.derive(self.password)
         
-        
+    
 class Session(User): 
 
-    verbosity = {"login_success" : "vvvv"}
-    defaults = {"open_command_line" : False}
-    required_attributes = ("username", "encryption_key", "mac_key", "file_system_key", "salt")    
-
+    def delete(self):
+        self.forget_identity(self.username)
+        super(Session, self).delete()
         
 def test_User():
-    import pride    
-    user = pride.objects["/User"]
-    data = "This is some test data!"
-    packed_encrypted_data = user.encrypt(data)
-    assert user.decrypt(packed_encrypted_data) == data
+    user = User(username="localhost")
+    cryptogram = user.encrypt("Test data", "Extra test data")
+    assert user.decrypt(cryptogram) == ("Test data", "Extra test data")
     
-    saved = user.save_data(data, packed_encrypted_data)
-    _data, _packed_encrypted_data = user.load_data(saved)
-    assert _data == data
-    assert _packed_encrypted_data == packed_encrypted_data
+    saved = user.save_data(cryptogram)
+    reloaded = user.load_data(saved)
+    tagged = user.authenticate(saved)
+    user.verify(tagged)
     
-    user.hash(_data)
-    user.alert("Passed unit test", level=0)
-    raise SystemExit()
+    user.hash(tagged)
+    user.generate_tag(tagged)
+    user.generate_strong_password("/Python/Data_Transfer_Service", "test_User_unit_test")
+    user.generate_portable_password("/Python/Data_Transfer_Service", "test_User_unit_test")
+    user.forget_identity(user.username)
+    user.alert("Unit test passed", level=0)
     
 if __name__ == "__main__":
     test_User()

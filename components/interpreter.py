@@ -180,9 +180,8 @@ class Python(base.Base):
         super(Python, self).__init__(**kwargs)
         self.setup_os_environ()
 
-        session_id, key1, key2, key3, salt = [random_bytes for random_bytes in slide(os.urandom(80), 16)] # ephemeral keys for encrypted in memory only data storage
-        self.session = self.create("pride.components.user.Session", username=session_id, 
-                                   encryption_key=key1,  mac_key=key2, file_system_key=key3, salt=salt)
+        # ephemeral keys for encrypted in memory only data storage
+        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32))
                                    
         if not self.command:
             command = os.path.join((os.getcwd() if "__file__" 

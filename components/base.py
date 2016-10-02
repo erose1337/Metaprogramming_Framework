@@ -274,9 +274,10 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
 
         for value, attributes in itertools.chain(self._localized_flags.items(), 
                                                  self._localized_defaults.items()):
-            value = value[0]
-            for attribute in attributes:
-                setattr(self, attribute, value)             
+            value = value[0]            
+            for attribute in attributes:                                    
+                setattr(self, attribute, value)     
+                
         for value_type, attributes in self._localized_mutable_defaults.items():
             value_type = value_type[0]
             for attribute in attributes:

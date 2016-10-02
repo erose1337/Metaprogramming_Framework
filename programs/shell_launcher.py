@@ -3,7 +3,8 @@ import pride.components.user
 
 def launch_shell(user=None):       
     user = pride.components.user.User(parse_args=True) if user is None else user        
-    user.create("pride.components.interpreter.Shell", username=user.username, password_source="prompt_user", parse_args=True)
+    user.create("pride.components.interpreter.Shell", username=user.username, 
+                password_source="user_secret", parse_args=True)
     
     try:
         command_line = user.objects["Command_Line"][0]

@@ -29,7 +29,7 @@ def main_as_name():
 class Shell(pride.components.authentication3.Authenticated_Client):
     """ Handles keystrokes and sends python source to the Interpreter to 
         be executed. This requires authentication via username/password."""
-    defaults = {"username" : "", "password" : "", "startup_definitions" : '', 
+    defaults = {"username" : None, "password" : None, "startup_definitions" : '', 
                 "target_service" : "/Python/Interpreter", "stdout" : None}
     
     verbosity = {"login" : 0, "execute_source" : "vv"}

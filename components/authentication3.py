@@ -280,8 +280,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
     
     allowed_values = {"password_source" : ("user_secret", "user_password", "prompt_user")}
     
-    def _get_password(self):               
-        if self.password_source == "prompt_user":
+    def _get_password(self):                       
+        if self.password_source == "prompt_user":            
             return getpass.getpass(self.password_prompt) if self._password is None else self._password
         elif self._password:
             return self._password
@@ -314,7 +314,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
     username = property(_get_username, _set_username)
                 
     def __init__(self, **kwargs):
-        super(Authenticated_Client, self).__init__(**kwargs)
+        super(Authenticated_Client, self).__init__(**kwargs)        
         self.password_prompt = self.password_prompt.format(self.reference, self.target_service, self.ip)
                               
         registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]

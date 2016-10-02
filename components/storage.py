@@ -26,7 +26,7 @@ class Persistent_Storage(pride.components.database.Database):
     def __init__(self, **kwargs):
         super(Persistent_Storage, self).__init__(**kwargs)
         for entry, value_callable in self.default_entries.items():
-            if entry not in self:
+            if entry not in self:                
                 self[entry] = value_callable()
         
     def __getitem__(self, item):
@@ -38,17 +38,25 @@ class Persistent_Storage(pride.components.database.Database):
         
     def __setitem__(self, item, value):
         data = pride.functions.persistence.save_data(value)
-        self.insert_or_replace("Entries", (item, data))
+        self.insert_or_replace("Entries", (item, data))        
 
     def __delitem__(self, item):
         self.delete_from("Entries", where={"identifier" : item})
+    
+    def __contains__(self, item):
+        try:
+            data = self[item]
+        except KeyError:
+            return False
+        else:
+            return True
         
     def pop(self, item):
         output = self[item]
         del self[item]
         return output
         
-       
+    
 def test_Persistent_Storage():
     storage = Persistent_Storage()
     test_values = [0, 'a', '', None, 1.0, set(), dict(), list(), (1, 2, 3)]

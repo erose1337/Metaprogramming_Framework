@@ -367,8 +367,8 @@ class Site_Configuration(type):
         dir_output = dir(site_config)                
         
         for attribute in new_class.site_config_support:         
-            attribute_name = new_class_name + '_' + attribute                 
-            if attribute_name in dir_output:                
+            attribute_name = new_class_name + '_' + attribute                                         
+            if attribute_name in dir_output:                                
                 getattr(new_class, attribute).update(getattr(site_config, attribute_name))                   
         return new_class
                                 

@@ -252,13 +252,14 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
                   level=self.verbosity["validate_success"])
         return True        
         
+        
 class Authenticated_Client(pride.components.rpc.RPC_Client):
     
     verbosity = {"register" : 0, "register_success" : 0, "register_failure" : 0,     
                  "login" : 0, "login_success" : 0, "login_failure" : 0,
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "login_failed" : 0, "logout_success" : 0, "auto_register" : "vv",
-                 "not_registered" : 0, "change_credentials" : 0}
+                 "not_registered" : 0, "change_credentials" : 0, "invalid_password" : 0}
                  
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -270,13 +271,25 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                 "sub_algorithm" : "sha512", "salt" : "\x00" * 16, "salt_size" : 16, "output_size" : 32,
                 
                 "registration_success_message" : "Registered with {}@{} as '{}'",                     
-                "registration_failed_message" : "Failed to register with {}@{} as '{}'"}
+                "registration_failed_message" : "Failed to register with {}@{} as '{}'",
+                
+                "password_source" : "user_secret", "password_length" : 32}
         
     flags = {"_registering" : False, "logged_in" : False, "_logging_in" : False,
              "_username" : '', "_password_hash" : ''}       
-                    
-    def _get_password(self):
-        return getpass.getpass(self.password_prompt) if self._password is None else self._password
+    
+    allowed_values = {"password_source" : ("user_secret", "user_password", "prompt_user")}
+    
+    def _get_password(self):               
+        if self.password_source == "prompt_user":
+            return getpass.getpass(self.password_prompt) if self._password is None else self._password
+        elif self._password:
+            return self._password
+        elif self.password_source == "user_secret":
+            method = "generate_strong_password"           
+        elif self.password_source == "user_password":
+            method = "generate_portable_password"
+        return getattr(pride.objects["/User"], method)(self.target_service, self.username, self.password_length)                    
     def _set_password(self, value):
         self._password = value
         self.password_hash = ''                
@@ -336,7 +349,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                    level=self.verbosity["register_success"])
         
         registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
-        registered_users.append((self.target_service, self.ip, self.username))
+        registered_users.append((self.target_service, self.ip, self.username))     
+        print registered_users
         pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users
 
         if self.auto_login:
@@ -383,13 +397,13 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         self.alert("{}".format(server_response, level=self.verbosity['login_failure']))
         
         if self.ip in ("localhost", "127.0.0.1"):
-            registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+            registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]               
             user_info = (self.target_service, self.ip, self.username)
             if user_info not in registered_users:
-                self.alert("Not registered for {}@{} as '{}'".format(*user_info), 
-                           level=self.verbosity["not_registered"])
-                if pride.components.shell.get_permission("{}: Register now?: ".format(self.reference)):
+                if pride.components.shell.get_permission("{}: Attempt to register?: ".format(self.reference)):
                     self.register()
+            else:
+                self.alert("Invalid password", level=self.verbosity["invalid_password"])
                 
     @pride.functions.decorators.call_if(logged_in=True)
     @pride.functions.decorators.exit(_reset_login_flags)

@@ -37,8 +37,8 @@ class Shell(pride.components.authentication3.Authenticated_Client):
     def login_success(self, message):
         super(Shell, self).login_success(message)        
         sys.stdout.write(">>> ")     
-        sys.stdout.flush()
-        if self.startup_definitions:
+        sys.stdout.flush()        
+        if self.startup_definitions:            
             self.handle_startup_definitions()                
              
     def handle_startup_definitions(self):

@@ -42,7 +42,6 @@
 import os
 PRIDE_DIRECTORY = os.path.split(os.path.abspath(__file__))[0]
 AUDIO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "audio")
-CRYPTO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "crypto")
 
 DATA_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "data")
 DATABASE_DIRECTORY = os.path.join(DATA_DIRECTORY, "database")
@@ -68,7 +67,7 @@ def write_to(entry, **values):
         _file.write(file_data)
         _file.flush()
         
-pride_interpreter_Shell_defaults = {"startup_definitions" : \
+pride_components_interpreter_Shell_defaults = {"startup_definitions" : \
 r"""import pride.components.base
 import pride
 
@@ -91,20 +90,18 @@ def delete(reference):
 def logout(program="/User/Shell"):
     objects[program].logout()
     
-#import pride.audio
-#pride.audio.enable()
+import pride.audio
+pride.audio.enable()
 import pride.gui
-#window = pride.gui.enable()
+window = pride.gui.enable()
 
 #graph = objects["/Python/SDL_Window"].create("pride.gui.graph.Graph")
 #explorer = objects["/Python/SDL_Window"].create("pride.gui.fileexplorer.File_Explorer")
 #chess = objects["/Python/SDL_Window"].create("pride.gui.chess.Chess")
 #cyvasse = objects[window].create("pride.gui.cyvasse.Cyvasse")
 #messenger = objects[window].create("pride.gui.messenger.Messenger", username="Ella")
-#homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
+homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
 """}
-
-pride_components_user_User_defaults = {'username': 'localhost'}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

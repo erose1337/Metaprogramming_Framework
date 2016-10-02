@@ -259,7 +259,7 @@ class Minimal_Theme(Theme):
         self.draw("rect_width", area, color=self.color, width=self.outline_width)        
         if self.text:
             width = self.w if self.wrap_text else None
-            assert width is not None, (self, width, self.w, self.wrap_text, self.text)
+        #    assert width is not None, (self, width, self.w, self.wrap_text, self.text)
             self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                       bg_color=self.background_color, color=self.text_color)
 

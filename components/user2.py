@@ -72,7 +72,7 @@ class User(pride.components.base.Base):
     
     mutable_defaults = {"login_token" : dict}
     flags = {"_password" : None}
-    verbosity = {"login_success" : 0}
+    verbosity = {"login_success" : 0, "registering" : 0}
     
     def _get_password(self):
         if self._password is None:
@@ -96,10 +96,18 @@ class User(pride.components.base.Base):
         self.login()
                 
     def login(self):                
-        self.derive_master_keys()
-        
-        cryptogram = self.find_identity(self.username)                
-        private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)                    
+        while True:
+            self.derive_master_keys()
+            
+            cryptogram = self.find_identity(self.username)            
+            try:
+                private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)                    
+            except pride.functions.security.InvalidTag:
+                self.alert("Invalid password", level=0)
+                self.password = None
+                self.username = None
+            else:
+                break
         
         self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
         self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
@@ -138,8 +146,9 @@ class User(pride.components.base.Base):
         self.data_encryption_key = keys[:size1]
         self.data_mac_key = keys[size1:size1 + size2]
                 
-    def handle_not_registered(self, identifier):
+    def handle_not_registered(self, identifier):        
         if self.auto_register or pride.components.shell.get_permission("{}: Register as '{}'? (y/n): ".format(self.reference, identifier)):
+            self.alert("Registering user '{}'".format(identifier), level=self.verbosity["registering"])
             self.store_new_identity(identifier)
         else:
             raise NotImplementedError()                
@@ -253,6 +262,8 @@ class User(pride.components.base.Base):
         
 class Session(User): 
 
+    verbosity = {"login_success" : "vvv", "registering" : "vvv"}
+    
     def delete(self):
         self.forget_identity(self.username)
         super(Session, self).delete()

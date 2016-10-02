@@ -261,7 +261,7 @@ class User(pride.components.base.Base):
             
         
 class Session(User): 
-
+    """ An ID that only persists for one application execution. """
     verbosity = {"login_success" : "vvv", "registering" : "vvv"}
     
     def delete(self):

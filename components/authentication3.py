@@ -17,6 +17,7 @@ from pride.errors import SecurityError, UnauthorizedError
 # xor key with key sent by partner
 #    - decrypt encrypted_session_secret via private key
 #    - xor both session secrets together to obtain final session secret
+
 remote_procedure_call = pride.components.rpc.remote_procedure_call       
                                 
 class Authenticated_Service(pride.components.rpc.RPC_Service):
@@ -75,7 +76,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
                 
                 ...
                 def get_credentials(self):
-                    return self.username, self.password_hash if self.hash_password_clientside else self.password
+                    return self.username, self.password
                             
                 @pride.functions.decorators.with_arguments_from(lambda self: ((self, ) + self.get_credentials(), {}))        
                 @remote_procedure_call(callback_name="register_results")
@@ -266,10 +267,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                 "password_prompt" : "{}: Please provide the pass phrase or word for {}@{}: ",
                 "auto_login" : True, "auto_register" : False,
                 
-                "username" : '', "password" : None, "hash_password_clientside" : True,
-                "iterations" : 100000, "password_hashing_algorithm" : "pbkdf2hmac",
-                "sub_algorithm" : "sha512", "salt" : "\x00" * 16, "salt_size" : 16, "output_size" : 32,
-                
+                "username" : '', "password" : None, 
+                  
                 "registration_success_message" : "Registered with {}@{} as '{}'",                     
                 "registration_failed_message" : "Failed to register with {}@{} as '{}'",
                 
@@ -294,14 +293,6 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         self._password = value
         self.password_hash = ''                
     password = property(_get_password, _set_password)
-            
-    def _get_password_hash(self):        
-        password_hash = self._password_hash or self._hash_password(self.password)
-        self._password_hash = password_hash
-        return password_hash
-    def _set_password_hash(self, value):
-        self._password_hash = value
-    password_hash = property(_get_password_hash, _set_password_hash)         
     
     def _get_username(self):
         if not self._username:
@@ -328,7 +319,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             self.login()
     
     def get_credentials(self):        
-        return self.username, self.password_hash if self.hash_password_clientside else self.password
+        return self.username, self.password
                 
     @pride.functions.decorators.with_arguments_from(lambda self: ((self, ) + self.get_credentials(), {}))        
     @remote_procedure_call(callback_name="register_results")
@@ -428,7 +419,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         self.username = None
         output += (self.username, )        
         self.password = None        
-        output += (self.password_hash if self.hash_password_clientside else self.password, )
+        output += (self.password, )
         print "Sending replacement credentials: ", output
         return output
         
@@ -466,13 +457,6 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         #    self.alert("Auto logging in", level=self.verbosity["auto_login"])
         #    self.login()
                 
-    def _hash_password(self, password):
-        return pride.functions.security.hash_password(password, self.iterations, algorithm=self.password_hashing_algorithm, 
-                                                                       sub_algorithm=self.sub_algorithm,
-                                                                       salt=self.salt, salt_size=self.salt_size, 
-                                                                       output_size=self.output_size)     
-        
-        
 def test_Authenticated_Service3():              
     service = objects["/Python"].create(Authenticated_Service)
     client = objects["/Python"].create(Authenticated_Client, username="Authenticated_Service3_unit_test", auto_register=True, auto_login=True)
@@ -481,6 +465,7 @@ def test_Authenticated_Service3():
     #client.login()
     client.logout()
     
+    client.change_credentials()
     
 if __name__ == "__main__":
     test_Authenticated_Service3()

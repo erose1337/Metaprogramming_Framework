@@ -207,8 +207,7 @@ class Finalizer(base.Base):
 
         _callbacks = self._callbacks
         while _callbacks:            
-            _, callback, args, kwargs = heapq.heappop(_callbacks)
-            print callback, args, kwargs
+            _, callback, args, kwargs = heapq.heappop(_callbacks)            
             try:
                 reference, method = callback
             except TypeError:
@@ -242,9 +241,9 @@ class Finalizer(base.Base):
     def add_callback(self, callback, priority, *args, **kwargs):
         heapq.heappush(self._callbacks, (priority, callback, args, kwargs))
         
-    def remove_callback(self, callback, *args, **kwargs):    
+    def remove_callback(self, callback, priority, *args, **kwargs):    
         try:
-            self._callbacks.remove((callback, args, kwargs))
+            self._callbacks.remove((priority, callback, args, kwargs))
         except ValueError:
             pass
         else:

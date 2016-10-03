@@ -148,7 +148,7 @@ class SDL_Window(SDL_Component):
             if hasattr(child, "pack") and child is not self.organizer:
                 child.delete()
         super(SDL_Window, self).delete()
-        objects["/Finalizer"].remove_callback((self.reference, "delete"))
+        objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)
 
         

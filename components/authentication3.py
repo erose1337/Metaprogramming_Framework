@@ -428,8 +428,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             self.register_success()
         else:              
             self.register_failure()
-            self.username, self.password = old_credentials
-        
+            self.username, self.password = old_credentials       
         
     def delete(self):
         if self.logged_in:

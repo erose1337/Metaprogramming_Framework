@@ -299,7 +299,7 @@ class Database(pride.base.Wrapper):
         
     def delete(self):
         self.close()
-        pride.objects["/Finalizer"].remove_callback((self.reference, "delete"))
+        pride.objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         super(Database, self).delete()
         
         

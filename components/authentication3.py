@@ -89,32 +89,20 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
         identifier_in_use = self.database.query("Users", retrieve_fields=("identifier", ), 
                                                          where={"identifier" : identifier})
         salt = os.urandom(self.salt_size)
-        if identifier_in_use:
+        if identifier_in_use:            
             if self.constant_time_registration:                
                 verifier_hash = self._hash_password(password_verifier, salt)
             return self.register_failure(identifier)
-        else:            
+        else:                        
             verifier_hash = self._hash_password(password_verifier, salt)        
             self.database.insert_into("Users", (identifier, verifier_hash, salt))
             return self.register_success(identifier)
         
-    def change_credentials(self, identifier, password_verifier, new_identifier, new_password_verifier):
-        query_result = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
-                                                    where={"identifier" : identifier})
-        if query_result:
-            correct_verifier, salt = query_result
-            print "Credential change for registered user", identifier, password_verifier, correct_verifier
-        else:            
-            correct_verifier, password_verifier = "\x00" * 32, "\x11" * 32 # two unequal strings to cause register_failure
-            
-        if pride.functions.security.constant_time_comparison(correct_verifier, password_verifier):
-            print "Updating identifier"
-            return self.register(new_identifier, new_password_verifier)
-        else:
-            print "Correct  :", correct_verifier
-            print "Incorrect:", password_verifier
-            print "New one  :", new_password_verifier
-            return self.register_failure(identifier)
+    def change_credentials(self, new_identifier, new_password_verifier):        
+        result = self.register(new_identifier, new_password_verifier)        
+        if result[0]:            
+            self.database.delete_from("Users", where={"identifier" : self.current_user})
+        return result
     
     def register_success(self, username):            
         """ usage: called during register() when registration succeeds.
@@ -275,7 +263,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                 "password_source" : "user_secret", "password_length" : 32}
         
     flags = {"_registering" : False, "logged_in" : False, "_logging_in" : False,
-             "_username" : '', "_password_hash" : ''}       
+             "_username" : '', "_password_hash" : '', "_new_credentials" : None}       
     
     allowed_values = {"password_source" : ("user_secret", "user_password", "prompt_user")}
     
@@ -341,7 +329,6 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         
         registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
         registered_users.append((self.target_service, self.ip, self.username))     
-        print registered_users
         pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users
 
         if self.auto_login:
@@ -415,26 +402,34 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                 self.login()            
     
     def _get_new_credentials(self):
-        output = self.get_credentials()        
-        self.username = None
-        output += (self.username, )        
-        self.password = None        
-        output += (self.password, )
-        print "Sending replacement credentials: ", output
-        return output
+        backup = self.get_credentials()
+        self.username, self.password = None, None
+        self._new_credentials = username, password = self.username, self.password        
+        self.username, self.password = backup
+        return username, password
         
     @pride.functions.decorators.with_arguments_from(lambda self: ((self, ) + self._get_new_credentials(), {}))
     @remote_procedure_call(callback_name="change_credential_result")
-    def change_credentials(self, identifier, password_verifier, new_identifier, new_password_verifier):
+    def change_credentials(self, new_identifier, new_password_verifier):
         pass        
         
     def change_credential_result(self, server_response):
         success, message = server_response
         self.alert("{}".format(message), level=0)
-        if success:
+        old_credentials = self.username, self.password
+        self.username, self.password = self._new_credentials            
+        self._new_credentials = None
+        
+        if success:            
+            registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+            registered_users.remove((self.target_service, self.ip, old_credentials[0]))     
+            pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users                
+            
             self.register_success()
-        else:
+        else:              
             self.register_failure()
+            self.username, self.password = old_credentials
+        
         
     def delete(self):
         if self.logged_in:
@@ -458,11 +453,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         #    self.login()
                 
 def test_Authenticated_Service3():              
-    service = objects["/Python"].create(Authenticated_Service)
-    client = objects["/Python"].create(Authenticated_Client, username="Authenticated_Service3_unit_test", auto_register=True, auto_login=True)
-    
-    #client.register()
-    #client.login()
+    service = Authenticated_Service()
+    client = Authenticated_Client(target_service=service.reference, username="Authenticated_Service3_unit_test", auto_register=True, auto_login=True)
     client.logout()
     
     client.change_credentials()

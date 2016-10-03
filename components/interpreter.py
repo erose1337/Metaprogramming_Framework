@@ -15,6 +15,7 @@ import pride.components.base as base
 import pride.components.authentication3
 import pride.components.shell
 import pride.components.user
+import pride.functions.contextmanagers
 import pride.site_config
 
 @contextlib.contextmanager
@@ -181,28 +182,26 @@ class Python(base.Base):
         self.setup_os_environ()
 
         # ephemeral keys for encrypted in memory only data storage
-        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32))
-                                   
+        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32))        
+        pride.objects["/Finalizer"].add_callback((self.session.reference, "delete"), -1)        
+        
         if not self.command:
             command = os.path.join((os.getcwd() if "__file__" 
                                     not in globals() else 
                                     pride.site_config.PRIDE_DIRECTORY), 
                                     os.path.join("programs", "shell_launcher.py"))
-        else:
+        else:            
             try:
-                machine_info_file = pride.objects["/Python/File_System"].open_file("machine_credentials.bin", 'r')
-            except IOError:
-                machine_info_file = pride.objects["/Python/File_System"].open_file("machine_credentials.bin", 'w')
-                urandom = os.urandom
-                machine_id, key1, key2, key3, salt = urandom(16), urandom(16), urandom(16), urandom(16), urandom(16)
-                machine_info_file.write(machine_id + key1 + key2 + key3 + salt)
-                machine_info_file.flush()
-            else:
-                machine_info = machine_info_file.read()                
-                machine_id = machine_info[:16]
-                key1, key2, key3, salt = machine_info[16:32], machine_info[32:48], machine_info[48:64], machine_info[64:80]
-            user = pride.components.user.User(username=machine_id, encryption_key=key1, mac_key=key2, 
-                                   file_system_key=key3, salt=salt, open_command_line=False)                    
+                machine_id, machine_password = pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"]
+            except KeyError:
+                machine_id, machine_password = os.urandom(32), os.urandom(32)
+                pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"] = (machine_id, machine_password)
+               
+            User = pride.components.user.User               
+            with pride.functions.contextmanagers.backup(User, "verbosity"):
+                User.verbosity["login_success"] = "vv"            
+                user = pride.components.user.User(username=machine_id, password=machine_password)
+            
             command = self.command  
         source = ''    
         if self.startup_definitions:

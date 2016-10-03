@@ -181,7 +181,7 @@ class Rpc_Server(pride.components.networkssl.SSL_Server):
                 "Tcp_Socket_type" : "pride.components.rpc.Rpc_Socket"}
         
         
-class Rpc_Client_Socket_Socket(Packet_Client):
+class Rpc_Client_Socket(Packet_Client):
     """ Client socket for making rpc requests using packetized tcp stream. """  
     verbosity = {"delayed_request_sent" : "vvv", "request_delayed" : "vvv",
                  "request_sent" : "vvv", "unresolved_callback" : 0, "handle_exception" : 0}

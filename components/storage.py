@@ -40,9 +40,10 @@ class Persistent_Storage(pride.components.database.Database):
         data = pride.functions.persistence.save_data(value)
         self.insert_or_replace("Entries", (item, data))        
 
-    def __delitem__(self, item):
+    def __delitem__(self, item):        
         self.delete_from("Entries", where={"identifier" : item})
-    
+        assert item not in self
+        
     def __contains__(self, item):
         try:
             data = self[item]

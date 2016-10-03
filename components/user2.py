@@ -159,7 +159,9 @@ class User(pride.components.base.Base):
                        keypair[0], keypair[1], secret, storage=self.storage_reference)
 
     def forget_identity(self, identifier):
-        del pride.objects[self.storage_reference]["/Users/{}".format(identifier)]
+        #identifiers = pride.objects[self.storage_reference]
+        #del identifiers["/Users/{}".format(identifier)]
+        del pride.objects[self.storage_reference]["/_{}/{}".format(type(self), identifier)]
         
     def encrypt(self, data, extra_data='', return_mode="cryptogram"):
         """ usage: pride.objects["/User"].encrypt(data, extra_data='', 
@@ -263,7 +265,7 @@ class User(pride.components.base.Base):
 class Session(User): 
     """ An ID that only persists for one application execution. """
     verbosity = {"login_success" : "vvv", "registering" : "vvv"}
-    
+        
     def delete(self):
         self.forget_identity(self.username)
         super(Session, self).delete()

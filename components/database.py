@@ -61,7 +61,7 @@ class Database(pride.base.Wrapper):
                                                      self.text_factory)
         self.wraps(connection)
         try:
-            pride.objects["/Finalizer"].add_callback((self.reference, "delete"))
+            pride.objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
         except KeyError:
             self.alert("Unable to queue finalizer callback", 
                        level=self.verbosity["finalizer_unvailable"])

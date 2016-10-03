@@ -2,6 +2,7 @@
 import sys
 import traceback
 import os
+import heapq
 
 if "--site_config" in sys.argv:            
     import ast
@@ -201,9 +202,13 @@ class Finalizer(base.Base):
                  "unable_to_load_object" : 0, "unable_to_get_method" : 0,
                  "callback_exception" : 0}
                  
-    def run(self):
+    def run(self):        
         verbosity = self.verbosity
-        for callback, args, kwargs in self._callbacks:
+
+        _callbacks = self._callbacks
+        while _callbacks:            
+            _, callback, args, kwargs = heapq.heappop(_callbacks)
+            print callback, args, kwargs
             try:
                 reference, method = callback
             except TypeError:
@@ -234,15 +239,17 @@ class Finalizer(base.Base):
                 self.alert("Finalizer callback success", level=verbosity["callback_success"])
         self._callbacks = []    
         
-    def add_callback(self, callback, *args, **kwargs):
-        self._callbacks.append((callback, args, kwargs))
+    def add_callback(self, callback, priority, *args, **kwargs):
+        heapq.heappush(self._callbacks, (priority, callback, args, kwargs))
         
-    def remove_callback(self, callback, *args, **kwargs):
+    def remove_callback(self, callback, *args, **kwargs):    
         try:
             self._callbacks.remove((callback, args, kwargs))
         except ValueError:
             pass
-        
+        else:
+            heapq.heapify(self._callbacks)
+            
 finalizer = Finalizer()        
 
 import pride.components.patch as patch

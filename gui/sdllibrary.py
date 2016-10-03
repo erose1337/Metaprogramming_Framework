@@ -67,7 +67,7 @@ class SDL_Window(SDL_Component):
                                        (self.size[0] * 10, self.size[1] * 10),
                                        access=self.texture_access_flag)
         
-        objects["/Finalizer"].add_callback((self.reference, "delete"))
+        objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
                         
     def invalidate_object(self, instance):
         if not self.running:

@@ -3,6 +3,7 @@ import struct
 import traceback
 import itertools
 import time
+import functools
 from os import path
 
 import pride
@@ -23,6 +24,8 @@ class UnauthorizedError(Warning): pass
 def remote_procedure_call(callback_name='', callback=None):
     def decorate(function):       
         call_name = function.__name__
+        
+        @functools.wraps(function)
         def _make_rpc(self, *args, **kwargs):  
             if callback_name:
                 _callback = getattr(self, callback_name)
@@ -52,6 +55,7 @@ def remote_procedure_call(callback_name='', callback=None):
 def packetize_send(send):
     """ Decorator that transforms a tcp stream into packets. Requires the use
         of the packetize_recv decorator on the recv end. """
+    @functools.wraps(send)
     def _send(self, data):
         return send(self, str(len(data)) + ' ' + data)   
     return _send
@@ -65,6 +69,7 @@ def packetize_recv(recv):
         The recv method decorated by this function will return a list of
         packets received or an empty list if no complete packets have been
         received. """        
+    @functools.wraps(recv)
     def _recv(self, buffer_size=0):
         try:
             data = _old_data[self] + recv(self, buffer_size)

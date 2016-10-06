@@ -15,17 +15,20 @@ class Patched_Module(pride.base.Wrapper):
     defaults = {"module_name" : ''}
     wrapped_object_name = "module"
     
-    def __init__(self, **kwargs):
-        super(Patched_Module, self).__init__(**kwargs)
+    def __init__(self, **kwargs):        
+        super(Patched_Module, self).__init__(**kwargs)                
         self.wraps(_importlib.import_module(self.module_name))
         sys_module.modules[self.module_name] = self
         globals()[self.module_name] = self
-            
+        
  
 class Stdout(pride.components.base.Base):
     
     defaults = {"file" : None, "log_type" : "StringIO.StringIO", 
                 "limit_log_size" : 1024 * 1024, "logging_enabled" : True}    
+    
+    auto_verbosity_ignore = ("write", "flush")
+    required_attributes = ("file", )
     
     def __init__(self, **kwargs):
         super(Stdout, self).__init__(**kwargs)
@@ -35,7 +38,7 @@ class Stdout(pride.components.base.Base):
         if self.limit_log_size and self.log.tell() > self.limit_log_size:
             self.log.truncate()
         if self.logging_enabled:            
-            self.log.write(data)
+            self.log.write.method(self.log, data) # because pride.components.fileio.File.write is wrapped in metaclass.on_alert_call (avoids recursion)
             self.log.flush()        
         self.file.write(data)
         self.file.flush()                
@@ -76,6 +79,10 @@ class inspect(Patched_Module):
             
     defaults = {"module_name" : "inspect"}
     
+    def __init__(self, **kwargs):
+        print "uhh what? ", self.alert
+        super(inspect, self).__init__(**kwargs)
+        
     def get_source(_object):
         try:
             return pride.compiler.module_source[_object.__name__][0]

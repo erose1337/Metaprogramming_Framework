@@ -129,6 +129,8 @@ class Alert_Handler(base.Base):
     parser_ignore = ("parse_args", "log_is_persistent", "verbosity")
     parser_modifiers = {"exit_on_help" : False}
     
+    auto_verbosity_ignore = ("append_to_log", )
+    
     def _get_print_level(self):
         return self._print_level
     def _set_print_level(self, value):

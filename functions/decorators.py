@@ -33,6 +33,7 @@ def required_arguments(no_args=False, no_kwargs=False, requires_args=False,
     
 def with_arguments_from(entry_function):
     def decorate(function):
+        @wraps(function)
         def new_call(*args, **kwargs):            
             args, kwargs = entry_function(*args, **kwargs)
             return function(*args, **kwargs)
@@ -41,6 +42,7 @@ def with_arguments_from(entry_function):
 
 def enter(enter_function):
     def decorate(function):
+        @wraps(function)
         def new_call(*args, **kwargs):
             enter_function(*args, **kwargs)
             return function(*args, **kwargs)
@@ -49,6 +51,7 @@ def enter(enter_function):
     
 def exit(exit_function):
     def decorate(function):
+        @wraps(function)
         def new_call(*args, **kwargs):
             result = function(*args, **kwargs)
             exit_function(*args, **kwargs)
@@ -59,6 +62,7 @@ def exit(exit_function):
 def call_if(**conditions):
     callback = conditions.pop("otherwise_callback", None)
     def decorate(function):
+        @wraps(function)
         def new_call(self, *args, **kwargs):            
             for key, value in conditions.items():
                 if not getattr(self, key) == value:
@@ -72,6 +76,7 @@ def call_if(**conditions):
     return decorate
     
 def on_exception(exception, callback):
+    @wraps(function)
     def decorate(function):
         def new_call(*args, **kwargs):
             try:

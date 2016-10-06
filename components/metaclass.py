@@ -32,12 +32,16 @@ class Documented(type):
         attributes["__doc"] = attributes.get("__doc__", "No docstring found")
         attributes["__doc__"] = Docstring()
                         
+                        
 class alert_on_call(object):
     
     def __init__(self, method):
-        self.method = method        
+        self.method = method            
         self.method_name = self.get_method_name(method)
-    
+        #sys.__stdout__.write("Wrapping: {} {}\n".format(method, self.method_name))
+        #sys.__stdout__.flush()
+        assert '_' != self.method_name[0], self.method_name
+        
     @staticmethod
     def get_method_name(method):
         try:
@@ -47,20 +51,28 @@ class alert_on_call(object):
              
     def __call__(self, *args, **kwargs):       
         method_name = self.method_name
+        method = self.method        
         component = args[0]
-        component.alert("{}({}, {})".format(method_name, pprint.pformat(args), pprint.pformat(kwargs)), level=component.verbosity[method_name])
-        return self.method(*args, **kwargs)        
+     #   sys.__stdout__.write("{} Calling: {} {}\n".format(component.reference, component, method_name))
+     #   sys.__stdout__.flush()
+      #  assert method_name not in ("write", "flush", "append_to_log"), component.reference
+        message = "{}{}{}".format(method_name, 
+                                  "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
+                                  " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
+                                  
+        component.alert(message, level=component.verbosity[method_name])
+        return method(*args, **kwargs)        
     
 
     
 class Method_Hook(type):
     """ Provides a hook for decorating methods for the new class. """
         
-    enabled = False
+    enabled = True
     decorator = alert_on_call
     default_verbosity = "debug"
-    
-    def __new__(cls, name, bases, attributes):        
+        
+    def __new__(cls, name, bases, attributes):                    
         new_class = super(Method_Hook, cls).__new__(cls, name, bases, attributes)
         if cls.enabled:
             Method_Hook.decorate(new_class)
@@ -71,19 +83,29 @@ class Method_Hook(type):
         decorator = cls.decorator
         default_verbosity = cls.default_verbosity
         for key, value in new_class.__dict__.items():            
-            if key[0] != "_" and callable(value) and not issubclass(type(value), BaseException):
-                print new_class, key, value, not issubclass(type(value), BaseException), issubclass(type(value), BaseException)
-                
-                if key == "alert":
-                    continue
-                bound_method = types.MethodType(decorator(value), 
-                                                None, 
-                                                new_class)
-                setattr(new_class, key, bound_method)
-                new_class.verbosity[key] = default_verbosity
+            # filter out things that aren't functions/are private or magic methods
+            if (key[0] != "_") and callable(value) and key not in new_class.auto_verbosity_ignore:
+                try:
+                    if isinstance(value, BaseException) or issubclass(value, BaseException):
+                        continue
+                except TypeError:                    
+                    if issubclass(type(value), BaseException):
+                        continue
+                assert '_' != key[0]           
+                if key not in new_class.verbosity:                    
+                    decorated_function = decorator(value)
+                #    print "After decoration: ", key, decorated_function
+                    functools.update_wrapper(decorated_function, value)                
+                    bound_method = types.MethodType(decorated_function, 
+                                                    None, 
+                                                    new_class)                                                         
+                    #sys.__stdout__.write("Setting: {} {} {}\n".format(new_class, key, bound_method))
+                    #sys.__stdout__.flush()
+                    setattr(new_class, key, bound_method)
+                    new_class.verbosity.setdefault(key, default_verbosity)
         return new_class        
-        
-                 
+      
+    
 class Runtime_Decorator(object):
     """ Provides the ability to call a method with a decorator, decorators,
         or monkey patch specified via keyword argument. This decorator
@@ -356,7 +378,7 @@ class Defaults(Inherited_Attributes):
                             "parser_ignore" : tuple, "flags" : dict,
                             "mutable_defaults" : dict, "required_attributes" : tuple,
                             "site_config_support" : tuple, "post_initializer" : str,
-                            "allowed_values" : dict}
+                            "allowed_values" : dict, "auto_verbosity_ignore" : tuple}
        
  
 class Site_Configuration(type):

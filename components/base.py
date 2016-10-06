@@ -219,6 +219,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     verbosity = {"delete" : "vv", "initialized" : "vv", "remove" : "vv",
                  "add" : "vv", "update" : "v"}
     
+    auto_verbosity_ignore = ("alert", )
+    
     # A command line argument parser is generated automatically for
     # every Base class based upon the attributes contained in the
     # class defaults dictionary. Specific attributes can be modified
@@ -314,6 +316,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             
         if self.startup_components:
             for component_type in self.startup_components:
+                #sys.__stdout__.write("{} creating: {}\n".format(self.reference, component_type))
+                #sys.__stdout__.flush()
                 component = self.create(component_type)
                 setattr(self, component.__class__.__name__.lower(), 
                         component.reference)                         
@@ -339,7 +343,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             class is usually supplied. 
             
             If create is overloaded, ensure that ancestor create is called
-            as well via super."""
+            as well via super."""          
         with pride.functions.contextmanagers.backup(pride, "_last_creator"):
             pride._last_creator = self.reference
             try:
@@ -602,7 +606,8 @@ class Wrapper(Base):
     wrapped_object_name = ''
     
     parser_ignore = ("wrapped_object", )
-        
+    #auto_verbosity_ignore = ("wraps", )
+    
     def __init__(self, **kwargs):
         super(Wrapper, self).__init__(**kwargs)
         if self.wrapped_object_name:

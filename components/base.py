@@ -315,9 +315,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             self.parent.add(self)
             
         if self.startup_components:
-            for component_type in self.startup_components:
-                #sys.__stdout__.write("{} creating: {}\n".format(self.reference, component_type))
-                #sys.__stdout__.flush()
+            for component_type in self.startup_components:                
                 component = self.create(component_type)
                 setattr(self, component.__class__.__name__.lower(), 
                         component.reference)                         
@@ -606,7 +604,7 @@ class Wrapper(Base):
     wrapped_object_name = ''
     
     parser_ignore = ("wrapped_object", )
-    #auto_verbosity_ignore = ("wraps", )
+    auto_verbosity_ignore = ("wraps", )
     
     def __init__(self, **kwargs):
         super(Wrapper, self).__init__(**kwargs)
@@ -642,6 +640,7 @@ class Proxy(Base):
        Base.Wrapper for more information."""
     
     wrapped_object_name = ''
+    auto_verbosity_ignore = ("wraps", )
     
     def __init__(self, **kwargs):
         wraps = super(Proxy, self).__getattribute__("wraps")
@@ -688,6 +687,7 @@ class Adapter(Base):
     adaptations = {}
     
     wrapped_object_name = ''
+    auto_verbosity_ignore = ("wraps", )
     
     def __init__(self, **kwargs):
         if "wrapped_object" in kwargs:
@@ -732,7 +732,7 @@ class Static_Wrapper(Base):
         Attribute access on a static wrapper is faster then the regular wrapper. """
     wrapped_attributes = tuple()
     wrapped_object_name = ''
-    
+    auto_verbosity_ignore = ("wraps", )
     defaults = {"wrapped_object" : None}
     
     def __init__(self, **kwargs):

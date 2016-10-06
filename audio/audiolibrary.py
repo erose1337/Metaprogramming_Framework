@@ -32,7 +32,7 @@ def wav_file_info(parse_args=True, **kwargs):
 class Audio_Reactor(base.Base):
     
     defaults = {"source_name" : ''}
-    verbosity = {"remove_listener_error" : 0}
+    verbosity = {"remove_listener_error" : 0, "handle_audio_input" : "vvvv", "handle_audio_output" : "vvvv", "refresh" : "vvv"}
     
     def __init__(self, **kwargs):
         self.listeners = []
@@ -205,10 +205,9 @@ class Config_Utility(scheduler.Process):
             
 class Audio_Manager(base.Base):
 
-    defaults = {"config_file_name" : '',
-                "use_defaults" : True,
-                "configure" : False}
-
+    defaults = {"config_file_name" : '', "use_defaults" : True, "configure" : False}
+    verbosity = {"refresh" : "vvv"}
+    
     def _get_devices(self):
         return self.objects.get("Audio_Input", []) + self.objects.get("Audio_Output", [])
 

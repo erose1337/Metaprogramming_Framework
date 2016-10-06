@@ -53,8 +53,8 @@ class alert_on_call(object):
         method_name = self.method_name
         method = self.method        
         component = args[0]
-     #   sys.__stdout__.write("{} Calling: {} {}\n".format(component.reference, component, method_name))
-     #   sys.__stdout__.flush()
+        sys.__stdout__.write("{} Calling: {} {}\n".format(component.reference, component, method_name))
+        sys.__stdout__.flush()
       #  assert method_name not in ("write", "flush", "append_to_log"), component.reference
         message = "{}{}{}".format(method_name, 
                                   "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',

@@ -50,20 +50,17 @@ known bugs:
     execfile does not work as __main__
     fix z layer issue with multiple objects on the same space? still even an issue?
             
-things that could be done:    
-    sort sdl renderer draw operations by operation type
-    patch inspect to get source from Compiler
-    fix load
+things that could be done:            
+    fix load - do persistent objects instead?
     make update work with gui objects
      
     develop the gui
-    improve executable
-    improve authentication2 - scrutiny for design pitfalls and errors - start anew with authentication3
+    improve executable    
     integrate ssl contexts into networkssl    
     pass in ssl commands and arguments to networkssl.generate_self_signed_certificate    
     class update feature
     --optimized flag that comments out alerts that are above a threshold. __debug__ flag
-    persistent objects
+    
     rotation descriptor on window objects. modify area based upon the given degrees of rotation about the center of the instance.
     
     preemptive multiprocessing?

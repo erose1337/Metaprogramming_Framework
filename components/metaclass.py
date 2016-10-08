@@ -34,13 +34,10 @@ class Documented(type):
                         
                         
 class alert_on_call(object):
-    
+    """ Decorator that automatically calls self.alert when the decorated method is called """
     def __init__(self, method):
         self.method = method            
         self.method_name = self.get_method_name(method)
-        #sys.__stdout__.write("Wrapping: {} {}\n".format(method, self.method_name))
-        #sys.__stdout__.flush()
-        assert '_' != self.method_name[0], self.method_name
         
     @staticmethod
     def get_method_name(method):
@@ -52,10 +49,7 @@ class alert_on_call(object):
     def __call__(self, *args, **kwargs):       
         method_name = self.method_name
         method = self.method        
-        component = args[0]
-        sys.__stdout__.write("{} Calling: {} {}\n".format(component.reference, component, method_name))
-        sys.__stdout__.flush()
-      #  assert method_name not in ("write", "flush", "append_to_log"), component.reference
+        component = args[0]     
         message = "{}{}{}".format(method_name, 
                                   "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
                                   " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
@@ -80,6 +74,9 @@ class Method_Hook(type):
         
     @classmethod
     def decorate(cls, new_class):
+        """ Wraps all non private/magic methods with Method_Hook.decorator, which is
+            set to the alert_on_call decorator. Private methods are whose names begin
+            with an '_'."""
         decorator = cls.decorator
         default_verbosity = cls.default_verbosity
         for key, value in new_class.__dict__.items():            
@@ -90,17 +87,13 @@ class Method_Hook(type):
                         continue
                 except TypeError:                    
                     if issubclass(type(value), BaseException):
-                        continue
-                assert '_' != key[0]           
-                if key not in new_class.verbosity:                    
-                    decorated_function = decorator(value)
-                #    print "After decoration: ", key, decorated_function
+                        continue                
+                if key not in new_class.verbosity:                                    
+                    decorated_function = decorator(value)                
                     functools.update_wrapper(decorated_function, value)                
                     bound_method = types.MethodType(decorated_function, 
                                                     None, 
-                                                    new_class)                                                         
-                    #sys.__stdout__.write("Setting: {} {} {}\n".format(new_class, key, bound_method))
-                    #sys.__stdout__.flush()
+                                                    new_class)                                                                                                 
                     setattr(new_class, key, bound_method)
                     new_class.verbosity.setdefault(key, default_verbosity)
         return new_class        

@@ -7,7 +7,7 @@ import contextlib as _contextlib
 
 import pride.components.base
 
-patches = ("sys", )
+patches = ("sys", "inspect")
 
 class Patched_Module(pride.base.Wrapper):
     """ The base class for patching modules """
@@ -36,7 +36,7 @@ class Stdout(pride.components.base.Base):
         
     def write(self, data):
         if self.limit_log_size and self.log.tell() > self.limit_log_size:
-            self.log.truncate()
+            self.log.truncate.method(self.log)
         if self.logging_enabled:            
             self.log.write.method(self.log, data) # because pride.components.fileio.File.write is wrapped in metaclass.on_alert_call (avoids recursion)
             self.log.flush()        
@@ -79,10 +79,6 @@ class inspect(Patched_Module):
             
     defaults = {"module_name" : "inspect"}
     
-    def __init__(self, **kwargs):
-        print "uhh what? ", self.alert
-        super(inspect, self).__init__(**kwargs)
-        
     def get_source(_object):
         try:
             return pride.compiler.module_source[_object.__name__][0]

@@ -26,9 +26,10 @@ class Mouse_Structure(object):
     
 class Black_Box_Service(pride.components.authentication3.Authenticated_Service):    
 
-    defaults = {"input_types" : ("keyboard", "mouse", "audio"), "window_type" : "pride.gui.sdllibrary.Window_Context"}
+    defaults = {"input_types" : ("keyboard", "mouse", "audio"), "window_type" : "pride.gui.sdllibrary.Window_Context",
+                "command_line" : "/User/Command_Line", "command_line_program" : "python"}
     remotely_available_procedures = ("handle_input", )
-    verbosity = {"handle_keyboard" : 0, "handle_mouse" : 'v', "handle_audio" : 0, "refresh" : 'v'}
+    verbosity = {"handle_keyboard" : "vvv", "handle_mouse" : "v", "handle_audio" : "vvv", "refresh" : 'v'}
     mutable_defaults = {"windows" : dict}
     
     def login_success(self, username):        
@@ -46,8 +47,10 @@ class Black_Box_Service(pride.components.authentication3.Authenticated_Service):
             
     def handle_keyboard_input(self, input_bytes):
         self.alert("Received keystrokes: {}".format(input_bytes), 
-                   level=self.verbosity["handle_keyboard"])
-                      
+                   level=self.verbosity["handle_keyboard"])        
+        component, method = pride.objects[self.command_line].programs[self.command_line_program]
+        getattr(pride.objects[component], method)(input_bytes)
+        
     def handle_mouse_input(self, mouse_info): 
         user_window = pride.objects[self.windows[self.current_user]]
         if mouse_info:            

@@ -29,12 +29,13 @@ class Background_Refresh(pride.components.scheduler.Process):
         automatically inside the __init__ method. """
         
     defaults = {"priority" : .5}
+    mutable_defaults = {"callbacks" : list}
     
     def run(self):
-        for client in self.children:
-            client.refresh()
-        
-        
+        for client, method in self.callbacks:
+            getattr(client, method)()                 
+
+    
 class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client):
     """ Client program for sending data to a party registered with the target service. 
         
@@ -47,7 +48,7 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
     
     def __init__(self, **kwargs):
         super(Data_Transfer_Client, self).__init__(**kwargs)
-        pride.objects["/Python/Background_Refresh"].add(self)
+        pride.objects["/Python/Background_Refresh"].callbacks.append((self, "refresh"))
         
     @pride.components.authentication3.remote_procedure_call(callback_name="receive")
     def send_to(self, receiver, message): 

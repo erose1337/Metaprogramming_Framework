@@ -53,7 +53,7 @@ class Compiler(object):
         self.cache_filename = cache_filename
         self._database_finalizer = lambda: self.database.close()
         atexit.register(self._database_finalizer)
-        
+                
         self.database = anydbm.open(cache_filename, 'c') # for caching preprocessed source        
         
         self._outdated = set()

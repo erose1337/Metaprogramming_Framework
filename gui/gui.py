@@ -97,15 +97,14 @@ class Organizer(base.Base):
         width_of = lambda side: sum(item.w or min(width_spacing, item.w_range[1]) for item in side)
         height_of = lambda side: sum(item.h or min(height_spacing, item.h_range[1]) for item in side)
         height_of_top = height_of(top)
-        
-      #  print "Setting: ", item, item_x, width_of(left), item_y, height_of_top, item_w, width_of(right), item_h, (height_of(bottom) + height_of_top)
+                
         item.area = (item_x + width_of(left), item_y + height_of_top, 
                      item_w - width_of(right), item_h - (height_of(bottom) + height_of_top))                         
         
     def pack_left(self, parent, item, count, length):
         item.z = parent.z + 1       
         pack_modes = self._pack_modes[parent.reference]
-        space_per_object = parent.w / (length + len(pack_modes["right"]) + len(pack_modes["main"]))        
+        space_per_object = parent.w / (length + len(pack_modes["right"]) + len(pack_modes["main"]))           
         left_items = [objects[name] for name in pack_modes["left"][:count]]
         if left_items:
             required_space = lambda item: item.w or min(space_per_object, item.w_range[1])
@@ -119,7 +118,7 @@ class Organizer(base.Base):
         
         item_height = parent.h - sum(item.h or min(height_per_object, item.h_range[1]) for item in bottom_objects)
         if count == length - 1 and not self._pack_modes[parent.reference]["main"]:
-            item_w = parent.w - item.x # (parent.x + parent.w) - item.x ?
+            item_w = (parent.x + parent.w) - item.x # parent.w - item.x ?
             if pack_modes["right"]:
                 right_items = [objects[name] for name in pack_modes["right"]]
                 required_space = lambda item: item.w or min(space_per_object, item.w_range[1])
@@ -525,8 +524,8 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
         if modifiers:
             for attribute, value in modifiers.items():
                 setattr(self, attribute, value)
-        
-        for item in self.children:
+
+        for item in self.children:            
             item.pack()
         try:
             pack_modes = organizer._pack_modes[self.reference]

@@ -110,10 +110,12 @@ class User(pride.components.base.Base):
                 break
         
         self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
-        self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
+        self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)                     
         self.secret = secret        
         self.derive_data_keys(secret)        
-    
+        
+        self.add(self.private_key)
+        self.add(self.public_key)
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
         
     def find_identity(self, identifier):        
@@ -285,7 +287,7 @@ def test_User():
     user.generate_strong_password("/Python/Data_Transfer_Service", "test_User_unit_test")
     user.generate_portable_password("/Python/Data_Transfer_Service", "test_User_unit_test")
     
-    message = "sign here: "
+    message = "sign here: "    
     signature = user.private_key.sign(message)
     assert user.public_key.verify(signature, message)
         

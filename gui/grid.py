@@ -14,9 +14,14 @@ class Grid(pride.gui.gui.Window):
         return self.rows, self.columns
     def _set_grid_size(self, value):
         self.rows, self.columns = value
-        self.setup_grid()        
+   #     self.setup_grid()        
     grid_size = property(_get_grid_size, _set_grid_size)       
             
+    def __init__(self, **kwargs):
+        super(Grid, self).__init__(**kwargs)
+        if not self.children:
+            self.setup_grid()
+        
     def setup_grid(self):
         for child in self.children:
             child.delete()

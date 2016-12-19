@@ -318,7 +318,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             for component_type in self.startup_components:                
                 component = self.create(component_type)
                 setattr(self, component.__class__.__name__.lower(), 
-                        component.reference)                         
+                        component.reference)   
+
         try:
             self.alert("Initialized", level=self.verbosity["initialized"])
         except (AttributeError, KeyError): 

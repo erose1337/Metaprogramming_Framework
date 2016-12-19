@@ -101,6 +101,7 @@ class RSA_Public_Key(pride.base.Wrapper):
         _format = getattr(cryptography.hazmat.primitives.serialization.PublicFormat, self.serialization_format)
         return self.key.public_bytes(encoding, _format)
         
+        
 class EC_Private_Key(pride.base.Wrapper):
     
     defaults = {"curve_name" : "SECP384R1", "hash_algorithm" : "SHA256",

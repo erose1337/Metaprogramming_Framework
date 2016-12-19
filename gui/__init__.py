@@ -31,8 +31,12 @@ def point_in_area(area, position):
             
 def enable():
     import pride
-    if "/Python/SDL_Window" not in pride.objects:
-        return pride.objects["/Python"].create("pride.gui.sdllibrary.SDL_Window").reference        
+    #import pride.components.blackbox
+    if "/Python/SDL_Window" not in pride.objects:        
+        window = pride.objects["/Python"].create("pride.gui.sdllibrary.SDL_Window").reference        
+        #service = pride.objects["/Python"].create(pride.components.blackbox.Black_Box_Service)
+        #client = pride.components.blackbox.Black_Box_Client(sdl_window=window, mouse_support=True)   
+        return window
     else:
         return "/Python/SDL_Window"
     

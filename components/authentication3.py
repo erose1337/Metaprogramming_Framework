@@ -240,8 +240,8 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
         self.alert("Authorizing: {} for {}".format(peername, method_name), 
                   level=self.verbosity["validate_success"])
         return True        
-        
-        
+            
+    
 class Authenticated_Client(pride.components.rpc.RPC_Client):
     
     verbosity = {"register" : 0, "register_success" : 0, "register_failure" : 0,     
@@ -284,9 +284,12 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
     
     def _get_username(self):
         if not self._username:
-            self._username = raw_input(self.username_prompt.format(self.reference,
-                                                                   self.target_service,
-                                                                   self.ip))
+            username = ''
+            while not username:
+                username = raw_input(self.username_prompt.format(self.reference,
+                                                                  self.target_service,
+                                                                  self.ip))
+            self._username = username
         return self._username
     def _set_username(self, value):         
         self._username = value        

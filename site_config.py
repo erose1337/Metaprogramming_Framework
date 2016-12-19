@@ -40,12 +40,24 @@
 # site_config 
 # defaults specified here will override defaults defined in the source code
 import os
+
+def ensure_folder_exists(pathname):
+    path_progress = r''    
+    for directory in os.path.split(pathname):
+        path_progress = os.path.join(path_progress, directory)
+        if not os.path.exists(path_progress) or not os.path.isdir(path_progress):
+            os.mkdir(path_progress) 
+            
 PRIDE_DIRECTORY = os.path.split(os.path.abspath(__file__))[0]
 AUDIO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "audio")
 
-DATA_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "data")
+DATA_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "data")  
 DATABASE_DIRECTORY = os.path.join(DATA_DIRECTORY, "database")
 LOG_DIRECTORY = os.path.join(DATA_DIRECTORY, "log")
+
+ensure_folder_exists(DATA_DIRECTORY)
+ensure_folder_exists(DATABASE_DIRECTORY)
+ensure_folder_exists(LOG_DIRECTORY)  
 
 FUNCTIONS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "functions")
 GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")
@@ -92,8 +104,8 @@ def logout(program="/User/Shell"):
     
 #import pride.audio
 #pride.audio.enable()
-#import pride.gui
-#window = pride.gui.enable()
+import pride.gui
+window = pride.gui.enable()
 
 #graph = objects["/Python/SDL_Window"].create("pride.gui.graph.Graph")
 #explorer = objects["/Python/SDL_Window"].create("pride.gui.fileexplorer.File_Explorer")
@@ -102,6 +114,7 @@ def logout(program="/User/Shell"):
 #messenger = objects[window].create("pride.gui.messenger.Messenger", username="Ella")
 #homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
+map = objects[window].create("game.gui.map.Map")
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

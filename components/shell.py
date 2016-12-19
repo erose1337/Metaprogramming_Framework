@@ -72,7 +72,7 @@ class Command_Line(pride.components.scheduler.Process):
                 "default_programs" : ("pride.components.shell.OS_Shell", 
                                       "pride.components.shell.Switch_Program"),
                 "idle_threshold" : 10000, 
-                "screensaver_type" : "pride.components.shell.CA_Screensaver"}
+                "screensaver_type" : "pride.components.shell.Random_Screensaver"}
                      
     def __init__(self, **kwargs):
         self._idle = True
@@ -149,6 +149,9 @@ class Command_Line(pride.components.scheduler.Process):
     def read_input(self):        
         input = sys.stdin.readline()
         self.thread_started = False
+        self.handle_input(input)
+        
+    def handle_input(self, input):
         self.alert("Got user input {}".format(input), level='vvv')       
         try:
             program_name, program_input = input.split(' ', 1)
@@ -327,7 +330,7 @@ class Terminal_Screensaver(pride.components.scheduler.Process):
                 self.file_text = '\n' + name + ':\n' + instance.__doc__
             else:
                 name = random.choice(list(pride.compiler.module_source))
-                source = pride.compiler.module_source[name]
+                source = pride.compiler.module_source[name][0]
                 self.file_text = "\n" + source + "\n"
                 
         sys.stdout.write(self.file_text[:self.rate])
@@ -489,3 +492,45 @@ class Wave_CAtest(Terminal_Screensaver):
         print '\n'.join((''.join(decide_symbol(number) for number in row) for row in self.rows))
         
         
+class Chaos_Screensaver(Terminal_Screensaver):
+                
+    defaults = {"storage_size" : 1600}
+    
+    def __init__(self, **kwargs):
+        super(Chaos_Screensaver, self).__init__(**kwargs)
+        self.bytearray = bytearray(self.storage_size)
+        self.bytearray[ord(os.urandom(1)) % self.storage_size] = ord(os.urandom(1))        
+        self.coroutine = self.advance_state()
+        next(self.coroutine)
+    
+    @staticmethod
+    def rotate_left(x, r, bit_width=8, _mask=dict((bit_width, ((2 ** bit_width) - 1)) for bit_width in (8, 16, 32, 64, 128))):  
+        r %= bit_width
+        return ((x << r) | (x >> (bit_width - r))) & _mask[bit_width]
+        
+    def advance_state(self):
+        data = self.bytearray
+       
+        total = 0
+        for byte in data:
+            total ^= byte
+                       
+        size = len(data)   
+        rotate_left = self.rotate_left
+        while True:                
+            for index in range(size):                
+                byte = data[index]                
+                total ^= byte
+                byte ^= rotate_left(total, index) ^ (index % 256) ^ data[(index + 1) % size] ^ data[(index - 1) % size]
+                total ^= byte
+        
+                data[index] = byte                                         
+                yield
+            
+    def run(self):        
+        next(self.coroutine)        
+        objects["/User/Command_Line"].clear()
+        sys.stdout.write(self.bytearray)            
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+                

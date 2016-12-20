@@ -85,26 +85,22 @@ class Organizer(base.Base):
         top_count, bottom_count, left_count, right_count = (len(item) for item in sides)
         item_x, item_y, item_w, item_h = parent_x, parent_y, parent_w, parent_h = parent.area
 
-        try:
-            width_spacing = parent_w / (left_count + right_count)
-        except ZeroDivisionError:
-            width_spacing = parent_w
-        try:
-            height_spacing = parent_h / (top_count + bottom_count)
-        except ZeroDivisionError:
-            height_spacing = parent_h
-        
+        width_spacing = (parent_w / ((left_count + right_count) or 1))# or parent_w
+        height_spacing = (parent_h / ((top_count + bottom_count) or 1))# or parent_h
+                
         width_of = lambda side: sum(item.w or min(width_spacing, item.w_range[1]) for item in side)
         height_of = lambda side: sum(item.h or min(height_spacing, item.h_range[1]) for item in side)
         height_of_top = height_of(top)
-                
-        item.area = (item_x + width_of(left), item_y + height_of_top, 
-                     item_w - width_of(right), item_h - (height_of(bottom) + height_of_top))                         
+        
+        width_of_left = width_of(left)
+        item.area = (item_x + width_of_left, item_y + height_of_top, 
+                     item_w - (width_of(right) + width_of_left), item_h - (height_of(bottom) + height_of_top))                         
         
     def pack_left(self, parent, item, count, length):
         item.z = parent.z + 1       
         pack_modes = self._pack_modes[parent.reference]
-        space_per_object = parent.w / (length + len(pack_modes["right"]) + len(pack_modes["main"]))           
+        space_per_object = parent.w / (length + len(pack_modes["right"]) + len(pack_modes["main"]))
+        
         left_items = [objects[name] for name in pack_modes["left"][:count]]
         if left_items:
             required_space = lambda item: item.w or min(space_per_object, item.w_range[1])
@@ -117,21 +113,21 @@ class Organizer(base.Base):
         item.position = parent.x + left_total, parent.y + sum(item.h or min(height_spacing, item.h_range[1]) for item in top_items)     
         
         item_height = parent.h - sum(item.h or min(height_per_object, item.h_range[1]) for item in bottom_objects)
-        if count == length - 1 and not self._pack_modes[parent.reference]["main"]:
-            item_w = (parent.x + parent.w) - item.x # parent.w - item.x ?
+        if count == length - 1 and not self._pack_modes[parent.reference]["main"]:            
+            item_w = (parent.x + parent.w) - item.x # (parent.x + parent.w) - item.x ?            
             if pack_modes["right"]:
                 right_items = [objects[name] for name in pack_modes["right"]]
                 required_space = lambda item: item.w or min(space_per_object, item.w_range[1])
-                item_w -= sum(required_space(item) for item in right_items)
+                item_w -= sum(required_space(item) for item in right_items)                  
             item.size = (max(item_w, 0) or space_per_object, item_height)    
-        else:
+        else:            
             item.size = (space_per_object, item_height)             
    
     def pack_top(self, parent, item, count, length):
         item.z = parent.z + 1
       #  assert parent.w, (parent, item)
         top_items = [objects[name] for name in self._pack_modes[parent.reference]["top"][:count]]
-        sizing = parent.h / length
+        sizing = parent.h / length # should the length of other pack modes matter too?
         occupied_space = sum(min(top_item.h, top_item.h_range[1]) or min(top_item.h_range[0], sizing) for top_item in top_items)  ## bug hiding right here!        
         if count:                       
             item.y = parent.y + occupied_space

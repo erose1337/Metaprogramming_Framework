@@ -88,8 +88,14 @@ class Method_Hook(type):
                 except TypeError:                    
                     if issubclass(type(value), BaseException):
                         continue                
+                    
                 if key not in new_class.verbosity:                                    
-                    decorated_function = decorator(value)                
+                    try:
+                        decorated_function = decorator(value)                
+                    except AttributeError: # value could be a nested class and not a function or method
+                        assert not hasattr(value, "im_func") and not hasattr(value, "func_name")
+                        continue
+                        
                     functools.update_wrapper(decorated_function, value)                
                     bound_method = types.MethodType(decorated_function, 
                                                     None, 
@@ -331,7 +337,7 @@ class Inherited_Attributes(type):
     
     def __new__(cls, name, bases, attributes):
         inherited_attributes = cls.inherited_attributes
-        if "inherited_attributes" in attributes:
+        if "inherited_attributes" in attributes:            
             inherited_attributes.update(attributes["inherited_attributes"])
         attributes["inherited_attributes"] = inherited_attributes
             

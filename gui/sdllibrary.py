@@ -322,7 +322,7 @@ class SDL_User_Input(scheduler.Process):
                                level=0)                
                     #raise
                 else:
-                    self.alert("Unhandled event: {}".format(event.type))
+                    self.alert("Unhandled event: {}".format(self.event_names[event.type]))
             except Exception as error:
                 self.alert("Exception handling {};\n{}".format(self.event_names[event.type], 
                                                                traceback.format_exc()), 
@@ -530,7 +530,7 @@ class Renderer(SDL_Component):
         x, y, w, h = area
         texture = self.sprite_factory.from_text(text, fontmanager=self.font_manager, **kwargs)             
         _w, _h = texture.size   
-        assert kwargs.get("width", None) is not None, (area, text, kwargs)
+#        assert kwargs.get("width", None) is not None, (area, text, kwargs)
         if kwargs.get("width", None) is None and _w > w:
             self.copy(texture, dstrect=(x + 2, y + 2, 
                                         w - 2, _h),

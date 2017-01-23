@@ -114,7 +114,8 @@ window = pride.gui.enable()
 #messenger = objects[window].create("pride.gui.messenger.Messenger", username="Ella")
 #homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
-map = objects[window].create("game.gui.map.Map")
+#map = objects[window].create("game.gui.map.Map")
+game_app = objects[window].create("game.Game_Application")
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

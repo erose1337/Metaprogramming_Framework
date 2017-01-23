@@ -349,4 +349,36 @@ class Palette(pride.gui.gui.Window):
         super(Palette, self).__init__(**kwargs)
         for button_type in self.button_types:
             self.create(Palette_Button, button_type=button_type, pack_mode="top")
+
+            
+class Number_Display(pride.gui.gui.Button):
+            
+    flags = {"_numeric_value" : 0}
+    
+    def _get_numeric_value(self):
+        return self._numeric_value
+    def _set_numeric_value(self, value):
+        self._numeric_value = value
+        self.text = bytes(value)
+    numeric_value = property(_get_numeric_value, _set_numeric_value)
+    
+            
+class Form(pride.gui.gui.Window):
+    
+    defaults = {"pack_mode" : "top", "available_points" : 0, 
+                "field_object_type" : "pride.gui.widgetlibrary.Number_Display"}
+                
+    mutable_defaults = {"entries" : dict}
+    
+    def __init__(self, **kwargs):
+        super(Form, self).__init__(**kwargs)
+        name_column = self.create("pride.gui.gui.Container", pack_mode="left")
+        value_column = self.create("pride.gui.gui.Container", pack_mode="left")
+        
+        entries = self.entries
+        for entry in sorted(entries.keys()):        
+            box = name_column.create("pride.gui.widgetlibrary.Text_Box", text=entry, allow_text_edit=False, pack_mode="top")                        
+            value_box = value_column.create(self.field_object_type, text=entries[entry], pack_mode="top")
+            value_box.create("pride.gui.widgetlibrary.Scroll_Bar", target=value_box.numeric_value, pack_mode="right")
+        #self.pack()
         

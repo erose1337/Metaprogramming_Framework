@@ -90,9 +90,9 @@ class Organizer(base.Base):
                 
         width_of = lambda side: sum(item.w or min(width_spacing, item.w_range[1]) for item in side)
         height_of = lambda side: sum(item.h or min(height_spacing, item.h_range[1]) for item in side)
-        height_of_top = height_of(top)
-        
+        height_of_top = height_of(top)        
         width_of_left = width_of(left)
+        
         item.area = (item_x + width_of_left, item_y + height_of_top, 
                      item_w - (width_of(right) + width_of_left), item_h - (height_of(bottom) + height_of_top))                         
         
@@ -110,7 +110,7 @@ class Organizer(base.Base):
         top_items = [objects[name] for name in pack_modes["top"]]
         bottom_objects = [objects[name] for name in pack_modes["bottom"]]
         height_per_object = parent.h / (len(top_items) + len(bottom_objects) or 1)
-        item.position = parent.x + left_total, parent.y + sum(item.h or min(height_spacing, item.h_range[1]) for item in top_items)     
+        item.position = parent.x + left_total, parent.y + sum(item.h or min(height_per_object, item.h_range[1]) for item in top_items)     
         
         item_height = parent.h - sum(item.h or min(height_per_object, item.h_range[1]) for item in bottom_objects)
         if count == length - 1 and not self._pack_modes[parent.reference]["main"]:            
@@ -125,27 +125,21 @@ class Organizer(base.Base):
    
     def pack_top(self, parent, item, count, length):
         item.z = parent.z + 1
-      #  assert parent.w, (parent, item)
-        top_items = [objects[name] for name in self._pack_modes[parent.reference]["top"][:count]]
-        sizing = parent.h / length # should the length of other pack modes matter too?
-        occupied_space = sum(min(top_item.h, top_item.h_range[1]) or min(top_item.h_range[0], sizing) for top_item in top_items)  ## bug hiding right here!        
-        if count:                       
-            item.y = parent.y + occupied_space
-        else:
-            item.y = parent.y
-        item.x = parent.x
+      
+        top_items = [objects[name] for name in self._pack_modes[parent.reference]["top"][:count]]      
+        main_items = [objects[name] for name in self._pack_modes[parent.reference]["main"]]
+        bottom_items = [objects[name] for name in self._pack_modes[parent.reference]["bottom"]]
         
-        if count == length - 1 and not self._pack_modes[parent.reference]["main"]:
-            bottom_objects = [objects[name] for name in self._pack_modes[parent.reference]["bottom"]]
-            item_h = (parent.y + parent.h) - item.y         
-            if bottom_objects:
-                width_spacing = parent.h / len(bottom_objects)
-                item_h - sum(bottom_object.h or min(width_spacing, bottom_object.h_range[1]) for
-                             bottom_object in bottom_objects)
-            item.size = (parent.w, item_h)
-        else:
-            item.size = (parent.w, (parent.h - occupied_space) / (length - count))  
-       # assert item.w, (item.size, item)
+        sizing = parent.h / (length + len(main_items) + len(bottom_items))       
+        height_of = lambda side: sum(item.h or min(sizing, item.h_range[1]) for item in side)              
+        main_height = height_of(main_items)
+        bottom_height = height_of(bottom_items)        
+
+        #print parent, item, parent.y, height_of(top_items), len(top_items), count, length
+        item.y = parent.y + height_of(top_items)
+        item.x = parent.x        
+        item.w = parent.w
+        item.h = sizing        
             
     def pack_grid(self, parent, item, count, length):
         grid_size = sqrt(length)
@@ -605,18 +599,14 @@ class Button(Window_Object):
 
 class Application(Window):
     
-    defaults = {"startup_components" : ("pride.gui.widgetlibrary.Task_Bar", 
-                                        "pride.gui.gui.Window")}
+    defaults = {"startup_components" : ("pride.gui.widgetlibrary.Task_Bar", ),
+                "application_window_type" : "pride.gui.gui.Window"}
     flags = {"transparency_enabled" : False}
-    
-    def _get_application_window(self):  
-        try:
-            return self.objects["Window"][0]
-        except KeyError:
-            print self, self.objects.keys()
-            raise
-    application_window = property(_get_application_window)
-    
+        
+    def __init__(self, **kwargs):
+        super(Application, self).__init__(**kwargs)
+        self.application_window = self.create(self.application_window_type)       
+        
     def draw_texture(self):
         assert not self.deleted
         super(Application, self).draw_texture()

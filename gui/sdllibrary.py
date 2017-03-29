@@ -35,7 +35,8 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
     
-    mutable_defaults = {"on_screen" : list}
+    mutable_defaults = {"on_screen" : list, "redraw_objects" : list, "drawing_instructions" : list, 
+                        "copying_instructions" : collections.OrderedDict}
     
     flags = {"max_layer" : 1, "invalid_layer" : 0, "running" : False}
     
@@ -64,7 +65,7 @@ class SDL_Window(SDL_Component):
 
         create_texture = self.renderer.sprite_factory.create_texture_sprite 
         self._texture = create_texture(self.renderer.wrapped_object,
-                                       (self.size[0] * 10, self.size[1] * 10),
+                                       self.renderer.max_size,
                                        access=self.texture_access_flag)
         
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
@@ -73,7 +74,8 @@ class SDL_Window(SDL_Component):
         if not self.running:
             self.running = True                        
             self.run_instruction.execute(priority=self.priority)
-                
+        self.redraw_objects.append(instance)
+        
     def create(self, *args, **kwargs):  
         kwargs.setdefault("sdl_window", self.reference)
         instance = super(SDL_Window, self).create(*args, **kwargs)
@@ -101,13 +103,33 @@ class SDL_Window(SDL_Component):
         super(SDL_Window, self).remove(instance)
         
     def run(self):        
+        #instructions = []
+        #for child in sorted(self.on_screen, key=operator.attrgetter('z')):            
+        #    instructions.extend(child._draw_texture())          
+        #
+        #self.draw(instructions)
+        #self.running = False
+
         instructions = []
-        for child in sorted(self.on_screen, key=operator.attrgetter('z')):            
-            instructions.extend(child._draw_texture())          
-        
+        copying_instructions = self.copying_instructions
+        for window_object in self.redraw_objects:            
+            self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)
+            instructions.extend(window_object._draw_texture())
+            area = x, y, w, h = window_object.area
+            copy_instruction = ((x + item_x_offset, y + item_y_offset,
+                                 w, h), area)
+            try:
+                copying_instructions[window_object.z].append(copy_instruction)
+            except KeyError:
+                copying_instructions[window_object.z] = [copy_instruction]
+        del self.redraw_objects[:]
+                
+        for layer_items in self.user_input._coordinate_tracker.values():            
+            instructions.extend(("render_copy", item.drawing_area, item.area) for item in layer_items)
+                                                 
         self.draw(instructions)
         self.running = False
-
+        
     def draw(self, instructions):
         renderer = self.renderer
         draw_procedures = renderer.instructions
@@ -520,12 +542,18 @@ class Renderer(SDL_Component):
         self.instructions["copy"] = self.copy
         self.clear()
     
+        info = self.get_renderer_info()
+        self.max_size = (info.max_texture_width, info.max_texture_height)
+        
     def _get_text_size(self, area, text, **kwargs):
         x, y, w, h = area
         kwargs.setdefault("width", w)
         return self.sprite_factory.from_text(text, fontmanager=self.font_manager,
                                              **kwargs).size
-                                             
+                                            
+    def render_copy(self, source_area, destination_area):
+        self.copy(self.parent._texture.texture, source_area, destination_area)
+        
     def draw_text(self, area, text, **kwargs):           
         x, y, w, h = area
         texture = self.sprite_factory.from_text(text, fontmanager=self.font_manager, **kwargs)             
@@ -581,6 +609,11 @@ class Renderer(SDL_Component):
             instructions[shape](*args, **kwargs)     
         self.set_render_target(None)
         return texture
+        
+    def get_renderer_info(self):
+        info = sdl2.SDL_RendererInfo()
+        sdl2.SDL_GetRendererInfo(self.renderer, info)
+        return info
         
         
 class Sprite_Factory(SDL_Component):

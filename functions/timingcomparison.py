@@ -73,8 +73,33 @@ def extract_number_from_string(data):
 def extract_number_from_string2(data, numbers=set("0123456789")):
     return [int(s) for s in data if s in numbers]
     
+def slide1(iterable, x=1):
+    """ Yields x bytes at a time from iterable """
+    slice_count, remainder = divmod(len(iterable), x)
+    for position in range((slice_count + 1 if remainder else slice_count)):
+        _position = position * x
+        yield iterable[_position:_position + x]      
+    
+def slide_iter(iterable, x=1):
+    size = len(iterable)
+    return (iterable[position * x:(position * x) + x] for position in range((size / x) + (1 if (size % x) else 0)))
+    
+def test_slide_timing():       
+    iterable = [x for x in range(1024 * 1024 * 48)]
+    TEST_SIZE = 16
+    def test_slide1(iterable):
+        for chunk in slide(iterable, TEST_SIZE):
+            pass
+    def test_slide_iter(iterable):
+        for chunk in slide(iterable, TEST_SIZE):
+            pass
+    timing_comparison((test_slide1, (iterable, ), {}),
+                      (test_slide_iter, (iterable, ), {}))
+    
+    
 if __name__ == "__main__":
-    timing_comparison((extract_number_from_string, ("h3110 23 cat 444.4 rabbit 11 2 dog", ), {}),
-                      (extract_number_from_string2, ("h3110 23 cat 444.4 rabbit 11 2 dog", ), {}),
-                      iterations=10000)
+    #timing_comparison((extract_number_from_string, ("h3110 23 cat 444.4 rabbit 11 2 dog", ), {}),
+    #                  (extract_number_from_string2, ("h3110 23 cat 444.4 rabbit 11 2 dog", ), {}),
+    #                  iterations=10000)
+    test_slide_timing()
     

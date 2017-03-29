@@ -18,8 +18,8 @@ import heapq
 import time
 import traceback
 import timeit
-import pprint
 import itertools
+import sys
 from functools import partial
 
 import pride
@@ -183,7 +183,8 @@ class Processor(Process):
                     error = "'{}' component does not exist".format(component_name)   
                     self.alert("{0}:\n    {1}".format(str(instruction), error), 
                                level=verbosity["component_alert"])                                        
-                    
+                sys.stdout.write("\r>>> ")
+                sys.stdout.flush()
             except AttributeError as error:                
                 if hasattr(objects[component_name], method):
                     if callback and result is not null_result:
@@ -194,7 +195,8 @@ class Processor(Process):
                 else:
                     self.alert("{0}:\n    {1}".format(str(instruction), error), 
                                level=verbosity["component_alert"])     
-                    
+                sys.stdout.write("\r>>> ")
+                sys.stdout.flush()
             except BaseException as error:                   
                 if type(error) in reraise_exceptions:                                        
                     raise
@@ -204,11 +206,15 @@ class Processor(Process):
                     else:
                         self.alert(exception_message.format(component_name, method, format_traceback()),
                                    level=verbosity["exception_alert"])
+                        sys.stdout.write("\r>>> ")
+                        sys.stdout.flush()
                     try:
                         objects[component_name].handle_instruction_exception(method, error, callback, result)
                     except AttributeError:
                         pass
-                        
+                sys.stdout.write("\r>>> ")
+                sys.stdout.flush()        
+                
     
 class Idle_Process(Process):
     

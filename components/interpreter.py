@@ -56,10 +56,11 @@ class Shell(pride.components.authentication3.Authenticated_Client):
     def execute_source(self, source): 
         """ Sends source to the interpreter specified in self.target_service for execution """
                                     
-    def handle_result(self, packet):
-        if packet:        
+    def handle_result(self, packet):         
+        if packet:            
+            packet += ">>> "
             (self.stdout or sys.stdout).write('\r' + packet)                            
-            
+        
 
 class Interpreter(pride.components.authentication3.Authenticated_Service):
     """ Executes python source. Requires authentication from remote hosts. 
@@ -98,7 +99,7 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         log.write("{}\n{} {} from {}:\n".format('-' * 80, time.asctime(), username, 
                                                 sender) + source)                       
         try:
-            code = pride.compiler.compile(source)
+            code = pride.compiler.compile(source, "{}@{}_execute_source".format(username, sender))
         except (SyntaxError, OverflowError, ValueError):
             result = traceback.format_exc()           
         else:          
@@ -106,7 +107,7 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
             backup = sys.stdout                 
             sys.stdout = _logger                          
             try:
-                exec code in globals()
+                self.execute_code(code, globals())        
             except SystemExit:  
                 sys.stdout = backup
                 raise
@@ -122,6 +123,9 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
             sys.stdout = backup
         log.flush()                 
         return result
+                        
+    def execute_code(self, code, _locals):
+        exec code in _locals
         
     def _exec_command(self, source):
         """ Executes the supplied source as the __main__ module"""

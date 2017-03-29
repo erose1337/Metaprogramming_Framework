@@ -224,20 +224,19 @@ class Scroll_Bar(gui.Container):
     defaults = {"pack_mode" : "right"}
     
     def __init__(self, **kwargs):
-        super(Scroll_Bar, self).__init__(**kwargs)
-        _target = self.target
+        super(Scroll_Bar, self).__init__(**kwargs)        
+        kwargs = {"target" : self.target, "amount" : self.amount}
         if self.pack_mode in ("right", "left"): # horizontal packs on the left side
             self.w_range = (0, 8)  
-            pack_mode = "top"
-            #crement_pack_mode = "bottom"
+            kwargs["pack_mode"] = "top"
+            self.create(Increment_Button, **kwargs)
+            self.create(Decrement_Button, **kwargs)            
         else:
             self.h_range = (0, 8)
-            pack_mode = "left"
-            #increment_pack_mode = "right"
-        self.create(Decrement_Button, target=_target, pack_mode=pack_mode)
-     #   self.create(Sc+roll_Indicator, **options)
-        self.create(Increment_Button, target=_target, pack_mode=pack_mode)
-        
+            kwargs["pack_mode"] = "left"            
+            self.create(Decrement_Button, **kwargs)
+            self.create(Increment_Button, **kwargs)
+                
         
 class Decrement_Button(Attribute_Modifier_Button):
       
@@ -353,11 +352,11 @@ class Palette(pride.gui.gui.Window):
             
 class Number_Display(pride.gui.gui.Button):
             
-    flags = {"_numeric_value" : 0}
+    flags = {"_numeric_value" : None}
     
     def _get_numeric_value(self):
         return self._numeric_value
-    def _set_numeric_value(self, value):
+    def _set_numeric_value(self, value):        
         self._numeric_value = value
         self.text = bytes(value)
     numeric_value = property(_get_numeric_value, _set_numeric_value)
@@ -376,9 +375,9 @@ class Form(pride.gui.gui.Window):
         value_column = self.create("pride.gui.gui.Container", pack_mode="left")
         
         entries = self.entries
-        for entry in sorted(entries.keys()):        
+        for entry in sorted(entries.keys()):                    
             box = name_column.create("pride.gui.widgetlibrary.Text_Box", text=entry, allow_text_edit=False, pack_mode="top")                        
-            value_box = value_column.create(self.field_object_type, text=entries[entry], pack_mode="top")
-            value_box.create("pride.gui.widgetlibrary.Scroll_Bar", target=value_box.numeric_value, pack_mode="right")
-        #self.pack()
+            value_box = value_column.create(self.field_object_type, numeric_value=entries[entry], pack_mode="top")
+            value_box.create("pride.gui.widgetlibrary.Scroll_Bar", target=(value_box.reference, "numeric_value"), pack_mode="right", amount=1)
+        
         

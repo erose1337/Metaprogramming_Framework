@@ -1,5 +1,4 @@
 import random
-import pprint
 import sys
 import os
 import threading
@@ -242,7 +241,7 @@ class Python_Shell(Program):
              "lines" : ''}
              
     def handle_input(self, user_input):               
-        if not user_input:
+        if not user_input:            
             user_input = '\n'
         else:
             user_input = pride.compiler.preprocess(user_input)

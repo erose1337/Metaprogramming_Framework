@@ -249,6 +249,7 @@ class Minimal_Theme(Theme):
         if self.text:
             width = self.w if self.wrap_text else None
         #    assert width is not None, (self, width, self.w, self.wrap_text, self.text)
+            assert isinstance(self.text, str), (type(self.text), self.text, self)
             self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                       bg_color=self.background_color, color=self.text_color)
 
@@ -280,7 +281,7 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
     def _set_texture_invalid(self, value):
         if not self._texture_invalid and value:
             assert self.sdl_window
-            objects[self.sdl_window].invalidate_object(self)
+            objects[self.sdl_window].invalidate_object(self)         
         self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
     
@@ -474,12 +475,13 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
     def _draw_texture(self):    
         if self.hidden:
             return []
-        pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self.reference, self.area, self.z)
-        self.draw_texture()
-        instructions = self._draw_operations[:]
-
-        for child in self.children:
-            instructions.extend(child._draw_texture())
+        
+        # to do: draw onto texture atlas and copy from atlas to screen texture
+        self.draw_texture()        
+        instructions = self._draw_operations
+        #instructions.extend(child._draw_texture() for child in self.children)
+        #for child in self.children:
+        #    instructions.extend(child._draw_texture())
             
         if self._texture_window_x or self._texture_window_y:
             x, y, w, h = self.area
@@ -501,8 +503,7 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
             #                                     MAX_H - y if y + h > MAX_H else h)), 
             #                     {})) # empty kwargs
                                           
-        self.texture_invalid = False
-        del self._draw_operations[:]
+        self.texture_invalid = False        
         return instructions
         
     def draw_texture(self):

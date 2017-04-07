@@ -209,9 +209,13 @@ class Python(base.Base):
             command = self.command  
         source = ''    
         if self.startup_definitions:
-            source += self.startup_definitions + "\n"        
-        with open(command, 'r') as module_file:
-            source += module_file.read()            
+            source += self.startup_definitions + "\n"    
+        try:
+            with open(command, 'r') as module_file:
+                source += module_file.read()            
+        except IOError:
+            self.alert("Unable to locate '{}';\nCWD: {}".format(command, os.getcwd()))
+            raise SystemExit()            
         pride.Instruction(self.interpreter, "_exec_command", source).execute()
              
     def setup_os_environ(self):

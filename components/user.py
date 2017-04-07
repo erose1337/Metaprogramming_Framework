@@ -12,7 +12,7 @@ class InvalidUsername(BaseException): pass
 
 try:
     from pride.components.user2 import *
-except ImportError:
+except ImportError:    
     class User(pride.components.base.Base):
         """ A User object for managing secure information and client accounts.
             A user is capable of performing manipulation of secure data,
@@ -63,7 +63,9 @@ except ImportError:
         verbosity = {"password_verified" : 'v', "invalid_password" : 0, "login_success" : 0}
         
         def _get_password(self):
-            return getpass.getpass(self.password_prompt.format(self.reference))
+            return self._password or getpass.getpass(self.password_prompt.format(self.reference))
+        def _set_password(self, value):
+            self._password = value
         password = property(_get_password)
         
         def _get_username(self):

@@ -447,7 +447,7 @@ class Preprocess_Decorator(Preprocessor):
   
 class Keyword(Preprocessor):
     """ Base class for new keywords. Subclasses should specify a keyword_string
-        class attribute. Keyword functionality is defined in pride.keywords. """
+        class attribute. Keyword functionality is defined in pride.additional_keywords. """
     
     @classmethod
     def handle_source(_class, source):

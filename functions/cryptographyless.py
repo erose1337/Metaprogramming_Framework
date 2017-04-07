@@ -5,10 +5,9 @@ import itertools
 import hashlib
 import hmac
 import os
+import six # python 2/3 compatibility
 
-from pride.functions.utilities import save_data, load_data
-from pride.errors import InvalidTag
-from pride.functions import hkdf
+from persistence import save_data, load_data
 
 __all__ = ("InvalidTag", "random_bytes", "psuedorandom_bytes", "encrypt", "decrypt", 
            "Hash_Object", "Key_Derivation_Object", "HKDFExpand", "hkdf_expand",
@@ -18,6 +17,52 @@ __all__ = ("InvalidTag", "random_bytes", "psuedorandom_bytes", "encrypt", "decry
 _TEST_KEY = "\x00" * 16
 _TEST_MESSAGE = "This is a sweet test message :)"
 
+class InvalidTag(BaseException): pass
+
+# from pride.functions.hkdf
+DEFAULT_HASH = "sha256"
+OUTPUT_SIZES = {"sha1" : 20,
+                "sha224" : 28,
+                "sha256" : 32,
+                "sha384" : 48,
+                "sha512" : 64}
+                    
+def extract(input_keying_material, salt, hash_function=DEFAULT_HASH):
+    hasher = getattr(hashlib, hash_function.lower())
+    return hasher(salt + bytes(input_keying_material)).digest()    
+    
+def expand(psuedorandom_key, length=32, info='', hash_function=DEFAULT_HASH):
+    outputs = [b'']
+    hasher = getattr(hashlib, hash_function)
+    blocks, extra = divmod(length, hasher().digest_size)
+    blocks += 1 if extra else 0
+    for counter in range(blocks):
+        outputs.append(hmac.HMAC(psuedorandom_key, 
+                                 outputs[-1] + info + six.int2byte(counter), 
+                                 hasher).digest())      
+    return b''.join(outputs)[:length]
+    
+def hkdf(input_keying_material, length, info='', salt='', hash_function=DEFAULT_HASH):
+    return expand(extract(input_keying_material, salt), 
+                  length, info, hash_function)
+                  
+class HKDF(object):
+                        
+    def __init__(self, hash_function=DEFAULT_HASH):
+        self.hash_function = hash_function
+        self.hash_length = OUTPUT_SIZES[hash_function]
+        
+    def extract(self, input_keying_material, salt=''):
+        return extract(input_keying_material, salt, self.hash_function)        
+        
+    def expand(self, psuedorandom_key, length, info=''):
+        return expand(psuedorandom_key, length=length, info=info, hash_function=self.hash_function)
+        
+    def hkdf(self, input_keying_material, length, info='', salt=''):
+        return hkdf(input_keying_material, length, info, salt)
+        
+# end code from pride.functions.hkdf        
+                  
 def random_bytes(count):
     """ Generates count cryptographically secure random bytes """
     return os.urandom(count) 
@@ -42,8 +87,8 @@ class HKDFExpand(object):
         self.info = info
         
     def derive(self, key_material):
-        return hkdf.expand(key_material, length=self.length, info=self.info, 
-                           hash_function=getattr(hashlib, self.algorithm.lower()))
+        return expand(key_material, length=self.length, info=self.info, 
+                      hash_function=getattr(hashlib, self.algorithm.lower()))
                            
 class Hash_Factory(object):
             
@@ -172,7 +217,7 @@ def _hash_stream_cipher_hmac(data, key, nonce, hash_function="SHA256"):
         
 def _hash_stream_cipher_hkdf(data, key, seed, algorithm="sha256"):
     data = bytearray(data)    
-    keystream = bytearray(hkdf.hkdf(key, len(data), seed, algorithm))
+    keystream = bytearray(hkdf(key, len(data), seed, algorithm))
     for index, byte in enumerate(keystream):
         data[index] ^= byte
     return bytes(data)

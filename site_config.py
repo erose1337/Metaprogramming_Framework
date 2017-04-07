@@ -104,8 +104,8 @@ def logout(program="/User/Shell"):
     
 #import pride.audio
 #pride.audio.enable()
-import pride.gui
-window = pride.gui.enable()
+#import pride.gui
+#window = pride.gui.enable()
 
 #graph = objects["/Python/SDL_Window"].create("pride.gui.graph.Graph")
 #explorer = objects["/Python/SDL_Window"].create("pride.gui.fileexplorer.File_Explorer")
@@ -115,7 +115,8 @@ window = pride.gui.enable()
 #homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
 #map = objects[window].create("game.gui.map.Map")
-game_app = objects[window].create("game.Game_Application")
+#game_app = objects[window].create("game.Game_Application")
+messenger = objects["/Python"].create("pride.components.messenger.Messenger")
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

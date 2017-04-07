@@ -71,6 +71,10 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
         """ Checks for new data from the server """
         self.send_to('', '')
         
+    def delete(self):
+        pride.objects["/Python/Background_Refresh"].callbacks.remove((self, "refresh"))
+        super(Data_Transfer_Client, self).delete()
+        
         
 class Data_Transfer_Service(pride.components.authentication3.Authenticated_Service):
     """ Service for transferring arbitrary data from one registered client to another """        

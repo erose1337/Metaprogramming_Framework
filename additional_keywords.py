@@ -46,3 +46,7 @@ def _improt(module_name):
     if filename[-1] == 'c':
         os.remove(filename[:-1])
     
+def _expect(*args):
+    for exception in args:
+        print("Encountered expected exception: {}".format(exception))
+        

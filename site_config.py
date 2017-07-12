@@ -116,7 +116,15 @@ def logout(program="/User/Shell"):
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
 #map = objects[window].create("game.gui.map.Map")
 #game_app = objects[window].create("game.Game_Application")
-messenger = objects["/Python"].create("pride.components.messenger.Messenger")
+#messenger = objects["/Python"].create("pride.components.messenger.Messenger")
+#import epqcrypto.asymmetric.keyexchange
+#import pride.components.sdts as sdts
+#
+#def new_client(username):
+#    public, private = epqcrypto.keyexchange.generate_keypair()
+#    return pride.components.sdts.Secure_Data_Transfer_Client(public_key=public, private_key=private, username=username)
+#objects["/Python/Data_Transfer_Service"].verbosity["data_transfer"] = 0
+#objects["/Python/Data_Transfer_Service"].verbosity["refresh"] = 0
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

@@ -21,11 +21,11 @@ def _export(*args):
     fqdn = for_fqdn[1]
     as_name = as_name[1]
     
-    if pride.compiler.find_module(module_name, None):
-        module_source = pride.compiler.module_source[module_name][0]
+    if module_name not in sys.modules:
+        module = importlib.import_module(module_name)
     else:
-        raise ValueError("Unable to find module {}".format(module_name))
-    
+        module = sys.modules[module_name]
+
     ip = get_ip_address(fqdn)      
     for shell in pride.objects["/User"].objects["Shell"]:
         if shell.ip == ip:

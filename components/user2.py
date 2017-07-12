@@ -68,7 +68,7 @@ class User(pride.components.base.Base):
                                 
                 "storage_reference" : "/Python/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password for {{}}: ",
-                "auto_register" : True}
+                "auto_register" : False}
     
     mutable_defaults = {"login_token" : dict}
     flags = {"_password" : None}
@@ -99,15 +99,20 @@ class User(pride.components.base.Base):
         while True:
             self.derive_master_keys()
             
-            cryptogram = self.find_identity(self.username)            
             try:
-                private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)                    
-            except pride.functions.security.InvalidTag:
-                self.alert("Invalid password", level=0)
-                self.password = None
-                self.username = None
+                cryptogram = self.find_identity(self.username)            
+            except ValueError:
+                self.username = self.password = None
+                continue
             else:
-                break
+                try:
+                    private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)                    
+                except pride.functions.security.InvalidTag:
+                    self.alert("Invalid password", level=0)
+                    self.password = None
+                    self.username = None
+                else:
+                    break
         
         self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)    
         self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)                     
@@ -150,10 +155,11 @@ class User(pride.components.base.Base):
                 
     def handle_not_registered(self, identifier):        
         if self.auto_register or pride.components.shell.get_permission("{}: Register as '{}'? (y/n): ".format(self.reference, identifier)):
-            self.alert("Registering user '{}'".format(identifier), level=self.verbosity["registering"])
+            if not self.auto_register:
+                self.alert("Registering user '{}'".format(identifier), level=self.verbosity["registering"])
             self.store_new_identity(identifier)
         else:
-            raise NotImplementedError()                
+            raise ValueError("{} not registered; Unable to continue".format(identifier))
               
     def store_new_identity(self, identifier):
         identifier, keypair, secret = generate_identity(identifier)

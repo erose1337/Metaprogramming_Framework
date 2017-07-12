@@ -47,8 +47,8 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
     verbosity = {"send_to" : "vvv"}
     
     def __init__(self, **kwargs):
-        super(Data_Transfer_Client, self).__init__(**kwargs)
         pride.objects["/Python/Background_Refresh"].callbacks.append((self, "refresh"))
+        super(Data_Transfer_Client, self).__init__(**kwargs)        
         
     @pride.components.authentication3.remote_procedure_call(callback_name="receive")
     def send_to(self, receiver, message): 

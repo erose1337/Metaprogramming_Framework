@@ -43,7 +43,7 @@ class Shell(pride.components.authentication3.Authenticated_Client):
             self.handle_startup_definitions()                
              
     def handle_startup_definitions(self):
-        source = pride.compiler.preprocess(self.startup_definitions)
+        source = self.startup_definitions
         try:
             compile(source, "Shell", 'exec')
         except:
@@ -99,7 +99,7 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         log.write("{}\n{} {} from {}:\n".format('-' * 80, time.asctime(), username, 
                                                 sender) + source)                       
         try:
-            code = pride.compiler.compile(source, "{}@{}_execute_source".format(username, sender))
+            code = compile(source, "{}@{}_execute_source".format(username, sender), 'exec')
         except (SyntaxError, OverflowError, ValueError):
             result = traceback.format_exc()           
         else:          
@@ -129,9 +129,13 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         
     def _exec_command(self, source):
         """ Executes the supplied source as the __main__ module"""
-        code = pride.compiler.compile(source, "__main__")
-        with main_as_name():
-            exec code in globals(), globals()
+        try:
+            code = compile(source, "__main__", "exec")              
+            with main_as_name():            
+                exec code in globals(), globals()            
+        except Exception as error:
+            self.alert("{}".format(traceback.format_exc()), level=0)
+            raise SystemExit()
             
     def execute_instruction(self, instruction, priority, callback):
         """ Executes the supplied instruction with the specified priority and callback """
@@ -186,7 +190,7 @@ class Python(base.Base):
         self.setup_os_environ()
 
         # ephemeral keys for encrypted in memory only data storage
-        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32))        
+        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32), auto_register=True)        
         pride.objects["/Finalizer"].add_callback((self.session.reference, "delete"), -1)        
         
         if not self.command:
@@ -197,15 +201,14 @@ class Python(base.Base):
         else:            
             try:
                 machine_id, machine_password = pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"]
-            except KeyError:
+            except KeyError:                
                 machine_id, machine_password = os.urandom(32), os.urandom(32)
                 pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"] = (machine_id, machine_password)
                
             User = pride.components.user.User               
             with pride.functions.contextmanagers.backup(User, "verbosity"):
-                User.verbosity["login_success"] = "vv"            
-                user = pride.components.user.User(username=machine_id, password=machine_password)
-            
+                User.verbosity["login_success"] = "vv"                            
+                user = User(username=machine_id, password=machine_password, auto_register=True)                
             command = self.command  
         source = ''    
         if self.startup_definitions:

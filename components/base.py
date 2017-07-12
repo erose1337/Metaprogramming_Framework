@@ -422,8 +422,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         self.objects[type(instance).__name__].remove(instance)
         instance.references_to.remove(self.reference)                    
     
-    def alert(self, message, level=0):
-        """usage: base.alert(message, level=0)
+    def alert(self, message, level=0, display_name=''):
+        """usage: base.alert(message, level=0, display_name='')
 
         Display/log a message according to the level given. The alert may 
         be printed for immediate attention and/or logged, depending on
@@ -431,7 +431,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
 
         - message is a string that will be logged and/or displayed        
         - level is an integer indicating the severity of the alert.
-
+        - display_name is a string that should be in place of the component name
         alert severity is relative to Alert_Handler log_level and print_level;
         a lower verbosity indicates a less verbose notification, while 0
         indicates a message that should not be suppressed. log_level and
@@ -439,7 +439,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         
         An objects verbosity can be modified via the site_config module. """ 
         alert_handler = objects["/Alert_Handler"]          
-        message = "{}: {}".format(self.reference, message)
+        message = "{}: {}".format(display_name or self.reference, message)
         if level in alert_handler._print_level or level is 0:                    
             sys.stdout.write(message + "\n")
             sys.stdout.flush()                           

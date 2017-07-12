@@ -12,12 +12,6 @@ import pride.functions.utilities
 from pride.functions.security import hash_function
 from pride.errors import SecurityError, UnauthorizedError             
 
-
-# send session key to partner
-# xor key with key sent by partner
-#    - decrypt encrypted_session_secret via private key
-#    - xor both session secrets together to obtain final session secret
-
 remote_procedure_call = pride.components.rpc.remote_procedure_call       
                                 
 class Authenticated_Service(pride.components.rpc.RPC_Service):
@@ -383,6 +377,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             if user_info not in registered_users:
                 if pride.components.shell.get_permission("{}: Attempt to register?: ".format(self.reference)):
                     self.register()
+                else:
+                    self.delete() # to keep or not?
             else:
                 self.alert("Invalid password", level=self.verbosity["invalid_password"])
                 

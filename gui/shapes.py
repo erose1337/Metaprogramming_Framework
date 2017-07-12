@@ -17,15 +17,36 @@ class Shape(pride.components.base.Base):
     def _on_set(self, coordinate, value):        
         setattr(self, "_" + coordinate, value)
     
-    @pride.preprocess
-    def define_coordinate_descriptors():
-        source = ''
-        for coordinate in ('x', 'y', 'w', 'h', 'z'):
-            source += "    def _get_{}(self):\n        return self._{}".format(coordinate, coordinate)
-            source += "\n    def _set_{}(self, value):\n        self._on_set('{}', value)".format(coordinate, coordinate)
-            source += "\n    {} = property(_get_{}, _set_{})\n\n".format(coordinate, coordinate, coordinate)           
-        return source[4:] # slice off initial 4 spaces
-        
+    def _get_x(self):
+        return self._x
+    def _set_x(self, value):
+        self._on_set('x', value)
+    x = property(_get_x, _set_x)
+    
+    def _get_y(self):
+        return self._y
+    def _set_y(self, value):
+        self._on_set('y', value)
+    y = property(_get_y, _set_y)
+    
+    def _get_w(self):
+        return self._w
+    def _set_w(self, value):
+        self._on_set('w', value)
+    w = property(_get_w, _set_w)
+    
+    def _get_h(self):
+        return self._h
+    def _set_h(self, value):
+        self._on_set('h', value)
+    h = property(_get_h, _set_h)
+    
+    def _get_z(self):
+        return self._z
+    def _set_z(self, value):
+        self._on_set('z', value)
+    z = property(_get_z, _set_z)
+    
     def _get_position(self):
         return (self.x, self.y)
     def _set_position(self, position):
@@ -95,17 +116,21 @@ class Shape(pride.components.base.Base):
     color = property(_get_color, _set_color)  
     
             
-class Bounded_Shape(Shape):
-           
-    @pride.preprocess
-    def _create_range_descriptors():
-        source = ''
-        for coordinate in ('w', 'h'):
-            source += "    def _get_{}_range(self):\n        return self._{}_range".format(coordinate, coordinate)
-            source += "\n    def _set_{}_range(self, value):\n        ".format(coordinate)
-            source += "self._{}_range = value\n        self.{} = self._{}".format(coordinate, coordinate, coordinate)
-            source += "\n    {}_range = property(_get_{}_range, _set_{}_range)\n\n".format(coordinate, coordinate, coordinate)        
-        return source[4:]           
+class Bounded_Shape(Shape):                   
+    
+    def _get_w_range(self):
+        return self._w_range
+    def _set_w_range(self, value):
+        self._w_range = value
+        self.w = self._w
+    w_range = property(_get_w_range, _set_w_range)
+    
+    def _get_h_range(self):
+        return self._h_range
+    def _set_h_range(self, value):
+        self._h_range = value
+        self.h = _h
+    h_range = property(_get_h_range, _set_h_range)
     
     def __init__(self, **kwargs):
         max_width, max_height = pride.gui.SCREEN_SIZE

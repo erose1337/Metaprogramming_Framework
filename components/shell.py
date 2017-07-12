@@ -243,9 +243,7 @@ class Python_Shell(Program):
     def handle_input(self, user_input):               
         if not user_input:            
             user_input = '\n'
-        else:
-            user_input = pride.compiler.preprocess(user_input)
-            
+   
         self.lines += user_input
         lines = self.lines
         write_prompt = True       
@@ -328,8 +326,7 @@ class Terminal_Screensaver(pride.components.scheduler.Process):
                 pride.objects[name] = instance
                 self.file_text = '\n' + name + ':\n' + instance.__doc__
             else:
-                name = random.choice(list(pride.compiler.module_source))
-                source = pride.compiler.module_source[name][0]
+                source = inspect.getsource(random.choice(sys.modules))                
                 self.file_text = "\n" + source + "\n"
                 
         sys.stdout.write(self.file_text[:self.rate])

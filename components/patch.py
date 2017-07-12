@@ -7,7 +7,7 @@ import contextlib as _contextlib
 
 import pride.components.base
 
-patches = ("sys", "inspect")#, "os")
+patches = ("sys", )#, "os")
 
 class Patched_Module(pride.base.Wrapper):
     """ The base class for patching modules """
@@ -74,19 +74,4 @@ class sys(Patched_Module):
         self._logger = self.create(Stdout, file=self.wrapped_object.__stdout__)
         self.stdout_log = self._logger.log            
         self.wrapped_object.stdout = self._logger
-        
-        
-class inspect(Patched_Module):
-            
-    defaults = {"module_name" : "inspect"}
-    
-    def get_source(_object):
-        try:
-            assert isinstance(pride.compiler.module_source[_object.__name__][0], str)
-            return pride.compiler.module_source[_object.__name__][0]
-        except KeyError:
-            return inspect.getsource(_object)
-            
-            
-            
-        
+                                    

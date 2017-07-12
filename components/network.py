@@ -482,30 +482,67 @@ class Udp_Socket(Socket):
         
 class Multicast_Beacon(Udp_Socket):
 
-    defaults = {"packet_ttl" : struct.pack("b", 127),
-                "multicast_group" : "224.0.0.0",
-                "multicast_port" : 1929}
-
+    defaults = {"packet_ttl" : 1, "multicast_group" : "224.0.0.0",
+                "multicast_port" : 1929, "loopback_enabled" : 1,
+                "outgoing_interface" : socket.INADDR_ANY}
+    
     parser_ignore = Udp_Socket.parser_ignore + ("packet_ttl", )
     
+    # A list of TTL thresholds and their associated scope follows:    
+    # TTL     Scope
+    # ----------------------------------------------------------------------
+    #    0    Restricted to the same host. Won't be output by any interface.
+    #    1    Restricted to the same subnet. Won't be forwarded by a router.
+    #  <32         Restricted to the same site, organization or department.
+    #  <64 Restricted to the same region.
+    # <128 Restricted to the same continent.
+    # <255 Unrestricted in scope. Global.       
+    
+    def _get_packet_ttl(self):
+        return struct.pack('b', self._packet_ttl)
+    def _set_packet_ttl(self, value):
+        self._packet_ttl = value
+    packet_ttl = property(_get_packet_ttl, _set_packet_ttl)
+           
     def __init__(self, **kwargs):
         super(Multicast_Beacon, self).__init__(**kwargs)
         self.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.packet_ttl)
-
-
+        self.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, self.loopback_enabled)
+        self.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, self.outgoing_interface)
+        
+    def broadcast(self, data):
+        self.sendto(data, (self.multicast_group, self.multicast_port))
+        
+        
 class Multicast_Receiver(Udp_Socket):
 
-    defaults = {"address" : "224.0.0.0"}
+    defaults = {"multicast_group" : "224.0.0.0", "port" : 1929}
 
     def __init__(self, **kwargs):
         super(Multicast_Receiver, self).__init__(**kwargs)
-
+        self.add_membership(self.multicast_group)
+        
+    def add_membership(self, multicast_group):
         # thanks to http://pymotw.com/2/socket/multicast.html for the below
-        group_option = socket.inet_aton(self.address)
+        group_option = socket.inet_aton(multicast_group)
         multicast_configuration = struct.pack("4sL", group_option, socket.INADDR_ANY)
         self.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, multicast_configuration)
-           
-
+        
+    def drop_membership(self, multicast_group):
+        group_option = socket.inet_aton(multicast_group)
+        multicast_configuration = struct.pack("4sL", group_option, socket.INADDR_ANY)
+        self.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, multicast_configuration)
+        
+    #def recvfrom(self):
+    #    data, sender = super(Multicast_Receiver, self).recvfrom()
+    #    self.alert("{}: {}".format(sender, data), level=0)
+    #    return data, sender
+        
+    def delete(self):
+        self.drop_membership(self.multicast_group)
+        super(Multicast_Receiver, self).delete()
+        
+        
 class Network_Connection_Manager(pride.components.base.Base):
     """ Provides a record of sockets currently in use. 
     

@@ -21,13 +21,8 @@ def create_module(module_name, source, context=None):
     return new_module
   
 def get_module_source(module):
-    """ Retrieve the source code of module. If the source code has been
-        processed by the pride compiler, the preprocessed code is returned
-        from the compilers cache. Otherwise, the inspect module is used. """
-    try:
-        return pride.compiler.module_source[module.__name__]
-    except (KeyError, NameError):        
-        return inspect.getsource(module)
+    """ Retrieve the source code of module using the inspect module. """
+    return inspect.getsource(module)
     
 def reload_module(module_name):
     """ Reloads the module specified by module_name"""
@@ -104,7 +99,7 @@ def get_required_sources(modules):
     with modules_preserved(modules):
         for module_name in modules:
             try:
-                module_source[module_name] = ''.join(pride.compiler.module_source[module_name][0])
+                module_source[module_name] = get_module_source(sys.modules[module_name])
             except KeyError:
                 module = importlib.import_module(module_name)
                 try:

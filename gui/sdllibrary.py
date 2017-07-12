@@ -116,6 +116,7 @@ class SDL_Window(SDL_Component):
             self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)
             instructions.extend(window_object._draw_texture())
             area = x, y, w, h = window_object.area
+            item_x_offset = item_y_offset = 0 # odo: calculate location in texture atlas
             copy_instruction = ((x + item_x_offset, y + item_y_offset,
                                  w, h), area)
             try:

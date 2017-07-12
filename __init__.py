@@ -23,12 +23,15 @@ if "--site_config" in sys.argv:
             site_config_entry[key] = value
         else:           
             setattr(site_config, name, ast.literal_eval(value))                   
-            
-import preprocessing
-        
-compiler = preprocessing.Compiler(preprocessors=(preprocessing.Preprocess_Decorator, ),
-                                  modify_builtins=None)                                    
-
+ 
+import additional_builtins
+try:
+    import __builtin__
+except ImportError:
+    import builtins as __builtin__    
+for name in additional_builtins.__all__:
+    setattr(__builtin__, name, getattr(additional_builtins, name))
+                      
 import heapq
 import timeit
 import platform
@@ -37,6 +40,7 @@ CURRENT_PLATFORM = platform.system()
 timestamp = timeit.default_timer
         
 def preprocess(function):    
+    raise DeprecationWarning("Preprocessing no longer supported")
     import pride.errors
     raise pride.errors.PreprocesserError("Failed to replace preprocess function with source")       
         
@@ -103,8 +107,7 @@ class Instruction(object):
                                                    self.args, self.kwargs)
 
 _last_creator = ''
-# compatibility purposes
-objects = objects
+objects = objects # compatibility purposes
 
 # Things must be done in this order for Alert_Handler to exist inside this file
 # and reuse Base machinery, namely for argument parsing. 

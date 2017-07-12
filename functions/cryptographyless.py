@@ -1,5 +1,6 @@
-""" Provides authenticated encryption and decryption functions using only the python standard library.
-    Used when the cryptography module cannot be installed. """
+""" Provides authenticated encryption and decryption functions using only the python standard library and the persistence module.
+    Used when the cryptography package cannot be installed. 
+    If the layout seems strange (why are there objects for some things?) the reason why is compatibility with the cryptography packages interface"""
     
 import itertools
 import hashlib
@@ -170,7 +171,7 @@ def verify_mac(key, packed_data, algorithm="SHA256", backend=None):
     else:
         return data
 
-def encrypt(data='', key='', mac_key=None,iv=None, extra_data='', algorithm="SHA256",
+def encrypt(data='', key='', mac_key=None, iv=None, extra_data='', algorithm="SHA256",
             mode=None, return_mode="cryptogram", backend=None, iv_size=16, hash_algorithm="sha256"):        
     iv = iv or random_bytes(iv_size)
     if (not data) or (not key) or (not mac_key):

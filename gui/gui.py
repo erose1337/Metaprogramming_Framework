@@ -253,17 +253,38 @@ class Minimal_Theme(Theme):
             self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                       bg_color=self.background_color, color=self.text_color)
 
-                                
-class Window_Object(pride.gui.shapes.Bounded_Shape):
+                             
+class Organized_Object(pride.gui.shapes.Bounded_Shape):
+    
+    defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : ''}
 
-    defaults = {'x' : 0, 'y' : 0, 'z' : 0, "size" : (0, 0),
-                "texture_size" : pride.gui.SCREEN_SIZE, "outline_width" : 1,
+    flags = {"sdl_window" : ''}
+    
+    mutable_defaults = {"_children" : list}
+    verbosity = {"packed" : "packed"}       
+    
+    def _get_pack_mode(self):      
+        return self._pack_mode
+    def _set_pack_mode(self, value):
+        self._pack_mode = value
+        objects[(self.sdl_window  or self.parent.sdl_window) + "/Organizer"].set_pack_mode(self.reference, value)
+    pack_mode = property(_get_pack_mode, _set_pack_mode)
+    
+    def pack(self):
+        organizer = objects[self.sdl_window + "/Organizer"]
+        organizer.pack(self)
+        for item in self.children:            
+            item.pack()
+            
+            
+class Window_Object(Organized_Object):
+
+    defaults = {"outline_width" : 1,
                 "background_color" : (0, 0, 0, 0), #(25, 125, 225, 125),
                 "color" : (15, 165, 25, 255), "text_color" : (15, 165, 25, 255),
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
                 "_ignore_click" : False, "hidden" : False, "movable" : False, 
-                "texture" : None, "text" : '', "pack_mode" : '' ,      
-                "sdl_window" : '', "scroll_bars_enabled" : False, 
+                "text" : '', "scroll_bars_enabled" : False, 
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.gui.Minimal_Theme"}    
         
@@ -337,14 +358,7 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
         self._texture_window_y = value
         self.texture_invalid = True
     texture_window_y = property(_get_texture_window_y, _set_texture_window_y)
-    
-    def _get_pack_mode(self):      
-        return self._pack_mode
-    def _set_pack_mode(self, value):
-        self._pack_mode = value
-        objects[(self.sdl_window  or self.parent.sdl_window) + "/Organizer"].set_pack_mode(self.reference, value)
-    pack_mode = property(_get_pack_mode, _set_pack_mode)
-    
+        
     def _get_parent_application(self):
         result = None
         instance = self
@@ -373,8 +387,7 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
     
     def __init__(self, **kwargs):               
         super(Window_Object, self).__init__(**kwargs)       
-        self.texture_window_x = self.texture_window_y = 0
-        self.texture = None
+        self.texture_window_x = self.texture_window_y = 0        
         self.texture_invalid = True
         
         self.theme = self.create(self.theme_type, wrapped_object=self)
@@ -502,17 +515,10 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
     def draw_texture(self):
         self.theme.draw_texture()
         
-    def pack(self, modifiers=None):        
-        organizer = objects[self.sdl_window + "/Organizer"]
-        organizer.pack(self)
-        if modifiers:
-            for attribute, value in modifiers.items():
-                setattr(self, attribute, value)
-
-        for item in self.children:            
-            item.pack()
+    def pack(self):        
+        super(Window_Object, self).pack()
         try:
-            pack_modes = organizer._pack_modes[self.reference]
+            pack_modes = objects[self.sdl_window + "/Organizer"]._pack_modes[self.reference]
         except KeyError:
             pass
         else:
@@ -607,31 +613,40 @@ class Application(Window):
         self.application_window.texture_invalid = True
         
         
+class Placeholder(Organized_Object):
 
-class Texture_Atlas(Window):
+    defaults = {"pack_mode" : "left"}
     
-    defaults = {"size" : (4096, 4096), "screen_size" : pride.gui.SCREEN_SIZE, "subsections" : tuple()}
     
-    texture_invalid = False
+class Texture_Atlas(Organized_Object):
+    
+    defaults = {"size" : (4096, 4096), "screen_size" : pride.gui.SCREEN_SIZE, "subsections" : tuple(),
+                "placeholder_type" : Placeholder, "pack_mode" : "main"}
+    
+   # flags = {"sdl_window" : ''}
     
     def __init__(self, *args, **kwargs):
         super(Texture_Atlas, self).__init__(*args, **kwargs)        
         # top-left: screen;      top-right: vertical placeholders
         #         bottom-top: square placeholders
         #         bottom-bottom: horizontal placeholders
-        top = self.create(pride.gui.gui.Container, pack_mode="top")
-        bottom = self.create(pride.gui.gui.Container, pack_mode="top")
+        placeholder_type = self.placeholder_type
+        sdl_window = self.sdl_window
+        
+        top = self.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
+        bottom = self.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
         
         screen_w, screen_h = self.screen_size
-        top_left = top.create(pride.gui.gui.Container, h_range=(screen_h, screen_h), pack_mode="left")        
-        top_right = top.create(pride.gui.gui.Container, pack_mode="left")        
-        bottom_top = bottom.create(pride.gui.gui.Container, pack_mode="top")
-        bottom_bottom = bottom.create(pride.gui.gui.Container, pack_mode="bottom")
+                
+        top_left = top.create(placeholder_type, h_range=(screen_h, screen_h), pack_mode="left", sdl_window=sdl_window)
+        top_right = top.create(placeholder_type, pack_mode="left", sdl_window=sdl_window)
+        bottom_top = bottom.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
+        bottom_bottom = bottom.create(placeholder_type, pack_mode="bottom", sdl_window=sdl_window)
         self.subsections = (top_left, top_right, bottom_top, bottom_bottom)
         
     def add_to_atlas(self, window_object):        
-        subsection = self.determine_subsection(window_object)
-        placeholder = subsection.create(pride.gui.gui.Container)
+        subsection, pack_mode = self.determine_subsection(window_object)
+        placeholder = subsection.create(self.placeholder_type, pack_mode=pack_mode, sdl_window=self.sdl_window)
         window_object._texture_atlas_reference = placeholder.reference
         return placeholder.position
         
@@ -646,11 +661,12 @@ class Texture_Atlas(Window):
         #   - if h / w > 2:
         #       item is vertical
         #   - else item fits well enough in a square
+        # also returns which way to pack the item into the according subsection
         w, h = window_object.size       
         if h and w / h > 2:
-            return self.subsections[3] # horizontal -> bottom: bottom
+            return self.subsections[3], "top" # horizontal -> bottom: bottom
         elif w and h / w > 2:
-            return self.subsections[1] # vertical -> top: right
+            return self.subsections[1], "left" # vertical -> top: right
         else:
-            return self.subsections[2] # square -> bottom: top             
+            return self.subsections[2], "left" # square -> bottom: top             
                         

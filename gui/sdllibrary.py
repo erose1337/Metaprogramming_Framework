@@ -49,6 +49,7 @@ class SDL_Window(SDL_Component):
     def __init__(self, **kwargs):
         super(SDL_Window, self).__init__(**kwargs)
         self.run_instruction = Instruction(self.reference, "run")
+        self.sdl_window = self.reference
         
         window = sdl2.ext.Window(self.name, size=self.size, flags=self.window_flags)
         
@@ -58,7 +59,7 @@ class SDL_Window(SDL_Component):
         self.renderer = self.create(Renderer, self, flags=self.renderer_flags)
         self.user_input = self.create(SDL_User_Input)
         self.organizer = self.create("pride.gui.gui.Organizer")
-        self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", screen_size=self.size)
+        self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", screen_size=self.size, sdl_window=self.reference)
               
         if self.showing:
             self.show()  
@@ -97,13 +98,15 @@ class SDL_Window(SDL_Component):
                 raise ValueError("Unable to remove {} from on_screen".format(instance))
         super(SDL_Window, self).remove(instance)
         
-    def run(self):        
+    def run(self, _empty_dict={}):        
         instructions = []
         copying_instructions = self.copying_instructions
         assert len(set(self.redraw_objects)) == len(self.redraw_objects)
-        for window_object in self.redraw_objects:            
+        
+        for window_object in self.redraw_objects[:]:            
             old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
             
+            print "ADDING TO ATLAS", window_object
             drawing_position = self.texture_atlas.add_to_atlas(window_object)
             area = x, y, w, h = window_object.area                        
             
@@ -112,7 +115,7 @@ class SDL_Window(SDL_Component):
             instructions.extend(window_object._draw_texture())
             window_object.area = area
                         
-            copy_instruction = (drawing_area, area) # source, destination 
+            copy_instruction = ("copy_subsection", (drawing_area, area), _empty_dict) # source, destination 
             # if it's already in a layer, remove it
             # then add it to the one it is supposed to be in
             # if there are no entries yet, create a list with the item in it
@@ -543,6 +546,7 @@ class Renderer(SDL_Component):
                                   name in ("point", "line", "rect", "rect_width", "text"))
         self.instructions["fill"] = self.fill
         self.instructions["copy"] = self.copy
+        self.instructions["copy_subsection"] = self.render_copy
         self.clear()
     
         info = self.get_renderer_info()

@@ -190,7 +190,7 @@ class Python(base.Base):
         self.setup_os_environ()
 
         # ephemeral keys for encrypted in memory only data storage
-        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32), auto_register=True)        
+        self.session = self.create("pride.components.user.Session", username=os.urandom(16), password=os.urandom(32), kdf_iterations=1, auto_register=True)        
         pride.objects["/Finalizer"].add_callback((self.session.reference, "delete"), -1)        
         
         if not self.command:

@@ -13,7 +13,6 @@ import pride.components.scheduler as scheduler
 import pride.functions.utilities as utilities
 import pride.gui
 Instruction = pride.Instruction
-#objects = pride.objects
 
 import sdl2
 import sdl2.ext
@@ -21,6 +20,7 @@ import sdl2.sdlttf
 sdl2.ext.init()
 sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
+
 
 class SDL_Component(base.Proxy): pass
     
@@ -58,7 +58,7 @@ class SDL_Window(SDL_Component):
         self.renderer = self.create(Renderer, self, flags=self.renderer_flags)
         self.user_input = self.create(SDL_User_Input)
         self.organizer = self.create("pride.gui.gui.Organizer")
-        
+        self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", screen_size=self.size)
               
         if self.showing:
             self.show()  
@@ -95,40 +95,41 @@ class SDL_Window(SDL_Component):
         except ValueError:
             if hasattr(instance, "pack") and instance.__class__.__name__ != "Organizer":
                 raise ValueError("Unable to remove {} from on_screen".format(instance))
-        #except AttributeError:            
-        #    print "That was weird"
-        #    import pprint
-        #    pprint.pprint(dict((key, getattr(self, key)) for key in sorted(self.__dict__)))
-        #    raise
         super(SDL_Window, self).remove(instance)
         
     def run(self):        
-        #instructions = []
-        #for child in sorted(self.on_screen, key=operator.attrgetter('z')):            
-        #    instructions.extend(child._draw_texture())          
-        #
-        #self.draw(instructions)
-        #self.running = False
-
         instructions = []
         copying_instructions = self.copying_instructions
+        assert len(set(self.redraw_objects)) == len(self.redraw_objects)
         for window_object in self.redraw_objects:            
-            self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)
+            old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
+            
+            drawing_position = self.texture_atlas.add_to_atlas(window_object)
+            area = x, y, w, h = window_object.area                        
+            
+            drawing_area = drawing_position + (w, h)
+            window_object.area = drawing_area
             instructions.extend(window_object._draw_texture())
-            area = x, y, w, h = window_object.area
-            item_x_offset = item_y_offset = 0 # odo: calculate location in texture atlas
-            copy_instruction = ((x + item_x_offset, y + item_y_offset,
-                                 w, h), area)
-            try:
-                copying_instructions[window_object.z].append(copy_instruction)
-            except KeyError:
-                copying_instructions[window_object.z] = [copy_instruction]
+            window_object.area = area
+                        
+            copy_instruction = (drawing_area, area) # source, destination 
+            # if it's already in a layer, remove it
+            # then add it to the one it is supposed to be in
+            # if there are no entries yet, create a list with the item in it
+            current_z = window_object.z
+            if current_z != old_z:     
+                try:
+                    copying_instructions[old_z].remove(copy_instruction)
+                except (KeyError, ValueError):
+                    pass
+                    
+                try:
+                    copying_instructions[current_z].append(copy_instruction)
+                except KeyError:
+                    copying_instructions[current_z] = [copy_instruction]
         del self.redraw_objects[:]
-                
-        for layer_items in self.user_input._coordinate_tracker.values():            
-            instructions.extend(("render_copy", item.drawing_area, item.area) for item in layer_items)
-                                                 
-        self.draw(instructions)
+                                                                        
+        self.draw(itertools.chain(instructions, *copying_instructions.values()))
         self.running = False
         
     def draw(self, instructions):
@@ -355,7 +356,7 @@ class SDL_User_Input(scheduler.Process):
         try:
             _, old_z = self.coordinate_tracker[item]
         except KeyError:
-            pass
+            old_z = 0
         else:            
             self._coordinate_tracker[old_z].remove(item)            
         try:
@@ -364,6 +365,7 @@ class SDL_User_Input(scheduler.Process):
             self._coordinate_tracker[z] = [item]
             
         self.coordinate_tracker[item] = (area, z)
+        return old_z
         
     def _remove_from_coordinates(self, item):        
         _, old_z = self.coordinate_tracker[item]

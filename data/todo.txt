@@ -52,7 +52,10 @@ known bugs:
     execfile does not work as __main__
     fix z layer issue with multiple objects on the same space? still even an issue?
             
-things that could be done:   
+things that could be done:       
+    re-design security
+        - implement long term password based security with shortcut
+        
     patch os.system to ask for permission before calling?
     fix load - do persistent objects instead?
     make update work with gui objects

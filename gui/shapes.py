@@ -129,7 +129,7 @@ class Bounded_Shape(Shape):
         return self._h_range
     def _set_h_range(self, value):
         self._h_range = value
-        self.h = _h
+        self.h = self._h
     h_range = property(_get_h_range, _set_h_range)
     
     def __init__(self, **kwargs):

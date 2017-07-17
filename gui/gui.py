@@ -271,8 +271,8 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
              "_texture_window_x" : 0, "_texture_window_y" : 0,
              "_text" : '', "_pack_mode" : '', "_sdl_window" : ''}
     
-    mutable_defaults = {"_draw_operations" : list, "pack_count" : dict, "_children" : list}
-    verbosity = {"texture_resized" : "vvv", "press" : "vv", "release" : "vv", "packed" : "packed"} 
+    mutable_defaults = {"_draw_operations" : list, "_children" : list}
+    verbosity = {"press" : "vv", "release" : "vv", "packed" : "packed"} 
     
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
     
@@ -342,7 +342,7 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
         return self._pack_mode
     def _set_pack_mode(self, value):
         self._pack_mode = value
-        objects[(self.sdl_window  or self.parent.sdl_window)+ "/Organizer"].set_pack_mode(self.reference, value)
+        objects[(self.sdl_window  or self.parent.sdl_window) + "/Organizer"].set_pack_mode(self.reference, value)
     pack_mode = property(_get_pack_mode, _set_pack_mode)
     
     def _get_parent_application(self):
@@ -495,13 +495,6 @@ class Window_Object(pride.gui.shapes.Bounded_Shape):
             destination = (x, y, w, h)        
           #  assert destination == self.area
             instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
-            
-            # less readable, less code though, need to find way to do this automagically            
-            #instructions.append(("copy", (self.texture.texture,
-            #                              (x + self.texture_window_x, y + self.texture_window_y, w, h), 
-            #                              (x, y, MAX_W - x if x + w > MAX_W else w,
-            #                                     MAX_H - y if y + h > MAX_H else h)), 
-            #                     {})) # empty kwargs
                                           
         self.texture_invalid = False        
         return instructions
@@ -613,3 +606,51 @@ class Application(Window):
         super(Application, self).draw_texture()
         self.application_window.texture_invalid = True
         
+        
+
+class Texture_Atlas(Window):
+    
+    defaults = {"size" : (4096, 4096), "screen_size" : pride.gui.SCREEN_SIZE, "subsections" : tuple()}
+    
+    texture_invalid = False
+    
+    def __init__(self, *args, **kwargs):
+        super(Texture_Atlas, self).__init__(*args, **kwargs)        
+        # top-left: screen;      top-right: vertical placeholders
+        #         bottom-top: square placeholders
+        #         bottom-bottom: horizontal placeholders
+        top = self.create(pride.gui.gui.Container, pack_mode="top")
+        bottom = self.create(pride.gui.gui.Container, pack_mode="top")
+        
+        screen_w, screen_h = self.screen_size
+        top_left = top.create(pride.gui.gui.Container, h_range=(screen_h, screen_h), pack_mode="left")        
+        top_right = top.create(pride.gui.gui.Container, pack_mode="left")        
+        bottom_top = bottom.create(pride.gui.gui.Container, pack_mode="top")
+        bottom_bottom = bottom.create(pride.gui.gui.Container, pack_mode="bottom")
+        self.subsections = (top_left, top_right, bottom_top, bottom_bottom)
+        
+    def add_to_atlas(self, window_object):        
+        subsection = self.determine_subsection(window_object)
+        placeholder = subsection.create(pride.gui.gui.Container)
+        window_object._texture_atlas_reference = placeholder.reference
+        return placeholder.position
+        
+    def remove_from_atlas(self, window_object):        
+        pride.objects[window_object._texture_atlas_reference].delete()
+        del window_object._texture_atlas_reference
+        
+    def determine_subsection(self, window_object):
+        # determine approximate "square-ness" of (w, h)
+        #   - if w / h > 2:
+        #       item is horizontal
+        #   - if h / w > 2:
+        #       item is vertical
+        #   - else item fits well enough in a square
+        w, h = window_object.size       
+        if h and w / h > 2:
+            return self.subsections[3] # horizontal -> bottom: bottom
+        elif w and h / w > 2:
+            return self.subsections[1] # vertical -> top: right
+        else:
+            return self.subsections[2] # square -> bottom: top             
+                        

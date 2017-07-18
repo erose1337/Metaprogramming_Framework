@@ -488,8 +488,7 @@ class Window_Object(Organized_Object):
     def _draw_texture(self):    
         if self.hidden:
             return []
-        
-        # to do: draw onto texture atlas and copy from atlas to screen texture
+                
         self.draw_texture()        
         instructions = self._draw_operations
         #instructions.extend(child._draw_texture() for child in self.children)
@@ -644,10 +643,13 @@ class Texture_Atlas(Organized_Object):
         bottom_bottom = bottom.create(placeholder_type, pack_mode="bottom", sdl_window=sdl_window)
         self.subsections = (top_left, top_right, bottom_top, bottom_bottom)
         
+        top.pack()
+        
     def add_to_atlas(self, window_object):        
         subsection, pack_mode = self.determine_subsection(window_object)
         placeholder = subsection.create(self.placeholder_type, pack_mode=pack_mode, sdl_window=self.sdl_window)
         window_object._texture_atlas_reference = placeholder.reference
+        placeholder.pack()
         return placeholder.position
         
     def remove_from_atlas(self, window_object):        

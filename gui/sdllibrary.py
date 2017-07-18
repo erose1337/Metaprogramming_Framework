@@ -21,6 +21,11 @@ sdl2.ext.init()
 sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
+def instruction_generator(instructions):
+    for layer in instructions.values():
+        for ops in layer:
+            for operation in ops:
+                yield operation
 
 class SDL_Component(base.Proxy): pass
     
@@ -35,8 +40,9 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
     
-    mutable_defaults = {"on_screen" : list, "redraw_objects" : list, "drawing_instructions" : list, 
-                        "copying_instructions" : collections.OrderedDict}
+    mutable_defaults = {"on_screen" : list, "redraw_objects" : list, 
+                        "drawing_instructions" : collections.OrderedDict,
+                        "_cached_operations" : list}                        
     
     flags = {"max_layer" : 1, "invalid_layer" : 0, "running" : False}
     
@@ -97,43 +103,24 @@ class SDL_Window(SDL_Component):
             if hasattr(instance, "pack") and instance.__class__.__name__ != "Organizer":
                 raise ValueError("Unable to remove {} from on_screen".format(instance))
         super(SDL_Window, self).remove(instance)
-        
-    def run(self, _empty_dict={}):        
-        instructions = []
-        copying_instructions = self.copying_instructions
-        assert len(set(self.redraw_objects)) == len(self.redraw_objects)
-        
+                
+    def run(self):        
+        instructions = self.drawing_instructions                
         for window_object in self.redraw_objects[:]:            
             old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
-            
-            print "ADDING TO ATLAS", window_object
-            drawing_position = self.texture_atlas.add_to_atlas(window_object)
-            area = x, y, w, h = window_object.area                        
-            
-            drawing_area = drawing_position + (w, h)
-            window_object.area = drawing_area
-            instructions.extend(window_object._draw_texture())
-            window_object.area = area
-                        
-            copy_instruction = ("copy_subsection", (drawing_area, area), _empty_dict) # source, destination 
-            # if it's already in a layer, remove it
-            # then add it to the one it is supposed to be in
-            # if there are no entries yet, create a list with the item in it
-            current_z = window_object.z
-            if current_z != old_z:     
-                try:
-                    copying_instructions[old_z].remove(copy_instruction)
-                except (KeyError, ValueError):
-                    pass
-                    
-                try:
-                    copying_instructions[current_z].append(copy_instruction)
-                except KeyError:
-                    copying_instructions[current_z] = [copy_instruction]
-        del self.redraw_objects[:]
-                                                                        
-        self.draw(itertools.chain(instructions, *copying_instructions.values()))
-        self.running = False
+            operations = window_object._draw_texture()
+            try:
+                instructions[old_z].remove(operations)
+            except (KeyError, ValueError):
+                pass
+            try:
+                instructions[window_object.z].append(operations)            
+            except KeyError:
+                instructions[window_object.z] = [operations]
+            self._cached_operations = instruction_generator(instructions)
+        del self.redraw_objects[:]        
+        self.draw(self._cached_operations)
+        self.running = False            
         
     def draw(self, instructions):
         renderer = self.renderer
@@ -341,19 +328,16 @@ class SDL_User_Input(scheduler.Process):
         handlers = self.handlers
         for event in sdl2.ext.get_events():
             try:
-                handlers[event.type](event)
+                handler = handlers[event.type]
             except KeyError:
-                if event.type in handlers:
-                    self.alert("Exception handling {};\n{}".format(self.event_names[event.type],
+                self.alert("Unhandled event: {}".format(self.event_names[event.type]), level=0)
+            else:
+                try:
+                    handler(event)
+                except Exception as error:
+                    self.alert("Exception handling {};\n{}".format(self.event_names[event.type], 
                                                                    traceback.format_exc()), 
-                               level=0)                
-                    #raise
-                else:
-                    self.alert("Unhandled event: {}".format(self.event_names[event.type]))
-            except Exception as error:
-                self.alert("Exception handling {};\n{}".format(self.event_names[event.type], 
-                                                               traceback.format_exc()), 
-                           level=0)
+                                level=0)
                 
     def _update_coordinates(self, item, area, z):
         try:

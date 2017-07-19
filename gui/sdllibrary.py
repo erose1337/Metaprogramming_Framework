@@ -21,10 +21,10 @@ sdl2.ext.init()
 sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
-def instruction_generator(instructions):
-    for layer in instructions.values():
-        for ops in layer:
-            for operation in ops:
+def instruction_generator(instructions):        
+    for layer in instructions.values():        
+        for window_object in layer:
+            for operation in window_object._draw_operations:
                 yield operation
 
 class SDL_Component(base.Proxy): pass
@@ -44,7 +44,7 @@ class SDL_Window(SDL_Component):
                         "drawing_instructions" : collections.OrderedDict,
                         "_cached_operations" : list}                        
     
-    flags = {"max_layer" : 1, "invalid_layer" : 0, "running" : False}
+    flags = {"max_layer" : 1, "invalid_layer" : 0, "running" : False, "_ignore_invalidation" : None}
     
     def _get_size(self):
         return (self.w, self.h)
@@ -65,7 +65,8 @@ class SDL_Window(SDL_Component):
         self.renderer = self.create(Renderer, self, flags=self.renderer_flags)
         self.user_input = self.create(SDL_User_Input)
         self.organizer = self.create("pride.gui.gui.Organizer")
-        self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", screen_size=self.size, sdl_window=self.reference)
+        self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
+        self.drawing_instructions[0] = []
               
         if self.showing:
             self.show()  
@@ -78,7 +79,9 @@ class SDL_Window(SDL_Component):
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
                         
     def invalidate_object(self, instance):
-        if not self.running:
+       # if instance is self._ignore_invalidation:
+       #     return        
+        if not self.running:            
             self.running = True                        
             self.run_instruction.execute(priority=self.priority)
         self.redraw_objects.append(instance)
@@ -105,21 +108,34 @@ class SDL_Window(SDL_Component):
         super(SDL_Window, self).remove(instance)
                 
     def run(self):        
-        instructions = self.drawing_instructions                
-        for window_object in self.redraw_objects[:]:            
+        instructions = self.drawing_instructions         
+        for window_object in self.redraw_objects: 
             old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
-            operations = window_object._draw_texture()
+            
+            #draw_position = texture_atlas.add_to_atlas(window_object)
+            #backup_position = window_object.position
+            #self._ignore_invalidation = window_object
+            #window_object.position = draw_position                        
+            
+            window_object._draw_texture()
+            
+            #window_object.position = backup_position
+            #self._ignore_invalidation = None
+            
+            #instructions.extend(draw_operations)
+            
+            #copy_instruction = ("copy_subsection", draw_position + window_object.size, window_object.area)
             try:
-                instructions[old_z].remove(operations)
+                instructions[old_z].remove(window_object)                                  
             except (KeyError, ValueError):
                 pass
             try:
-                instructions[window_object.z].append(operations)            
+                instructions[window_object.z].append(window_object)            
             except KeyError:
-                instructions[window_object.z] = [operations]
-            self._cached_operations = instruction_generator(instructions)
+                instructions[window_object.z] = [window_object]
+            
         del self.redraw_objects[:]        
-        self.draw(self._cached_operations)
+        self.draw(instruction_generator(instructions))
         self.running = False            
         
     def draw(self, instructions):

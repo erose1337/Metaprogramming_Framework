@@ -489,12 +489,10 @@ class Window_Object(Organized_Object):
         if self.hidden:
             return []
                 
+        del self._draw_operations[:]
         self.draw_texture()        
-        instructions = self._draw_operations
-        #instructions.extend(child._draw_texture() for child in self.children)
-        #for child in self.children:
-        #    instructions.extend(child._draw_texture())
-            
+        instructions = self._draw_operations[:]        
+
         if self._texture_window_x or self._texture_window_y:
             x, y, w, h = self.area
             source_rect = (x + self.texture_window_x,
@@ -509,7 +507,6 @@ class Window_Object(Organized_Object):
             instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
                                           
         self.texture_invalid = False        
-        return instructions
         
     def draw_texture(self):
         self.theme.draw_texture()

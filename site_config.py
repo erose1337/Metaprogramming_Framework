@@ -106,7 +106,7 @@ def logout(program="/User/Shell"):
 #pride.audio.enable()
 import pride.gui
 window = pride.gui.enable()
-homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
+#homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
 
 #graph = objects["/Python/SDL_Window"].create("pride.gui.graph.Graph")
 #explorer = objects["/Python/SDL_Window"].create("pride.gui.fileexplorer.File_Explorer")
@@ -115,7 +115,7 @@ homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
 #messenger = objects[window].create("pride.gui.messenger.Messenger", username="Ella")
 
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
-#map = objects[window].create("game.gui.map.Map")
+map = objects[window].create("game.gui.map.Map")
 #game_app = objects[window].create("game.Game_Application")
 #messenger = objects["/Python"].create("pride.components.messenger.Messenger")
 #import epqcrypto.asymmetric.keyexchange

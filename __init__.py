@@ -87,7 +87,8 @@ class Instruction(object):
             of the instruction is needed. """
         heapq.heappush(self.instructions, [timestamp() + priority, self, 
                                            callback, self.component_name,
-                                           self.method, self.args, self.kwargs])
+                                           self.method, self.args, self.kwargs,
+                                           True])
     
     @classmethod
     def purge(cls, reference):        

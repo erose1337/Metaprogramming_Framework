@@ -63,7 +63,7 @@ class Organizer(base.Base):
     def add_pack_method(self, name, callback):
         setattr(self, name, "pack_{}".format(name), callback)
         
-    def pack(self, item):
+    def pack_item(self, item):
    #     self.alert("packing: {}, {} {} {}", 
    #               [item, item.area, item.z, item.pack_mode],
    #                level=self.verbosity["packing"])
@@ -123,24 +123,31 @@ class Organizer(base.Base):
         else:            
             item.size = (space_per_object, item_height)             
    
+    def _height_of(self, side, sizing):
+        return sum(item.h or min(sizing, item.h_range[1]) for item in side)
+        
     def pack_top(self, parent, item, count, length):
         item.z = parent.z + 1
-      
-        top_items = [objects[name] for name in self._pack_modes[parent.reference]["top"][:count]]      
-        main_items = [objects[name] for name in self._pack_modes[parent.reference]["main"]]
-        bottom_items = [objects[name] for name in self._pack_modes[parent.reference]["bottom"]]
+             
+        main_items = self._pack_modes[parent.reference]["main"]
+        bottom_items = self._pack_modes[parent.reference]["bottom"]
         
-        sizing = parent.h / (length + len(main_items) + len(bottom_items))       
-        height_of = lambda side: sum(item.h or min(sizing, item.h_range[1]) for item in side)              
-        main_height = height_of(main_items)
-        bottom_height = height_of(bottom_items)        
-
-        #print parent, item, parent.y, height_of(top_items), len(top_items), count, length
-        item.y = parent.y + height_of(top_items)
+        height_of = self._height_of        
+        _sizing = parent.h / (length + len(main_items) + len(bottom_items))
+        #main_height = height_of((objects[item] for item in main_items), _sizing)
+        #bottom_height = height_of((objects[item] for item in bottom_items), _sizing)
+        #sizing = (parent.h - (main_height + bottom_height)) / length                 
+                    
+        item.y = parent.y + sum(objects[name].h for name in self._pack_modes[parent.reference]["top"][:count])#height_of(top_items)
         item.x = parent.x        
         item.w = parent.w
-        item.h = sizing        
-            
+        item.h = _sizing                                      
+        
+        #if count == length - 1 and not main_items:  
+        #    parent_size = min(sizing, parent.h_range[1])
+        #    print "Maxing: ", item.h_range[1], parent_size - item.y, parent_size, item.y, sizing, parent.h_range
+        #    item.h = min(item.h_range[1], parent_size - item.y)# + sum(item.h or min(_sizing, item.h_range[1]) for item in bottom_items)))
+                        
     def pack_grid(self, parent, item, count, length):
         grid_size = sqrt(length)
 
@@ -272,7 +279,7 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
     
     def pack(self):
         organizer = objects[self.sdl_window + "/Organizer"]
-        organizer.pack(self)
+        organizer.pack_item(self)
         for item in self.children:            
             item.pack()
             
@@ -407,7 +414,7 @@ class Window_Object(Organized_Object):
         try:
             self._children.remove(_object)
         except ValueError:
-            if _object is not self.theme:
+            if _object is not self.theme:                
                 raise
         super(Window_Object, self).remove(_object)
         
@@ -555,9 +562,8 @@ class Window_Object(Organized_Object):
                     self._scroll_bar_w = None
                 
     def delete(self):
-        self.pack_mode = None # clear Organizer cache        
-        objects[self.sdl_window + "/SDL_User_Input"]._remove_from_coordinates(self.reference) 
-        self.texture_invalid = True
+        self.pack_mode = None # clear Organizer cache          
+        pride.objects[self.sdl_window].remove_window_object(self)                        
         self.theme.delete()
         super(Window_Object, self).delete()                
                 

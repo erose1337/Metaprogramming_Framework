@@ -177,14 +177,14 @@ class Text_Box(gui.Container):
         self.alert("Left click: {}".format(self.editing), level='vvv')
         self.editing = not self.editing
         
-    def draw_texture(self):
-       # width, height = pride.gui.SCREEN_SIZE#self.texture.area
-        area = self.area#(0, 0, width, height)
-        self.draw("fill", area, color=self.background_color)
-        self.draw("rect", area, color=self.color)
-        if self.text:
-            self.draw("text", self.area, self.text, 
-                      bg_color=self.background_color, color=self.text_color)
+    #def draw_texture(self):
+    #   # width, height = pride.gui.SCREEN_SIZE#self.texture.area
+    #    area = self.area#(0, 0, width, height)
+    #    self.draw("fill", area, color=self.background_color)
+    #    self.draw("rect", area, color=self.color)
+    #    if self.text:
+    #        self.draw("text", self.area, self.text, 
+    #                  bg_color=self.background_color, color=self.text_color)
         
                 
 class Date_Time_Button(gui.Button):

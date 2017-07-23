@@ -22,7 +22,7 @@ sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
 def instruction_generator(instructions):        
-    for layer in instructions.values():        
+    for layer in instructions.values():                
         for window_object in layer:
             for operation in window_object._draw_operations:
                 yield operation
@@ -40,11 +40,9 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
     
-    mutable_defaults = {"on_screen" : list, "redraw_objects" : list, 
-                        "drawing_instructions" : collections.OrderedDict,
-                        "_cached_operations" : list}                        
+    mutable_defaults = {"redraw_objects" : list, "drawing_instructions" : collections.OrderedDict}                        
     
-    flags = {"max_layer" : 1, "invalid_layer" : 0, "running" : False, "_ignore_invalidation" : None}
+    flags = {"running" : False, "_ignore_invalidation" : None}
     
     def _get_size(self):
         return (self.w, self.h)
@@ -65,7 +63,7 @@ class SDL_Window(SDL_Component):
         self.renderer = self.create(Renderer, self, flags=self.renderer_flags)
         self.user_input = self.create(SDL_User_Input)
         self.organizer = self.create("pride.gui.gui.Organizer")
-        self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
+        #self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
         self.drawing_instructions[0] = []
               
         if self.showing:
@@ -88,28 +86,29 @@ class SDL_Window(SDL_Component):
         
     def create(self, *args, **kwargs):  
         kwargs.setdefault("sdl_window", self.reference)
-        instance = super(SDL_Window, self).create(*args, **kwargs)
-        if hasattr(instance, 'pack'):
-            try:
-                instance.pack()
-            except TypeError:
-                if instance.__class__.__name__ != "Organizer":
-                    raise
-            else:
-                self.on_screen.append(instance)        
-        return instance
-        
-    def remove(self, instance):        
+        instance = super(SDL_Window, self).create(*args, **kwargs)        
         try:
-            self.on_screen.remove(instance)
+            instance.pack()
+        except AttributeError:
+            pass                            
+        return instance
+                        
+    def remove_window_object(self, window_object):
+        old_z = self.user_input._remove_from_coordinates(window_object.reference)
+        try:
+            self.redraw_objects.remove(window_object)
         except ValueError:
-            if hasattr(instance, "pack") and instance.__class__.__name__ != "Organizer":
-                raise ValueError("Unable to remove {} from on_screen".format(instance))
-        super(SDL_Window, self).remove(instance)
-                
+            pass        
+                    
+        try:
+            self.drawing_instructions[window_object.z].remove(window_object)
+        except (KeyError, ValueError):
+            pass
+        
     def run(self):        
         instructions = self.drawing_instructions         
         for window_object in self.redraw_objects: 
+            assert not window_object.deleted, window_object.reference
             old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
             
             #draw_position = texture_atlas.add_to_atlas(window_object)
@@ -376,7 +375,7 @@ class SDL_User_Input(scheduler.Process):
         del self.coordinate_tracker[item]
         if self.active_item == item:
             self.active_item = None
-    
+                
     def handle_textinput(self, event):
         text = event.edit.text
         cursor = event.edit.start

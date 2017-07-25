@@ -106,7 +106,7 @@ class SDL_Window(SDL_Component):
             pass
         
     def run(self):        
-        instructions = self.drawing_instructions         
+        instructions = self.drawing_instructions           
         for window_object in self.redraw_objects: 
             assert not window_object.deleted, window_object.reference
             old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
@@ -341,12 +341,12 @@ class SDL_User_Input(scheduler.Process):
         
     def run(self):
         handlers = self.handlers
-        for event in sdl2.ext.get_events():
+        for event in sdl2.ext.get_events():            
             try:
                 handler = handlers[event.type]
             except KeyError:
                 self.alert("Unhandled event: {}".format(self.event_names[event.type]), level=0)
-            else:
+            else:                
                 try:
                     handler(event)
                 except Exception as error:
@@ -385,8 +385,6 @@ class SDL_User_Input(scheduler.Process):
         if self.active_item:
             instance = objects[self.active_item]            
             instance.text_entry(text)
-            #if instance.allow_text_edit:
-            #    instance.text += text
         
     def handle_unhandled_event(self, event):        
         self.alert("{0} passed unhandled".format(event.type), 'vv')
@@ -465,7 +463,7 @@ class SDL_User_Input(scheduler.Process):
             motion = event.motion
             pride.objects[self.active_item].mousemotion(motion.xrel, motion.yrel)
 
-    def handle_keydown(self, event):
+    def handle_keydown(self, event):        
         try:
             instance = pride.objects[self.active_item]
         except KeyError:

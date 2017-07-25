@@ -21,7 +21,7 @@ if "--site_config" in sys.argv:
                 setattr(site_config, name[:opening_bracket], site_config_entry)
             key = name[opening_bracket + 1:-1].strip("'").strip('"')
             site_config_entry[key] = value
-        else:           
+        else:                       
             setattr(site_config, name, ast.literal_eval(value))                   
  
 import additional_builtins

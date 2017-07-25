@@ -5,19 +5,21 @@ class Gameboard_Square(pride.gui.gui.Button):
     defaults = {"outline_width" : 2}
     flags = {"current_piece" : None}
     
-    def add(self, piece):        
-        self_reference = self.reference
-
-        piece.current_square = self_reference
-        self.current_piece = piece.reference
-        
-        if piece.parent is not self:            
-            piece.parent_name = self_reference                
+    def add(self, piece):       
+        if not isinstance(piece, pride.gui.gui.Theme):
+            self_reference = self.reference
+    
+            piece.current_square = self_reference
+            self.current_piece = piece.reference
+            
+            if piece.parent is not self:            
+                piece.parent_name = self_reference                
         super(Gameboard_Square, self).add(piece)
     
     def remove(self, piece):
-        piece.current_square = None
-        self.current_piece = None
+        if not isinstance(piece, pride.gui.gui.Theme):
+            piece.current_square = None
+            self.current_piece = None
         super(Gameboard_Square, self).remove(piece)
         
     def left_click(self, mouse):
@@ -110,12 +112,12 @@ class Game_Piece(pride.gui.gui.Button):
                 pride.objects[piece].toggle_outline_highlight(capture_color)                            
 
     def toggle_outline_highlight(self, color):
-        if self._backup_color:            
+        if self._backup_color:                        
             self.color = self._backup_color
             self._backup_color = None            
         else:
-            backup_color = self.color
-            self._backup_color = (backup_color.r, backup_color.g, backup_color.b, backup_color.a)
+            #backup_color = self.color            
+            self._backup_color = self.color#(backup_color.r, backup_color.g, backup_color.b, backup_color.a)
             self.color = color            
             
     def get_potential_moves(self):

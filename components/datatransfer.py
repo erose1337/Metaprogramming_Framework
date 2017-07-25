@@ -31,8 +31,8 @@ class Background_Refresh(pride.components.scheduler.Process):
     defaults = {"priority" : .5}
     mutable_defaults = {"callbacks" : list}
     
-    def run(self):        
-        for client, method in self.callbacks:            
+    def run(self):                
+        for client, method in self.callbacks:         
             getattr(client, method)()                 
 
     

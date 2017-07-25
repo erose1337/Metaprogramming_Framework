@@ -129,24 +129,24 @@ class Organizer(base.Base):
     def pack_top(self, parent, item, count, length):
         item.z = parent.z + 1
              
-        main_items = self._pack_modes[parent.reference]["main"]
-        bottom_items = self._pack_modes[parent.reference]["bottom"]
-        
+        _items = self._pack_modes[parent.reference]
+        main_items = _items["main"]
+        bottom_items = _items["bottom"]
+        top_items = _items["top"]     
         height_of = self._height_of        
-        _sizing = parent.h / (length + len(main_items) + len(bottom_items))
-        #main_height = height_of((objects[item] for item in main_items), _sizing)
-        #bottom_height = height_of((objects[item] for item in bottom_items), _sizing)
-        #sizing = (parent.h - (main_height + bottom_height)) / length                 
-                    
-        item.y = parent.y + sum(objects[name].h for name in self._pack_modes[parent.reference]["top"][:count])#height_of(top_items)
+        
+        _sizing = parent.h / (len(top_items) + len(main_items) + len(bottom_items))
+        
+        item.y = parent.y + height_of((objects[item] for item in top_items[:count]), _sizing)
         item.x = parent.x        
         item.w = parent.w
         item.h = _sizing                                      
         
-        #if count == length - 1 and not main_items:  
-        #    parent_size = min(sizing, parent.h_range[1])
-        #    print "Maxing: ", item.h_range[1], parent_size - item.y, parent_size, item.y, sizing, parent.h_range
-        #    item.h = min(item.h_range[1], parent_size - item.y)# + sum(item.h or min(_sizing, item.h_range[1]) for item in bottom_items)))
+        if count == length - 1 and not main_items:  
+            height_of_top = height_of((objects[item] for item in top_items), _sizing)
+            height_of_bottom = height_of((objects[item] for item in bottom_items), _sizing) 
+            available_space = parent.h - (height_of_top + height_of_bottom)            
+            item.h = available_space
                         
     def pack_grid(self, parent, item, count, length):
         grid_size = sqrt(length)
@@ -182,23 +182,26 @@ class Organizer(base.Base):
 
     def pack_bottom(self, parent, item, count, length):
         item.z = parent.z + 1       
-        assert parent.w
-        bottom_size = parent.h / length        
-        item.size = (parent.w, bottom_size)
-        if count:
-            pack_modes = self._pack_modes[parent.reference]
-            bottom_objects = (objects[name] for name in pack_modes["bottom"][:count])            
-            item.y = parent.y + parent.h - sum(item.h or min(bottom_size, item.h_range[1]) for 
-                                               item in bottom_objects)            
-            if count == length - 1:
-                top_objects = [objects[name] for name in pack_modes["top"]]
-                top_size = parent.h / len(top_objects)
-                item.h = min(item.h_range[1], parent.h - sum(item.h or min(top_size, item.h_range[1]) for item in top_objects))
-    #            print "Adjusted height", item, item.h, item.h_range, parent.h, sum(item.h or min(top_size, item.h_range[1]) for item in top_objects)
-        else:
-            item.y = parent.y + parent.h - item.h         
+                        
+        pack_modes = self._pack_modes[parent.reference]
+        height_of = self._height_of            
+        bottom_objects = [objects[name] for name in pack_modes["bottom"]]
+        top_objects = [objects[name] for name in pack_modes["top"]]
+
+        # stretch to fit
+        sizing = parent.h / (len(bottom_objects) + len(top_objects)) 
+        height_of_bottom = height_of(bottom_objects[:count + 1], sizing)
+        
+        item.y = parent.y + parent.h - height_of_bottom
         item.x = parent.x
-                
+        item.w = parent.w # need to take into account size of left/right
+        item.h = sizing
+        
+        if not pack_modes["main"] and count == length - 1:
+            height_of_top = height_of(top_objects, sizing)                
+            item.y = parent.y + height_of_top
+            item.h = (parent.h - (height_of_top + height_of(bottom_objects[:count], sizing)))
+                         
     def pack_right(self, parent, item, count, length):  
         pack_modes = self._pack_modes[parent.reference]
         left_objects = [objects[name] for name in pack_modes["left"]]
@@ -279,8 +282,8 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
     
     def pack(self):
         organizer = objects[self.sdl_window + "/Organizer"]
-        organizer.pack_item(self)
-        for item in self.children:            
+        organizer.pack_item(self)        
+        for item in self.children:             
             item.pack()
             
             
@@ -434,8 +437,7 @@ class Window_Object(Organized_Object):
         elif mouse.button == 3:
             self.right_click(mouse)
         else:
-            self.alert("Button {} not yet implemented", 
-                       [mouse.button])        
+            self.alert("Button {} not yet implemented".format(mouse.button), level=0)
                     
     def left_click(self, mouse):
         pass
@@ -573,7 +575,7 @@ class Window_Object(Organized_Object):
     def select(self, mouse):
         pass    
     
-    def text_entry(self, text):
+    def text_entry(self, text):        
         if self.allow_text_edit:
             self.text += text        
         

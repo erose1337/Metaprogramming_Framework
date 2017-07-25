@@ -59,30 +59,23 @@ class Save_Button(pride.gui.gui.Button):
         pass
         
         
-class Text_File(pride.gui.gui.Window):
+class Text_File(pride.gui.widgetlibrary.Text_Box):
             
     defaults = {"allow_text_edit" : True,
-                "pack_mode" : "top"}
+                "pack_mode" : "main"}
     
-    def text_entry(self, text):
-        print text
-        super(Text_File, self).text_entry(text)
-        
-        
+
 class Text_Editor(pride.gui.gui.Application):
     
     defaults = {"startup_components" : tuple()}
     
     def __init__(self, **kwargs):
         super(Text_Editor, self).__init__(**kwargs)
-        self.create("pride.gui.widgetlibrary.Task_Bar", pack_mode="top",
-                    startup_components=("pride.gui.text_editor.File_Button",
-                                        "pride.gui.text_editor.Edit_Button",
-                                        "pride.gui.text_editor.Options_Button"))
-        self.create("pride.gui.gui.Window")
-       # self.create("pride.gui.Container", 
-        #            startup_components=("
-        self.create("pride.gui.text_editor.Text_File")
+        self.application_window.create("pride.gui.widgetlibrary.Task_Bar", pack_mode="top",
+                                        startup_components=("pride.gui.text_editor.File_Button",
+                                                            "pride.gui.text_editor.Edit_Button",
+                                                            "pride.gui.text_editor.Options_Button"))
+        self.application_window.create("pride.gui.text_editor.Text_File")
         
         
 class Shortcut(pride.gui.widgetlibrary.Icon):

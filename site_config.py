@@ -115,7 +115,7 @@ window = pride.gui.enable()
 #messenger = objects[window].create("pride.gui.messenger.Messenger", username="Ella")
 
 #visualized_list = objects[window].create("pride.gui.datatypes.List")
-map = objects[window].create("game.gui.map.Map")
+#map = objects[window].create("game.gui.map.Map")
 #game_app = objects[window].create("game.Game_Application")
 #messenger = objects["/Python"].create("pride.components.messenger.Messenger")
 #import epqcrypto.asymmetric.keyexchange

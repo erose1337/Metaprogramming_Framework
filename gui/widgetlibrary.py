@@ -123,7 +123,8 @@ class Homescreen(gui.Application):
         self.application_window.create(Program_Icon, popup_type="pride.gui.shell.Python_Shell",
                                        program="/User/Command_Line/Python_Shell", text="Python")
         self.application_window.create("pride.gui.text_editor.Shortcut")
-
+        self.application_window.create(Icon, popup_type="pride.gui.chess.Chess", text="Chess")
+        
         
 class Task_Bar(gui.Container):
 

@@ -4,6 +4,7 @@ import os
 import threading
 import codeop
 import traceback
+import inspect
 
 import pride
 import pride.components.scheduler

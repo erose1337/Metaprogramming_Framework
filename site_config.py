@@ -126,6 +126,20 @@ window = pride.gui.enable()
 #    return pride.components.sdts.Secure_Data_Transfer_Client(public_key=public, private_key=private, username=username)
 #objects["/Python/Data_Transfer_Service"].verbosity["data_transfer"] = 0
 #objects["/Python/Data_Transfer_Service"].verbosity["refresh"] = 0
+
+def organizer_test():
+    w = objects[window].create("pride.gui.gui.Container")
+    ctop = w.create("pride.gui.gui.Container", pack_mode="top")
+    cmain = w.create("pride.gui.gui.Container", pack_mode="main")
+    cbottom = w.create("pride.gui.gui.Container", pack_mode="bottom")
+    cbottom2 = w.create("pride.gui.gui.Container", pack_mode="bottom")
+    w.pack()
+    print ctop.area
+    print cmain.area
+    print cbottom.area
+    print cbottom2.area
+    return w, ctop, cmain, cbottom, cbottom2
+w, ctop, cmain, cbot, cbot2 = organizer_test()
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

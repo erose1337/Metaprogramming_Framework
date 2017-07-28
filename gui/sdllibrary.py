@@ -345,12 +345,12 @@ class SDL_User_Input(scheduler.Process):
             try:
                 handler = handlers[event.type]
             except KeyError:
-                self.alert("Unhandled event: {}".format(self.event_names[event.type]), level=0)
+                self.alert("Unhandled event: {}".format(self.event_names.get(event.type, event.type)), level=0)
             else:                
                 try:
                     handler(event)
                 except Exception as error:
-                    self.alert("Exception handling {};\n{}".format(self.event_names[event.type], 
+                    self.alert("Exception handling {};\n{}".format(self.event_names.get(event.type, event.type), 
                                                                    traceback.format_exc()), 
                                 level=0)
                 

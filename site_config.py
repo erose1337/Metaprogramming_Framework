@@ -133,13 +133,19 @@ def organizer_test():
     cmain = w.create("pride.gui.gui.Container", pack_mode="main")
     cbottom = w.create("pride.gui.gui.Container", pack_mode="bottom")
     cbottom2 = w.create("pride.gui.gui.Container", pack_mode="bottom")
+    cgrid = w.create("pride.gui.grid.Grid", grid_size=(3, 3), pack_mode="left")
     w.pack()
     print ctop.area
     print cmain.area
     print cbottom.area
     print cbottom2.area
-    return w, ctop, cmain, cbottom, cbottom2
-w, ctop, cmain, cbot, cbot2 = organizer_test()
+    print cgrid.area
+    return w, ctop, cmain, cbottom, cbottom2, cgrid
+#w, ctop, cmain, cbot, cbot2, cgrid = organizer_test()
+
+w = objects[window].create("pride.gui.gui.Window")
+def new(pack_mode, w=w):
+    return w.create("pride.gui.gui.Container", pack_mode=pack_mode)    
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

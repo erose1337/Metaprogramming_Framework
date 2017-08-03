@@ -327,7 +327,8 @@ class Terminal_Screensaver(pride.components.scheduler.Process):
                 pride.objects[name] = instance
                 self.file_text = '\n' + name + ':\n' + instance.__doc__
             else:
-                source = inspect.getsource(random.choice(sys.modules))                
+                name = random.choice(sys.modules.keys())
+                source = inspect.getsource(sys.modules[name])
                 self.file_text = "\n" + source + "\n"
                 
         sys.stdout.write(self.file_text[:self.rate])

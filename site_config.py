@@ -127,25 +127,18 @@ window = pride.gui.enable()
 #objects["/Python/Data_Transfer_Service"].verbosity["data_transfer"] = 0
 #objects["/Python/Data_Transfer_Service"].verbosity["refresh"] = 0
 
-def organizer_test():
-    w = objects[window].create("pride.gui.gui.Container")
-    ctop = w.create("pride.gui.gui.Container", pack_mode="top")
-    cmain = w.create("pride.gui.gui.Container", pack_mode="main")
-    cbottom = w.create("pride.gui.gui.Container", pack_mode="bottom")
-    cbottom2 = w.create("pride.gui.gui.Container", pack_mode="bottom")
-    cgrid = w.create("pride.gui.grid.Grid", grid_size=(3, 3), pack_mode="left")
-    w.pack()
-    print ctop.area
-    print cmain.area
-    print cbottom.area
-    print cbottom2.area
-    print cgrid.area
-    return w, ctop, cmain, cbottom, cbottom2, cgrid
-#w, ctop, cmain, cbot, cbot2, cgrid = organizer_test()
 
 w = objects[window].create("pride.gui.gui.Window")
+
 def new(pack_mode, w=w):
-    return w.create("pride.gui.gui.Container", pack_mode=pack_mode)    
+    return w.create("pride.gui.gui.Container", pack_mode=pack_mode)   
+
+def organizer_test(pieces=("top", "bottom", "main", "left", "left", "right"), w=w):
+    components = [new(piece) for piece in pieces]
+    w.pack()
+    return components
+top, bottom, main, left1, left2, right = organizer_test()
+    
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

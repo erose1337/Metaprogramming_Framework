@@ -327,7 +327,10 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             pass
          
         if self.post_initializer:
+            self.alert("Calling: {}".format(self.post_initializer))
             getattr(self, self.post_initializer)()
+        #else:
+        #    print self.reference, "No post initializer"
             
     def create(self, instance_type, *args, **kwargs):
         """ usage: object.create(instance_type, args, kwargs) => instance

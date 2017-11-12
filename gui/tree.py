@@ -73,13 +73,9 @@ class Animated_Tree(Number_Tree):
         
         factors = self.factors
         item1, item2 = factors[index1], factors[index2]
-        if random.randint(0, 10) > 8:
-            _item1 = (item1 + item2) % max(factors)
-            if _item1 < 2:
-                item1 = item1
-            else:
-                item1 = _item1
         factors[index1], factors[index2] = item2, item1
         self.update_tree_instruction.execute(priority=self.update_tree_priority)        
         self.factors = factors # to trigger Texture Invalid
                 
+                
+#todo: number trees with straight lines                

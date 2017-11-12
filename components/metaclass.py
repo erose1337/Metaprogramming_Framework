@@ -363,9 +363,8 @@ class Inherited_Attributes(type):
                 _attribute += attributes.get(attribute_name, [])
                 _attribute = list(set(_attribute))
                 
-            elif issubclass(attribute_type, str):
-                _attribute = getattr(_class, attribute_name, '')
-                
+            elif issubclass(attribute_type, str):   
+                _attribute = attributes.get(attribute_name, getattr(_class, attribute_name, ''))
             attributes[attribute_name] = _attribute
                 
         return super(Inherited_Attributes, cls).__new__(cls, name, bases, attributes)

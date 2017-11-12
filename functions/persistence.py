@@ -23,7 +23,7 @@ def load_data(packed_data):
         size, packed_data = packed_data.split(' ', 1)
         size = int(size)
         output.append(unpack_data(packed_data[:size]))
-        packed_data = packed_data[size:]
+        packed_data = packed_data[size:]    
     return tuple(output) if len(output) > 1 else output[0]
         
 def pack_data(arg):

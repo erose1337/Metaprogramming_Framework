@@ -161,7 +161,7 @@ class Processor(Process):
                             sleep(time_until)
                                             
                         alert("executing instruction {}".format(instruction), 
-                            level=verbosity["instruction_execution"])
+                              level=verbosity["instruction_execution"])
                         
                         if callback:
                             result = call(*args, **kwargs)

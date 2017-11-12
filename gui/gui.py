@@ -129,7 +129,7 @@ class Organizer(base.Base):
         return sum(min(sizing, item.h_range[1]) for item in side)
         
     def _width_of(self, side, sizing):
-        return sum(max(item.w, min(sizing, item.w_range[1])) for item in side)
+        return sum(min(sizing, item.w_range[1]) for item in side)
         
     def pack_top(self, parent, item, count, length):
         item.z = parent.z + 1
@@ -148,15 +148,16 @@ class Organizer(base.Base):
         height_of_main = height_of((objects[name] for name in main_items), vertical_sizing)
         height_of_bottom = height_of((objects[name] for name in bottom_items), vertical_sizing)
         
-        horizontal_sizing = parent.w / ((len(left_items) + int(any(top_items)) + len(right_items)) or 1) # or 1 in case there are no left/main/right objects        
+        horizontal_sizing = parent.w / (len(left_items) + 1 + len(right_items)) # + 1 for the top
         width_of_left = width_of((objects[name] for name in left_items), horizontal_sizing)
         width_of_right = width_of((objects[name] for name in right_items), horizontal_sizing)
                 
         item.y = parent.y + height_of_top
-        item.x = parent.x + width_of_left        
+        item.x = parent.x + width_of_left  
+       # print parent.x, width_of_left, len(left_items), horizontal_sizing
         item.w = parent.w - (width_of_left + width_of_right)
        # print parent.w, width_of_left, width_of_right, len(left_items), len(right_items)
-        item.h = parent.h - sum((height_of_top, height_of_main, height_of_bottom))                                
+        item.h = (parent.h - sum((height_of_main, height_of_bottom))) / len(top_items)
         #print item.h, parent.h, height_of_top, height_of_main, height_of_bottom, vertical_sizing, len(top_items), len(main_items), len(bottom_items)
         
         if count == length - 1 and not main_items:  
@@ -335,7 +336,7 @@ class Window_Object(Organized_Object):
         return self._texture_invalid
     def _set_texture_invalid(self, value):
         if not self._texture_invalid and value:
-            assert self.sdl_window
+          #  assert self.sdl_window
             objects[self.sdl_window].invalidate_object(self)         
         self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
@@ -413,7 +414,7 @@ class Window_Object(Organized_Object):
         self._children = value
     children = property(_get_children, _set_children)
     
-    def _get_sdl_window(self):
+    def _get_sdl_window(self):        
         return (self._sdl_window or getattr(self.parent, "sdl_window", self.parent_name))
     def _set_sdl_window(self, value):
         self._sdl_window = value

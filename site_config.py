@@ -131,13 +131,15 @@ window = pride.gui.enable()
 w = objects[window].create("pride.gui.gui.Window")
 
 def new(pack_mode, w=w):
-    return w.create("pride.gui.gui.Container", pack_mode=pack_mode)   
-
+    _object = w.create("pride.gui.gui.Container", pack_mode=pack_mode)   
+    w.pack()    
+    return _object
+    
 def organizer_test(pieces=("top", "bottom", "main", "left", "left", "right"), w=w):
     components = [new(piece) for piece in pieces]
     w.pack()
     return components
-top, bottom, main, left1, left2, right = organizer_test()
+#top, bottom, main, left1, left2, right = organizer_test()
     
 """}
 

@@ -1,12 +1,13 @@
 import pride.components.datatransfer
 
-import epqcrypto.protocol
-import epqcrypto.hashing
+from epqcrypto.asymmetric.keyexchange import generate_keypair as epq_kex_generate_keypair
+import epqcrypto.symmetric.hashing
 
 class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Client):
     
     defaults = {"public_key" : None, "private_key" : None,
-                "hash_function" : epqcrypto.hashing.hash_function, "secret_size" : 32}
+                "hash_function" : epqcrypto.symmetric.hashing.hash_function, "secret_size" : 32,
+                "secure_connection_type" : "epqcrypto.protocol.protocol.Secure_Connection"}
     
     mutable_defaults = {"secure_connections" : dict}
             
@@ -19,7 +20,7 @@ class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Cl
         if not (self.public_key and self.private_key):
             self.alert("Keypair not supplied;")
             if pride.components.shell.get_permission("{}: Generate new keypair now?: ".format(self.reference)):
-                self.public_key, self.private_key = epqcrypto.protocol.keyexchange.generate_keypair()
+                self.public_key, self.private_key = epq_kex_generate_keypair()
             else:
                 raise ValueError("Public/Private keypair is required to continue")
         
@@ -66,7 +67,7 @@ class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Cl
                     
     def new_connection(self, identity):
         assert identity not in self.secure_connections
-        connection = self.create(epqcrypto.protocol.Secure_Connection, *self.connection_arguments)        
+        connection = self.create(self.secure_connection_type, *self.connection_arguments)        
         self.secure_connections[identity] = connection
         return connection
         

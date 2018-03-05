@@ -32,7 +32,7 @@ class Background_Refresh(pride.components.scheduler.Process):
     mutable_defaults = {"callbacks" : list}
     
     def run(self):                
-        for client, method in self.callbacks:         
+        for client, method in self.callbacks:                     
             getattr(client, method)()                 
 
     
@@ -69,6 +69,7 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
             
     def refresh(self):
         """ Checks for new data from the server """
+        print "Refreshing", self
         self.send_to('', '')
         
     def delete(self):

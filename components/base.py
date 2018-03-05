@@ -524,9 +524,9 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         [setattr(self, key, value) for key, value in attributes.items()]
                 
         if self.replace_reference_on_load:
-            print "Replacing instance", self
+            #print "Replacing instance", self
             pride.objects[self.reference] = self
-            print "Done"
+            #print "Done"
         self.alert("Loaded", level='v')
         
     def update(self, update_children=False, _already_updated=None):

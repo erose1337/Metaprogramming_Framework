@@ -1,6 +1,6 @@
 import pride.components.datatransfer
 
-from epqcrypto.asymmetric.keyexchange import generate_keypair as epq_kex_generate_keypair
+import epqcrypto.asymmetric.kem
 import epqcrypto.symmetric.hashing
 
 class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Client):
@@ -20,7 +20,7 @@ class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Cl
         if not (self.public_key and self.private_key):
             self.alert("Keypair not supplied;")
             if pride.components.shell.get_permission("{}: Generate new keypair now?: ".format(self.reference)):
-                self.public_key, self.private_key = epq_kex_generate_keypair()
+                self.public_key, self.private_key = epqcrypto.asymmetric.kem.generate_keypair()
             else:
                 raise ValueError("Public/Private keypair is required to continue")
         

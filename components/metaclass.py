@@ -48,13 +48,14 @@ class alert_on_call(object):
              
     def __call__(self, *args, **kwargs):       
         method_name = self.method_name
-        method = self.method        
-        component = args[0]     
-        message = "{}{}{}".format(method_name, 
-                                  "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
-                                  " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
-                                  
-        component.alert(message, level=component.verbosity[method_name])
+        method = self.method    
+        if method_name != "on_load": # can cause problems otherwise           
+            component = args[0]     
+            message = "{}{}{}".format(method_name, 
+                                    "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
+                                    " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
+                                    
+            component.alert(message, level=component.verbosity[method_name])
         return method(*args, **kwargs)        
     
 

@@ -1,9 +1,14 @@
 #bit trace
+#to do: extend to 3d 
+import os
+import collections
+
 import pride.gui.gui
 
 class Bit_Trace(pride.gui.gui.Window):
     
-    defaults = {"x_position" : None, "y_position" : None, "point_size" : 4}
+    defaults = {"x_position" : None, "y_position" : None, "point_size" : 4, "max_points" : 128}
+    mutable_defaults = {"points" : list}
     required_attributes = ("bits", )
     post_initializer = "trace"
     flags = {"_bits" : (None, None)}
@@ -19,10 +24,11 @@ class Bit_Trace(pride.gui.gui.Window):
         
     def trace(self):
         x_bits, y_bits = self.bits
-        self.trace_bits(x_bits, self.w, "x_position")
-        self.trace_bits(y_bits, self.h, "y_position")                    
+        x_position = self.trace_bits(x_bits, self.w)
+        y_position = self.trace_bits(y_bits, self.h)                    
+        self.points.append((x_position, y_position))       
         
-    def trace_bits(self, bits, space_size, attribute):        
+    def trace_bits(self, bits, space_size):         
         position = space_size / 2
         adjustment = position
         for bit in bits:
@@ -31,15 +37,42 @@ class Bit_Trace(pride.gui.gui.Window):
                 position += adjustment
             else:
                 position -= adjustment
-        assert position >= 0        
-        setattr(self, attribute, position)
+        assert position >= 0                
+        return position        
                 
-    def draw_texture(self):        
-        x = self.x_position
-        y = self.y_position
-        size = self.point_size        
-        self.draw("rect", (x - size, y - size, size, size), color=self.color)
-        #self.draw("point", (self.w / 2, self.y_position), color=self.color)        
-        #self.draw("line", (0, self.y_position, self.w, self.y_position), color=self.color)
+    def draw_texture(self):                        
+        size = self.point_size  
+        color = self.color
+        x, y = self.points[0]
+        self.draw("rect", (x - size, y - size, size, size), color=color)
+        last_point = (x, y)
+        for x, y in self.points[1:]:                             
+            self.draw("rect", (x - size, y - size, size, size), color=color)
+            self.draw("line", last_point + (x, y), color=color)
+            last_point = (x, y)               
+        if self.points > self.max_points:
+            self.points[:] = self.points[-self.max_points:]
+            
+       
+class Animated_Bit_Trace(Bit_Trace):
+            
+    defaults = {"dimension" : 2, "priority" : .025}
+    flags = {"_bits" : ((0, 0), (0, 0))}
+    post_initializer = "begin_trace"
+    
+    def begin_trace(self):
+        self.bits = [self.random_bits(2), self.random_bits(2)]        
+        self.trace_instruction = pride.Instruction(self.reference, "begin_trace") # so it can be unscheduled upon deletion
+        self.trace_instruction.execute(priority=self.priority)
         
+    @classmethod
+    def random_bits(self, amount):
+        in_bytes = (amount / 8) or 1
+        random_bytes = os.urandom(in_bytes)
+        bits = [int(item) for item in ''.join(format(ord(byte), 'b').zfill(8) for byte in random_bytes)[:amount]]
+        return bits
+        
+    def delete(self):
+        self.trace_instruction.unschedule()
+        super(Animated_Bit_Trace, self).delete()
         

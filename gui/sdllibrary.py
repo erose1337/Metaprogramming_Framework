@@ -527,8 +527,8 @@ class SDL_User_Input(scheduler.Process):
         
 class Renderer(SDL_Component):
 
-    defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
-                "blendmode_flag" : sdl2.SDL_BLENDMODE_BLEND}
+    defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED, "blendmode_flag" : sdl2.SDL_BLENDMODE_ADD, # changed from SDL_BLENDMODE_BLEND to try and make alpha blending work for slider puzzles
+                "logical_size" : (800, 600)}
                 
     def __init__(self, window, **kwargs):      
         super(Renderer, self).__init__(**kwargs)

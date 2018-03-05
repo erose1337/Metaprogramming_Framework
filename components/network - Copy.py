@@ -227,7 +227,6 @@ class Socket(base.Wrapper):
                 self._endpoint_reference = pride.objects["/Python/Network_Connection_Manager"].socket_reference[self.peername]
             instance = pride.objects[self._endpoint_reference]
             instance._local_data += data
-            print "Bypassing network stack"
             try:
                 instance.recv()
             except Exception:

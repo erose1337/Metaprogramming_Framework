@@ -104,41 +104,25 @@ def logout(program="/User/Shell"):
     
 #import pride.audio
 #pride.audio.enable()
-import pride.gui
-window = pride.gui.enable()
-#homescreen = objects[window].create('pride.gui.widgetlibrary.Homescreen')
+#import pride.gui
+#window = pride.gui.enable()
 
-#graph = objects["/Python/SDL_Window"].create("pride.gui.graph.Graph")
-#explorer = objects["/Python/SDL_Window"].create("pride.gui.fileexplorer.File_Explorer")
-#chess = objects["/Python/SDL_Window"].create("pride.gui.chess.Chess")
-#cyvasse = objects[window].create("pride.gui.cyvasse.Cyvasse")
-#messenger = objects[window].create("pride.gui.messenger.Messenger", username="Ella")
-
-#visualized_list = objects[window].create("pride.gui.datatypes.List")
-#map = objects[window].create("game.gui.map.Map")
-#game_app = objects[window].create("game.Game_Application")
-#messenger = objects["/Python"].create("pride.components.messenger.Messenger")
-#import epqcrypto.asymmetric.keyexchange
-#import pride.components.sdts as sdts
-#
-#def new_client(username):
-#    public, private = epqcrypto.keyexchange.generate_keypair()
-#    return pride.components.sdts.Secure_Data_Transfer_Client(public_key=public, private_key=private, username=username)
-#objects["/Python/Data_Transfer_Service"].verbosity["data_transfer"] = 0
-#objects["/Python/Data_Transfer_Service"].verbosity["refresh"] = 0
+#trace = objects[window].create("pride.gui.bittrace.Animated_Bit_Trace")
+#import animated
+#slider = objects[window].create(animated.Slider_Puzzle)
 
 
-w = objects[window].create("pride.gui.gui.Window")
+#w = objects[window].create("pride.gui.gui.Window")
 
-def new(pack_mode, w=w):
-    _object = w.create("pride.gui.gui.Container", pack_mode=pack_mode)   
-    w.pack()    
-    return _object
-    
-def organizer_test(pieces=("top", "bottom", "main", "left", "left", "right"), w=w):
-    components = [new(piece) for piece in pieces]
-    w.pack()
-    return components
+#def new(pack_mode, w=w):
+#    _object = w.create("pride.gui.gui.Container", pack_mode=pack_mode)   
+#    w.pack()    
+#    return _object
+#    
+#def organizer_test(pieces=("top", "bottom", "main", "left", "left", "right"), w=w):
+#    components = [new(piece) for piece in pieces]
+#    w.pack()
+#    return components
 #top, bottom, main, left1, left2, right = organizer_test()
     
 """}

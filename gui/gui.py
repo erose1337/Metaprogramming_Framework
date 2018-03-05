@@ -313,7 +313,12 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
         
         
 class Window_Object(Organized_Object):
-
+    """ to do: write documentation!
+    
+        FAQ: I get the following message when exiting, why?:
+            Exception TypeError: "'NoneType' object is not callable" in <bound method Window.__del__ of <sdl2.ext.window.Window object at 0xXXXXXXX> ignore
+            Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored  
+        A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
     defaults = {"outline_width" : 1,
                 "background_color" : (0, 0, 0, 0), #(25, 125, 225, 125),
                 "color" : (15, 165, 25, 255), "text_color" : (15, 165, 25, 255),

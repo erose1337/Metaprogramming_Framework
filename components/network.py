@@ -26,7 +26,11 @@ import pride.components.datastructures
 import pride.components.scheduler as scheduler
 import pride.components.base as base
 import pride.functions.utilities
+import pride.functions.persistence
 
+DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.persistence.save_data),
+                                                     "loads" : staticmethod(pride.functions.persistence.load_data)})
+                                                     
 ERROR_CODES = {}
 
 try:
@@ -85,11 +89,9 @@ class Socket(base.Wrapper):
                 # connect_timeout is how long, in seconds, to wait before giving up when
                 # when attempting to establish a new connection to a server. 
                 "connect_timeout" : 1,
-                                                
-                # Sockets that are connected to each other from within the application
-                # can communicate directly with each other via references, bypassing
-                # even the loopback connector; 0 round trips occur, all sends/recvs occur inline
-                "bypass_network_stack" : False,
+                
+                "serializer" : DEFAULT_SERIALIZER,
+                
                 "shutdown_on_close" : True, "shutdown_flag" : 2}
         
     additional_parser_ignores = defaults.keys()
@@ -98,7 +100,7 @@ class Socket(base.Wrapper):
     parser_ignore = tuple(additional_parser_ignores)
     
     flags = {"_byte_count" : 0, "_connecting" : False, "_endpoint_reference" : '',
-             "connected" : False, "closed" : False, "_local_data" : '',
+             "connected" : False, "closed" : False,
              "_saved_in_attribute" : '', "timeout_count" : 1}
     
     verbosity = {"close" : "socket_close", "network_nonexistant" : "vv",
@@ -171,12 +173,7 @@ class Socket(base.Wrapper):
             method is called for Tcp sockets and requires a connection.
             
             Note that this recv will return the entire contents of the buffer and 
-            does not need to be called in a loop."""
-        if self._local_data:
-            data = self._local_data
-            self._local_data = bytes()
-            return data
-        
+            does not need to be called in a loop."""        
         buffer_size = buffer_size or self.recv_size 
         _memoryview = self._memoryview
         try:        
@@ -217,33 +214,17 @@ class Socket(base.Wrapper):
     
     def send(self, data):
         """ Sends data to the connected endpoint. All of the data will be sent. """
-        sockname = self.sockname
-        peername = self.peername
         byte_count = len(data)
 #        assert not self.deleted 
-#        assert not self.closed
-        if self.bypass_network_stack:
-            if not self._endpoint_reference:                
-                self._endpoint_reference = pride.objects["/Python/Network_Connection_Manager"].socket_reference[self.peername]
-            instance = pride.objects[self._endpoint_reference]
-            instance._local_data += data
-            print "Bypassing network stack"
-            try:
-                instance.recv()
-            except Exception:
-                message = "Caught non socket.error during recv:\n{}".format(traceback.format_exc())
-                instance.alert(message, level=0)                
-                instance.delete()            
-        else:            
-            # send through the socket using the network stack
-            _socket = self.socket
-            _data = memoryview(data)
-            
-            position = 0
-            while position < byte_count:
-                sent = _socket.send(_data[position:])
-                position += sent  
-            return position
+#        assert not self.closed         
+        _socket = self.socket
+        _data = memoryview(data)
+        
+        position = 0
+        while position < byte_count:
+            sent = _socket.send(_data[position:])
+            position += sent  
+        return position
              
     def connect(self, address):
         """ Perform a non blocking connect to the specified address. The on_connect method
@@ -284,16 +265,6 @@ class Socket(base.Wrapper):
     def close(self):
         self.alert("Closing", level=self.verbosity["close"])
     #    objects["/Python/Network"].remove(self)
-        if self._saved_in_attribute:
-            connection_manager = objects["/Python/Network_Connection_Manager"]
-            sockname = self.sockname
-            import pprint
-            print self, "Removing from connection manager", sockname
-            pprint.pprint(connection_manager.inbound_connections)
-            pprint.pprint(connection_manager.outbound_connections)
-            
-            del getattr(connection_manager, self._saved_in_attribute)[sockname]
-            del connection_manager.socket_reference[sockname]
         if self.shutdown_on_close and self.connected:
             self.wrapped_object.shutdown(self.shutdown_flag)
         self.wrapped_object.close()
@@ -319,7 +290,13 @@ class Socket(base.Wrapper):
         except KeyError: 
             self.alert("Network unavailable")
             
-                
+    def serialize(self, data):
+        return self.serializer.save_data(data)
+        
+    def deserialize(self, data):
+        return self.serializer.load_data(data)
+        
+        
 class Raw_Socket(Socket):
     
     defaults = {"socket_type" : socket.SOCK_RAW,
@@ -373,16 +350,7 @@ class Tcp_Socket(Socket):
 
     defaults = {"socket_family" : socket.AF_INET, "socket_type" : socket.SOCK_STREAM,
                 "dont_save" : True}
-    flags = {"_local_data" : b''}
-                     
-    def on_connect(self):
-        super(Tcp_Socket, self).on_connect()
-        connection_manager = pride.objects["/Python/Network_Connection_Manager"]
-        sockname = self.sockname
-        connection_manager.socket_reference[sockname] = self.reference
-        connection_manager.inbound_connections[sockname] = self.peername
-        self._saved_in_attribute = "inbound_connections"
-            
+                                 
         
 class Server(Tcp_Socket):
 
@@ -452,14 +420,6 @@ class Tcp_Client(Tcp_Socket):
             
         if self.auto_connect:
             self.connect(self.host_info)
-
-    def on_connect(self):
-        super(Tcp_Client, self).on_connect()               
-        connection_manager = objects["/Python/Network_Connection_Manager"]
-        sockname = self.sockname
-        connection_manager.socket_reference[sockname] = self.reference
-        connection_manager.outbound_connections[sockname] = self.peername
-        self._saved_in_attribute = "outbound_connections"
         
         
 class Udp_Socket(Socket):
@@ -557,8 +517,7 @@ class Network_Connection_Manager(pride.components.base.Base):
         
         The servers dictionary maps an (interface, port) pair to the reference
         of the server listening on at that address. """
-    mutable_defaults = {"outbound_connections" : dict, "inbound_connections" : dict,
-                        "servers" : dict, "socket_reference" : dict}            
+    mutable_defaults = {"servers" : dict}            
         
         
 class Network(scheduler.Process):

@@ -37,26 +37,37 @@ class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Cl
                 raise ValueError("Not connected to '{}'".format(identity))
             connection = self.secure_connections[identity]
             if connection.connection_confirmed:                
-                data = connection.send(data)                   
+                data = connection.send(data)     
+                self.alert("Sending secured data")
         super(Secure_Data_Transfer_Client, self).send_to(identity, data)
         
-    def receive(self, messages):
+    def receive(self, messages):               
         for sender, data in messages:            
             try:
                 connection = self.secure_connections[sender]
-            except KeyError:
+            except KeyError:                
                 connection = self.new_connection(sender)       
                 response = connection.accept(data)
+                connection.connection_confirmed = False
+                self.send_to(sender, data)
+                connection.connection_confirmed = True
+                response = ''
             else:
                 if connection.stage == "connecting":
+                    self.alert("Initiator confirming connection")
                     response = connection.initiator_confirm_connection(data)
-                    connection.connection_confirmed = False
-                    self.send_to(sender, response)
-                    connection.connection_confirmed = True
-                    response = ''
-                elif connection.stage == "accepted:confirming":                    
+                    self.alert("Initiator connection confirmed")
+                    #connection.connection_confirmed = False
+                    #self.send_to(sender, response)
+                    #connection.connection_confirmed = True
+                    #response = ''
+                elif connection.stage == "accepted:confirming": 
+                    raise NotImplementedError()
+                    self.alert("Responder confirming connection")
                     response = connection.responder_confirm_connection(data)
-                elif connection.connection_confirmed:                    
+                elif connection.connection_confirmed:  
+                    raise NotImplementedError()
+                    self.alert("Received secured data")
                     data = connection.receive(data)
                     response = self.handle_data(sender, data)
             if response:
@@ -66,6 +77,7 @@ class Secure_Data_Transfer_Client(pride.components.datatransfer.Data_Transfer_Cl
         self.alert("{}: {}".format(sender, data))
                     
     def new_connection(self, identity):
+        self.alert("Creating new connection to: {}".format(identity))
         assert identity not in self.secure_connections
         connection = self.create(self.secure_connection_type, *self.connection_arguments)        
         self.secure_connections[identity] = connection

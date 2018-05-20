@@ -68,8 +68,7 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
                        level=self.verbosity.get(sender, 0))
             
     def refresh(self):
-        """ Checks for new data from the server """
-        print "Refreshing", self
+        """ Checks for new data from the server """        
         self.send_to('', '')
         
     def delete(self):

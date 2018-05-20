@@ -104,8 +104,8 @@ def logout(program="/User/Shell"):
     
 #import pride.audio
 #pride.audio.enable()
-#import pride.gui
-#window = pride.gui.enable()
+import pride.gui
+window = pride.gui.enable()
 
 #trace = objects[window].create("pride.gui.bittrace.Animated_Bit_Trace")
 #import animated
@@ -124,7 +124,14 @@ def logout(program="/User/Shell"):
 #    w.pack()
 #    return components
 #top, bottom, main, left1, left2, right = organizer_test()
-    
+
+#import pride.components.sdts
+#
+#client1 = pride.components.sdts.Secure_Data_Transfer_Client(username="Ella6")
+#client2 = pride.components.sdts.Secure_Data_Transfer_Client(username="Ella7")
+#client1.connect("Ella7", client2.public_key)
+ 
+_map = objects["/Python/SDL_Window"].create("map.Map")
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

@@ -62,6 +62,26 @@ class Shell(pride.components.authentication3.Authenticated_Client):
             (self.stdout or sys.stdout).write('\r' + packet)                            
         
 
+class Loud_Logger(object):
+    """ Logger that prints written data to sys.__stdout__. Used by Interpreter to synchronize message output when in use by a local user. """
+    
+    def __init__(self):
+        self._logger = StringIO.StringIO()
+        
+    def __getattr__(self, attribute):
+        getter = super(Loud_Logger, self).__getattribute__
+        if attribute in ("write", "_logger"):
+            return getter(attribute)
+        else:
+            return getattr(getter("_logger"), attribute)
+            
+    def write(self, data):
+        sys.__stdout__.write(data)
+        _logger = self._logger
+        _logger.write(data)
+        _logger.flush()
+        
+        
 class Interpreter(pride.components.authentication3.Authenticated_Service):
     """ Executes python source. Requires authentication from remote hosts. 
         The source code and return value of all requests are logged. """
@@ -103,7 +123,10 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         except (SyntaxError, OverflowError, ValueError):
             result = traceback.format_exc()           
         else:          
-            _logger = self._logger
+            if sender == "localhost":
+                _logger = Loud_Logger()
+            else:
+                _logger = self._logger
             backup = sys.stdout                 
             sys.stdout = _logger                          
             try:
@@ -117,7 +140,10 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
             else:
                 self.user_session[username] += source                
                 _logger.seek(0)
-                result = _logger.read()                         
+                if sender != "localhost":
+                    result = _logger.read()  
+                else:
+                    result = '\b'
             log.write("{}\n".format(result))                    
             _logger.truncate(0)      
             sys.stdout = backup

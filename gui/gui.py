@@ -23,7 +23,7 @@ def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                                                   size, access=access)
     
 class Organizer(base.Base):
-    
+    # this component could/should really be redone, it is hugely complicated and grossly inefficient
     mutable_defaults = {"pack_modes" : dict, "_pack_modes" : dict, "_pack_index" : dict}
 
     def get_pack_mode(self, instance):
@@ -121,15 +121,17 @@ class Organizer(base.Base):
         
         item.y = parent.y #+ height_of_top 
         item.x = item_x + width_of_left                                    
-        item.w = width_spacing#parent_w - (width_of_right + width_of_main + width_of_left)
+        #item.w = width_spacing  # original
+        #print parent_w, width_of_right, width_of_main, width_of_left
+        item.w = parent_w - (width_of_right + width_of_main + width_of_left)#(left[count:], width_spacing))
         item.h = parent_h# - height_of_bottom
         #print parent_h, height_of_bottom, height_of_top, height_spacing, top_count, bottom_count
         
     def _height_of(self, side, sizing):
-        return sum(min(sizing, item.h_range[1]) for item in side)
+        return sum(min(item.h_range[1], max(sizing, item.h_range[0])) for item in side)
         
     def _width_of(self, side, sizing):
-        return sum(min(sizing, item.w_range[1]) for item in side)
+        return sum(min(item.w_range[1], max(sizing, item.w_range[0])) for item in side)
         
     def pack_top(self, parent, item, count, length):
         item.z = parent.z + 1
@@ -156,8 +158,8 @@ class Organizer(base.Base):
         item.x = parent.x + width_of_left  
        # print parent.x, width_of_left, len(left_items), horizontal_sizing
         item.w = parent.w - (width_of_left + width_of_right)
-       # print parent.w, width_of_left, width_of_right, len(left_items), len(right_items)
-        item.h = (parent.h - sum((height_of_main, height_of_bottom))) / len(top_items)
+       # print parent.w, width_of_left, width_of_right, len(left_items), len(right_items)        
+        item.h = parent.h - (height_of_top + height_of_main + height_of_bottom)
         #print item.h, parent.h, height_of_top, height_of_main, height_of_bottom, vertical_sizing, len(top_items), len(main_items), len(bottom_items)
         
         if count == length - 1 and not main_items:  
@@ -228,7 +230,7 @@ class Organizer(base.Base):
             height_of_top = height_of(top_objects, sizing)                
             item.y = parent.y + height_of_top
             item.h = (parent.h - (height_of_top + height_of(bottom_objects[:count], sizing)))
-                         
+                            
     def pack_right(self, parent, item, count, length):  
         item.z = parent.z + 1
         pack_modes = self._pack_modes[parent.reference]

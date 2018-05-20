@@ -440,7 +440,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         An objects verbosity can be modified via the site_config module. """ 
         alert_handler = objects["/Alert_Handler"]          
         message = "{}: {}".format(display_name or self.reference, message)
-        if level in alert_handler._print_level or level is 0:                    
+        if level in alert_handler._print_level or level is 0:               
             sys.stdout.write(message + "\n")
             sys.stdout.flush()                           
         if level in alert_handler._log_level or level is 0:

@@ -123,7 +123,7 @@ class Organizer(base.Base):
         item.x = item_x + width_of_left                                    
         #item.w = width_spacing  # original
         #print parent_w, width_of_right, width_of_main, width_of_left
-        item.w = parent_w - (width_of_right + width_of_main + width_of_left)#(left[count:], width_spacing))
+        item.w = parent_w - (width_of_right + width_of_main + width_of((_item for _item in left if _item != item), width_spacing))#(left[count:], width_spacing))
         item.h = parent_h# - height_of_bottom
         #print parent_h, height_of_bottom, height_of_top, height_spacing, top_count, bottom_count
         
@@ -159,7 +159,7 @@ class Organizer(base.Base):
        # print parent.x, width_of_left, len(left_items), horizontal_sizing
         item.w = parent.w - (width_of_left + width_of_right)
        # print parent.w, width_of_left, width_of_right, len(left_items), len(right_items)        
-        item.h = parent.h - (height_of_top + height_of_main + height_of_bottom)
+        item.h = parent.h - (height_of((objects[_item] for _item in top_items if objects[_item] != item), vertical_sizing) + height_of_main + height_of_bottom)
         #print item.h, parent.h, height_of_top, height_of_main, height_of_bottom, vertical_sizing, len(top_items), len(main_items), len(bottom_items)
         
         if count == length - 1 and not main_items:  
@@ -276,7 +276,7 @@ class Theme(pride.base.Wrapper):
 class Minimal_Theme(Theme):
             
     def draw_texture(self):
-        area = self.area
+        area = self.area        
         self.draw("fill", area, color=self.background_color)
         self.draw("rect_width", area, color=self.color, width=self.outline_width)        
         if self.text:

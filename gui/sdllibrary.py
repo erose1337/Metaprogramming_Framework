@@ -148,6 +148,8 @@ class SDL_Window(SDL_Component):
             if operation == "text":
                 if not args[0]:
                     continue                                
+            #if operation == "fill":
+            #    print args, kwargs
             draw_procedures[operation](*args, **kwargs)        
         
         renderer.set_render_target(None)

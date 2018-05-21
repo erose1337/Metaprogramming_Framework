@@ -113,7 +113,6 @@ window = pride.gui.enable()
 
 
 #w = objects[window].create("pride.gui.gui.Window")
-
 #def new(pack_mode, w=w):
 #    _object = w.create("pride.gui.gui.Container", pack_mode=pack_mode)   
 #    w.pack()    

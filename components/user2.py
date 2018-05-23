@@ -83,7 +83,7 @@ class User(pride.components.base.Base):
     password = property(_get_password, _set_password)        
         
     def _get_username(self):
-        if self._username is None:
+        while self._username in (None, ''):
             self._username = raw_input("{}: Please provide username: ".format(self.reference))
         return self._username
     def _set_username(self, value):

@@ -198,6 +198,7 @@ class Organizer(base.Base):
         
     def pack_z(self, parent, item, count, length):
         item.z = parent.z + 1
+        item.area = parent.area
 
     def pack_bottom(self, parent, item, count, length):
         item.z = parent.z + 1       

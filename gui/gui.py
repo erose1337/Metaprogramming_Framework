@@ -106,7 +106,7 @@ class Organizer(base.Base):
         sides = [[objects[name] for name in pack_modes[side]] for side in ("top", "bottom", "left", "right", "main")]
         top, bottom, left, right, main = sides
         top_count, bottom_count, left_count, right_count, main_count = (len(side) for side in sides)
-        item_x, item_y, item_w, item_h = parent_x, parent_y, parent_w, parent_h = parent.area
+        parent_x, parent_y, parent_w, parent_h = parent.area
 
         width_spacing = parent_w / (left_count + int(any((top_count, main_count, bottom_count))) + right_count)
         height_spacing = parent_h / ((top_count + bottom_count) or 1)
@@ -119,13 +119,13 @@ class Organizer(base.Base):
         width_of_left = width_of(left[:count], width_spacing)
         width_of_main = width_of(main, width_spacing)
         
-        item.y = parent.y #+ height_of_top 
-        item.x = item_x + width_of_left                                    
-        #item.w = width_spacing  # original
-        #print parent_w, width_of_right, width_of_main, width_of_left
+        #item.y = parent.y
+        item.y = parent.y + height_of_top
+        item.x = parent_x + width_of_left                                    
+        #item.w = width_spacing  # original        
         item.w = parent_w - (width_of_right + width_of_main + width_of((_item for _item in left if _item != item), width_spacing))#(left[count:], width_spacing))
-        item.h = parent_h# - height_of_bottom
-        #print parent_h, height_of_bottom, height_of_top, height_spacing, top_count, bottom_count
+        #item.h = parent_h# - height_of_bottom
+        item.h = parent_h - (height_of_top + height_of_bottom)
         
     def _height_of(self, side, sizing):
         return sum(min(item.h_range[1], max(sizing, item.h_range[0])) for item in side)
@@ -155,10 +155,12 @@ class Organizer(base.Base):
         width_of_right = width_of((objects[name] for name in right_items), horizontal_sizing)
                 
         item.y = parent.y + height_of_top
-        item.x = parent.x + width_of_left  
+        #item.x = parent.x + width_of_left  
        # print parent.x, width_of_left, len(left_items), horizontal_sizing
-        item.w = parent.w - (width_of_left + width_of_right)
+        #item.w = parent.w - (width_of_left + width_of_right)
        # print parent.w, width_of_left, width_of_right, len(left_items), len(right_items)        
+        item.x = parent.x
+        item.w = parent.w
         item.h = parent.h - (height_of((objects[_item] for _item in top_items if objects[_item] != item), vertical_sizing) + height_of_main + height_of_bottom)
         #print item.h, parent.h, height_of_top, height_of_main, height_of_bottom, vertical_sizing, len(top_items), len(main_items), len(bottom_items)
         
@@ -223,8 +225,10 @@ class Organizer(base.Base):
         width_of_right = width_of(right_objects, w_sizing)
                 
         item.y = (parent.y + parent.h) - height_of_bottom
-        item.x = parent.x + width_of_left
-        item.w = parent.w - (width_of_left + width_of_right)
+        #item.x = parent.x + width_of_left
+        #item.w = parent.w - (width_of_left + width_of_right)
+        item.x = parent.x
+        item.w = parent.w
         item.h = sizing    
         
         if not pack_modes["main"] and count == length - 1:
@@ -251,11 +255,13 @@ class Organizer(base.Base):
         width_of_left = width_of(left, width_spacing)
         width_of_main = width_of(main[:1], width_spacing)
         
-        item.y = parent_y #+ height_of_top 
+        #item.y = parent_y
+        item.y = parent_y + height_of_top
         item.w = parent_w - (width_of(right[:count], width_spacing) + max((width_of(top[:1], width_spacing), width_of_main, width_of(bottom[:1], width_spacing))) + width_of_left)
         item.x = (parent_x + parent_w) - (item.w + width_of(right[:count], width_spacing))
-        item.h = parent_h# - height_of_bottom        
-                
+        #item.h = parent_h# - height_of_bottom        
+        item.h = parent_h - (height_of_top + height_of_bottom)
+        
     def pack_drop_down_menu(self, parent, item, count, length): 
         SCREEN_SIZE = pride.gui.SCREEN_SIZE
         item.area = (parent.x, parent.y + parent.h,
@@ -280,11 +286,9 @@ class Minimal_Theme(Theme):
         area = self.area        
         self.draw("fill", area, color=self.background_color)
         self.draw("rect_width", area, color=self.color, width=self.outline_width)        
-        if self.text:
-            width = self.w if self.wrap_text else None
-        #    assert width is not None, (self, width, self.w, self.wrap_text, self.text)
+        if self.text:                    
             assert isinstance(self.text, str), (type(self.text), self.text, self)
-            self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
+            self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
                       bg_color=self.background_color, color=self.text_color)
 
                              

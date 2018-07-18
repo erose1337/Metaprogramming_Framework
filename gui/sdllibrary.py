@@ -561,7 +561,7 @@ class Renderer(SDL_Component):
         self.copy(self.parent._texture.texture, source_area, destination_area)
         
     def draw_text(self, area, text, **kwargs):           
-        x, y, w, h = area
+        x, y, w, h = area                       
         texture = self.sprite_factory.from_text(text, fontmanager=self.font_manager, **kwargs)             
         _w, _h = texture.size   
 #        assert kwargs.get("width", None) is not None, (area, text, kwargs)
@@ -575,7 +575,7 @@ class Renderer(SDL_Component):
         
     def get_text_size(self, area, text, **kwargs):
         x, y, w, h = area
-        kwargs.setdefault("width", w)
+        kwargs.setdefault("width", w)        
         texture = self.sprite_factory.from_text(text, 
                                                 fontmanager=self.font_manager, 
                                                 **kwargs)        

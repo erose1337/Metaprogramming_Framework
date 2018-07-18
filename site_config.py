@@ -130,7 +130,9 @@ window = pride.gui.enable()
 #client2 = pride.components.sdts.Secure_Data_Transfer_Client(username="Ella7")
 #client1.connect("Ella7", client2.public_key)
  
-_map = objects["/Python/SDL_Window"].create("map.Map")
+#_map = objects["/Python/SDL_Window"].create("map.Map")
+#test = objects["/Python/SDL_Window"].create("pride.gui.organizerunittest.Organizer_Unit_Test")
+game = objects["/Python/SDL_Window"].create("game2.gui.battlescreen.Battle_Screen.unit_test")
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

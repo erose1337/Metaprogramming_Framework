@@ -6,7 +6,6 @@ import itertools
 import hashlib
 import hmac
 import os
-import six # python 2/3 compatibility
 
 from persistence import save_data, load_data
 
@@ -27,7 +26,7 @@ OUTPUT_SIZES = {"sha1" : 20,
                 "sha256" : 32,
                 "sha384" : 48,
                 "sha512" : 64}
-                    
+
 def extract(input_keying_material, salt, hash_function=DEFAULT_HASH):
     hasher = getattr(hashlib, hash_function.lower())
     return hasher(salt + bytes(input_keying_material)).digest()    
@@ -215,16 +214,9 @@ def _hash_stream_cipher_hmac(data, key, nonce, hash_function="SHA256"):
     for index, key_byte in enumerate(bytearray(psuedorandom_bytes(key, nonce, len(data), hash_function))):
         output[index] ^= key_byte
     return bytes(output)    
-        
-def _hash_stream_cipher_hkdf(data, key, seed, algorithm="sha256"):
-    data = bytearray(data)    
-    keystream = bytearray(hkdf(key, len(data), seed, algorithm))
-    for index, byte in enumerate(keystream):
-        data[index] ^= byte
-    return bytes(data)
-    
+            
 def _encrypt(data, key, mac_key, nonce='', extra_data='', algorithm="sha256", nonce_size=32, hmac_algorithm="sha256",
-             cipher_priority=("hkdf", "hmac"), return_mode="cryptogram"):
+             return_mode="cryptogram"):
     """ usage: _encrypt(data, key, extra_data='', nonce='', 
                 hash_function="SHA256", nonce_size=32) => encrypted_packet
     
@@ -239,13 +231,8 @@ def _encrypt(data, key, mac_key, nonce='', extra_data='', algorithm="sha256", no
         nonce_size defaults to 32; decreasing below 16 may destroy security.
         A nonce_size of 16 with a random nonce shortens key lifetime when encrypting many messages. """    
     nonce = nonce or os.urandom(nonce_size)        
-    try:
-        cipher = _hash_stream_cipher_hkdf
-    except NameError:
-        cipher = _hash_stream_cipher_hmac
-        mode = "hmac"
-    else:
-        mode = "hkdf"
+    mode = "hmac"
+    
     algorithm = algorithm.lower()
     hmac_algorithm = hmac_algorithm.lower()
         
@@ -277,11 +264,8 @@ def _decrypt(data, key, mac_key):
         raise ValueError("Unsupported mode {}".format(header))
         
     if hmac.HMAC(mac_key, header + extra_data + nonce + encrypted_data, hasher).digest() == mac_tag:
-        if mode == "hkdf":
-            cipher = _hash_stream_cipher_hkdf            
-        else:
-            assert mode == "hmac"
-            ciphert = _hash_stream_cipher_hmac
+        assert mode == "hmac"
+        ciphert = _hash_stream_cipher_hmac
             
         plaintext = cipher(encrypted_data, key, nonce, algorithm)
         if extra_data:

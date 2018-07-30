@@ -281,9 +281,8 @@ class Indicator(gui.Button):
         
     def draw_texture(self):
         super(Indicator, self).draw_texture()
-        #x, y, w, h = self.parent.area
-        
-        self.draw("text", self.area, self.text, color=self.text_color, width=self.w)    
+        #x, y, w, h = self.parent.area        
+        self.draw("text", self.area, self.text, color=self.text_color, w=self.w)    
         
 
 class Done_Button(gui.Button):

@@ -33,9 +33,9 @@ class Black_Box_Service(pride.components.authentication3.Authenticated_Service):
     mutable_defaults = {"windows" : dict}
     
     def login_success(self, username):        
-        window =  self.create(self.window_type)
+        window = self.create(self.window_type)
         self.windows[username] = window.reference
-        window.create("pride.gui.widgetlibrary.Homescreen")
+        window.create("pride.gui.widgetlibrary.Homescreen")        
         return super(Black_Box_Service, self).login_success(username)
         
     def handle_input(self, packed_user_input):
@@ -60,7 +60,8 @@ class Black_Box_Service(pride.components.authentication3.Authenticated_Service):
         else:
             self.alert("Received window refresh request", level=self.verbosity["refresh"])                   
         
-        instructions = user_window.run()    
+        instructions = user_window.run()   
+        assert instructions
         return "draw", instructions
         
     def handle_audio_input(self, audio_bytes):
@@ -73,9 +74,9 @@ class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
     defaults = {"target_service" : "/Python/Black_Box_Service", 
                 "mouse_support" : False, "refresh_interval" : .95,
                 "audio_support" : False, "audio_source" : "/Python/Audio_Manager/Audio_Input",
-                "microphone_on" : False,
+                "microphone_on" : False, "sdl_window" : None,
                 "response_methods" : ("handle_response_draw", )}
-                
+    required_attributes = ("sdl_window", )
     verbosity = {"handle_input" : 'v', "receive_response" : 'v', "receive_null_response" : 'v'}
     flags = {"_refresh_flag" : False}
         
@@ -119,7 +120,7 @@ class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
                 self.alert("Unsupported response method: '{}'".format(response_method), level=0)
             
     def handle_response_draw(self, draw_instructions):         
-        if draw_instructions:
+        if draw_instructions:            
             pride.objects[self.sdl_window].draw(draw_instructions)        
     
     def _refresh(self):
@@ -138,9 +139,9 @@ def test_black_box_service():
     except KeyError:
         pride.objects["/User"].create("pride.components.shell.Command_Line")    
     window = pride.gui.enable()
-    pride.audio.enable()
+    #pride.audio.enable()
     service = pride.objects["/Python"].create(Black_Box_Service)
-    client = Black_Box_Client(username="localhost", sdl_window=window, mouse_support=True, audio_support=True)    
+    client = Black_Box_Client(username="localhost", sdl_window=window, mouse_support=True, audio_support=False)    
     
 if __name__ == "__main__":
     test_black_box_service()

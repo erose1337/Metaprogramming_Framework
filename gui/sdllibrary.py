@@ -81,7 +81,7 @@ class SDL_Window(SDL_Component):
        #     return        
         if not self.running:            
             self.running = True                        
-            self.run_instruction.execute(priority=self.priority)
+            self.run_instruction.execute(priority=self.priority)        
         self.redraw_objects.append(instance)
         
     def create(self, *args, **kwargs):  
@@ -105,9 +105,14 @@ class SDL_Window(SDL_Component):
         except (KeyError, ValueError):
             pass
         
-    def run(self):        
-        instructions = self.drawing_instructions           
-        for window_object in self.redraw_objects: 
+    def run(self):                
+        self.update_drawing_instructions()      
+        self.draw(instruction_generator(self.drawing_instructions))
+        self.running = False            
+        
+    def update_drawing_instructions(self):
+        instructions = self.drawing_instructions
+        for window_object in self.redraw_objects:             
             assert not window_object.deleted, window_object.reference
             old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
             
@@ -131,25 +136,21 @@ class SDL_Window(SDL_Component):
             try:
                 instructions[window_object.z].append(window_object)            
             except KeyError:
-                instructions[window_object.z] = [window_object]
-            
-        del self.redraw_objects[:]        
-        self.draw(instruction_generator(instructions))
-        self.running = False            
+                instructions[window_object.z] = [window_object]            
+        del self.redraw_objects[:]  
         
     def draw(self, instructions):
         renderer = self.renderer
         draw_procedures = renderer.instructions
         texture = self._texture.texture
         renderer.set_render_target(texture)
-        renderer.clear()
-        
+        renderer.clear()        
         for operation, args, kwargs in instructions:
             if operation == "text":
                 if not args[0]:
                     continue                                
             #if operation == "fill":
-            #    print args, kwargs
+            #    print args, kwargs            
             draw_procedures[operation](*args, **kwargs)        
         
         renderer.set_render_target(None)
@@ -187,15 +188,12 @@ class Window_Context(SDL_Window):
            
     defaults = {"showing" : False}
     
-    def run(self):
-        instructions = []
-        for child in sorted(self.on_screen, key=operator.attrgetter('z')):            
-            instructions.extend(child._draw_texture())              
-        self.running = False
-        return instructions        
+    def run(self):                
+        self.update_drawing_instructions()                      
+        return list(instruction_generator(self.drawing_instructions))
         
     def invalidate_object(self, item):
-        pass
+        self.redraw_objects.append(item)
         
         
 class Window_Handler(pride.components.base.Base):

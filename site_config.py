@@ -132,7 +132,9 @@ window = pride.gui.enable()
  
 #_map = objects["/Python/SDL_Window"].create("map.Map")
 #test = objects["/Python/SDL_Window"].create("pride.gui.organizerunittest.Organizer_Unit_Test")
-game = objects["/Python/SDL_Window"].create("game2.gui.battlescreen.Battle_Screen.unit_test")
+#game = objects["/Python/SDL_Window"].create("game2.gui.battlescreen.Battle_Screen.unit_test")
+calendar = objects["/Python/SDL_Window"].create("pride.gui.calendar.Calendar", month="August")
+
 """}
 
 pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}

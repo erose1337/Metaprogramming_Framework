@@ -548,13 +548,7 @@ class Renderer(SDL_Component):
     
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
-        
-    def _get_text_size(self, area, text, **kwargs):
-        x, y, w, h = area
-        kwargs.setdefault("width", w)
-        return self.sprite_factory.from_text(text, fontmanager=self.font_manager,
-                                             **kwargs).size
-                                            
+                                
     def render_copy(self, source_area, destination_area):
         self.copy(self.parent._texture.texture, source_area, destination_area)
         
@@ -563,17 +557,22 @@ class Renderer(SDL_Component):
         texture = self.sprite_factory.from_text(text, fontmanager=self.font_manager, **kwargs)             
         _w, _h = texture.size   
 #        assert kwargs.get("width", None) is not None, (area, text, kwargs)
-        if kwargs.get("width", None) is None and _w > w:
-            self.copy(texture, dstrect=(x + 2, y + 2, 
-                                        w - 2, _h),
-                      srcrect=(0, 0, w, _h))
+        #if kwargs.get("width", None) is None and _w > w:
+        #    self.copy(texture, dstrect=(x + 2, y + 2, 
+        #                                w - 2, _h),
+        #              srcrect=(0, 0, w, _h))
+        #else:
+        if kwargs["center_text"]:
+            destination = ((x + (w / 2)) - (_w / 2),
+                           (y + (h / 2)) - (_h / 2),
+                           _w - 2, _h)
         else:
-            self.copy(texture, dstrect=(x + 2, y + 2, 
-                                        _w - 2, _h))        
+            destination = (x + 2, y + 2, _w - 2, _h)
+        self.copy(texture, dstrect=destination)        
         
     def get_text_size(self, area, text, **kwargs):
         x, y, w, h = area
-        kwargs.setdefault("width", w)        
+        kwargs.setdefault("w", w)        
         texture = self.sprite_factory.from_text(text, 
                                                 fontmanager=self.font_manager, 
                                                 **kwargs)        

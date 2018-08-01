@@ -289,7 +289,8 @@ class Minimal_Theme(Theme):
         if self.text:                    
             assert isinstance(self.text, str), (type(self.text), self.text, self)
             self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
-                      bg_color=self.background_color, color=self.text_color)
+                      bg_color=self.text_background_color, color=self.text_color,
+                      center_text=self.center_text)
 
                              
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
@@ -326,8 +327,8 @@ class Window_Object(Organized_Object):
             Exception TypeError: "'NoneType' object is not callable" in <bound method Window.__del__ of <sdl2.ext.window.Window object at 0xXXXXXXX> ignore
             Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored  
         A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
-    defaults = {"outline_width" : 1,
-                "background_color" : (0, 0, 0, 0), #(25, 125, 225, 125),
+    defaults = {"outline_width" : 1, "center_text" : True,
+                "background_color" : (0, 0, 0, 0), "text_background_color" : (0, 0, 0, 255),
                 "color" : (15, 165, 25, 255), "text_color" : (15, 165, 25, 255),
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
                 "_ignore_click" : False, "hidden" : False, "movable" : False, 

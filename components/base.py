@@ -181,7 +181,12 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     This is good because it will avoid the hanging reference problem that can
     cause memory leaks. This will work well when my_base_object only has the one
     other_base_object to keep track of. other_base_object is then accessed by
-    looking up the reference in the pride.objects dictionary."""
+    looking up the reference in the pride.objects dictionary.
+    
+    base.children returns an iterator over the child objects; If you intend to
+    delete all child objects, make a copy via list(my_object.children) to
+    loop over, otherwise not all child objects will be deleted (removing items
+    from a list while iterating over it doesn't work as expected)."""
     
     # certain container type class attributes are "inherited" from base classes
     # these include defaults, required_attributes, mutable_defaults, verbosity

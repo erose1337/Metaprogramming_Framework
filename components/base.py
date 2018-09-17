@@ -372,13 +372,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         self.alert("Deleting", level=self.verbosity["delete"])
         if self.deleted:            
             raise DeleteError("{} has already been deleted".format(self.reference))
-            
-        for child in list(self.children):
-            try:
-                child.delete()
-            except DeleteError:
-                if self.reference in child.references_to:
-                    raise        
+                
+        self.delete_children()           
         
         if self.references_to:
             # make a copy, as remove will mutate self.references_to            
@@ -387,6 +382,14 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         del objects[self.reference]
         self.deleted = True           
             
+    def delete_children(self):        
+        for child in list(self.children):
+            try:
+                child.delete()
+            except DeleteError:
+                if self.reference in child.references_to:
+                    raise    
+                    
     def add(self, instance):
         """ usage: object.add(instance)
 

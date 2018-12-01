@@ -4,46 +4,48 @@ import traceback
 import os
 import heapq
 
-if "--site_config" in sys.argv:            
-    import ast
-    index = sys.argv.index("--site_config")
-    sys.argv.pop(index)
-    site_config_entries = sys.argv.pop(index)
-    import site_config  
-    for name_equals_value in site_config_entries.split(';'):
-        name, value = name_equals_value.split('=', 1)         
-        if name[-1] == ']':
-            opening_bracket = name.index('[')            
+def parse_site_config():
+    if "--site_config" in sys.argv:
+        import ast
+        import site_config
+        index = sys.argv.index("--site_config")
+        sys.argv.pop(index)
+        site_config_entries = sys.argv.pop(index)
+        configuration = site_config.config
+        for name_equals_value in site_config_entries.split(';'):
+            name, value_code = name_equals_value.split('=', 1)
+            value = ast.literal_eval(value_code)
             try:
-                site_config_entry = getattr(site_config, name[:opening_bracket])
-            except AttributeError:
-                site_config_entry = {}
-                setattr(site_config, name[:opening_bracket], site_config_entry)
-            key = name[opening_bracket + 1:-1].strip("'").strip('"')
-            site_config_entry[key] = value
-        else:                       
-            setattr(site_config, name, ast.literal_eval(value))                   
- 
+                site_config_entry = configuration[name]
+            except KeyError:
+                configuration[name] = value
+            else:
+                try:
+                    site_config_entry.update(value) # update dicts in place
+                except AttributeError:
+                    configuration[name] = value # replace other types completely
+parse_site_config()
+
 import additional_builtins
 try:
     import __builtin__
 except ImportError:
-    import builtins as __builtin__    
+    import builtins as __builtin__
 for name in additional_builtins.__all__:
     setattr(__builtin__, name, getattr(additional_builtins, name))
-                      
+
 import heapq
 import timeit
 import platform
 import mmap
 CURRENT_PLATFORM = platform.system()
 timestamp = timeit.default_timer
-        
-def preprocess(function):    
+
+def preprocess(function):
     raise DeprecationWarning("Preprocessing no longer supported")
     import pride.errors
-    raise pride.errors.PreprocesserError("Failed to replace preprocess function with source")       
-        
+    raise pride.errors.PreprocesserError("Failed to replace preprocess function with source")
+
 class Instruction(object):
     """ usage: Instruction(component_name, method_name,
                            *args, **kwargs).execute(priority=priority,
@@ -67,9 +69,9 @@ class Instruction(object):
         that they do not happen inline even if the priority is 0.0. In
         order to access the result of the executed function, a callback
         function can be provided."""
-    
+
     instructions = []
-    
+
     def __init__(self, component_name, method, *args, **kwargs):
         super(Instruction, self).__init__()
         self.created_at = timestamp()
@@ -85,23 +87,23 @@ class Instruction(object):
             The instruction will be executed in priority seconds.
             An optional callback function can be provided if the return value
             of the instruction is needed. """
-        heapq.heappush(self.instructions, [timestamp() + priority, self, 
+        heapq.heappush(self.instructions, [timestamp() + priority, self,
                                            callback, self.component_name,
                                            self.method, self.args, self.kwargs,
                                            True])
-    
+
     @classmethod
-    def purge(cls, reference):        
+    def purge(cls, reference):
         instructions = cls.instructions
         for entry in instructions:
-            if entry[3] == reference:                
-                entry[-1] = False                        
-                
+            if entry[3] == reference:
+                entry[-1] = False
+
     def unschedule(self):
         for entry in self.instructions:
             if entry[1] == self:
                 entry[-1] = False
-        
+
     def __str__(self):
         return "Instruction({}.{}, {}, {})".format(self.component_name, self.method,
                                                    self.args, self.kwargs)
@@ -110,7 +112,7 @@ _last_creator = ''
 objects = objects # compatibility purposes
 
 # Things must be done in this order for Alert_Handler to exist inside this file
-# and reuse Base machinery, namely for argument parsing. 
+# and reuse Base machinery, namely for argument parsing.
 import pride.components.base as base
 
 class Alert_Handler(base.Base):
@@ -126,14 +128,14 @@ class Alert_Handler(base.Base):
                 'vvvv' : "extremely verbose notification "}
 
     defaults = {"log_level" : '0+v', "print_level" : '0',
-                "log_name" : os.path.join(site_config.LOG_DIRECTORY, "Alerts.log"), 
+                "log_name" : os.path.join(site_config.LOG_DIRECTORY, "Alerts.log"),
                 "log_is_persistent" : False, "parse_args" : True}
 
     parser_ignore = ("parse_args", "log_is_persistent", "verbosity")
     parser_modifiers = {"exit_on_help" : False}
-    
+
     auto_verbosity_ignore = ("append_to_log", )
-    
+
     def _get_print_level(self):
         return self._print_level
     def _set_print_level(self, value):
@@ -141,7 +143,7 @@ class Alert_Handler(base.Base):
         print_level = value.split('+')
         if '0' in print_level:
             print_level.remove('0')
-            print_level.append(0)        
+            print_level.append(0)
         self._print_level = set(print_level)
     print_level = property(_get_print_level, _set_print_level)
 
@@ -155,22 +157,22 @@ class Alert_Handler(base.Base):
             log_level.append(0)
         self._log_level = set(log_level)
     log_level = property(_get_log_level, _set_log_level)
-        
+
     def __init__(self, **kwargs):
         super(Alert_Handler, self).__init__(**kwargs)
         self.log = open(self.log_name, 'a+')
 
     def append_to_log(self, message, level):
         self.log.seek(0, 1) # windows might complain about files in + mode if this isn't done
-        self.log.write(str(level) + message + "\n")   
-            
+        self.log.write(str(level) + message + "\n")
+
     def dump_log(self, byte_count=0, lines=0):
         log = self.log
         backup_position = log.tell()
         if byte_count:
             log.seek(backup_position - byte_count)
             output = log.read(byte_count)
-        elif lines:            
+        elif lines:
             mmap_log = self._open_mmap(log)
             output = self._tail_lines(mmap_log, lines)
             mmap_log.close()
@@ -178,41 +180,41 @@ class Alert_Handler(base.Base):
             log.seek(0)
             output = log.read()
         log.seek(backup_position)
-        return output   
-    
+        return output
+
     @staticmethod
-    def _open_mmap(_file):    
+    def _open_mmap(_file):
         if CURRENT_PLATFORM == "Windows":
             mmap_file = mmap.mmap(_file.fileno(), 0, access=mmap.ACCESS_READ)
         else:
             # for Windows the mmap parameters are different
-            mmap_file = mmap.mmap(_file.fileno(), 0, mmap.MAP_SHARED, mmap.PROT_READ)           
+            mmap_file = mmap.mmap(_file.fileno(), 0, mmap.MAP_SHARED, mmap.PROT_READ)
         return mmap_file
-    
+
     @staticmethod
-    def _tail_lines(string_like_object, line_count):            
+    def _tail_lines(string_like_object, line_count):
         index = string_like_object.rfind('\n')
-        count = 1        
+        count = 1
         while count < line_count:
             index = string_like_object.rfind('\n', 0, index - 1)
-            count += 1                    
-        return string_like_object[index:]  
-    
+            count += 1
+        return string_like_object[index:]
+
 alert_handler = Alert_Handler()
 
 class Finalizer(base.Base):
-    
+
     mutable_defaults = {"_callbacks" : list, "_function_callback" : list}
     verbosity = {"execute_callback" : 'v', "callback_success" : 'v',
                  "unable_to_load_object" : 0, "unable_to_get_method" : 0,
                  "callback_exception" : 0}
-                 
-    def run(self):        
+
+    def run(self):
         verbosity = self.verbosity
 
         _callbacks = self._callbacks
-        while _callbacks:            
-            _, callback, args, kwargs = heapq.heappop(_callbacks)            
+        while _callbacks:
+            _, callback, args, kwargs = heapq.heappop(_callbacks)
             try:
                 reference, method = callback
             except TypeError:
@@ -223,40 +225,39 @@ class Finalizer(base.Base):
                 except KeyError:
                     if reference in objects:
                         raise
-                    else:                                                
-                        self.alert("Unable to load object for callback: '{}'; Object does not exist".format(callback), 
+                    else:
+                        self.alert("Unable to load object for callback: '{}'; Object does not exist".format(callback),
                                    level=verbosity["unable_to_load_object"])
                         continue
                 except AttributeError:
-                    self.alert("Unable to get method: '{}.{}'".format(reference, method), 
+                    self.alert("Unable to get method: '{}.{}'".format(reference, method),
                                level=verbosity["unable_to_get_method"])
-                               
-            self.alert("Executing finalizer callback: {}({}, {})".format(callback, args, kwargs), 
-                       level=verbosity["execute_callback"])            
+
+            self.alert("Executing finalizer callback: {}({}, {})".format(callback, args, kwargs),
+                       level=verbosity["execute_callback"])
             try:
                 callback(*args, **kwargs)
             except Exception as error:
                 message = "Unhandled exception running finalizer method '{}.{}'\n{}"
                 self.alert(message.format(reference, method, traceback.format_exc()),
-                           level=verbosity["callback_exception"]) 
+                           level=verbosity["callback_exception"])
             else:
                 self.alert("Finalizer callback success", level=verbosity["callback_success"])
-        self._callbacks = []    
-        
+        self._callbacks = []
+
     def add_callback(self, callback, priority, *args, **kwargs):
         heapq.heappush(self._callbacks, (priority, callback, args, kwargs))
-        
-    def remove_callback(self, callback, priority, *args, **kwargs):    
+
+    def remove_callback(self, callback, priority, *args, **kwargs):
         try:
             self._callbacks.remove((priority, callback, args, kwargs))
         except ValueError:
             pass
         else:
             heapq.heapify(self._callbacks)
-            
-finalizer = Finalizer()        
+
+finalizer = Finalizer()
 
 import pride.components.patch as patch
 for name in patch.patches:
     getattr(patch, name)()
-    

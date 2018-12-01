@@ -1,0 +1,22 @@
+to do:
+----
+Change git push to use a default site_config rather than the one for this machine
+
+changes
+-----
+Changed nature of --site_config flag
+    - new syntax:
+        `--site_config package.module.class.attribute = {\'key\':value};`
+    - removed need to specify particular entry; New style:
+        `--site_config pride.components.base.Base.verbosity = {\'initialized\':0}`
+    - old style:
+        `--site_config pride_components_base_Base_verbosity[\'initialized\']=0;
+    - added `config` dictionary to site_config.py
+    - keys should be of the form `package.module.class.attribute`
+        - replaces old syntax of `package_module_class_attribute`
+        - fixes bug that would make some objects unaddressable
+
+notes
+----
+RPC "bypass_network_stack" is still present?
+RPC acted weird on first run, then worked fine?

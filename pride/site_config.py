@@ -70,11 +70,12 @@ del os
 import sys
 def write_to(entry, **values):
     site_config_module = sys.modules[__name__]
-    if hasattr(site_config_module, entry):
-        file_data = "\n{}.update({})\n"
-    else:
-        file_data = "\n{} = {}\n"
-    file_data = file_data.format(entry, str(values))
+    values = str(values)
+    file_data = """
+try:
+    config["{}"].update({})
+except KeyError:
+    config["{}"] = {}""".format(entry, values, entry, values)
     with open(SITE_CONFIG_FILE, 'a') as _file:
         _file.write(file_data)
         _file.flush()
@@ -137,6 +138,4 @@ calendar = objects["/Python/SDL_Window"].create("pride.gui.calendar.Calendar", m
 
 """}
 
-#pride_components_rpc_Rpc_Server_defaults = {'keyfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.key', 'certfile': 'c:\\users\\_\\pythonbs\\pride\\data\\ssl_server.crt'}
-
-pride_components_rpc_Rpc_Server_defaults = {'keyfile': '/home/e/projects/pride/pride/data/rpc.key', 'certfile': '/home/e/projects/pride/pride/data/rpc.crt'}
+config = dict()

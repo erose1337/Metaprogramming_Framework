@@ -384,13 +384,16 @@ class Site_Configuration(type):
 
     def __new__(cls, name, bases, attributes):
         new_class = super(Site_Configuration, cls).__new__(cls, name, bases, attributes)
-        new_class_name = (new_class.__module__ + '.' + name).replace('.', '_')
-        dir_output = dir(site_config)
-
+        new_class_name = new_class.__module__ + '.' + name
+        config = site_config.config
         for attribute in new_class.site_config_support:
-            attribute_name = new_class_name + '_' + attribute
-            if attribute_name in dir_output:
-                getattr(new_class, attribute).update(getattr(site_config, attribute_name))
+            attribute_name = '.'.join((new_class_name, attribute))
+            if attribute_name in config:
+                value = getattr(new_class, attribute)
+                try:
+                    value.update(config[attribute_name])
+                except AttributeError:
+                    setattr(new_class, config[attribute_name])
         return new_class
 
 
@@ -415,7 +418,7 @@ class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
    # _metaclass = type("Metaclass",
      #                 tuple(metaclasses),
       #                {})
-    localized_dictionaries = ("predefaults", "mutable_defaults", "defaults")                  
+    localized_dictionaries = ("predefaults", "mutable_defaults", "defaults")
     def __new__(cls, name, bases, attributes):
         new_class = super(Metaclass, cls).__new__(cls, name, bases, attributes)
         for attribute_name in cls.localized_dictionaries:

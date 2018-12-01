@@ -225,9 +225,9 @@ class SSL_Server(pride.components.network.Server):
                 self.keyfile = certificate.key_filename
 
                 if (self.update_site_config_on_new_certfile and
-                    not hasattr(pride.site_config, "pride_components_rpc_Rpc_Server_defaults")):
+                    not hasattr(pride.site_config, "pride.components.rpc.Rpc_Server.defaults")):
 
-                    pride.site_config.write_to("pride_components_rpc_Rpc_Server_defaults",
+                    pride.site_config.write_to("pride.components.rpc.Rpc_Server.defaults",
                                                certfile=certificate.crt_filename,
                                                keyfile=certificate.key_filename)
             else:

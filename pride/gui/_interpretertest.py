@@ -5,47 +5,47 @@ import dis
 import pride
 
 class Stack(object):
-        
+
     def __init__(self):
         self.stack = []
-        
+
     def append(self, value):
         self.stack.append(value)
-        
+
     def push(self, value):
         self.stack.append(value)
-        
+
     def pop(self, index=-1):
         return self.stack.pop(index)
-        
-    def __getitem__(self, value):        
+
+    def __getitem__(self, value):
         return self.stack[value]
-        
+
     def __setitem__(self, index, value):
         self.stack[index] = value
-        
+
     def __delitem__(self, index):
         del self.stack[index]
-        
-        
+
+
 class Stack_Frame(object):
-    
+
     def __init__(self, _locals, parent, stack_type=Stack):
         self.locals = _locals
         self.parent = parent
         self.stack = stack_type()
-                
-                
+
+
 class Function(pride.base.Wrapper):
-    
+
     defaults = {"stack_frame_type" : Stack_Frame}
-    
+
     wrapped_object_name = "function"
-    
+
     @classmethod
     def wrap_function(cls, function):
         return cls(wrapped_object=function)
-    
+
     def __init__(self, **kwargs):
         super(Function, self).__init__(**kwargs)
         arg_specification = inspect.getargspec(self.function)
@@ -59,7 +59,7 @@ class Function(pride.base.Wrapper):
             self._code = self.function.func_code
         except AttributeError:
             self._code = self.function.im_func.func_code
-        
+
     def __call__(self, *args, **kwargs):
         _locals = {}#self._locals
         defaults = self._defaults
@@ -79,20 +79,20 @@ class Function(pride.base.Wrapper):
             _locals[self._keywords] = kwargs
         frame = self.stack_frame_type(_locals, self)
         return objects["/Bytecode_Interpreter"].execute_code(self._code, frame)
-          
-        
+
+
 class Bytecode_Interpreter(pride.components.base.Base):
-            
-    flags = {"_bytecode_counter" : None, "_delta" : 0}.items()
-    
+
+    predefaults = {"_bytecode_counter" : None, "_delta" : 0}.items()
+
     def __init__(self, **kwargs):
         super(Bytecode_Interpreter, self).__init__(**kwargs)
         self._method_name = {"<" : "__lt__", "<=" : "__le__", ">" : "__gt__", ">=" : "__ge__",
                              "==" : "__eq__", "!=" : "__ne__", "in" : "__contains__"}
-                             
-        self.operation_handlers = dict((dis.opmap[name.upper()], getattr(self, name.replace('+', '_'))) for name in 
+
+        self.operation_handlers = dict((dis.opmap[name.upper()], getattr(self, name.replace('+', '_'))) for name in
                                        ("pop_top", "rot_two", "rot_three", "rot_four", "dup_top",
-                                        "unary_positive", "unary_negative", "unary_not", 
+                                        "unary_positive", "unary_negative", "unary_not",
                                         "unary_convert", "unary_invert", "get_iter",
                                         "slice+0", "slice+1", "slice+2", "slice+3",
                                         "store_slice+0", "store_slice+1", "store_slice+2",
@@ -101,10 +101,10 @@ class Bytecode_Interpreter(pride.components.base.Base):
                                         "print_expr", "print_item_to", "print_newline_to",
                                         "break_loop", "continue_loop", "load_locals",
                                         "yield_value", "import_star", "exec_stmt", "pop_block",
-                                        "end_finally", "setup_with", "with_cleanup", 
+                                        "end_finally", "setup_with", "with_cleanup",
                                         "store_name", "delete_name", "unpack_sequence", "dup_topx",
-                                        "store_attr", "delete_attr", "delete_global",                                       
-                                        "load_const", "store_fast", "load_name", "load_global", 
+                                        "store_attr", "delete_attr", "delete_global",
+                                        "load_const", "store_fast", "load_name", "load_global",
                                         "store_global", "load_fast", "call_function", "print_item",
                                         "print_newline", "load_attr", "store_subscr", "import_name",
                                         "import_from", "setup_loop", "setup_except", "setup_finally",
@@ -114,7 +114,7 @@ class Bytecode_Interpreter(pride.components.base.Base):
                                         "make_function", "build_class", "build_list",
                                         "build_set", "build_map", "for_iter",
                                         "list_append", ))
-        single_address_operations = []                                        
+        single_address_operations = []
         for prefix in ("binary", "inplace"):
             for operation in ("power", "multiply", "divide", "floor_divide", "true_divide", "modulo",
                               "add", "subtract", "lshift", "rshift", "and", "xor" ,"or"):
@@ -126,13 +126,13 @@ class Bytecode_Interpreter(pride.components.base.Base):
                      "GET_ITER", "POP_TOP"):
             single_address_operations.append(dis.opmap[name])
         self.single_address_operations = set(single_address_operations)
-        
+
     def execute_code(self, code_object, frame):
         bytecode = bytearray(code_object.co_code)
         index = 0
         opname = dis.opname
         single_address_operations = self.single_address_operations
-        function_call_operations = set(dis.opmap[name] for name in 
+        function_call_operations = set(dis.opmap[name] for name in
                                        ("CALL_FUNCTION", "CALL_FUNCTION_VAR", "CALL_FUNCTION_KW",
                                         "CALL_FUNCTION_VAR_KW"))
         bytecode_length = len(bytecode)
@@ -143,7 +143,7 @@ class Bytecode_Interpreter(pride.components.base.Base):
                 return stack.pop()
             self.alert("Performing: {}".format(opname[operation]), level=0)
             try:
-                self.operation_handlers[operation]((bytecode[index + 1] if operation not in 
+                self.operation_handlers[operation]((bytecode[index + 1] if operation not in
                                                     function_call_operations else
                                                     (bytecode[index + 1], bytecode[index + 2])),
                                                     code_object, stack, frame)
@@ -161,39 +161,39 @@ class Bytecode_Interpreter(pride.components.base.Base):
                 self._bytecode_counter = None
             else:
                 index += 1 if operation in single_address_operations else 3
-    
+
     def store_name(self, argument, code_object, stack, frame):
         frame.locals[code_object.co_names[argument]] = stack.pop()
-        
+
     def delete_name(self, argument, code_object, stack, frame):
         del frame.locals[code_object.co_names[argument]]
-        
+
     def unpack_sequence(self, argument, code_object, stack, frame):
         top_of_stack = stack.pop()
         for x in range(argument):
             stack.append(stack.pop())
-            
+
     def dup_topx(self, argument, code_object, stack, frame):
         stack.extend(stack[-argument:])
- 
+
     def store_attr(self, argument, code_object, stack, frame):
         setattr(stack.pop(), code_object.co_names[argument], stack.pop())
-        
+
     def delete_attr(self, argument, code_object, stack, frame):
         delattr(stack.pop(), code_object.co_names[argument])
-        
-    def load_const(self, argument, code_object, stack, frame):    
+
+    def load_const(self, argument, code_object, stack, frame):
         stack.append(code_object.co_consts[argument])
-        
+
     def store_fast(self, argument, code_object, stack, frame):
         frame.locals[code_object.co_varnames[argument]] = stack.pop()
-    
+
     def load_fast(self, argument, code_object, stack, frame):
         stack.append(frame.locals[code_object.co_varnames[argument]])
-        
+
     def load_name(self, argument, code_object, stack, frame):
         stack.append(frame.locals[code_object.co_varnames[argument]])
-        
+
     def load_global(self, argument, code_object, stack, frame):
         _globals = frame.parent.func_globals
         name = code_object.co_names[argument]
@@ -204,39 +204,39 @@ class Bytecode_Interpreter(pride.components.base.Base):
                 stack.append(_globals["__builtins__"][name])
             except (AttributeError, KeyError):
                 raise NameError("global name '{}' not defined".format(name))
-            
+
     def store_global(self, argument, code_object, stack, frame):
         frame.parent.func_globals[code_object.co_names[argument]] = stack.pop()
-    
+
     def delete_global(self, argument, code_object, stack, frame):
         del frame.parent.func_globals[code_object.co_names[argument]]
-        
+
     def call_function(self, argument, code_object, stack, frame):
         positional_arg_count, keyword_arg_count = argument
         #print "number of arguments: ", keyword_arg_count, positional_arg_count
-        keywords = dict(((stack.pop(-2), stack.pop()) for 
+        keywords = dict(((stack.pop(-2), stack.pop()) for
                           count in range(keyword_arg_count)))
         arguments = tuple(stack.pop() for count in range(positional_arg_count))
         print "Arguments: ", arguments, keywords, stack[-1]
         stack.append(stack.pop()(*reversed(arguments), **keywords))
-    
+
     def print_item(self, argument, code_object, stack, frame):
         sys.stdout.write(str(stack.pop()))
         sys.stdout.flush()
-        
+
     def print_newline(self, argument, code_object, stack, frame):
         sys.stdout.write("\n")
         sys.stdout.flush()
-        
+
     def load_attr(self, argument, code_object, stack, frame):
         stack.append(getattr(stack.pop(), code_object.co_names[argument]))
-    
+
     def store_subscr(self, argument, code_object, stack, frame):
         stack.pop()[stack.pop()] = stack.pop()
-    
+
     def delete_subscr(self, argument, code_object, stack, frame):
         del stack[-2][stack[-1]]
-        
+
     def compare_op(self, argument, code_object, stack, frame):
         operator = dis.cmp_op[argument]
         left_operand = stack.pop()
@@ -249,64 +249,64 @@ class Bytecode_Interpreter(pride.components.base.Base):
                 if "not" in operator:
                     value = not value
             elif operator == "not in":
-                value = left_operand not in stack.pop()                
+                value = left_operand not in stack.pop()
             elif operator == "exception_match":
-                value = isinstance(left_operand, stack.pop())            
+                value = isinstance(left_operand, stack.pop())
         else:
             value = getattr(left_operand, operation, left_operand.__cmp__)(stack.pop())
         stack.append(value)
-    
+
     def pop_jump_if_false(self, argument, code_object, stack, frame):
         if not stack.pop():
             self._bytecode_counter = argument
-            
+
     def pop_jump_if_true(self, argument, code_object, stack, frame):
         if stack.pop():
             self._bytecode_counter = argument
-            
+
     def jump_if_true_or_pop(self, argument, code_object, stack, frame):
         if stack[-1]:
             self._bytecode_counter = argument
         else:
             del stack[-1]
-            
+
     def jump_if_false_or_pop(self, argument, code_object, stack, frame):
         if not stack[-1]:
             self._bytecode_counter = argument
         else:
             del stack[-1]
-            
+
     def jump_forward(self, argument, code_object, stack, frame):
         self._delta = argument
-        
+
     def jump_absolute(self, argument, code_object, stack, frame):
         self._bytecode_counter = argument
-    
+
     def build_tuple(self, argument, code_object, stack, frame):
         stack.append(tuple(stack[-argument:]))
         del stack[-argument - 1:-1]
-        
+
     def make_function(self, argument, code_object, stack, frame):
         defaults = tuple(stack[-(count + 1)] for count in range(argument))
         stack.append(types.FunctionType(stack.pop(), globals(), argdefs=defaults))
-            
+
     def build_class(self, argument, code_object, stack, frame):
-        new_class = types.ClassType(stack[-3], stack[-2], stack[-1])       
-    
+        new_class = types.ClassType(stack[-3], stack[-2], stack[-1])
+
     def build_list(self, argument, code_object, stack, frame):
         stack.append(list(stack[-argument:]))
         del stack[-argument - 1:-1]
-        
+
     def build_set(self, argument, code_object, stack, frame):
         stack.append(set(stack[-argument:]))
         del stack[-argument - 1:-1]
-        
+
     def build_map(self, argument, code_object, stack, frame):
         stack.append(dict())
-        
+
     def get_iter(self, argument, code_object, stack, frame):
         stack.append(iter(stack.pop()))
-     
+
     def for_iter(self, argument, code_object, stack, frame):
         print stack
         try:
@@ -314,98 +314,98 @@ class Bytecode_Interpreter(pride.components.base.Base):
         except StopIteration:
             del stack[-1]
             self._delta = argument
-    
+
     def list_append(self, argument, code_object, stack, frame):
         list.append(stack[-argument - 1], stack.pop())
-    
+
     def pop_top(self, argument, code_object, stack, frame):
         del stack[-1]
-        
+
     def rot_two(self, argument, code_object, stack, frame):
         stack.append(stack.pop(-2))
-        
+
     def rot_three(self, argument, code_object, stack, frame):
         stack.insert(-3, stack.pop())
-    
+
     def rot_four(self, argument, code_object, stack, frame):
         stack.insert(-4, stack.pop())
-        
+
     def dup_top(self, argument, code_object, stack, frame):
-        stack.append(stack[-1])        
-       
+        stack.append(stack[-1])
+
     def unary_positive(self, argument, code_object, stack, frame):
         stack[-1] = +stack[-1]
-        
+
     def unary_negative(self, argument, code_object, stack, frame):
         stack[-1] = -stack[-1]
-        
+
     def unary_not(self, argument, code_object, stack, frame):
         stack[-1] = not stack[-1]
-        
+
     def unary_convert(self, argument, code_object, stack, frame):
         stack[-1] = `stack[-1]`
-        
+
     def unary_invert(self, argument, code_object, stack, frame):
         stack[-1] = ~stack[-1]
-     
+
     def slice_0(self, argument, code_object, stack, frame):
         stack[-1] = stack[-1][:]
-        
+
     def slice_1(self, argument, code_object, stack, frame):
         stack[-1] = stack[-2][stack[-1]:]
-        
+
     def slice_2(self, argument, code_object, stack, frame):
         stack[-1] = stack[-2][:stack[-1]]
-    
+
     def slice_3(self, argument, code_object, stack, frame):
         stack[-1] = stack[-3][stack[-2]:stack[1]]
-        
+
     def store_slice_0(self, argument, code_object, stack, frame):
         stack[-1][:] = stack[-2]
-        
+
     def store_slice_1(self, argument, code_object, stack, frame):
         stack[-2][stack[-1]:] = stack[-3]
-        
+
     def store_slice_2(self, argument, code_object, stack, frame):
         stack[-2][:stack[-1]] = stack[-3]
-        
+
     def store_slice_3(self, argument, code_object, stack, frame):
         stack[-3][stack[-2]:stack[-1]] = stack[-4]
-        
+
     def delete_slice_0(self, argument, code_object, stack, frame):
         del stack[-1][:]
-        
+
     def delete_slice_1(self, argument, code_object, stack, frame):
         del stack[-2][stack[-1]:]
-        
+
     def delete_slice_2(self, argument, code_object, stack, frame):
         del stack[-2][:stack[-1]]
-        
+
     def delete_slice_3(self, argument, code_object, stack, frame):
         del stack[-3][stack[-2]:stack[-1]]
-        
+
     def print_expr(self, argument, code_object, stack, frame):
         print stack.pop()
-        
+
     def print_item_to(self, argument, code_object, stack, frame):
         stack.pop().write(str(stack.pop()))
-        
+
     def print_newline_to(self, argument, code_object, stack, frame):
         stack.pop().write('\n')
-        
+
     def break_loop(self, argument, code_object, stack, frame):
         raise NotImplementedError()
-    
+
     def continue_loop(self, argument, code_object, stack, frame):
         self._bytecode_counter = argument
-    
+
     def load_locals(self, argument, code_object, stack, frame):
         stack.append(frame.locals())
-        
+
     def yield_value(self, argument, code_object, stack, frame):
         raise NotImplementedError
         stack.pop()
-        
+
     def import_star(self, argument, code_object, stack, frame):
         _locals = frame.locals
         module = stack[-1]
@@ -413,7 +413,7 @@ class Bytecode_Interpreter(pride.components.base.Base):
             if not attribute_name.startswith('_'):
                 _locals[attribute_name] = getattr(attribute_name, module)
         stack.pop()
-        
+
     def exec_stmt(self, argument, code_object, stack, frame):
         _locals = _globals = None
         try:
@@ -422,65 +422,65 @@ class Bytecode_Interpreter(pride.components.base.Base):
             try:
                 code = stack.pop(-2)
             except IndexError:
-                code = stack.pop(-1)                
+                code = stack.pop(-1)
             else:
-                _locals = stack.pop()                
+                _locals = stack.pop()
         else:
             _locals = stack.pop(-2)
             _globals = stack.pop()
         exec code in _locals, _globals
-     
+
     def pop_block(self, argument, code_object, stack, frame):
         raise NotImplementedError
-        
+
     def end_finally(self, argument, code_object, stack, frame):
         raise NotImplementedError
-        
+
     def setup_with(self, argument, code_object, stack, frame):
         raise NotImplementedError
-        
+
     def with_cleanup(self, argument, code_object, stack, frame):
         raise NotImplementedError
-        
+
     def import_name(self, argument, code_object, stack, frame):
         __import__(code_object.co_names[argument], stack.pop(), stack.pop())
-        
+
     def import_from(self, argument, code_object, stack, frame):
         stack.append(getattr(stack[-1], code_object.co_names[argument]))
-    
+
     def setup_loop(self, argument, code_object, stack, frame):
         raise NotImplementedError
-        
+
     def setup_except(self, argument, code_object, stack, frame):
         raise NotImplementedError
-        
+
     def setup_finally(self, argument, code_object, stack, frame):
-        raise NotImplementedError      
-        
+        raise NotImplementedError
+
     @pride.preprocess
     def generate_binary_inplace_methods():
         source = []
         method_source = "    def {}_{}(self, argument, code_object, stack, frame):\n\tstack.append(stack.pop() {} stack.pop())"
         subscr_source = "    def {}_subscr(self, argument, code_object, stack, frame):\n\tstack.append(stack.pop()[stack.pop()])"
-        operations = {"power" : "**", "multiply" : '*', "divide" : '/', 
-                      "floor_divide" : "//",  "true_divide" : '/', "modulo" : '%', 
-                      "add" : '+', "subtract" : '-', "lshift" : "<<", 
+        operations = {"power" : "**", "multiply" : '*', "divide" : '/',
+                      "floor_divide" : "//",  "true_divide" : '/', "modulo" : '%',
+                      "add" : '+', "subtract" : '-', "lshift" : "<<",
                       "rshift" : ">>", "and" : '&', "xor" : '^', "or" : '|'}
         for operation_name, symbol in operations.items():
             source.append(method_source.format("binary", operation_name, symbol))
             source.append(method_source.format("inplace", operation_name, symbol))
         source.append(subscr_source.format("binary"))
         source.append(subscr_source.format("inplace"))
-        source.append('\n')        
+        source.append('\n')
         return '\n'.join(source)[4:]
-    
+
 X = 1 # test global
-    
+
 def _test(keyword=True, *args, **kwargs):
     print keyword, args, kwargs
     return None
-    
-def test_bytecode_interpreter():        
+
+def test_bytecode_interpreter():
     def test(first_argument, default_argument=True, *args, **kwargs):
         print first_argument
         a_variable = _test(False, 1, 2, testing='yes')
@@ -504,7 +504,6 @@ def test_bytecode_interpreter():
     function = Function.wrap_function(test)
    # dis.dis(test)
     assert function(10) == 1
-    
+
 if __name__ == "__main__":
     test_bytecode_interpreter()
-    

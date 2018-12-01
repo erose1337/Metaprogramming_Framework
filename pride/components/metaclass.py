@@ -18,61 +18,61 @@ class Docstring(object):
     def __get__(self, instance, _class):
         _object = instance if instance else _class
         return utilities.documentation(_object)
-        
-        
+
+
 class Documented(type):
     """ A metaclass that uses the Docstring object to supply
         abundant documentation for classes"""
     def __new__(cls, name, bases, attributes):
         cls.make_docstring(attributes)
         return super(Documented, cls).__new__(cls, name, bases, attributes)
-        
+
     @staticmethod
     def make_docstring(attributes):
         attributes["__doc"] = attributes.get("__doc__", "No docstring found")
         attributes["__doc__"] = Docstring()
-                        
-                        
+
+
 class alert_on_call(object):
     """ Decorator that automatically calls self.alert when the decorated method is called """
     def __init__(self, method):
-        self.method = method            
+        self.method = method
         self.method_name = self.get_method_name(method)
-        
+
     @staticmethod
     def get_method_name(method):
         try:
             return method.im_func.func_name
         except AttributeError:
             return method.func_name
-             
-    def __call__(self, *args, **kwargs):       
+
+    def __call__(self, *args, **kwargs):
         method_name = self.method_name
-        method = self.method    
-        if method_name != "on_load": # can cause problems otherwise           
-            component = args[0]     
-            message = "{}{}{}".format(method_name, 
+        method = self.method
+        if method_name != "on_load": # can cause problems otherwise
+            component = args[0]
+            message = "{}{}{}".format(method_name,
                                     "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
                                     " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
-                                    
-            component.alert(message, level=component.verbosity[method_name])
-        return method(*args, **kwargs)        
-    
 
-    
+            component.alert(message, level=component.verbosity[method_name])
+        return method(*args, **kwargs)
+
+
+
 class Method_Hook(type):
     """ Provides a hook for decorating methods for the new class. """
-        
+
     enabled = True
     decorator = alert_on_call
     default_verbosity = "debug"
-        
-    def __new__(cls, name, bases, attributes):                    
+
+    def __new__(cls, name, bases, attributes):
         new_class = super(Method_Hook, cls).__new__(cls, name, bases, attributes)
         if cls.enabled:
             Method_Hook.decorate(new_class)
         return new_class
-        
+
     @classmethod
     def decorate(cls, new_class):
         """ Wraps all non private/magic methods with Method_Hook.decorator, which is
@@ -80,32 +80,32 @@ class Method_Hook(type):
             with an '_'."""
         decorator = cls.decorator
         default_verbosity = cls.default_verbosity
-        for key, value in new_class.__dict__.items():            
+        for key, value in new_class.__dict__.items():
             # filter out things that aren't functions/are private or magic methods
             if (key[0] != "_") and callable(value) and key not in new_class.auto_verbosity_ignore:
                 try:
                     if isinstance(value, BaseException) or issubclass(value, BaseException):
                         continue
-                except TypeError:                    
+                except TypeError:
                     if issubclass(type(value), BaseException):
-                        continue                
-                    
-                if key not in new_class.verbosity:                                    
+                        continue
+
+                if key not in new_class.verbosity:
                     try:
-                        decorated_function = decorator(value)                
+                        decorated_function = decorator(value)
                     except AttributeError: # value could be a nested class and not a function or method
                         assert not hasattr(value, "im_func") and not hasattr(value, "func_name")
                         continue
-                        
-                    functools.update_wrapper(decorated_function, value)                
-                    bound_method = types.MethodType(decorated_function, 
-                                                    None, 
-                                                    new_class)                                                                                                 
+
+                    functools.update_wrapper(decorated_function, value)
+                    bound_method = types.MethodType(decorated_function,
+                                                    None,
+                                                    new_class)
                     setattr(new_class, key, bound_method)
                     new_class.verbosity.setdefault(key, default_verbosity)
-        return new_class        
-      
-    
+        return new_class
+
+
 class Runtime_Decorator(object):
     """ Provides the ability to call a method with a decorator, decorators,
         or monkey patch specified via keyword argument. This decorator
@@ -113,20 +113,20 @@ class Runtime_Decorator(object):
 
         usage: wrapped_method(my_argument, decorator="decorators.Tracer")"""
     __metaclass__ = Documented
-    
+
     enabled = False
-    
+
     def __init__(self, function):
         self.function = function
         functools.update_wrapper(self, function)
         self.handler_map = {"monkey_patch" : self._handle_monkey_patch,
                             "decorator" : self._handle_decorator,
                             "decorators" : self._handle_decorators}
-            
+
     def __call__(self, *args, **kwargs):
         check_for = kwargs.pop
         modifiers = ("monkey_patch", "decorator", "decorators")
-        
+
         for modifier in modifiers:
             found = check_for(modifier, None)
             if found:
@@ -134,13 +134,13 @@ class Runtime_Decorator(object):
                 break
         else:
             call = self.function
-        return call(*args, **kwargs)  
-            
+        return call(*args, **kwargs)
+
     """def _handle_context_manager(self, context_manager):
         raise NotImplementedError
         if isinstance(context_manager, str):
             context_manager = resolve_string(context_manager)
-        return context_manager   
+        return context_manager
 
         with context_manager():
             result = self.function(*args, **kwargs)
@@ -172,19 +172,19 @@ class Runtime_Decorator(object):
             wrapped_function = item(wrapped_function)
         return wrapped_function
 
-        
+
 class Parser_Metaclass(type):
-    """ Provides a command line parser for a class based upon 
+    """ Provides a command line parser for a class based upon
         the class.defaults dictionary"""
 
     parser = argparse.ArgumentParser()
     command_parser = parser.add_subparsers(help="filename")
     #run_parser = command_parser.add_parser("run", help="execute the specified script")
     #profile_parser = command_parser.add_parser("profile", help="profile the specified script")
-    
+
     def __new__(cls, name, bases, attributes):
         new_class = super(Parser_Metaclass, cls).__new__(cls, name, bases, attributes)
-                
+
         base_class = bases[0]
         modifiers = getattr(base_class, "parser_modifiers", {}).copy()
         exit_on_help = attributes.get("parser_modifiers", {}).get("exit_on_help", True)
@@ -199,25 +199,25 @@ class Parser_Metaclass(type):
 
         new_modifiers = attributes.get("parser_modifiers", {})
         modifiers.update(new_modifiers)
-        
-        new_class = Parser_Metaclass.make_parser(new_class, name, 
+
+        new_class = Parser_Metaclass.make_parser(new_class, name,
                                                  modifiers, exit_on_help)
         return new_class
-        
+
     @staticmethod
     def make_parser(new_class, name, modifiers, exit_on_help):
         parser = Parser_Metaclass.command_parser.add_parser(name)
         new_class.parser = Parser(parser, modifiers, exit_on_help, name, new_class.defaults)
         return new_class
-    
-    
+
+
 class Parser(object):
     """ Faciltates automatically generated command line parsers. Parser
         instances are class attributes assigned by the Parser_Metaclass"""
     sys_argv_backup = copy(sys.argv)
     sys_argv = sys.argv
     __metaclass__ = Documented
-    
+
     def __init__(self, parser, modifiers, exit_on_help, name, argument_info):
         super(Parser, self).__init__()
         self.parser = parser
@@ -248,7 +248,7 @@ class Parser(object):
                     temporary["dest"] = name
                 else:
                     positionals += 1
-                    
+
                 default_value = argument_info[name]
                 temporary["default"] = default_value
                 value_type = type(default_value)
@@ -264,9 +264,9 @@ class Parser(object):
 
         for argument_name, options in arguments.items():
             parser.add_argument(argument_name, **options)
-        
+
         self.positionals_count = positionals
-        
+
     def get_arguments(self):
         parser = self.parser
         new_argv = Parser.sys_argv
@@ -283,11 +283,11 @@ class Parser(object):
                     index = new_argv.index("--help")
                 except ValueError:
                     raise error
-                    
+
             removed_help = new_argv.pop(index)
             arguments, unused = parser.parse_known_args()
             new_argv.insert(index, removed_help)
-            
+
         if unused:
             new_argv = sys.argv = copy(Parser.sys_argv)
             for unused_name in unused:
@@ -307,11 +307,11 @@ class Parser(object):
 
             arguments, unused = parser.parse_known_args()
             sys.argv = Parser.sys_argv
-        
+
         is_keyword_argument = False
         positionals = self.positionals_count
-        
-        while positionals and len(sys.argv) > 1: 
+
+        while positionals and len(sys.argv) > 1:
             positionals -= 1
             for item in sys.argv[1:]:
                 if "-" != item[0]:
@@ -319,10 +319,10 @@ class Parser(object):
                         is_keyword_argument = False
                         continue
                     sys.argv.remove(item)
-                    break            
+                    break
                 else:
                     is_keyword_argument = True
-        Parser.sys_argv = sys.argv     
+        Parser.sys_argv = sys.argv
         sys.argv = Parser.sys_argv_backup#print sys.argv # this might cause a bug? it consumes sys.argv otherwise
         return arguments
 
@@ -331,24 +331,24 @@ class Parser(object):
         options = dict((key, getattr(namespace, key)) for key in namespace.__dict__.keys())
         return options
 
-       
+
 class Inherited_Attributes(type):
-        
+
     inherited_attributes = {}
-    
+
     def __new__(cls, name, bases, attributes):
         inherited_attributes = cls.inherited_attributes
-        if "inherited_attributes" in attributes:            
+        if "inherited_attributes" in attributes:
             inherited_attributes.update(attributes["inherited_attributes"])
         attributes["inherited_attributes"] = inherited_attributes
-            
+
         for attribute_name, attribute_type in inherited_attributes.items():
             if issubclass(attribute_type, dict):
                 _attribute = {}
                 for _class in bases:
                     _attribute.update(getattr(_class, attribute_name, {}))
                 _attribute.update(attributes.get(attribute_name, {}))
-                
+
             elif issubclass(attribute_type, tuple):
                 empty_tuple = tuple()
                 _attribute = empty_tuple
@@ -356,71 +356,71 @@ class Inherited_Attributes(type):
                     _attribute += getattr(_class, attribute_name, empty_tuple)
                 _attribute += attributes.get(attribute_name, empty_tuple)
                 _attribute = tuple(set(_attribute))
-                
+
             elif issubclass(attribute_type, list):
                 _attribute = []
                 for _class in bases:
                     _attribute += getattr(_class, attribute_name, [])
                 _attribute += attributes.get(attribute_name, [])
                 _attribute = list(set(_attribute))
-                
-            elif issubclass(attribute_type, str):   
+
+            elif issubclass(attribute_type, str):
                 _attribute = attributes.get(attribute_name, getattr(_class, attribute_name, ''))
             attributes[attribute_name] = _attribute
-                
+
         return super(Inherited_Attributes, cls).__new__(cls, name, bases, attributes)
-        
-        
+
+
 class Defaults(Inherited_Attributes):
 
-    inherited_attributes = {"defaults" : dict, "verbosity" : dict, 
-                            "parser_ignore" : tuple, "flags" : dict,
+    inherited_attributes = {"defaults" : dict, "verbosity" : dict,
+                            "parser_ignore" : tuple, "predefaults" : dict,
                             "mutable_defaults" : dict, "required_attributes" : tuple,
                             "site_config_support" : tuple, "post_initializer" : str,
                             "allowed_values" : dict, "auto_verbosity_ignore" : tuple}
-       
- 
+
+
 class Site_Configuration(type):
-    
+
     def __new__(cls, name, bases, attributes):
         new_class = super(Site_Configuration, cls).__new__(cls, name, bases, attributes)
         new_class_name = (new_class.__module__ + '.' + name).replace('.', '_')
-        dir_output = dir(site_config)                
-        
-        for attribute in new_class.site_config_support:         
-            attribute_name = new_class_name + '_' + attribute                                         
-            if attribute_name in dir_output:                                
-                getattr(new_class, attribute).update(getattr(site_config, attribute_name))                   
+        dir_output = dir(site_config)
+
+        for attribute in new_class.site_config_support:
+            attribute_name = new_class_name + '_' + attribute
+            if attribute_name in dir_output:
+                getattr(new_class, attribute).update(getattr(site_config, attribute_name))
         return new_class
-                                
-        
-class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults, 
+
+
+class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
                 Site_Configuration):
-    """ A metaclass that applies other metaclasses. 
-        
+    """ A metaclass that applies other metaclasses.
+
         Also Produces class dictionaries keyed by equivalent values.
-        This makes mass attribute assignment slightly faster. 
-        
+        This makes mass attribute assignment slightly faster.
+
         i.e.:
-            
+
             {'attribute' : True, 'attribute2' : True, 'attribute3' : True}
-            
+
         becomes:
-            
+
             {True: ('attribute', 'attribute1', 'attribute2')}
-            
+
         This is an optimization used to speed up Base.__init__"""
-        
+
     #metaclasses = [Documented, Instance_Tracker, Parser_Metaclass, Method_Hook]
    # _metaclass = type("Metaclass",
      #                 tuple(metaclasses),
       #                {})
-    localized_dictionaries = ("flags", "mutable_defaults", "defaults")                  
+    localized_dictionaries = ("predefaults", "mutable_defaults", "defaults")                  
     def __new__(cls, name, bases, attributes):
-        new_class = super(Metaclass, cls).__new__(cls, name, bases, attributes)    
+        new_class = super(Metaclass, cls).__new__(cls, name, bases, attributes)
         for attribute_name in cls.localized_dictionaries:
             dictionary = getattr(new_class, attribute_name)
-            new_dictionary = {}         
+            new_dictionary = {}
 
             for key, value in dictionary.items():
                 try:
@@ -430,65 +430,65 @@ class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
 
             setattr(new_class, "_localized_" + attribute_name, new_dictionary)
         return new_class
-        
+
     @classmethod
     def update_metaclass(cls):
         cls._metaclass = type(cls.__name__,
                               tuple(cls.metaclasses),
                               {})
-               
+
     @classmethod
     def insert_metaclass(cls, metaclass, index=-1):
         cls.metaclasses.insert(index, metaclass)
         cls.update_metaclass()
-        
+
     @classmethod
     def remove_metaclass(cls, metaclass):
         cls.metaclasses.remove(metaclass)
         cls.update_metaclass()
-        
-        
+
+
 if __name__ == "__main__":
     import unittest
     import pride.components.base as base
-          
-    
+
+
     class Test_Metaclass(unittest.TestCase):
-        
+
         def testdocumentation(self):
             print base.Base.__doc__[:256] + "..."
             print "End documentation test"
-            
+
         def testdecoration(self):
             test_base = base.Base()
-            
+
             def test_decorator1(function):
                 def wrapped_function(*args, **kwargs):
                     print "inside local decorator1"
                     return function(*args, **kwargs)
                 return wrapped_function
-               
+
             def test_decorator2(function):
                 def wrapped_function(*args, **kwargs):
                     print "inside local decorator2"
                     return function(*args, **kwargs)
                 return wrapped_function
-                
+
             sock = test_base.create("socket.socket", decorator=test_decorator1)
-            
+
             other_base = test_base.create("pride.components.base.Base", decorators=(test_decorator1, test_decorator2))
-            
+
             def monkey_patch(*args, **kwargs):
                 print "inside monkey patch"
-                
-            another_sock = test_base.create("socket.socket", 
+
+            another_sock = test_base.create("socket.socket",
                                             monkey_patch=monkey_patch)
             self.failIf(another_sock) # monkey_patch returns False
-            
+
         def testparser(self):
             import sys
 
-            
+
             backup = sys.argv
             arguments = ("--test_string", "test_value", "--test_int", '8',
                          "--test_bool", "False", "--test_float", 3.14)
@@ -497,28 +497,28 @@ if __name__ == "__main__":
 
             class TestBase(base.Base):
                 defaults = pride.defaults.Base.copy()
-                
+
                 arg_index = 1
                 for item in arguments[::2]:
                     defaults[item] = arguments[arg_index]
                     arg_index += 2
-                    
-            test_base = TestBase(parse_args=True, testattr=1, 
+
+            test_base = TestBase(parse_args=True, testattr=1,
                                  test_string="ishouldn'tbehere")
-            
+
             print "Ensuring parser attribute assignment works"
-            
+
             print "Testing keyword arg assignment..."
             self.failUnless(test_base.testattr == 1)
-            
-            
+
+
             # as above, iteratively for the pairs in sys.argv
             arg_index = 1
             for index, item in enumerate(arguments[::2]):
                 value = arguments[arg_index]
                 arg_index += 2
                 print "Testing {}: {} == {}".format(item, getattr(test_base, item), value)
-                self.failUnless(getattr(test_base, item) == value)            
-            
+                self.failUnless(getattr(test_base, item) == value)
+
             sys.argv = backup
     unittest.main()

@@ -21,143 +21,143 @@ sdl2.ext.init()
 sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
-def instruction_generator(instructions):        
-    for layer in instructions.values():                
+def instruction_generator(instructions):
+    for layer in instructions.values():
         for window_object in layer:
             for operation in window_object._draw_operations:
                 yield operation
 
 class SDL_Component(base.Proxy): pass
-    
-        
+
+
 class SDL_Window(SDL_Component):
 
     defaults = {"size" : pride.gui.SCREEN_SIZE, "showing" : True,
                 'position' : (0, 0), 'x' : 0, 'y' : 0, 'z' : 0,
                 'w' : pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
                 "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .04,
-                "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,            
+                "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
-    
-    mutable_defaults = {"redraw_objects" : list, "drawing_instructions" : collections.OrderedDict}                        
-    
-    flags = {"running" : False, "_ignore_invalidation" : None}
-    
+
+    mutable_defaults = {"redraw_objects" : list, "drawing_instructions" : collections.OrderedDict}
+
+    predefaults = {"running" : False, "_ignore_invalidation" : None}
+
     def _get_size(self):
         return (self.w, self.h)
     def _set_size(self, size):
         self.w, self.h = size
     size = property(_get_size, _set_size)
-    
+
     def __init__(self, **kwargs):
         super(SDL_Window, self).__init__(**kwargs)
         self.run_instruction = Instruction(self.reference, "run")
         self.sdl_window = self.reference
-        
+
         window = sdl2.ext.Window(self.name, size=self.size, flags=self.window_flags)
-        
+
         self.wraps(window)
         self.window_handler = self.create(Window_Handler)
-        
-        self.renderer = self.create(Renderer, self, flags=self.renderer_flags)
+
+        self.renderer = self.create(Renderer, self, predefaults=self.renderer_flags)
         self.user_input = self.create(SDL_User_Input)
         self.organizer = self.create("pride.gui.gui.Organizer")
         #self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
         self.drawing_instructions[0] = []
-              
-        if self.showing:
-            self.show()  
 
-        create_texture = self.renderer.sprite_factory.create_texture_sprite 
+        if self.showing:
+            self.show()
+
+        create_texture = self.renderer.sprite_factory.create_texture_sprite
         self._texture = create_texture(self.renderer.wrapped_object,
                                        self.renderer.max_size,
                                        access=self.texture_access_flag)
-        
+
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
-                        
+
     def invalidate_object(self, instance):
        # if instance is self._ignore_invalidation:
-       #     return        
-        if not self.running:            
-            self.running = True                        
-            self.run_instruction.execute(priority=self.priority)        
+       #     return
+        if not self.running:
+            self.running = True
+            self.run_instruction.execute(priority=self.priority)
         self.redraw_objects.append(instance)
-        
-    def create(self, *args, **kwargs):  
+
+    def create(self, *args, **kwargs):
         kwargs.setdefault("sdl_window", self.reference)
-        instance = super(SDL_Window, self).create(*args, **kwargs)        
+        instance = super(SDL_Window, self).create(*args, **kwargs)
         try:
             instance.pack()
         except AttributeError:
-            pass                            
+            pass
         return instance
-                        
+
     def remove_window_object(self, window_object):
         old_z = self.user_input._remove_from_coordinates(window_object.reference)
         try:
             self.redraw_objects.remove(window_object)
         except ValueError:
-            pass        
-                    
+            pass
+
         try:
             self.drawing_instructions[window_object.z].remove(window_object)
         except (KeyError, ValueError):
             pass
-        
-    def run(self):                
-        self.update_drawing_instructions()      
+
+    def run(self):
+        self.update_drawing_instructions()
         self.draw(instruction_generator(self.drawing_instructions))
-        self.running = False            
-        
+        self.running = False
+
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions
-        for window_object in self.redraw_objects:             
+        for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
-            old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)  
-            
+            old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)
+
             #draw_position = texture_atlas.add_to_atlas(window_object)
             #backup_position = window_object.position
             #self._ignore_invalidation = window_object
-            #window_object.position = draw_position                        
-            
+            #window_object.position = draw_position
+
             window_object._draw_texture()
-            
+
             #window_object.position = backup_position
             #self._ignore_invalidation = None
-            
+
             #instructions.extend(draw_operations)
-            
+
             #copy_instruction = ("copy_subsection", draw_position + window_object.size, window_object.area)
             try:
-                instructions[old_z].remove(window_object)                                  
+                instructions[old_z].remove(window_object)
             except (KeyError, ValueError):
                 pass
             try:
-                instructions[window_object.z].append(window_object)            
+                instructions[window_object.z].append(window_object)
             except KeyError:
-                instructions[window_object.z] = [window_object]            
-        del self.redraw_objects[:]  
-        
+                instructions[window_object.z] = [window_object]
+        del self.redraw_objects[:]
+
     def draw(self, instructions):
         renderer = self.renderer
         draw_procedures = renderer.instructions
         texture = self._texture.texture
         renderer.set_render_target(texture)
-        renderer.clear()        
+        renderer.clear()
         for operation, args, kwargs in instructions:
             if operation == "text":
                 if not args[0]:
-                    continue                                
+                    continue
             #if operation == "fill":
-            #    print args, kwargs            
-            draw_procedures[operation](*args, **kwargs)        
-        
+            #    print args, kwargs
+            draw_procedures[operation](*args, **kwargs)
+
         renderer.set_render_target(None)
         area = (0, 0, self.size[0], self.size[1])
         renderer.copy(texture, area, area)
         renderer.present()
-        
+
     def get_mouse_state(self):
         mouse = sdl2.mouse
         x = ctypes.c_long(0)
@@ -173,7 +173,7 @@ class SDL_Window(SDL_Component):
 
     def pack(self, modifiers=None):
         pass
-            
+
     def delete(self):
         # delete window objects before sdl components
         for child in self.children:
@@ -183,21 +183,21 @@ class SDL_Window(SDL_Component):
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)
 
-        
+
 class Window_Context(SDL_Window):
-           
+
     defaults = {"showing" : False}
-    
-    def run(self):                
-        self.update_drawing_instructions()                      
+
+    def run(self):
+        self.update_drawing_instructions()
         return list(instruction_generator(self.drawing_instructions))
-        
+
     def invalidate_object(self, item):
         self.redraw_objects.append(item)
-        
-        
+
+
 class Window_Handler(pride.components.base.Base):
-    
+
     def __init__(self, **kwargs):
         super(Window_Handler, self).__init__(**kwargs)
         self.event_switch = {sdl2.SDL_WINDOWEVENT_SHOWN : self.handle_shown,
@@ -214,72 +214,72 @@ class Window_Handler(pride.components.base.Base):
                              sdl2.SDL_WINDOWEVENT_FOCUS_GAINED : self.handle_focus_gained,
                              sdl2.SDL_WINDOWEVENT_FOCUS_LOST : self.handle_focus_lost,
                              sdl2.SDL_WINDOWEVENT_CLOSE : self.handle_close}
-    
+
     def handle_event(self, event):
      #   self.alert("Handling {}".format(self.event_switch[event.window.event]), level=0)
         self.event_switch[event.window.event](event)
-        
+
     def handle_shown(self, event):
         pass
-        
+
     def handle_hidden(self, event):
         pass
-        
+
     def handle_exposed(self, event):
         pass
-        
+
     def handle_moved(self, event):
         pass
-        
+
     def handle_resized(self, event):
         pass
-        
+
     def handle_size_changed(self, event):
         pass
-        
+
     def handle_minimized(self, event):
         pass
-        
+
     def handle_maximized(self, event):
         pass
-        
+
     def handle_restored(self, event):
         pass
-        
+
     def handle_enter(self, event):
         pass
-        
+
     def handle_leave(self, event):
         try:
             self.parent.user_input.active_item.held = False
         except AttributeError:
             pass
-        
+
     def handle_focus_gained(self, event):
         self.parent.user_input._ignore_click = True
-        
+
     def handle_focus_lost(self, event):
         try:
             self.parent.user_input.active_item.held = False
         except AttributeError:
             pass
-                
+
     def handle_close(self, event):
         pass
-        
-        
+
+
 class SDL_User_Input(scheduler.Process):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None}
     mutable_defaults = {"coordinate_tracker" : dict, "_coordinate_tracker" : collections.OrderedDict}
-    
+
     verbosity = {"handle_text_input" : "vvv"}
-    
+
     def _get_active_item(self):
         return self._active_item
     def _set_active_item(self, value):
         self._active_item = value
-        
+
     def __init__(self, **kwargs):
         super(SDL_User_Input, self).__init__(**kwargs)
         self.uppercase_modifiers = (sdl2.KMOD_SHIFT, sdl2.KMOD_CAPS,
@@ -307,9 +307,9 @@ class SDL_User_Input(scheduler.Process):
         letters = string.ascii_letters
         for index, character in enumerate(letters[:26]):
             uppercase[character] = letters[index+26]
-        
+
         self.setup_event_handler()
-        
+
     def setup_event_handler(self):
         unhandled = self.handle_unhandled_event
         self.handlers = {"sdl2.SDL_DOLLARGESTURE" : unhandled,
@@ -335,69 +335,69 @@ class SDL_User_Input(scheduler.Process):
                          "sdl2.SDL_TEXTEDITING" : unhandled,
                          "sdl2.SDL_TEXTINPUT" : self.handle_textinput,
                          "sdl2.SDL_USEREVENT" : unhandled,
-                         "sdl2.SDL_WINDOWEVENT" : self.parent.window_handler.handle_event}        
+                         "sdl2.SDL_WINDOWEVENT" : self.parent.window_handler.handle_event}
         self.event_names = dict((resolve_string(key), key) for key, value in self.handlers.items())
         self.handlers = dict((resolve_string(key), value) for key, value in self.handlers.items())
-        
+
     def run(self):
         handlers = self.handlers
-        for event in sdl2.ext.get_events():            
+        for event in sdl2.ext.get_events():
             try:
                 handler = handlers[event.type]
             except KeyError:
                 self.alert("Unhandled event: {}".format(self.event_names.get(event.type, event.type)), level=0)
-            else:                
+            else:
                 try:
                     handler(event)
                 except Exception as error:
-                    self.alert("Exception handling {};\n{}".format(self.event_names.get(event.type, event.type), 
-                                                                   traceback.format_exc()), 
+                    self.alert("Exception handling {};\n{}".format(self.event_names.get(event.type, event.type),
+                                                                   traceback.format_exc()),
                                 level=0)
-                
+
     def _update_coordinates(self, item, area, z):
         try:
             _, old_z = self.coordinate_tracker[item]
         except KeyError:
             old_z = 0
-        else:            
-            self._coordinate_tracker[old_z].remove(item)            
+        else:
+            self._coordinate_tracker[old_z].remove(item)
         try:
             self._coordinate_tracker[z].append(item)
         except KeyError:
             self._coordinate_tracker[z] = [item]
-            
+
         self.coordinate_tracker[item] = (area, z)
         return old_z
-        
-    def _remove_from_coordinates(self, item):        
+
+    def _remove_from_coordinates(self, item):
         _, old_z = self.coordinate_tracker[item]
         self._coordinate_tracker[old_z].remove(item)
         del self.coordinate_tracker[item]
         if self.active_item == item:
             self.active_item = None
-                
+
     def handle_textinput(self, event):
         text = event.edit.text
         cursor = event.edit.start
         selection_length = event.edit.length
-        self.alert("Handling textinput {} {} {}".format(text, cursor, selection_length), 
+        self.alert("Handling textinput {} {} {}".format(text, cursor, selection_length),
                    level=self.verbosity["handle_text_input"])
         if self.active_item:
-            instance = objects[self.active_item]            
+            instance = objects[self.active_item]
             instance.text_entry(text)
-        
-    def handle_unhandled_event(self, event):        
+
+    def handle_unhandled_event(self, event):
         self.alert("{0} passed unhandled".format(event.type), 'vv')
 
     def handle_quit(self, event):
         self.parent.delete()
         if "/User/Shell" not in pride.objects:
             raise SystemExit()
-            
-    def handle_mousebuttondown(self, event):        
+
+    def handle_mousebuttondown(self, event):
         mouse = event.button
         mouse_position = (mouse.x, mouse.y)
-        self.alert("mouse button down at {}".format(mouse_position), level='v')        
+        self.alert("mouse button down at {}".format(mouse_position), level='v')
         active_item = None
         max_z = 0
         coordinates = self.coordinate_tracker
@@ -414,7 +414,7 @@ class SDL_User_Input(scheduler.Process):
                 active_item = possible[0][0]
             if active_item:
                 break
-                
+
         old_active_item = self.active_item
         if old_active_item:
             try:
@@ -422,14 +422,14 @@ class SDL_User_Input(scheduler.Process):
             except KeyError:
                 if old_active_item in pride.objects:
                     raise
-                    
+
         self.active_item = active_item
         try:
-            pride.objects[active_item].select(mouse)        
+            pride.objects[active_item].select(mouse)
         except KeyError:
             if active_item in pride.objects:
-                raise              
-        
+                raise
+
         if active_item:
             if self._ignore_click:
                 self._ignore_click = False
@@ -439,31 +439,31 @@ class SDL_User_Input(scheduler.Process):
                 except KeyError:
                     if active_item in pride.objects:
                         raise
-                    else:                        
+                    else:
                         self.alert("Active item has been deleted {}".format(active_item, ), level=0)
                         self.active_item = None
 
     def handle_mousebuttonup(self, event):
         active_item = self.active_item
-        if active_item:            
+        if active_item:
             instance = pride.objects[active_item]
             if instance.held:
                 area, z = self.coordinate_tracker[active_item]
                 mouse = event.button
                 if pride.gui.point_in_area(area, (mouse.x, mouse.y)):
                     instance.release(mouse)
-       
+
     def handle_mousewheel(self, event):
         if self.active_item:
             wheel = event.wheel
             pride.objects[self.active_item].mousewheel(wheel.x, wheel.y)
 
-    def handle_mousemotion(self, event):        
+    def handle_mousemotion(self, event):
         if self.active_item:
             motion = event.motion
             pride.objects[self.active_item].mousemotion(motion.xrel, motion.yrel)
 
-    def handle_keydown(self, event):        
+    def handle_keydown(self, event):
         try:
             instance = pride.objects[self.active_item]
         except KeyError:
@@ -472,34 +472,34 @@ class SDL_User_Input(scheduler.Process):
             else:
                 self.alert("Active item is None; unable to handle keystrokes", level='v')
             return
-            
+
         key_value = event.key.keysym.sym
         modifier = event.key.keysym.mod
-        
+
       #  if key_value < 256 or key_value > 0: # in ascii range
-            
+
         try:
             key = chr(key_value)
-        except ValueError:      
+        except ValueError:
             return # key was a modifier key
-        else:      
+        else:
             if key == "\r":
                 key = "\n"
             key_press = [key, None]
-            
+
             if modifier in self.uppercase_modifiers:
                 try:
                     key = self.uppercase[key]
                 except KeyError:
-                    pass            
+                    pass
             elif modifier:
                 key_press[1] = modifier
-                            
-            if ord(key) < 32 or key_press[1] is not None:                            
+
+            if ord(key) < 32 or key_press[1] is not None:
                 reference, method = self.get_hotkey(instance, tuple(key_press))
-                if reference is not None:                    
+                if reference is not None:
                     getattr(pride.objects[reference], method)()
-                
+
     def get_hotkey(self, instance, key_press):
         if key_press in instance.hotkeys:
             callback_info = (instance.reference, instance.hotkeys[key_press])
@@ -513,52 +513,53 @@ class SDL_User_Input(scheduler.Process):
     def handle_keyup(self, event):
         pass
 
-    def save(self):        
+    def save(self):
         with pride.functions.contextmanagers.backup(self, "handlers", "_coordinate_tracker"):
             self.handlers = None
             self._coordinate_tracker = self._coordinate_tracker.items()
             attributes = super(SDL_User_Input, self).save()
         return attributes
-        
+
     def on_load(self, attributes):
         super(SDL_User_Input, self).on_load(attributes)
         self.setup_event_handler()
-        
-        
+
+
 class Renderer(SDL_Component):
 
-    defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED, "blendmode_flag" : sdl2.SDL_BLENDMODE_ADD, # changed from SDL_BLENDMODE_BLEND to try and make alpha blending work for slider puzzles
+    defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
+                "blendmode_flag" : sdl2.SDL_BLENDMODE_ADD, # changed from SDL_BLENDMODE_BLEND to try and make alpha blending work for slider puzzles
                 "logical_size" : (800, 600)}
-                
-    def __init__(self, window, **kwargs):      
+
+    def __init__(self, window, **kwargs):
         super(Renderer, self).__init__(**kwargs)
-        
+
         self.wraps(sdl2.ext.Renderer(window, flags=self.flags))
-        
+
         self.blendmode = self.blendmode_flag
-        
+
         self.sprite_factory = self.create(Sprite_Factory)
         self.font_manager = self.create(Font_Manager)
-        self.instructions = dict((name, getattr(self, "draw_" + name)) for 
+        self.instructions = dict((name, getattr(self, "draw_" + name)) for
                                   name in ("point", "line", "rect", "rect_width", "text"))
         self.instructions["fill"] = self.fill
         self.instructions["copy"] = self.copy
         self.instructions["copy_subsection"] = self.render_copy
         self.clear()
-    
+
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
-                                
+
     def render_copy(self, source_area, destination_area):
         self.copy(self.parent._texture.texture, source_area, destination_area)
-        
-    def draw_text(self, area, text, **kwargs):           
-        x, y, w, h = area                       
-        texture = self.sprite_factory.from_text(text, fontmanager=self.font_manager, **kwargs)             
-        _w, _h = texture.size   
+
+    def draw_text(self, area, text, **kwargs):
+        x, y, w, h = area
+        texture = self.sprite_factory.from_text(text, fontmanager=self.font_manager, **kwargs)
+        _w, _h = texture.size
 #        assert kwargs.get("width", None) is not None, (area, text, kwargs)
         #if kwargs.get("width", None) is None and _w > w:
-        #    self.copy(texture, dstrect=(x + 2, y + 2, 
+        #    self.copy(texture, dstrect=(x + 2, y + 2,
         #                                w - 2, _h),
         #              srcrect=(0, 0, w, _h))
         #else:
@@ -568,63 +569,63 @@ class Renderer(SDL_Component):
                            _w - 2, _h)
         else:
             destination = (x + 2, y + 2, _w - 2, _h)
-        self.copy(texture, dstrect=destination)        
-        
+        self.copy(texture, dstrect=destination)
+
     def get_text_size(self, area, text, **kwargs):
         x, y, w, h = area
-        kwargs.setdefault("w", w)        
-        texture = self.sprite_factory.from_text(text, 
-                                                fontmanager=self.font_manager, 
-                                                **kwargs)        
-        return texture.size        
-        
+        kwargs.setdefault("w", w)
+        texture = self.sprite_factory.from_text(text,
+                                                fontmanager=self.font_manager,
+                                                **kwargs)
+        return texture.size
+
     def draw_rect_width(self, area, **kwargs):
         width = kwargs.pop("width")
-        x, y, w, h = area        
-        
+        x, y, w, h = area
+
         for rect_size in xrange(1, width + 1):
             new_x = x + rect_size
             new_y = y + rect_size
             new_w = w - rect_size
             new_h = h - rect_size
             self.draw_rect((new_x, new_y, new_w, new_h), **kwargs)
-    
+
     def merge_layers(self, textures):
         self.clear()
         for texture in textures:
             self.copy(texture)
         return self.sprite_factory.from_surface(self.rendertarget.get_surface())
-    
-    def set_render_target(self, texture):            
+
+    def set_render_target(self, texture):
         code = sdl2.SDL_SetRenderTarget(self.wrapped_object.renderer, texture)
         if code < 0:
             raise ValueError("error code {}. Could not set render target of renderer {} to texture {}".format(code, self.wrapped_object.renderer, texture))
-            
+
     def draw(self, texture, draw_instructions, background=None, clear=True):
         self.set_render_target(texture)
         if clear:
             self.clear()
         if background:
-            self.copy(background)               
+            self.copy(background)
 
         instructions = self.instructions
         for shape, args, kwargs in draw_instructions:
-            instructions[shape](*args, **kwargs)     
+            instructions[shape](*args, **kwargs)
         self.set_render_target(None)
         return texture
-        
+
     def get_renderer_info(self):
         info = sdl2.SDL_RendererInfo()
         sdl2.SDL_GetRendererInfo(self.renderer, info)
         return info
-        
-        
+
+
 class Sprite_Factory(SDL_Component):
 
-    def __init__(self, **kwargs):        
+    def __init__(self, **kwargs):
         super(Sprite_Factory, self).__init__(**kwargs)
         self.wraps(sdl2.ext.SpriteFactory(renderer=self.parent))
-        
+
     def save(self):
         sprite_factory = self.wrapped_object
         self.wraps(None)
@@ -632,8 +633,8 @@ class Sprite_Factory(SDL_Component):
         self.wraps(sprite_factory)
         print "\n\n\nReturning: ", attributes
         return attributes
-        
-        
+
+
 class Font_Manager(SDL_Component):
 
     defaults = {"font_path" : os.path.join(pride.gui.PACKAGE_LOCATION,
@@ -649,35 +650,34 @@ class Font_Manager(SDL_Component):
                    "bg_color" : _defaults["default_background"]}
         kwargs["wrapped_object"] = sdl2.ext.FontManager(**options)
         super(Font_Manager, self).__init__(**kwargs)
-        
-    def save(self):        
+
+    def save(self):
         raise NotImplementedError()
         with pride.functions.contextmanagers.backup(self, "_bgcolor", "_textcolor", "_default_font", "fonts"):
             color = self._bgcolor
             self._bgcolor = (color.r, color.g, color.b, color.a)
-            
+
             text_color = self._textcolor
             self._textcolor = (color.r, color.g, color.b, color.a)
-            
+
             self.fonts = {}
-            
+
             default_font = self._default_font
             self._default_font = self.defaults["font_path"]
-            attributes = super(Font_Manager, self).save()                
+            attributes = super(Font_Manager, self).save()
         return attributes
-        
+
     def on_load(self, attributes):
         color = attributes["_bgcolor"]
         attributes["_bgcolor"] = sdl2.ext.Color(*color)
-        
+
         text_color = attributes["_textcolor"]
         attributes["_textcolor"] = sdl2.ext.Color(*text_color)
-        raise NotImplementedError()       
+        raise NotImplementedError()
         #options = {"font_path" : attributes["font_path"],
         #           "size" : attributes["default_font_size"],
         #           "color" : attributes["default_color"],
         #           "bg_color" : attributes["default_background"]}
         #attributes["wrapped_object"] = sdl2.ext.FontManager(**options)
-        
+
         super(Font_Manager, self).on_load(attributes)
-        

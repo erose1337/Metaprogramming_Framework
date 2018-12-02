@@ -139,8 +139,3 @@ window = pride.gui.enable()
 calendar = objects["/Python/SDL_Window"].create("pride.gui.calendar.Calendar", month="August")
 
 """}
-
-try:
-    config["pride.components.rpc.Rpc_Server.defaults"].update({'keyfile': '/home/e/projects/pride/pride/data/rpc.key', 'certfile': '/home/e/projects/pride/pride/data/rpc.crt'})
-except KeyError:
-    config["pride.components.rpc.Rpc_Server.defaults"] = {'keyfile': '/home/e/projects/pride/pride/data/rpc.key', 'certfile': '/home/e/projects/pride/pride/data/rpc.crt'}

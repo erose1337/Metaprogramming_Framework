@@ -6,11 +6,6 @@ Fix gui bug(s)
 
 changes
 -----
-changed Base.delete_children method to not make a copy of the children list
-fixed old-style shell startup_definitions defaults in site_config
-fixed a bug when parsing --site_config entries
-removed traceback from exiting via ctrl-c
-removed debug alert statement from RPC module
 
 notes
 ----

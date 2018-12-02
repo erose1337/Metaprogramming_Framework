@@ -14,7 +14,13 @@ def parse_site_config():
         configuration = site_config.config
         for name_equals_value in site_config_entries.split(';'):
             name, value_code = name_equals_value.split('=', 1)
-            value = ast.literal_eval(value_code)
+            while True:
+                try:
+                    value = ast.literal_eval(value_code)
+                except SyntaxError:
+                    value_code += sys.argv.pop(index)
+                else:
+                    break
             try:
                 site_config_entry = configuration[name]
             except KeyError:

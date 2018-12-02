@@ -1,20 +1,16 @@
 to do:
 ----
 Change git push to use a default site_config rather than the one for this machine
+investigate Cython and make a JIT metaclass
+Fix gui bug(s)
 
 changes
 -----
-Changed nature of --site_config flag
-    - new syntax:
-        `--site_config package.module.class.attribute = {\'key\':value};`
-    - removed need to specify particular entry; New style:
-        `--site_config pride.components.base.Base.verbosity = {\'initialized\':0}`
-    - old style:
-        `--site_config pride_components_base_Base_verbosity[\'initialized\']=0;
-    - added `config` dictionary to site_config.py
-    - keys should be of the form `package.module.class.attribute`
-        - replaces old syntax of `package_module_class_attribute`
-        - fixes bug that would make some objects unaddressable
+changed Base.delete_children method to not make a copy of the children list
+fixed old-style shell startup_definitions defaults in site_config
+fixed a bug when parsing --site_config entries
+removed traceback from exiting via ctrl-c
+removed debug alert statement from RPC module
 
 notes
 ----

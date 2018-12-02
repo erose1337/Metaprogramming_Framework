@@ -184,9 +184,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     looking up the reference in the pride.objects dictionary.
 
     base.children returns an iterator over the child objects; If you intend to
-    delete all child objects, make a copy via list(my_object.children) to
-    loop over, otherwise not all child objects will be deleted (removing items
-    from a list while iterating over it doesn't work as expected)."""
+    delete all child objects, use the delete_children method."""
 
     # certain container type class attributes are "inherited" from base classes
     # these include defaults, required_attributes, mutable_defaults, verbosity
@@ -383,12 +381,14 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         self.deleted = True
 
     def delete_children(self):
-        for child in list(self.children):
-            try:
-                child.delete()
-            except DeleteError:
-                if self.reference in child.references_to:
-                    raise
+        children = self.objects.values()
+        while any(children):
+            for child in self.children:
+                try:
+                    child.delete()
+                except DeleteError:
+                    if self.reference in child.references_to:
+                        raise
 
     def add(self, instance):
         """ usage: object.add(instance)

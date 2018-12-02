@@ -41,10 +41,7 @@ def remote_procedure_call(callback_name='', callback=None):
                 if self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
                     local_service = pride.objects[self.target_service]
                     session_id = self.session.id
-                    #local_service.alert("Validating {} from {} {}: {}".format(call_name, self.ip, session_id, local_service.validate(session_id, self.ip, call_name)))
-                    #local_service.alert("Validation again? {}".format(local_service.validate(session_id, self.ip, call_name)))
                     if local_service.validate(session_id, self.ip, call_name) or call_name == "register":
-                        local_service.alert("Success, calling: {}".format(call_name))
                         output = local_service.execute_remote_procedure_call(session_id, self.ip, call_name, args, kwargs)
                         if _callback:
                             _callback(output)

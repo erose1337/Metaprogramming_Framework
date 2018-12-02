@@ -80,7 +80,9 @@ except KeyError:
         _file.write(file_data)
         _file.flush()
 
-pride_components_interpreter_Shell_defaults = {"startup_definitions" : \
+config = dict()
+config["pride.components.interpreter.Shell.defaults"] = \
+{"startup_definitions" : \
 r"""import pride.components.base
 import pride
 
@@ -138,4 +140,7 @@ calendar = objects["/Python/SDL_Window"].create("pride.gui.calendar.Calendar", m
 
 """}
 
-config = dict()
+try:
+    config["pride.components.rpc.Rpc_Server.defaults"].update({'keyfile': '/home/e/projects/pride/pride/data/rpc.key', 'certfile': '/home/e/projects/pride/pride/data/rpc.crt'})
+except KeyError:
+    config["pride.components.rpc.Rpc_Server.defaults"] = {'keyfile': '/home/e/projects/pride/pride/data/rpc.key', 'certfile': '/home/e/projects/pride/pride/data/rpc.crt'}

@@ -198,7 +198,7 @@ class Socket(base.Wrapper):
                 old_buffer.extend(bytearray(2 * len(old_buffer)))
                 Socket._memoryview = memoryview(old_buffer)
                 self.recv(buffer_size)
-            elif error.errno != 10035:
+            elif error.errno not in (10035, 11):
                 raise
 
         _byte_count = self._byte_count
@@ -292,10 +292,10 @@ class Socket(base.Wrapper):
             self.alert("Network unavailable")
 
     def serialize(self, data):
-        return self.serializer.save_data(data)
+        return self.serializer.dumps(data)
 
     def deserialize(self, data):
-        return self.serializer.load_data(data)
+        return self.serializer.loads(data)
 
 
 class Raw_Socket(Socket):
@@ -357,7 +357,7 @@ class Server(Tcp_Socket):
 
     defaults = {"port" : 80,
                 "backlog" : 50,
-                "reuse_port" : 0,
+                "reuse_port" : 1,
                 "Tcp_Socket_type" : "network.Tcp_Socket",
                 "allow_port_zero" : False,
                 "dont_save" : False,
@@ -370,7 +370,7 @@ class Server(Tcp_Socket):
 
     def __init__(self, **kwargs):
         super(Server, self).__init__(**kwargs)
-#        self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, self.reuse_port)
+        self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, self.reuse_port)
         self.bind((self.interface, self.port))
         self.listen(self.backlog)
         pride.objects["/Python/Network_Connection_Manager"].servers[(self.interface, self.port)] = self.reference
@@ -380,12 +380,11 @@ class Server(Tcp_Socket):
             while True:
                 self.accept()
         except socket.error as error:
-            if error.errno != 10035:
+            if error.errno not in (10035, 11):
                 raise
 
     def accept(self):
         _socket, address = self.socket.accept()
-
         connection = self.create(self.Tcp_Socket_type, wrapped_object=_socket,
                                  peername=address)
         connection.on_connect()
@@ -511,11 +510,6 @@ class Network_Connection_Manager(pride.components.base.Base):
         The inbound and outbound connections dictionary maps (ip, port) pairs
         to the (ip, port) pair of their connected endpoint
 
-        The socket_reference dictionary maps socket (ip, port) pairs to the
-        socket.reference. This applies to local sockets only. The reference
-        can be/is used to bypass the network stack and call send/recv between
-        sockets exclusively at the application level.
-
         The servers dictionary maps an (interface, port) pair to the reference
         of the server listening on at that address. """
     mutable_defaults = {"servers" : dict}
@@ -559,8 +553,6 @@ class Network(scheduler.Process):
             if writable_sockets:
                 writable.extend(writable_sockets)
 
-        connecting = self.connecting
-        self.connecting = set()
         read_progress = 0
         readable_count = len(readable)
         # nesting the for within the while so we don't have to
@@ -574,7 +566,6 @@ class Network(scheduler.Process):
                 error_handler.dispatch(_socket, error, ERROR_CODES[error.errno].lower())
             except Exception as error:
                 _socket = readable[read_progress + read_counter]
-                message = "Caught non socket.error during recv: {}".format(traceback.format_exc())
                 _socket.alert(message, level=0)
                 _socket.delete()
               #  raise
@@ -583,6 +574,8 @@ class Network(scheduler.Process):
             else:
                 break
 
+        connecting = self.connecting
+        self.connecting = set()
         if connecting:
             if writable:
                 # if a connecting tcp client is now writable, it's connected

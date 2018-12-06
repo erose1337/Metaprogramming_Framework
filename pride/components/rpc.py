@@ -10,12 +10,13 @@ import pride
 import pride.components.base
 import pride.components.scheduler
 import pride.components.networkssl
+import pride.components.network
 import pride.functions.persistence
 import pride.functions.decorators
 #objects = pride.objects
 
-DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.persistence.save_data),
-                                                     "loads" : staticmethod(pride.functions.persistence.load_data)})
+DEFAULT_SERIALIZER = pride.components.network.DEFAULT_SERIALIZER
+
 _old_data = {}
 
 class UnauthorizedError(Warning): pass
@@ -38,7 +39,7 @@ def remote_procedure_call(callback_name='', callback=None):
             else:
                 self.alert("Making request '{}.{}'".format(self.target_service, call_name),
                            level=self.verbosity[call_name])
-                if self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
+                if False: #self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
                     local_service = pride.objects[self.target_service]
                     session_id = self.session.id
                     if local_service.validate(session_id, self.ip, call_name) or call_name == "register":
@@ -117,8 +118,8 @@ class Session(pride.components.base.Base):
             followed by the information from the supplied instruction. No
             information regarding the callback is included in the request. """
         _call = component, method = instruction.component_name, instruction.method
-        request = DEFAULT_SERIALIZER.save_data(self.id, component, method,
-                                               DEFAULT_SERIALIZER.save_data((instruction.args, instruction.kwargs)))
+        request = DEFAULT_SERIALIZER.dumps(self.id, component, method,
+                                           DEFAULT_SERIALIZER.dumps((instruction.args, instruction.kwargs)))
         host = pride.objects["/Python/Rpc_Connection_Manager"].get_host(self.host_info)
         # we have to insert at the beginning things will happen inline, and
         # must append to the end when network round trips with callbacks are used
@@ -212,7 +213,7 @@ class Rpc_Client_Socket(Packet_Client):
 
     def recv(self, packet_count=0):
         for response in super(Rpc_Client_Socket, self).recv():
-            _response = self.deserealize(response)
+            _response = self.deserialize(response)
             callback_owner = self._callbacks.pop(0)
             try:
                 _call, callback = pride.objects[callback_owner].next_callback()
@@ -293,6 +294,7 @@ class Rpc_Socket(Packet_Socket):
 
 class Rpc_Worker(pride.components.base.Base):
     """ Performs remote procedure call requests """
+    defaults = {"serializer" : DEFAULT_SERIALIZER}
     verbosity = {"request_result" : "vvv"}
 
     def handle_request(self, peername, session_id, component_name, method,
@@ -302,8 +304,14 @@ class Rpc_Worker(pride.components.base.Base):
         if not instance.validate(session_id, peername, method):
             raise UnauthorizedError()
         else:
-            args, kwargs = self.deserealize(serialized_arguments)
+            args, kwargs = self.deserialize(serialized_arguments)
             return instance.execute_remote_procedure_call(session_id, peername, method, args, kwargs)
+
+    def deserialize(self, serialized_data):
+        return self.serializer.loads(serialized_data)
+
+    def serialize(self, data):
+        return self.serializer.dumps(data)
 
 
 class RPC_Service(pride.components.base.Base):

@@ -1,13 +1,17 @@
 to do:
 ----
 Change git push to use a default site_config rather than the one for this machine
+    - option to specify alternative configuration files
 investigate Cython and make a JIT metaclass
 Fix gui bug(s)
+shell screensaver broken on ubuntu
+    - does not display properly for most screensavers
 
 changes
 -----
+fixed networking on ubuntu
+simplified shell user input handling and some screensaver issues
 
 notes
 ----
-RPC "bypass_network_stack" is still present?
 RPC acted weird on first run, then worked fine?

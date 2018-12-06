@@ -62,7 +62,7 @@ def is_affirmative(input, affirmative_words=("affirmative", "true")):
             is_positive = None
     return is_positive
 
-class Command_Line(pride.components.scheduler.Process):
+class Command_Line(pride.components.base.Base):
     """ Captures user input and provides the input to the specified or default program.
 
         Available programs can be modified via the add_program, remove_program,
@@ -71,7 +71,7 @@ class Command_Line(pride.components.scheduler.Process):
                 "prompt" : ">>> ", "programs" : None,
                 "default_programs" : ("pride.components.shell.OS_Shell",
                                       "pride.components.shell.Switch_Program"),
-                "idle_threshold" : 10000,
+                "idle_threshold" : 1,
                 "screensaver_type" : "pride.components.shell.Random_Screensaver"}
 
     def __init__(self, **kwargs):
@@ -87,8 +87,10 @@ class Command_Line(pride.components.scheduler.Process):
         for program in self.default_programs[1:]:
             self.create(program)
 
-        priority = self.idle_threshold * self.priority
-        pride.Instruction(self.reference, "handle_idle").execute(priority=priority)
+        pride.Instruction(self.reference, "handle_idle").execute(priority=self.idle_threshold)
+
+        self._new_thread()
+        self.thread.start()
 
     def _new_thread(self):
         self.thread = threading.Thread(target=self.read_input)
@@ -119,20 +121,12 @@ class Command_Line(pride.components.scheduler.Process):
 
     def run(self):
         if input_waiting():
-            if self.screensaver is not None:
-                pride.objects[self.screensaver].delete()
-                self.screensaver = None
-                self.clear()
-                previous_log_contents = sys.stdout_log[:self._position]
-                sys.stdout.write(previous_log_contents)
-                sys.stdout.flush()
-                sys.stdout.logging_enabled = True
-
-            if not self.thread_started:
-                self._new_thread()
-                self.thread.start()
-                self.thread_started = True
-                self._idle = False
+            pass
+            #if not self.thread_started:
+            #    self._new_thread()
+            #    self.thread.start()
+            #    self.thread_started = True
+            #    self._idle = False
 
     def set_prompt(self, prompt):
         self.prompt = prompt
@@ -147,9 +141,22 @@ class Command_Line(pride.components.scheduler.Process):
         self._new_thread()
 
     def read_input(self):
-        input = sys.stdin.readline()
-        self.thread_started = False
-        self.handle_input(input)
+        self.thread_started = True
+        while True:
+            input = sys.stdin.readline()
+            self._idle = False
+            self.clear_screensaver()
+            self.handle_input(input)
+
+    def clear_screensaver(self):
+        if self.screensaver is not None:
+            pride.objects[self.screensaver].delete()
+            self.screensaver = None
+            self.clear()
+            previous_log_contents = sys.stdout_log[:self._position]
+            sys.stdout.write(previous_log_contents)
+            sys.stdout.flush()
+            sys.stdout.logging_enabled = True
 
     def handle_input(self, input):
         self.alert("Got user input {}".format(input), level='vvv')
@@ -181,19 +188,19 @@ class Command_Line(pride.components.scheduler.Process):
         #    sys.stdout.write(self.prompt)
 
     def handle_idle(self):
-        if self._idle and not self.screensaver and not self.thread_started:
+        if self._idle and not self.screensaver:
             self._position = sys.stdout_log.tell()
             sys.stdout.logging_enabled = False
+            self.alert("Starting terminal screensaver; Press enter to resume... ")
             self.screensaver = self.create(self.screensaver_type).reference
         self._idle = True
-        priority = self.idle_threshold * self.priority
-        pride.Instruction(self.reference, "handle_idle").execute(priority=priority)
+        pride.Instruction(self.reference, "handle_idle").execute(priority=self.idle_threshold)
 
     def clear(self):
         if PLATFORM == "Windows":
             command = "CLS"
         else:
-            command = "CLEAR"
+            command = "clear"
         os.system(command)
 
 
@@ -330,11 +337,11 @@ class Terminal_Screensaver(pride.components.scheduler.Process):
                 module = None
                 while module is None:
                     name = random.choice(sys.modules.keys())
+                    module = sys.modules[name]
                     try:
-                        module = sys.modules[name]
-                    except TypeError:
+                        source = inspect.getsource(module)
+                    except (TypeError, IOError):
                         continue
-                source = inspect.getsource(module)
                 self.file_text = "\n" + source + "\n"
 
         sys.stdout.write(self.file_text[:self.rate])

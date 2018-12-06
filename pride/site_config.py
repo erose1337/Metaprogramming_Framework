@@ -104,38 +104,4 @@ def delete(reference):
 
 def logout(program="/User/Shell"):
     objects[program].logout()
-
-#import pride.audio
-#pride.audio.enable()
-import pride.gui
-window = pride.gui.enable()
-
-#trace = objects[window].create("pride.gui.bittrace.Animated_Bit_Trace")
-#import animated
-#slider = objects[window].create(animated.Slider_Puzzle)
-
-
-#w = objects[window].create("pride.gui.gui.Window")
-#def new(pack_mode, w=w):
-#    _object = w.create("pride.gui.gui.Container", pack_mode=pack_mode)
-#    w.pack()
-#    return _object
-#
-#def organizer_test(pieces=("top", "bottom", "main", "left", "left", "right"), w=w):
-#    components = [new(piece) for piece in pieces]
-#    w.pack()
-#    return components
-#top, bottom, main, left1, left2, right = organizer_test()
-
-#import pride.components.sdts
-#
-#client1 = pride.components.sdts.Secure_Data_Transfer_Client(username="Ella6")
-#client2 = pride.components.sdts.Secure_Data_Transfer_Client(username="Ella7")
-#client1.connect("Ella7", client2.public_key)
-
-#_map = objects["/Python/SDL_Window"].create("map.Map")
-#test = objects["/Python/SDL_Window"].create("pride.gui.organizerunittest.Organizer_Unit_Test")
-#game = objects["/Python/SDL_Window"].create("game2.gui.battlescreen.Battle_Screen.unit_test")
-calendar = objects["/Python/SDL_Window"].create("pride.gui.calendar.Calendar", month="August")
-
 """}

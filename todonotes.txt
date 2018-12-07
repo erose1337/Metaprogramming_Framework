@@ -1,7 +1,5 @@
 to do:
 ----
-Change git push to use a default site_config rather than the one for this machine
-    - option to specify alternative configuration files
 investigate Cython and make a JIT metaclass
 Fix gui bug(s)
 shell screensaver broken on ubuntu
@@ -9,8 +7,8 @@ shell screensaver broken on ubuntu
 
 changes
 -----
-fixed networking on ubuntu
-simplified shell user input handling and some screensaver issues
+fixed Matrix_Screensaver and CA_Screensaver
+noted `--log_level debug` will log session key on the Interpreter object docs
 
 notes
 ----

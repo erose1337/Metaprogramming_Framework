@@ -62,6 +62,7 @@ def is_affirmative(input, affirmative_words=("affirmative", "true")):
             is_positive = None
     return is_positive
 
+
 class Command_Line(pride.components.base.Base):
     """ Captures user input and provides the input to the specified or default program.
 
@@ -71,7 +72,7 @@ class Command_Line(pride.components.base.Base):
                 "prompt" : ">>> ", "programs" : None,
                 "default_programs" : ("pride.components.shell.OS_Shell",
                                       "pride.components.shell.Switch_Program"),
-                "idle_threshold" : 1,
+                "idle_threshold" : 1000,
                 "screensaver_type" : "pride.components.shell.Random_Screensaver"}
 
     def __init__(self, **kwargs):
@@ -355,7 +356,9 @@ class Terminal_Screensaver(pride.components.scheduler.Process):
 
 class Random_Screensaver(Terminal_Screensaver):
 
-    choices = ["pride.components.shell.Terminal_Screensaver", "pride.components.shell.Matrix_Screensaver", "pride.components.shell.CA_Screensaver"]
+    choices = ["pride.components.shell.Terminal_Screensaver",
+               "pride.components.shell.Matrix_Screensaver",
+               "pride.components.shell.CA_Screensaver"]
 
     def __new__(cls, *args, **kwargs):
         _type = random.choice(cls.choices)
@@ -365,75 +368,62 @@ class Random_Screensaver(Terminal_Screensaver):
 
 class Matrix_Screensaver(Terminal_Screensaver):
 
-    defaults = {"priority" : .08}
+    defaults = {"priority" : .08, "column" : None, "index" : 0}
+    mutable_defaults = {"characters" : list}
 
     def __init__(self, **kwargs):
         super(Matrix_Screensaver, self).__init__(**kwargs)
-        self.characters = []
         self.width, self.height = pride.components._termsize.getTerminalSize()
-        self.row = None
         for x in xrange(self.height):
-            self.characters.append(bytearray(self.width))
+            row = [' '] * self.width
+            row[-1] = '\n'
+            self.characters.append(row)
 
     def run(self):
-        if not self.row: # pick a new row at random to go down
-            row_number = 0
-            used_numbers = set()
-            while self.characters[0][row_number]:
-                row_number = random.randint(0, self.width - 1)
-                used_numbers.add(row_number)
-                if len(used_numbers) == self.width:
-                    self.characters = []
-                    for x in xrange(self.height):
-                        self.characters.append(bytearray(self.width))
-                    break
-            self.row = row_number
-            self.column = 0
-        self.characters[self.column][self.row] = chr(random.randint(0, 255))
-        sys.stdout.write(str(self.characters[self.column]))
+        if self.column is None:
+            self.column = random.randint(0, self.width - 2)
+            self.index = 0
+        self.characters[self.index][self.column] = unichr(random.randint(0, 255))
+        self.index += 1
+        if self.index == self.height:
+            self.column = None
+            self.index = 0
+        objects["/User/Command_Line"].clear()
+        sys.stdout.write(''.join(''.join(item) for item in self.characters))
         sys.stdout.flush()
-        self.column += 1
-        if self.column >= self.height:
-            self.row = None
-            objects["/User/Command_Line"].clear()
 
 
 class CA_Screensaver(Terminal_Screensaver):
 
-    defaults = {"storage_size" : 80, "_injection_timer" : 0}
-
-    next_state = {(1, 1, 1) : 1, (1, 1, 0) : 0, (1, 0, 1) : 0, (1, 0, 0) : 1,
-                  (0, 1, 1) : 0, (0, 1, 0) : 1, (0, 0, 1) : 1, (0, 0, 0) : 0}
+    defaults = {"storage_size" : pride.components._termsize.getTerminalSize()[0],
+                "character1" : 'A', "character0" : ' '}
 
     rule_30 = {(1, 1, 1) : 0, (1, 1, 0) : 0, (1, 0, 1) : 0, (1, 0, 0) : 1,
                (0, 1, 1) : 1, (0, 1, 0) : 1, (0, 0, 1) : 1, (0, 0, 0) : 0}
-
-   # _RULE_30 = [0, 1, 1, 1, 1, 0, 0, 0]
-   #
-   # def rule_30(byte1, byte2, byte3):
-   #     return _RULE_30[(byte1 << 2) | (byte2 << 1) | byte3]
 
     def __init__(self, **kwargs):
         super(CA_Screensaver, self).__init__(**kwargs)
         self.bytearray = bytearray(self.storage_size)
         self.bytearray[ord(os.urandom(1)) % self.storage_size] = 1
-        self._state = CA_Screensaver.rule_30 if ord(random._urandom(1)) < 128 else CA_Screensaver.next_state
-
+        self._state = CA_Screensaver.rule_30
+        self.translator = {ord(self.character1) : 1, 1 : 1,
+                           ord(self.character0) : 0, 0 : 0}
     def run(self):
         _bytearray = self.bytearray
         size = self.storage_size
-        if not self._injection_timer:
-            two_bytes = bytearray(os.urandom(2))
-            _bytearray[two_bytes[0] % size] ^= 1
-            self._injection_timer = two_bytes[1]
-        else:
-            self._injection_timer -= 1
-
         new_bytearray = bytearray(size)
-        _state = self._state
+        rule = self._state
+        translator = self.translator
         for index, byte in enumerate(_bytearray):
-            current_state = (_bytearray[index - 1], byte, _bytearray[(index + 1) % size])
-            new_bytearray[index] = _state[current_state]
+            current_state = (translator[_bytearray[index - 1]],
+                             translator[byte],
+                             translator[_bytearray[(index + 1) % size]])
+            value = rule[current_state]
+            if value == 1:
+                display_character = 'A'
+            else:
+                display_character = ' '
+            new_bytearray[index] = display_character
         self.bytearray = new_bytearray
         sys.stdout.write(new_bytearray)
         sys.stdout.write("\n")

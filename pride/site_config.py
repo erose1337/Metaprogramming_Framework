@@ -1,12 +1,11 @@
 """ pride.site_config - site configuration module.
 
     Site specific defaults, mutable_defaults, predefaults, and verbosity may be set
-    here. Entries take the form of the full name of the object, meaning the
-    name of the class, the module the class resides in, and any packages the
-    module resides in. Because the '.' symbol denotes attribute access, names
-    must have the '.' symbol replaced with '_'. For example:
+    here. Entries go in the config dictionary, and should take the form of the full
+    name of the object, meaning the name of the class, the module the class resides
+    in, and any packages the module resides in:
 
-        pride_user_User_defaults = {'username' : 'localhost'}
+        config["pride.components.user.User.defaults"].update({'username' : 'localhost'})
 
     The above line effectively does the following at runtime, before the class
     is constructed:
@@ -29,13 +28,20 @@
     command line argument. Simply enter the --site_config flag followed by the
     desired entries, like so:
 
-        python -m pride.main --site_config pride_user_User_defaults['username']='Ella'
+        python -m pride.main --site_config pride.user.User.defaults = {\'username\':\'Ella\'}
 
     This will use a different default username for a single execution of the program.
 
     Multiple changes can be made with multiple statements, separated via semicolons:
 
-        python -m pride.main --site_config pride_user_User_verbosity['password_verified']=0;pride_user_User_defaults['username']='Ella'
+        python -m pride.main --site_config pride.user.User.verbosity = {\'password_verified\':0};pride.user.User.defaults = {\'username\':\'Ella\'}
+
+    Alternative configurations
+    ------
+    It is possible to run multiple instances of pride with different site_config values.
+    Simply create a shell script that runs:
+
+        python -m pride.main --site_config ...(config entries here)...
     """
 # site_config
 # defaults specified here will override defaults defined in the source code

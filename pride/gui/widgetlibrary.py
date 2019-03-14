@@ -129,22 +129,22 @@ class Homescreen(gui.Application):
 class Task_Bar(gui.Container):
 
     defaults = {"pack_mode" : "top"}
-    predefaults= {"bound" : (0, 20)}
+    #predefaults= {"bound" : (0, 20)}
 
-    def _set_pack_mode(self, value):
-        super(Task_Bar, self)._set_pack_mode(value)
-        if self.pack_mode in ("right", "left", "left"):
-            self._backup_w_range = self.w_range
-            self.w_range = self.bound
-            self.h_range = self._backup_h_range
-        else:
-            self._backup_h_range = self.h_range
-            self.h_range = self.bound
-            try:
-                self.w_range = self._backup_w_range
-            except AttributeError:
-                pass
-    pack_mode = property(gui.Container._get_pack_mode, _set_pack_mode)
+    #def _set_pack_mode(self, value):
+    #    super(Task_Bar, self)._set_pack_mode(value)
+    #    if self.pack_mode in ("right", "left", "left"):
+    #        self._backup_w_range = self.w_range
+    #        self.w_range = self.bound
+    #        self.h_range = self._backup_h_range
+    #    else:
+    #        self._backup_h_range = self.h_range
+    #        self.h_range = self.bound
+    #        try:
+    #            self.w_range = self._backup_w_range
+    #        except AttributeError:
+    #            pass
+    #pack_mode = property(gui.Container._get_pack_mode, _set_pack_mode)
 
     def __init__(self, **kwargs):
         super(Task_Bar, self).__init__(**kwargs)
@@ -162,21 +162,15 @@ class Text_Box(gui.Container):
     defaults = {"h" : 16, "pack_mode" : "left",
                 "allow_text_edit" : True,  "editing" : False}
 
-    def _get_editing(self):
-        return self._editing
-    def _set_editing(self, value):
-        self._editing = value
-        if value:
-            self.alert("Turning text input on", level='vv')
-            sdl2.SDL_StartTextInput()
-        else:
-            self.alert("Disabling text input", level='vv')
-            sdl2.SDL_StopTextInput()
-    editing = property(_get_editing, _set_editing)
+    def select(self, mouse):
+        self.alert("Turning text input on", level='vv')
+        self.allow_text_edit = True
+        sdl2.SDL_StartTextInput()
 
-    def left_click(self, event):
-        self.alert("Left click: {}".format(self.editing), level='vvv')
-        self.editing = not self.editing
+    def deselect(self, mouse, next_active_object):
+        self.alert("Disabling text input", level='vv')
+        self.allow_text_edit = False
+        sdl2.SDL_StopTextInput()
 
     #def draw_texture(self):
     #   # width, height = pride.gui.SCREEN_SIZE#self.texture.area
@@ -302,15 +296,13 @@ class Prompt(Text_Box):
         if self.use_done_button:
             self.create("pride.gui.widgetlibrary.Done_Button", callback=(self.reference, "_done_callback"))
 
-    def text_entry(self, value):
-        self._text = value
-        if value and value[-1] == '\n':
-            callback_owner, method = self.callback
-            getattr(pride.objects[callback_owner], method)(self.text)
-            self._text = ''
+    def handle_return(self):
+        self.text = value
+        callback_owner, method = self.callback
+        getattr(pride.objects[callback_owner], method)(self.text)
 
     def _done_callback(self):
-        self.text += '\n'
+        self.handle_return()
 
 
 class Dialog_Box(gui.Container):

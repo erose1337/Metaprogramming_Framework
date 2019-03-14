@@ -1,11 +1,13 @@
 # borrowed gratefully from http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+# includes small bug fixes for bugs found by cython
 """ getTerminalSize()
  - get width and height of console
  - works on linux,os x,windows,cygwin(windows)
 """
 
-__all__=['getTerminalSize']
+import os
 
+__all__=['getTerminalSize']
 
 def getTerminalSize():
    import platform
@@ -81,7 +83,7 @@ def _getTerminalSize_linux():
             pass
     if not cr:
         try:
-            cr = (env['LINES'], env['COLUMNS'])
+            cr = (os.environ['LINES'], os.environ['COLUMNS'])
         except:
             return None
     return int(cr[1]), int(cr[0])

@@ -4,7 +4,9 @@ import traceback
 import os
 import heapq
 
-def parse_site_config():
+_alert_handler_config = dict()
+
+def parse_site_config(alert_handler_config=_alert_handler_config):
     if "--site_config" in sys.argv:
         import ast
         import site_config
@@ -21,6 +23,12 @@ def parse_site_config():
                     value_code += sys.argv.pop(index)
                 else:
                     break
+            if name.split('.', 1)[0] == "Alert_Handler":
+                attribute = name.split('.', 1)[1]
+                try:
+                    alert_handler_config[attribute].update(value)
+                except KeyError:
+                    alert_handler_config[attribute] = value
             try:
                 site_config_entry = configuration[name]
             except KeyError:
@@ -46,11 +54,6 @@ import platform
 import mmap
 CURRENT_PLATFORM = platform.system()
 timestamp = timeit.default_timer
-
-def preprocess(function):
-    raise DeprecationWarning("Preprocessing no longer supported")
-    import pride.errors
-    raise pride.errors.PreprocesserError("Failed to replace preprocess function with source")
 
 class Instruction(object):
     """ usage: Instruction(component_name, method_name,
@@ -120,27 +123,36 @@ objects = objects # compatibility purposes
 # Things must be done in this order for Alert_Handler to exist inside this file
 # and reuse Base machinery, namely for argument parsing.
 import pride.components.base as base
+import pride.site_config as site_config
 
 class Alert_Handler(base.Base):
     """ Provides the backend for the base.alert method. The print_level
         and log_level attributes act as global levels for alerts;
         print_level and log_level may be specified as command line arguments
         upon program startup to globally control verbosity/logging. """
+    # the .updates are a hack that facilitates site_config support for the Alert_Handler
+
     level_map = {0 : 'alert ',
                 '' : "stdout ",
                 'v' : "notification ",
                 'vv' : "verbose notification ",
                 'vvv' : "very verbose notification ",
                 'vvvv' : "extremely verbose notification "}
+    level_map.update(_alert_handler_config.get("level_map", dict()))
 
     defaults = {"log_level" : '0+v', "print_level" : '0',
                 "log_name" : os.path.join(site_config.LOG_DIRECTORY, "Alerts.log"),
                 "log_is_persistent" : False, "parse_args" : True}
+    defaults.update(_alert_handler_config.get("defaults", dict()))
 
     parser_ignore = ("parse_args", "log_is_persistent", "verbosity")
+    parser_ignore += _alert_handler_config.get("parser_ignore", tuple())
+
     parser_modifiers = {"exit_on_help" : False}
+    parser_modifiers.update(_alert_handler_config.get("parser_modifiers", dict()))
 
     auto_verbosity_ignore = ("append_to_log", )
+    auto_verbosity_ignore += _alert_handler_config.get("auto_verbosity_ignore", tuple())
 
     def _get_print_level(self):
         return self._print_level
@@ -206,6 +218,7 @@ class Alert_Handler(base.Base):
             count += 1
         return string_like_object[index:]
 
+del _alert_handler_config
 alert_handler = Alert_Handler()
 
 class Finalizer(base.Base):

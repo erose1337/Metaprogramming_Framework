@@ -17,6 +17,7 @@ import pride.components.shell
 import pride.components.user
 import pride.functions.contextmanagers
 import pride.site_config
+import pride.functions.utilities
 
 @contextlib.contextmanager
 def main_as_name():
@@ -101,7 +102,7 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         self.log = self.create("pride.components.fileio.File",
                                "{}.log".format(filename), 'a+',
                                persistent=False).reference
-        self._logger = invoke(self._logger_type)
+        self._logger = pride.functions.utilities.invoke(self._logger_type)
 
     def login_success(self, username):
         flag, message, session_id = super(Interpreter, self).login_success(username)

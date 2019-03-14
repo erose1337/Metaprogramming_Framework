@@ -5,6 +5,7 @@ import pride.functions.security
 import pride.components.asymmetric
 import pride.components.shell
 from pride.functions.persistence import save_data, load_data
+from pride.functions.utilities import invoke
 
 def generate_identity(identifier=None, keypair=None, secret=None,
                       identifier_size=32, secret_size=32):

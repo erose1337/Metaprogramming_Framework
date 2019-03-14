@@ -10,7 +10,7 @@ from six import with_metaclass
 
 import pride
 import pride.components.metaclass
-import pride.functions.utilities
+import pride.functions.utilities as utilities
 import pride.functions.contextmanagers
 import pride.functions.module_utilities
 from pride.errors import *
@@ -303,11 +303,11 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             for attribute in self.required_attributes:
                 try:
                     if not getattr(self, attribute):
-                        raise ArgumentError("Required attribute '{}' has no value".format(attribute))
+                        raise ArgumentError("{}: Required attribute '{}' has falsey value".format(self.reference, attribute))
                 except AttributeError:
                     import pprint
                     pprint.pprint(kwargs)
-                    raise ArgumentError("Required attribute '{}' not assigned".format(attribute))
+                    raise ArgumentError("{}: Required attribute '{}' not assigned".format(self.reference, attribute))
 
         if self.allowed_values:
             for key, values in self.allowed_values.items():
@@ -353,7 +353,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             except TypeError:
                 if isinstance(instance_type, type):
                     raise
-                instance = resolve_string(instance_type)(*args, **kwargs)
+                instance = utilities.resolve_string(instance_type)(*args, **kwargs)
         return instance
 
     def delete(self):
@@ -381,14 +381,12 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         self.deleted = True
 
     def delete_children(self):
-        children = self.objects.values()
-        while any(children):
-            for child in self.children:
-                try:
-                    child.delete()
-                except DeleteError:
-                    if self.reference in child.references_to:
-                        raise
+        for child in list(self.children):
+            try:
+                child.delete()
+            except DeleteError:
+                if self.reference in child.references_to:
+                    raise
 
     def add(self, instance):
         """ usage: object.add(instance)
@@ -560,7 +558,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                   updated. Solution: instantiate base objects in __init__ """
         self.alert("Beginning Update ({})...".format(id(self)), level=self.verbosity["update"])
         _already_updated = _already_updated or [self.reference]
-        class_base = pride.functions.utilities.updated_class(type(self))
+        class_base = utilities.updated_class(type(self))
         class_base._required_modules.append(self.__class__.__name__)
         new_self = class_base.__new__(class_base)
         for attribute, value in ((key, value) for key, value in

@@ -6,8 +6,12 @@ import functools
 import ast
 from copy import copy
 
-import autodocumentation as utilities
+import cython
+
+import autodocumentation
+import pride
 import pride.site_config as site_config
+from pride.functions.utilities import resolve_string
 
 class Docstring(object):
     """ A descriptor object used by the Documented metaclass. Augments
@@ -17,7 +21,7 @@ class Docstring(object):
 
     def __get__(self, instance, _class):
         _object = instance if instance else _class
-        return utilities.documentation(_object)
+        return autodocumentation.documentation(_object)
 
 
 class Documented(type):
@@ -64,7 +68,7 @@ class Method_Hook(type):
     """ Provides a hook for decorating methods for the new class. """
 
     enabled = True
-    decorator = alert_on_call
+    decorator = alert_on_call#cython.ccall
     default_verbosity = "debug"
 
     def __new__(cls, name, bases, attributes):
@@ -393,7 +397,7 @@ class Site_Configuration(type):
                 try:
                     value.update(config[attribute_name])
                 except AttributeError:
-                    setattr(new_class, config[attribute_name])
+                    setattr(new_class, config[attribute_name], value)
         return new_class
 
 
@@ -433,6 +437,10 @@ class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
 
             setattr(new_class, "_localized_" + attribute_name, new_dictionary)
         return new_class
+
+    @classmethod
+    def __prepare__(metaclass, cls, bases):
+        return dict()
 
     @classmethod
     def update_metaclass(cls):

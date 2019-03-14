@@ -7,6 +7,7 @@ import pride.components.base
 import pride.functions.security
 import pride.components.shell
 import pride.functions.persistence
+from pride.functions.utilities import invoke
 
 class InvalidUsername(BaseException): pass
 

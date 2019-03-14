@@ -12,6 +12,7 @@ import pride.components.base as base
 import pride.components.scheduler as scheduler
 import pride.functions.utilities as utilities
 import pride.gui
+resolve_string = utilities.resolve_string
 Instruction = pride.Instruction
 
 import sdl2
@@ -49,6 +50,22 @@ class SDL_Window(SDL_Component):
     def _set_size(self, size):
         self.w, self.h = size
     size = property(_get_size, _set_size)
+
+    def _get_position(self):
+        return self.x, self.y
+    def _set_position(self, value):
+        self.x, self.y = value
+    position = property(_get_position, _set_position)
+
+    def _get_area(self):
+        return (self.x, self.y, self.w, self.h)
+    def _set_area(self, rect):
+        self.x, self.y, self.w, self.h = rect
+    area = property(_get_area, _set_area)
+
+    def _get_gui_children(self):
+        return (child for child in self.children if hasattr(child, "pack"))
+    gui_children = property(_get_gui_children)
 
     def __init__(self, **kwargs):
         super(SDL_Window, self).__init__(**kwargs)
@@ -106,6 +123,7 @@ class SDL_Window(SDL_Component):
             pass
 
     def run(self):
+        self.organizer.pack_items()
         self.update_drawing_instructions()
         self.draw(instruction_generator(self.drawing_instructions))
         self.running = False
@@ -171,13 +189,10 @@ class SDL_Window(SDL_Component):
     def get_mouse_position(self):
         return self.get_mouse_state()[0]
 
-    def pack(self, modifiers=None):
-        pass
-
     def delete(self):
         # delete window objects before sdl components
         for child in self.children:
-            if hasattr(child, "pack") and child is not self.organizer:
+            if hasattr(child, "pack"):
                 child.delete()
         super(SDL_Window, self).delete()
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
@@ -213,10 +228,10 @@ class Window_Handler(pride.components.base.Base):
                              sdl2.SDL_WINDOWEVENT_LEAVE : self.handle_leave,
                              sdl2.SDL_WINDOWEVENT_FOCUS_GAINED : self.handle_focus_gained,
                              sdl2.SDL_WINDOWEVENT_FOCUS_LOST : self.handle_focus_lost,
+                             sdl2.SDL_WINDOWEVENT_TAKE_FOCUS : self.handle_take_focus,
                              sdl2.SDL_WINDOWEVENT_CLOSE : self.handle_close}
 
     def handle_event(self, event):
-     #   self.alert("Handling {}".format(self.event_switch[event.window.event]), level=0)
         self.event_switch[event.window.event](event)
 
     def handle_shown(self, event):
@@ -263,6 +278,9 @@ class Window_Handler(pride.components.base.Base):
             self.parent.user_input.active_item.held = False
         except AttributeError:
             pass
+
+    def handle_take_focus(self, event):
+        pass
 
     def handle_close(self, event):
         pass
@@ -416,7 +434,7 @@ class SDL_User_Input(scheduler.Process):
                 break
 
         old_active_item = self.active_item
-        if old_active_item:
+        if old_active_item and pride.objects[old_active_item]._selected: # item can deselect itself
             try:
                 pride.objects[old_active_item].deselect(mouse, active_item)
             except KeyError:

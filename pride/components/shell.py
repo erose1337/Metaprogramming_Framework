@@ -272,18 +272,18 @@ class Python_Shell(Program):
                         if lines[-2:] == "\n\n":
                             self.prompt = ">>> "
                             self.lines = ''
-                            objects[self.shell_connection].execute_source(lines)
+                            pride.objects[self.shell_connection].execute_source(lines)
                             self.user_is_entering_definition = False
                     else:
                         self.lines = ''
-                        objects[self.shell_connection].execute_source(lines)
+                        pride.objects[self.shell_connection].execute_source(lines)
                         write_prompt = False
                 else:
                     self.user_is_entering_definition = True
                     self.prompt = "... "
         else:
             self.lines = ''
-        objects["/User/Command_Line"].set_prompt(self.prompt)
+        pride.objects["/User/Command_Line"].set_prompt(self.prompt)
         sys.stdout.write("\b" * 4 + self.prompt)
         sys.stdout.flush()
 
@@ -314,8 +314,8 @@ class Messenger_Program(Program):
 
     def handle_input(self, user_input):
         destination, message = user_input.split(':', 1)
-        objects["/Messenger_Client"].send_message(destination, message,
-                                                  self.reference)
+        pride.objects["/Messenger_Client"].send_message(destination, message,
+                                                        self.reference)
 
 
 class Terminal_Screensaver(pride.components.scheduler.Process):
@@ -362,7 +362,7 @@ class Random_Screensaver(Terminal_Screensaver):
 
     def __new__(cls, *args, **kwargs):
         _type = random.choice(cls.choices)
-        __type = resolve_string(_type)
+        __type = pride.functions.utilities.resolve_string(_type)
         return __type(*args, **kwargs)
 
 
@@ -388,7 +388,7 @@ class Matrix_Screensaver(Terminal_Screensaver):
         if self.index == self.height:
             self.column = None
             self.index = 0
-        objects["/User/Command_Line"].clear()
+        pride.objects["/User/Command_Line"].clear()
         sys.stdout.write(''.join(''.join(item) for item in self.characters))
         sys.stdout.flush()
 
@@ -484,7 +484,7 @@ class Wave_CAtest(Terminal_Screensaver):
 
                 self.rows[new_y_coord][new_x_coord] = (x_magnitude, y_magnitude)
 
-        objects["/User/Command_Line"].clear()
+        pride.objects["/User/Command_Line"].clear()
         def decide_symbol(number):
             if number[0] or number[1]:
                 return str(number[0]) + str(number[1])
@@ -530,7 +530,7 @@ class Chaos_Screensaver(Terminal_Screensaver):
 
     def run(self):
         next(self.coroutine)
-        objects["/User/Command_Line"].clear()
+        pride.objects["/User/Command_Line"].clear()
         sys.stdout.write(self.bytearray)
         sys.stdout.write("\n")
         sys.stdout.flush()

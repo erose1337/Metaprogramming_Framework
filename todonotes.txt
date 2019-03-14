@@ -1,15 +1,23 @@
 to do:
 ----
-investigate Cython and make a JIT metaclass
 Fix gui bug(s)
-shell screensaver broken on ubuntu
-    - does not display properly for most screensavers
+improve auto-documentation (pride.components.package)
+add api file + start using versionhelper
+    - separate gui into separate package due to different levels of stability
+change user.encrypt to use a per-cryptogram key to avoid dealing with nonces
+deal with certificates properly?
 
 changes
 -----
-fixed Matrix_Screensaver and CA_Screensaver
-noted `--log_level debug` will log session key on the Interpreter object docs
+
 
 notes
 ----
 RPC acted weird on first run, then worked fine?
+
+
+known issues
+-----
+encryptedstorage does not have OS provided encryption on linux
+    - there is no equivalent on linux
+    - just switch providers if using linux

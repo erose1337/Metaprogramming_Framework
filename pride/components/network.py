@@ -544,7 +544,7 @@ class Network(scheduler.Process):
         readable, writable, empty_list = [], [], []
         # select has a max # of file descriptors it can handle, which
         # is about 500 (at least on windows). step through in slices (0, 500), (500, 100), ...
-        for socket_list in slide(self.sockets, 500):
+        for socket_list in pride.functions.utilities.slide(self.sockets, 500):
             (readable_sockets,
              writable_sockets, _) = select.select(socket_list, socket_list,
                                                   empty_list, 0.0)

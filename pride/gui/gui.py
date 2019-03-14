@@ -1,11 +1,12 @@
-from math import floor, sqrt, ceil
+import operator
+from math import floor, sqrt
 
 import pride
 import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
+import pride.gui.sdllibrary
 Instruction = pride.Instruction
-#objects = pride.objects
 
 import sdl2
 import sdl2.ext
@@ -23,255 +24,158 @@ def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                                                   size, access=access)
 
 class Organizer(base.Base):
-    # this component could/should really be redone, it is hugely complicated and grossly inefficient
-    mutable_defaults = {"pack_modes" : dict, "_pack_modes" : dict, "_pack_index" : dict}
 
-    def get_pack_mode(self, instance):
-        return self.pack_modes[instance]
+    mutable_defaults = {"pack_queue" : list, "window_queue" : list}
 
-    def set_pack_mode(self, instance, value):
-        if value is None:
-            try:
-                del self._pack_modes[instance]
-            except KeyError:
-                pass
-            old_pack_mode = self.pack_modes.pop(instance)
-            del self._pack_index[instance]
+    def schedule_pack(self, item):
+        if isinstance(item, pride.gui.sdllibrary.SDL_Window):
+            if item not in self.window_queue:
+                self.window_queue.append(item)
+        elif item not in self.pack_queue:
+            self.pack_queue.append(item)
 
-            _instance = pride.objects[instance]
-            parent = _instance.parent_name
-            if parent in self._pack_modes:
-            #    print "removing : ", _instance, self._pack_modes[parent][old_value]
-                self._pack_modes[parent][old_pack_mode].remove(instance)
-            return
-        parent = pride.objects[instance].parent.reference
-        old_pack_mode = self.pack_modes.get(instance, '')
-        if old_pack_mode:
-            self._pack_modes[parent][old_pack_mode].remove(instance)
-
-        self.pack_modes[instance] = value
+    def unschedule_pack(self, item):
         try:
-            self._pack_modes[parent][value].append(instance)
-        except KeyError:
-            if parent not in self._pack_modes:
-                self._pack_modes[parent] = dict((key, []) for key in ("top", "bottom", "left", "right", "main"))
-                self._pack_modes[parent][value] = [instance]
+            if item.__class__.__name__ == "SDL_Window":
+                self.window_queue.remove(item)
             else:
-                self._pack_modes[parent][value] = [instance]
-        self._pack_index[instance] = self._pack_modes[parent][value].index(instance)
+                self.pack_queue.remove(item)
+        except ValueError:
+            return
 
-    def add_pack_method(self, name, callback):
-        setattr(self, name, "pack_{}".format(name), callback)
+    def pack_items(self):
+        for sdl_window in self.window_queue:
+            self.pack_children(sdl_window, list(sdl_window.gui_children))
+        for item in sorted(self.pack_queue, key=operator.attrgetter('z')):
+            self.pack_children(item, list(item.children))
+        del self.window_queue[:]
+        del self.pack_queue[:]
 
-    def pack_item(self, item):
-   #     self.alert("packing: {}, {} {} {}",
-   #               [item, item.area, item.z, item.pack_mode],
-   #                level=self.verbosity["packing"])
-        reference = item.reference
-        pack_mode = self.pack_modes[reference]
-        pack = getattr(self, "pack_{0}".format(pack_mode))
-        parent = item.parent
-        old_size = item.size
-        pack(parent, item, self._pack_index[reference],
-             len(self._pack_modes[parent.reference][pack_mode]))
-        item.alert("Packed into: {} {}".format(item.area, item.z),
-                   level=item.verbosity["packed"])
+    def pack_children(self, parent, children):
+        parent.alert("Packing")
+        area = parent.area
+        z = parent.z
 
-    def pack_main(self, parent, item, count, length):
-        item.z = parent.z + 1
-        pack_modes = self._pack_modes[parent.reference]
-        sides = [[objects[name] for name in pack_modes[side]] for side in ("top", "bottom", "left", "right")]
-        top, bottom, left, right = sides
-        top_count, bottom_count, left_count, right_count = (len(side) for side in sides)
-        parent_x, parent_y, parent_w, parent_h = parent.area
+        top = [child for child in children if child.pack_mode == "top"]
+        main = [child for child in children if child.pack_mode == "main"]
+        bottom = [child for child in children if child.pack_mode == "bottom"]
 
-        width_spacing = parent_w / (left_count + length + right_count)
-        height_spacing = parent_h / (top_count + length + bottom_count)
+        top_main_bottom = top + main + bottom
+        if top_main_bottom:
+            self.pack_verticals(area, z, top_main_bottom, top, main, bottom)
+            top_height = sum(child.h for child in top)
+            bottom_height = sum(child.h for child in bottom)
+        else:
+            top_height = bottom_height = 0
 
-        width_of = self._width_of
-        height_of = self._height_of
-        height_of_top = height_of(top, height_spacing)
-        height_of_bottom = height_of(bottom, height_spacing)
-        width_of_right = width_of(right, width_spacing)
-        width_of_left = width_of(left, width_spacing)
+        left = [child for child in children if child.pack_mode == "left"]
+        right = [child for child in children if child.pack_mode == "right"]
+        left_main_right = left + main + right
+        if left_main_right:
+            self.pack_horizontals(area, z, left_main_right, left, main, right,
+                                  top_height, bottom_height)
 
-        item.x = parent_x + width_of_left
-        item.y = parent_y + height_of_top
-        item.w = parent_w - (width_of_left + width_of_right)
-        item.h = parent_h - (height_of_bottom + height_of_top)
+        for child in children:
+            self.unschedule_pack(child)
+            self.pack_children(child, list(child.children))
 
-    def pack_left(self, parent, item, count, length):
-        item.z = parent.z + 1
-        pack_modes = self._pack_modes[parent.reference]
-        sides = [[objects[name] for name in pack_modes[side]] for side in ("top", "bottom", "left", "right", "main")]
-        top, bottom, left, right, main = sides
-        top_count, bottom_count, left_count, right_count, main_count = (len(side) for side in sides)
-        parent_x, parent_y, parent_w, parent_h = parent.area
+    def pack_horizontals(self, area, z, left_main_right, left, main, right, top_height, bottom_height):
+        x, y, w, h = area
+        left_main_right_len = len(left_main_right)
+        available_space = w
+        spacing = available_space / left_main_right_len
+        small_items = [child for child in left_main_right if child.w_range[1] < spacing]
+        if small_items:
+            spacing += sum(spacing - item.w_range[1] for item in small_items)
+            spacing /= (len(left_main_right) - len(small_items)) or 1
+            extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
+                        sum(child.w_range[1] for child in small_items))
+        else:
+            extra = w - (spacing * left_main_right_len)
+        assert extra >= 0, extra
 
-        width_spacing = parent_w / (left_count + int(any((top_count, main_count, bottom_count))) + right_count)
-        height_spacing = parent_h / ((top_count + bottom_count) or 1)
+        offset = 0
+        for child in left:
+            child.y = y + top_height
+            child.h = h - (top_height + bottom_height)
+            child.x = x + offset
+            child.w = spacing
+            if extra and child not in small_items:
+                child.w += extra
+                extra = 0
+            child.z = z
+            offset += child.w
 
-        width_of = self._width_of
-        height_of = self._height_of
-        height_of_top = height_of(top, height_spacing)
-        height_of_bottom = height_of(bottom, height_spacing)
-        width_of_right = width_of(right, width_spacing)
-        width_of_left = width_of(left[:count], width_spacing)
-        width_of_main = width_of(main, width_spacing)
+        if main:
+            main_item = main[0]
+            main_item.x = x + offset
+            main_item.w = spacing
+            if extra and main_item not in small_items:
+                main_item.w += extra
+                extra = 0
+            offset += main_item.w
 
-        #item.y = parent.y
-        item.y = parent.y + height_of_top
-        item.x = parent_x + width_of_left
-        #item.w = width_spacing  # original
-        item.w = parent_w - (width_of_right + width_of_main + width_of((_item for _item in left if _item != item), width_spacing))#(left[count:], width_spacing))
-        #item.h = parent_h# - height_of_bottom
-        item.h = parent_h - (height_of_top + height_of_bottom)
+        offset = 0
+        for child in right:
+            child.y = y + top_height
+            child.h = h - (top_height + bottom_height)
+            child.w += spacing
+            if extra and child not in small_items:
+                child.w += extra
+                extra = 0
+            offset += child.w
+            child.x = x + w - offset
+            child.z = z
 
-    def _height_of(self, side, sizing):
-        return sum(min(item.h_range[1], max(sizing, item.h_range[0])) for item in side)
+    def pack_verticals(self, area, z, top_main_bottom, top, main, bottom):
+        x, y, w, h = area
+        top_main_bottom_len = len(top_main_bottom)
+        available_space = h
+        spacing = available_space / (top_main_bottom_len or 1)
+        small_items = [child for child in top_main_bottom if child.h_range[1] < spacing]
+        if small_items:
+            spacing += sum(spacing - item.h_range[1] for item in small_items)
+            spacing /= (top_main_bottom_len - len(small_items)) or 1
+            extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
+                        sum(child.h_range[1] for child in small_items))
+        else:
+            extra = h - (spacing * top_main_bottom_len)
+        assert extra >= 0, extra
 
-    def _width_of(self, side, sizing):
-        return sum(min(item.w_range[1], max(sizing, item.w_range[0])) for item in side)
+        offset = 0
+        for child in top:
+            child.x = x
+            child.w = w
+            child.y = y + offset
+            child.h = spacing
+            if extra and child not in small_items:
+                child.h += extra
+                extra = 0
+            child.z = z
+            offset += child.h # h_range can constrain, so use child.h instead of spacing
+        top_height = offset
 
-    def pack_top(self, parent, item, count, length):
-        item.z = parent.z + 1
+        if main:
+            main_item = main[0]
+            main_item.y = y + offset
+            main_item.h = spacing
+            if extra and main_item not in small_items:
+                main_item.h += extra
+                extra = 0
+            main_item.z = z
+            offset += main_item.h
 
-        _items = self._pack_modes[parent.reference]
-        main_items = _items["main"]
-        bottom_items = _items["bottom"]
-        top_items = _items["top"]
-        left_items = _items["left"]
-        right_items = _items["right"]
-        height_of = self._height_of
-        width_of = self._width_of
-
-        vertical_sizing = parent.h / (len(top_items) + len(main_items) + len(bottom_items))
-        height_of_top = height_of((objects[name] for name in top_items[:count]), vertical_sizing)
-        height_of_main = height_of((objects[name] for name in main_items), vertical_sizing)
-        height_of_bottom = height_of((objects[name] for name in bottom_items), vertical_sizing)
-
-        horizontal_sizing = parent.w / (len(left_items) + 1 + len(right_items)) # + 1 for the top
-        width_of_left = width_of((objects[name] for name in left_items), horizontal_sizing)
-        width_of_right = width_of((objects[name] for name in right_items), horizontal_sizing)
-
-        item.y = parent.y + height_of_top
-        #item.x = parent.x + width_of_left
-       # print parent.x, width_of_left, len(left_items), horizontal_sizing
-        #item.w = parent.w - (width_of_left + width_of_right)
-       # print parent.w, width_of_left, width_of_right, len(left_items), len(right_items)
-        item.x = parent.x
-        item.w = parent.w
-        item.h = parent.h - (height_of((objects[_item] for _item in top_items if objects[_item] != item), vertical_sizing) + height_of_main + height_of_bottom)
-        #print item.h, parent.h, height_of_top, height_of_main, height_of_bottom, vertical_sizing, len(top_items), len(main_items), len(bottom_items)
-
-        if count == length - 1 and not main_items:
-            height_of_top = height_of((objects[name] for name in top_items[:-1]), vertical_sizing)
-            available_space = parent.h - (height_of_top + height_of_bottom)
-            item.h = available_space
-
-    def pack_grid(self, parent, item, count, length):
-        grid_size = sqrt(length)
-
-        if grid_size != floor(grid_size):
-            grid_size = floor(grid_size) + 1
-        position = (int(floor((count / grid_size))), int(count % grid_size))
-
-        item.z = parent.z + 1
-
-        pack_modes = self._pack_modes[parent.reference]
-        right_objects = [pride.objects[reference] for reference in pack_modes["right"]]
-        left_objects = [pride.objects[reference] for reference in pack_modes["left"]]
-        main_objects = [pride.objects[reference] for reference in pack_modes["main"]]
-        horizontal_spacing = parent.w / ((len(left_objects) + len(right_objects) + len(main_objects)) or 1)
-        occupied_left_area =  sum((item.w or min(item.w_range[1], horizontal_spacing) for item in left_objects))
-        occupied_right_area = sum((item.w or min(item.w_range[1], horizontal_spacing) for item in right_objects))
-
-        top_objects = [pride.objects[reference] for reference in pack_modes["top"]]
-        bottom_objects = [pride.objects[reference] for reference in pack_modes["bottom"]]
-        vertical_spacing = parent.h / ((len(top_objects) + len(bottom_objects) + len(main_objects)) or 1)
-        occupied_top_area = sum((item.h or min(item.h_range[1], vertical_spacing) for item in top_objects))
-        occupied_bottom_area = sum((item.h or min(item.h_range[1], vertical_spacing) for item in bottom_objects))
-
-        available_width = parent.w - occupied_left_area - occupied_right_area
-        available_height = parent.h - occupied_top_area - occupied_bottom_area
-        item.size = int(available_width / grid_size), int(available_height / grid_size)
-        item.x = (item.w * position[1]) + parent.x + occupied_left_area
-        item.y = (item.h * position[0]) + parent.y + occupied_top_area
-
-    def pack_z(self, parent, item, count, length):
-        item.z = parent.z + 1
-        item.area = parent.area
-
-    def pack_bottom(self, parent, item, count, length):
-        item.z = parent.z + 1
-
-        pack_modes = self._pack_modes[parent.reference]
-        height_of = self._height_of
-        width_of = self._width_of
-
-        left_objects = [objects[name] for name in pack_modes["left"]]
-        right_objects = [objects[name] for name in pack_modes["right"]]
-        bottom_objects = [objects[name] for name in pack_modes["bottom"]]
-        top_objects = [objects[name] for name in pack_modes["top"]]
-        main_objects = pack_modes["main"]
-
-        # stretch to fit
-        sizing = parent.h / (len(bottom_objects) + len(main_objects) + len(top_objects))
-        height_of_bottom = height_of(bottom_objects[:count + 1], sizing)
-        height_of_top = height_of(top_objects, sizing)
-
-        w_sizing = parent.w / (len(left_objects) + int(any(bottom_objects)) + len(right_objects))
-        width_of_left = width_of(left_objects, w_sizing)
-        width_of_right = width_of(right_objects, w_sizing)
-
-        item.y = (parent.y + parent.h) - height_of_bottom
-        #item.x = parent.x + width_of_left
-        #item.w = parent.w - (width_of_left + width_of_right)
-        item.x = parent.x
-        item.w = parent.w
-        item.h = sizing
-
-        if not pack_modes["main"] and count == length - 1:
-            height_of_top = height_of(top_objects, sizing)
-            item.y = parent.y + height_of_top
-            item.h = (parent.h - (height_of_top + height_of(bottom_objects[:count], sizing)))
-
-    def pack_right(self, parent, item, count, length):
-        item.z = parent.z + 1
-        pack_modes = self._pack_modes[parent.reference]
-        sides = [[objects[name] for name in pack_modes[side]] for side in ("top", "bottom", "left", "right", "main")]
-        top, bottom, left, right, main = sides
-        top_count, bottom_count, left_count, right_count, main_count = (len(side) for side in sides)
-        parent_x, parent_y, parent_w, parent_h = parent.area
-
-        width_spacing = parent_w / (left_count + int(any((top_count, main_count, bottom_count))) + right_count)
-        height_spacing = parent_h / ((top_count + bottom_count) or 1)
-
-        width_of = self._width_of
-        height_of = self._height_of
-        height_of_top = height_of(top, height_spacing)
-        height_of_bottom = height_of(bottom, height_spacing)
-        width_of_right = width_of(right, width_spacing)
-        width_of_left = width_of(left, width_spacing)
-        width_of_main = width_of(main[:1], width_spacing)
-
-        #item.y = parent_y
-        item.y = parent_y + height_of_top
-        item.w = parent_w - (width_of(right[:count], width_spacing) + max((width_of(top[:1], width_spacing), width_of_main, width_of(bottom[:1], width_spacing))) + width_of_left)
-        item.x = (parent_x + parent_w) - (item.w + width_of(right[:count], width_spacing))
-        #item.h = parent_h# - height_of_bottom
-        item.h = parent_h - (height_of_top + height_of_bottom)
-
-    def pack_drop_down_menu(self, parent, item, count, length):
-        SCREEN_SIZE = pride.gui.SCREEN_SIZE
-        item.area = (parent.x, parent.y + parent.h,
-                     SCREEN_SIZE[0] / 5, min(120, SCREEN_SIZE[1] / length))
-        item.z = parent.z + 1
-
-    def pack_popup_menu(self, parent, item, count, length):
-        item.z = max(pride.objects[item.sdl_window + "/SDL_User_Input"]._coordinate_tracker.keys())
-        w, h = pride.gui.SCREEN_SIZE
-        item.position = (w / 4, h / 4)
+        offset = 0
+        for child in bottom:
+            child.x = x
+            child.w = w
+            child.h = spacing
+            if extra and child not in small_items:
+                child.h += extra
+                extra = 0
+            offset += child.h
+            child.y = y + h - offset
+            child.z = z
 
 
 class Theme(pride.base.Wrapper):
@@ -302,22 +206,9 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
 
-    def _get_pack_mode(self):
-        return self._pack_mode
-    def _set_pack_mode(self, value):
-        self._pack_mode = value
-        objects[(self.sdl_window  or self.parent.sdl_window) + "/Organizer"].set_pack_mode(self.reference, value)
-    pack_mode = property(_get_pack_mode, _set_pack_mode)
-
     def pack(self):
         organizer = objects[self.sdl_window + "/Organizer"]
-        organizer.pack_item(self)
-        for item in self.children:
-            item.pack()
-
-    def delete(self):
-        self.pack_mode = None # clear Organizer cache
-        super(Organized_Object, self).delete()
+        organizer.schedule_pack(self.parent)
 
 
 class Window_Object(Organized_Object):
@@ -334,12 +225,13 @@ class Window_Object(Organized_Object):
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
-                "theme_type" : "pride.gui.gui.Minimal_Theme"}
+                "theme_type" : "pride.gui.gui.Minimal_Theme",
+                "_selected" : False}
 
     predefaults = {"scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
                    "_text" : '', "_pack_mode" : '', "_sdl_window" : ''}
-    
+
     mutable_defaults = {"_draw_operations" : list, "_children" : list}
     verbosity = {"press" : "vv", "release" : "vv", "packed" : "packed"}
 
@@ -560,46 +452,47 @@ class Window_Object(Organized_Object):
 
     def pack(self):
         super(Window_Object, self).pack()
-        try:
-            pack_modes = objects[self.sdl_window + "/Organizer"]._pack_modes[self.reference]
-        except KeyError:
-            pass
-        else:
-            total_height = sum((objects[name].h for name in pack_modes["top"] + pack_modes["bottom"]))
-            total_width = sum((objects[name].w for name in pack_modes["right"] + pack_modes["left"]))
-         #   if total_height > self.h:
-         #       if total_width > self.w:
-         #           self.texture_size = (total_width, total_height)
-         #       else:
-         #           self.texture_size = (self.texture_size[0], total_height)
-         #       self.texture = create_texture(self.texture_size)
-         #       self.alert("Resized texture to: {}".format(self.texture_size), level=0)
-         #   elif total_width > self.w:
-         #       self.texture_size = (total_width, self.texture_size[1])
+        self.texture_invalid = True
+        #try:
+        #    pack_modes = objects[self.sdl_window + "/Organizer"]._pack_modes[self.reference]
+        #except KeyError:
+        #    pass
+        #else:
+        #    total_height = sum((objects[name].h for name in pack_modes["top"] + pack_modes["bottom"]))
+        #    total_width = sum((objects[name].w for name in pack_modes["right"] + pack_modes["left"]))
+        # #   if total_height > self.h:
+        # #       if total_width > self.w:
+        # #           self.texture_size = (total_width, total_height)
+        # #       else:
+        # #           self.texture_size = (self.texture_size[0], total_height)
+        # #       self.texture = create_texture(self.texture_size)
+        # #       self.alert("Resized texture to: {}".format(self.texture_size), level=0)
+        # #   elif total_width > self.w:
+        # #       self.texture_size = (total_width, self.texture_size[1])
 
-            if self.scroll_bars_enabled:
-                excess_height = total_height > self.h
-                excess_width = total_width > self.w
-                if not self._scroll_bar_h:
-                    if excess_height:
-                        bar = self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
-                                        target=(self.reference, "texture_window_y"))
-                        self._scroll_bar_h = bar.reference
-                        bar.pack()
-                elif not excess_height:
-                    objects[self._scroll_bar_h].delete()
-                    self._scroll_bar_h = None
+        #    if self.scroll_bars_enabled:
+        #        excess_height = total_height > self.h
+        #        excess_width = total_width > self.w
+        #        if not self._scroll_bar_h:
+        #            if excess_height:
+        #                bar = self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
+        #                                target=(self.reference, "texture_window_y"))
+        #                self._scroll_bar_h = bar.reference
+        #                bar.pack()
+        #        elif not excess_height:
+        #            objects[self._scroll_bar_h].delete()
+        #            self._scroll_bar_h = None
 
-                if not self._scroll_bar_w:
-                    if excess_width:
-                        bar = self.create("pride.gui.widgetlibrary.Scroll_Bar",
-                                        pack_mode="bottom", target=(self.reference,
-                                                                    "texture_window_x"))
-                        self._scroll_bar_w = bar.reference
-                        bar.pack()
-                elif not excess_width:
-                    objects[self._scroll_bar_w].delete()
-                    self._scroll_bar_w = None
+        #        if not self._scroll_bar_w:
+        #            if excess_width:
+        #                bar = self.create("pride.gui.widgetlibrary.Scroll_Bar",
+        #                                pack_mode="bottom", target=(self.reference,
+        #                                                            "texture_window_x"))
+        #                self._scroll_bar_w = bar.reference
+        #                bar.pack()
+        #        elif not excess_width:
+        #            objects[self._scroll_bar_w].delete()
+        #            self._scroll_bar_w = None
 
     def delete(self):
         pride.objects[self.sdl_window].remove_window_object(self)
@@ -607,10 +500,10 @@ class Window_Object(Organized_Object):
         super(Window_Object, self).delete()
 
     def deselect(self, mouse, next_active_object):
-        pass
+        self._selected = False
 
     def select(self, mouse):
-        pass
+        self._selected = True
 
     def text_entry(self, text):
         if self.allow_text_edit:
@@ -622,6 +515,7 @@ class Window_Object(Organized_Object):
     def handle_backspace(self):
         if self.allow_text_edit:
             self.text = self.text[:-1]
+
 
 class Window(Window_Object):
 

@@ -20,6 +20,7 @@ class Number_Tree(Tree):
     defaults = {"edge_padding" : 30}
     required_attributes = ("factors", )
     predefaults = {"_factors" : None}
+    post_initializer = "derive_lines"
 
     def _get_factors(self):
         return self._factors
@@ -28,10 +29,6 @@ class Number_Tree(Tree):
         self.texture_invalid = True
         self.derive_lines()
     factors = property(_get_factors, _set_factors)
-
-    def __init__(self, *args, **kwargs):
-        super(Number_Tree, self).__init__(*args, **kwargs)
-        self.derive_lines()
 
     def derive_lines(self):
         if not self.factors:

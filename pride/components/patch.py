@@ -39,7 +39,10 @@ class Stdout(pride.components.base.Base):
         if self.limit_log_size and self.log.tell() > self.limit_log_size:
             self.log.truncate.method(self.log)
         if self.logging_enabled:
-            self.log.write.method(self.log, data) # because pride.components.fileio.File.write is wrapped in metaclass.on_alert_call (avoids recursion)
+            try:
+                self.log.write.method(self.log, data) # because pride.components.fileio.File.write is wrapped in metaclass.on_alert_call (avoids recursion)
+            except AttributeError:
+                self.log.write(data)
             self.log.flush()
         self.file.write(data)
         self.file.flush()

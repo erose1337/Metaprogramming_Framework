@@ -44,7 +44,7 @@ class Organizer(base.Base):
             return
 
     def pack_items(self):
-        for sdl_window in self.window_queue:
+        for sdl_window in self.window_queue[:]:
             self.pack_children(sdl_window, list(sdl_window.gui_children))
         for item in sorted(self.pack_queue, key=operator.attrgetter('z')):
             self.pack_children(item, list(item.children))
@@ -52,7 +52,6 @@ class Organizer(base.Base):
         del self.pack_queue[:]
 
     def pack_children(self, parent, children):
-        parent.alert("Packing")
         area = parent.area
         z = parent.z
 
@@ -86,8 +85,8 @@ class Organizer(base.Base):
         spacing = available_space / left_main_right_len
         small_items = [child for child in left_main_right if child.w_range[1] < spacing]
         if small_items:
-            spacing += sum(spacing - item.w_range[1] for item in small_items)
-            spacing /= (len(left_main_right) - len(small_items)) or 1
+            spacing += sum(spacing - item.w_range[1] for item in small_items) / ((len(left_main_right) - len(small_items)) or 1)
+        #    spacing /=
             extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
                         sum(child.w_range[1] for child in small_items))
         else:
@@ -134,10 +133,17 @@ class Organizer(base.Base):
         spacing = available_space / (top_main_bottom_len or 1)
         small_items = [child for child in top_main_bottom if child.h_range[1] < spacing]
         if small_items:
-            spacing += sum(spacing - item.h_range[1] for item in small_items)
-            spacing /= (top_main_bottom_len - len(small_items)) or 1
+        #    print("Spacing before adding extra from small items: ", spacing)
+            spacing += sum(spacing - item.h_range[1] for item in small_items) / ((top_main_bottom_len - len(small_items)) or 1)
+        #    print("Spacing after adding extra from small items: ", spacing)
+            #spacing /=
+        #    print("Spacing after dividing by {}".format((top_main_bottom_len - len(small_items)) or 1))
             extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
                         sum(child.h_range[1] for child in small_items))
+        #    print("Extra: {} = {} - ({} * {}) + {}".format(extra, h, spacing,
+        #                                                   len([child for child in top_main_bottom if child not in small_items]),
+        #                                                   sum(child.h_range[1] for child in small_items)
+        #                                                   ))
         else:
             extra = h - (spacing * top_main_bottom_len)
         assert extra >= 0, extra
@@ -149,6 +155,7 @@ class Organizer(base.Base):
             child.y = y + offset
             child.h = spacing
             if extra and child not in small_items:
+                print extra, spacing
                 child.h += extra
                 extra = 0
             child.z = z

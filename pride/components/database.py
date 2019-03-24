@@ -10,8 +10,8 @@ from pride.errors import ArgumentError
 def create_assignment_string(items):
     keys = items.keys()
     values = [items[key] for key in keys]
-    return ", ".join("{} = ?".format(key) for key in keys), values    
-    
+    return ", ".join("{} = ?".format(key) for key in keys), values
+
 def create_where_string(where):
     """ Helper function used by Database objects """
     keys = []
@@ -20,55 +20,55 @@ def create_where_string(where):
         try:
             key, operator = key.split()
         except:
-            operator = '='        
+            operator = '='
         keys.append((key, operator))
-        values.append(value)        
-    condition_string = "WHERE " + "AND ".join("{} {} ?".format(key, operator) for 
+        values.append(value)
+    condition_string = "WHERE " + "AND ".join("{} {} ?".format(key, operator) for
                                               key, operator in keys)
     return condition_string, values
-         
+
 class Database(pride.base.Wrapper):
-    """ An object with methods for dispatching sqlite3 commands. 
+    """ An object with methods for dispatching sqlite3 commands.
         Database objects may be simpler and safer then directly
         working with sqlite3 queries. Note that database methods
         do not commit automatically."""
     IntegrityError = sqlite3.IntegrityError
-    
-    defaults = {"database_name" : '', "connection" : None, 
+
+    defaults = {"database_name" : '', "connection" : None,
                 "cursor" : None, "text_factory" : str, "auto_commit" : True,
                 "detect_types_flags" : sqlite3.PARSE_DECLTYPES,
                 "return_cursor" : False}
-        
+
     wrapped_object_name = "connection"
-    
+
     verbosity = {"open_database" : 'v', "create_table" : "vv",
                  "query_issued" : "vvv", "query_result" : "vvv",
                  "insert_into" : "vvv", "delete_from" : "vvv",
                  "drop_table" : "v", "table_info" : "vvv",
                  "update_table" : "vvv", "finalizer_unavailable" : 0,
                  "insert_or_replace" : "vvv"}
-    
+
     mutable_defaults = {"in_memory" : dict}
-    
+
     database_structure = {}
     primary_key = {}
-        
+
     def __init__(self, **kwargs):
         super(Database, self).__init__(**kwargs)
         self.database_name = self.database_name or os.path.join(pride.site_config.DATABASE_DIRECTORY,
                                                                 (self.reference.replace("/", '_') + ".db"))
-        connection, self.cursor = self.open_database(self.database_name, 
+        connection, self.cursor = self.open_database(self.database_name,
                                                      self.text_factory)
         self.wraps(connection)
         try:
             pride.objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
         except KeyError:
-            self.alert("Unable to queue finalizer callback", 
+            self.alert("Unable to queue finalizer callback",
                        level=self.verbosity["finalizer_unvailable"])
-        
+
         for table, structure in self.database_structure.items():
             self.create_table(table, structure)
-            
+
     def open_database(self, database_name, text_factory=None):
         """ Opens database_name and obtain a sqlite3 connection and cursor.
             Database objects call this implicitly when initializing.
@@ -80,22 +80,22 @@ class Database(pride.base.Wrapper):
         if text_factory:
             connection.text_factory = text_factory
         return connection, connection.cursor()
-        
+
     def create_table(self, table_name, fields, if_not_exists=True):
-        """ Creates a table in the underlying sqlite3 database. 
+        """ Creates a table in the underlying sqlite3 database.
             fields is an iterable containing field names. The if_not_exists
             flag, which defaults to True, will only create the table
             if it does not exist already. """
-        query = "CREATE TABLE{}{}({})".format(" IF NOT EXISTS " if 
+        query = "CREATE TABLE{}{}({})".format(" IF NOT EXISTS " if
                                               if_not_exists else ' ',
                                               table_name, ', '.join(fields))
-        self.alert("Creating table: {}".format(query), 
-                   level=self.verbosity["create_table"])        
+        self.alert("Creating table: {}".format(query),
+                   level=self.verbosity["create_table"])
         result = self.cursor.execute(query)
-        
+
         self.in_memory[table_name] = {}
         if self.auto_commit:
-            self.commit()        
+            self.commit()
         if table_name not in self.database_structure:
             self.database_structure[table_name] = fields
             for field in fields:
@@ -103,7 +103,7 @@ class Database(pride.base.Wrapper):
                     self.primary_key[table_name] = field.split()[0]
                     break
         return result
-        
+
     def query(self, table_name, retrieve_fields=tuple(), where=None,
               group_by=None, having=None, order_by=None, distinct=True):
         """ Retrieves information from the named database table.
@@ -119,25 +119,25 @@ class Database(pride.base.Wrapper):
             try:
                 return self.in_memory[table_name][where[primary_key]]
             except KeyError:
-                pass                  
+                pass
         retrieve_fields = ", ".join(retrieve_fields or (field.split()[0] for
                                     field in self.database_structure.get(table_name, [])))
         post_string = ''
         if group_by:
             post_string += " GROUP BY {}".format(", ".join(group_by))
-            
+
         if having:
             post_string += " HAVING {}".format(having)
-            
+
         if order_by:
             field_order, asc_or_desc = order_by
             post_string += " ORDER BY {} {};".format(", ".join(field_order), asc_or_desc)
-        
+
         if distinct:
             pre_string = "SELECT DISTINCT {} FROM {}"
         else:
             pre_string = "SELECT {} FROM  {}"
-            
+
         if where:
             condition_string, values = create_where_string(where)
             query_format = (retrieve_fields, table_name, condition_string)
@@ -147,10 +147,10 @@ class Database(pride.base.Wrapper):
             result = self.cursor.execute(query, values)
         else:
             query = pre_string.format(retrieve_fields, table_name) + post_string
-            self.alert("Making query: {}".format(query), 
+            self.alert("Making query: {}".format(query),
                        level=self.verbosity["query_issued"])
             result = self.cursor.execute(query)
-        self.alert("Retrieved: {}".format(result), 
+        self.alert("Retrieved: {}".format(result),
                    level=self.verbosity["query_result"])
         if self.return_cursor:
             return result
@@ -161,7 +161,7 @@ class Database(pride.base.Wrapper):
                 if len(result) == 1:
                     result = result[0]
             return result
-            
+
     def insert_into(self, table_name, values, columns=None, batch=False):
         """ Inserts values into the specified table. The values must
             be the correct type and the correct amount. Value types
@@ -169,7 +169,7 @@ class Database(pride.base.Wrapper):
         # range is len(values[0]) if batch is True, else range is len(values)
         query = "INSERT INTO {}{} VALUES({})".format(table_name, columns or '',
                                                      ", ".join('?' for count in range(len(values[0 if batch else slice(len(values))]))))
-        self.alert("Inserting data into table {}; {}, {}".format(table_name, query, values), 
+        self.alert("Inserting data into table {}; {}, {}".format(table_name, query, values),
                    level=self.verbosity["insert_into"])
         if batch:
             cursor = self.cursor.executemany(query, values)
@@ -179,12 +179,12 @@ class Database(pride.base.Wrapper):
         #self.in_memory[table_name][primary_key] = values
         if self.auto_commit:
             self.commit()
-        return cursor            
-    
+        return cursor
+
     def update_table(self, table_name, where=None, arguments=None):
         assert where and arguments
         condition_string, values = create_where_string(where)
-        
+
         _arguments = {}
         primary_key = None
         for item in self.database_structure[table_name]:
@@ -206,7 +206,7 @@ class Database(pride.base.Wrapper):
         if self.auto_commit:
             self.commit()
         return cursor
-        
+
     def delete_from(self, table_name, where=None):
         """ Removes an entry from the specified table. The where
             argument is a dictionary containing field name:value pairs."""
@@ -214,22 +214,22 @@ class Database(pride.base.Wrapper):
             raise ArgumentError("Failed to specify where condition(s) for {}.delete_from".format(self))
         else:
             condition_string, values = create_where_string(where)
-            query = "DELETE FROM {} {}".format(table_name, condition_string)   
+            query = "DELETE FROM {} {}".format(table_name, condition_string)
             self.alert("Deleting entry from table: {}; {}".format(table_name, query),
                        level=self.verbosity["delete_from"])
             cursor = self.cursor.execute(query, values)
             if self.auto_commit:
                 self.commit()
             return cursor
-                                             
-    def insert_or_replace(self, table_name, new_values):         
+
+    def insert_or_replace(self, table_name, new_values):
         query = "INSERT OR REPLACE INTO {} VALUES ({})".format(table_name, ', '.join('?' for value in new_values))
         self.alert("{}".format(query), level=self.verbosity["insert_or_replace"])
         cursor = self.cursor.execute(query, new_values)
         if self.auto_commit:
             self.commit()
-        return cursor        
-    
+        return cursor
+
     def drop_table(self, table_name):
         """ Removes a table from the underlying sqlite3 database. Note
             that this will remove all entries in the specified table, and
@@ -239,14 +239,14 @@ class Database(pride.base.Wrapper):
         self.cursor.execute("DROP TABLE {}", (table_name, ))
         if self.auto_commit:
             self.commit()
-     
+
     def alter_table(self, table_name, mode, argument):
         """ Alters the specified table. Available modes are
-            "ADD" and "RENAME", while argument should be 
+            "ADD" and "RENAME", while argument should be
             an additional field definition or new name. Added
             columns are appended. """
         if mode == "ADD":
-            insert = "ADD COLUMN"            
+            insert = "ADD COLUMN"
         elif mode == "RENAME":
             insert = "RENAME TO"
         else:
@@ -256,20 +256,31 @@ class Database(pride.base.Wrapper):
         self.cursor.execute(command)
         if self.auto_commit:
             self.commit()
-        
+
     def table_info(self, table_name):
         """ Returns a generator which yields field information for the
             specified table. Entries consist of the field index, field name,
             field type, and more."""
-        self.alert("Retrieving table information for: {}".format(table_name), 
+        self.alert("Retrieving table information for: {}".format(table_name),
                    level=self.verbosity["table_info"])
         return self.cursor.execute("PRAGMA table_info({})".format(table_name))
-    
-    def get_last_auto_increment_value(self, table_name):        
+
+    def db_info(self):
+        """ Returns a dictionary of table_name:fields representing the database schema """
+        self.alert("Dumping db info for: {}".format(self.database_name),
+                   level=self.verbosity["db_info"])
+        tables = self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        output = dict()
+        for table_tuple in tables.fetchall():
+            for table in table_tuple:
+                output[table] = [entry for entry in self.table_info(table).fetchall()]
+        return output
+
+    def get_last_auto_increment_value(self, table_name):
         value = self.cursor.execute("SELECT seq FROM sqlite_sequence where name='{}'".format(table_name)).fetchone()
         if value:
             return value[0]
-        
+
     def __getstate__(self):
         state = super(Database, self).__getstate__()
         del state["cursor"]
@@ -277,13 +288,13 @@ class Database(pride.base.Wrapper):
         del state["connection"]
         state["text_factory"] = state["text_factory"].__name__
         return state
-    
+
     def __contains__(self, table_name):
         try:
             return self.query(table_name)
         except sqlite3.OperationalError:
             return False
-            
+
     def on_load(self, state):
         super(Database, self).on_load(state)
         text_factory = self.text_factory
@@ -293,33 +304,32 @@ class Database(pride.base.Wrapper):
             self.text_factory = unicode
         else:
             self.text_factory = None
-        connection, self.cursor = self.open_database(self.database_name, 
+        connection, self.cursor = self.open_database(self.database_name,
                                                      self.text_factory)
         self.wraps(connection)
-        
+
     def delete(self):
         self.close()
         pride.objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         super(Database, self).delete()
-        
-        
+
+
 def test_db():
     class Test_Database(Database):
-        
+
         defaults = {"database_name" : "test_database.db"}
         database_structure = {"Test" : ("test_name TEXT PRIMARY_KEY UNIQUE", "test_data BLOB")}
-        primary_key = {"Test" : "test_name"}        
-        
+        primary_key = {"Test" : "test_name"}
+
     test = Test_Database()
-            
+
     entry = ("first_entry", "\x00" * 10)
-    test.insert_into("Test", entry)    
+    test.insert_into("Test", entry)
     assert test.query("Test") == entry, (entry, test.query("Test"))
-        
+
     test.insert_into("Test", ("no_duplicates", "0"))
     test.insert_or_replace("Test", ("no_duplicates", '1'))
     test.query("Test", retrieve_fields=("test_name", "test_data"), where={"test_name" : "no_duplicates"})
-    
+
 if __name__ == "__main__":
     test_db()
-    

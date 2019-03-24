@@ -128,7 +128,7 @@ class Homescreen(gui.Application):
 
 class Task_Bar(gui.Container):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"pack_mode" : "top", "h_range" : (0, 20)}
     #predefaults= {"bound" : (0, 20)}
 
     #def _set_pack_mode(self, value):
@@ -216,7 +216,9 @@ class Color_Palette(gui.Window):
 
 class Scroll_Bar(gui.Container):
 
-    defaults = {"pack_mode" : "right"}
+    defaults = {"pack_mode" : "right", "amount" : 5,
+                "target" : '', "amount" : 0}
+    required_attributes = ("target", "amount")
 
     def __init__(self, **kwargs):
         super(Scroll_Bar, self).__init__(**kwargs)
@@ -229,18 +231,20 @@ class Scroll_Bar(gui.Container):
         else:
             self.h_range = (0, 8)
             kwargs["pack_mode"] = "left"
-            self.create(Decrement_Button, **kwargs)
             self.create(Increment_Button, **kwargs)
+            self.create(Decrement_Button, **kwargs)
 
 
 class Decrement_Button(Attribute_Modifier_Button):
 
-    defaults = {"amount" : 10, "operation" : "__sub__", "h_range" : (0, 8), "w_range" : (0, 8)}
+    defaults = {"amount" : 10, "operation" : "__sub__", "h_range" : (0, 8),
+                "w_range" : (0, 20), "text" : ''}
 
 
 class Increment_Button(Attribute_Modifier_Button):
 
-    defaults = {"amount" : 10, "operation" : "__add__", "h_range" : (0, 8), "w_range" : (0, 8)}
+    defaults = {"amount" : 10, "operation" : "__add__", "h_range" : (0, 8),
+                "w_range" : (0, 20), "text" : ''}
 
 
 class Scroll_Indicator(gui.Button):
@@ -265,7 +269,6 @@ class Scroll_Indicator(gui.Button):
 class Indicator(gui.Button):
 
     defaults = {"pack_mode" : "left",
-                "h" : 16,
                 "line_color" : (255, 235, 155),
                 "text" : ''}
 
@@ -276,7 +279,8 @@ class Indicator(gui.Button):
     def draw_texture(self):
         super(Indicator, self).draw_texture()
         #x, y, w, h = self.parent.area
-        self.draw("text", self.area, self.text, color=self.text_color, w=self.w)
+        self.draw("text", self.area, self.text, color=self.text_color, w=self.w,
+                  center_text=self.center_text)
 
 
 class Done_Button(gui.Button):
@@ -371,3 +375,44 @@ class Form(pride.gui.gui.Window):
             box = name_column.create("pride.gui.widgetlibrary.Text_Box", text=entry, allow_text_edit=False, pack_mode="top")
             value_box = value_column.create(self.field_object_type, numeric_value=entries[entry], pack_mode="top")
             value_box.create("pride.gui.widgetlibrary.Scroll_Bar", target=(value_box.reference, "numeric_value"), pack_mode="right", amount=1)
+
+
+class Dropdown_Box(pride.gui.gui.Container):
+
+    defaults = {"entry_h_range" : (40, 40), "selection" : None,
+                "menu_open" : False}
+
+    def __init__(self, **kwargs):
+        super(Dropdown_Box, self).__init__(**kwargs)
+        self.entries = [self.create(entry_type, h_range=self.entry_h_range) for
+                        entry_type in self.entry_types]
+        for entry in self.entries[1:]:
+            entry.toggle_hidden()
+
+    def show_menu(self):
+        self.menu_open = True
+        for entry in self.entries:
+            if entry.hidden:
+                entry.toggle_hidden()
+
+    def hide_menu(self, selection):
+        self.menu_open = False
+        self.selection = selection.reference
+        for entry in self.entries:
+            if not entry.hidden and entry is not selection:
+                entry.toggle_hidden()
+
+
+class Dropdown_Box_Entry(pride.gui.gui.Button):
+
+    defaults = {"pack_mode" : "top"}
+
+    def left_click(self, mouse):
+        dropdown_box = self.parent
+        if not dropdown_box.menu_open:
+            dropdown_box.show_menu()
+        else:
+            dropdown_box.hide_menu(self)
+            if self.hidden:
+                self.toggle_hidden()
+        self.pack()

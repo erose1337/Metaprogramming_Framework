@@ -265,6 +265,11 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         super(Base, self).__init__() # facilitates complicated inheritance - otherwise does nothing
         self.references_to = []
         parent_name = self.parent_name = pride._last_creator
+        # the following line fixes a bug where:
+        #       base object A creates base object B
+        #       base object B instantiates base object C (not via 'create')
+        #       base object C would become a child of base object A
+        pride._last_creator = ''
         instance_count = 0
         _name = name = parent_name + "/" + self.__class__.__name__
         while name in objects:

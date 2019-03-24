@@ -44,49 +44,62 @@ class Organizer(base.Base):
             return
 
     def pack_items(self):
-        for sdl_window in self.window_queue[:]:
-            self.pack_children(sdl_window, list(sdl_window.gui_children))
-        for item in sorted(self.pack_queue, key=operator.attrgetter('z')):
-            self.pack_children(item, list(item.children))
-        del self.window_queue[:]
-        del self.pack_queue[:]
+        if self.window_queue:
+            #self.alert("Packing Window")
+            window_queue = self.window_queue[:]
+            del self.window_queue[:]
+            for sdl_window in window_queue:
+                self.pack_children(sdl_window, list(sdl_window.gui_children))
+        if self.pack_queue:
+            #self.alert("Packing items")
+            pack_queue = sorted(self.pack_queue, key=operator.attrgetter('z'))
+            del self.pack_queue[:]
+            for item in pack_queue:
+                self.pack_children(item, list(item.children))
 
     def pack_children(self, parent, children):
+    #    parent.alert("Packing children {}".format(children))
+        if not children:
+            return
+
+        _lists = {"top" : [], "main" : [], "bottom" : [], "left" : [], "right" : []}
+        for child in children:
+            if child.hidden:
+                child.area = (0, 0, 0, 0)
+            else:
+                try:
+                    _lists[child.pack_mode].append(child)
+                except KeyError:
+                    raise NotImplementedError("Unsupported pack mode '{}'".format(child.pack_mode))
+        top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
         area = parent.area
-        z = parent.z
+        z = parent.z + 1
 
-        top = [child for child in children if child.pack_mode == "top"]
-        main = [child for child in children if child.pack_mode == "main"]
-        bottom = [child for child in children if child.pack_mode == "bottom"]
-
-        top_main_bottom = top + main + bottom
-        if top_main_bottom:
-            self.pack_verticals(area, z, top_main_bottom, top, main, bottom)
+        if top or main or bottom:
+            self.pack_verticals(area, z, top, main, bottom)
             top_height = sum(child.h for child in top)
             bottom_height = sum(child.h for child in bottom)
         else:
             top_height = bottom_height = 0
 
-        left = [child for child in children if child.pack_mode == "left"]
-        right = [child for child in children if child.pack_mode == "right"]
-        left_main_right = left + main + right
-        if left_main_right:
-            self.pack_horizontals(area, z, left_main_right, left, main, right,
+        if left or main or right:
+            self.pack_horizontals(area, z, left, main, right,
                                   top_height, bottom_height)
 
         for child in children:
-            self.unschedule_pack(child)
+        #    self.unschedule_pack(child)
+            assert child not in self.pack_queue
             self.pack_children(child, list(child.children))
 
-    def pack_horizontals(self, area, z, left_main_right, left, main, right, top_height, bottom_height):
+    def pack_horizontals(self, area, z, left, main, right, top_height, bottom_height):
         x, y, w, h = area
+        left_main_right = left + main + right
         left_main_right_len = len(left_main_right)
         available_space = w
         spacing = available_space / left_main_right_len
         small_items = [child for child in left_main_right if child.w_range[1] < spacing]
         if small_items:
             spacing += sum(spacing - item.w_range[1] for item in small_items) / ((len(left_main_right) - len(small_items)) or 1)
-        #    spacing /=
             extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
                         sum(child.w_range[1] for child in small_items))
         else:
@@ -118,7 +131,7 @@ class Organizer(base.Base):
         for child in right:
             child.y = y + top_height
             child.h = h - (top_height + bottom_height)
-            child.w += spacing
+            child.w = spacing
             if extra and child not in small_items:
                 child.w += extra
                 extra = 0
@@ -126,24 +139,17 @@ class Organizer(base.Base):
             child.x = x + w - offset
             child.z = z
 
-    def pack_verticals(self, area, z, top_main_bottom, top, main, bottom):
+    def pack_verticals(self, area, z, top, main, bottom):
         x, y, w, h = area
+        top_main_bottom = top + main + bottom
         top_main_bottom_len = len(top_main_bottom)
         available_space = h
         spacing = available_space / (top_main_bottom_len or 1)
         small_items = [child for child in top_main_bottom if child.h_range[1] < spacing]
         if small_items:
-        #    print("Spacing before adding extra from small items: ", spacing)
             spacing += sum(spacing - item.h_range[1] for item in small_items) / ((top_main_bottom_len - len(small_items)) or 1)
-        #    print("Spacing after adding extra from small items: ", spacing)
-            #spacing /=
-        #    print("Spacing after dividing by {}".format((top_main_bottom_len - len(small_items)) or 1))
             extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
                         sum(child.h_range[1] for child in small_items))
-        #    print("Extra: {} = {} - ({} * {}) + {}".format(extra, h, spacing,
-        #                                                   len([child for child in top_main_bottom if child not in small_items]),
-        #                                                   sum(child.h_range[1] for child in small_items)
-        #                                                   ))
         else:
             extra = h - (spacing * top_main_bottom_len)
         assert extra >= 0, extra
@@ -155,7 +161,6 @@ class Organizer(base.Base):
             child.y = y + offset
             child.h = spacing
             if extra and child not in small_items:
-                print extra, spacing
                 child.h += extra
                 extra = 0
             child.z = z
@@ -204,6 +209,12 @@ class Minimal_Theme(Theme):
                       center_text=self.center_text)
 
 
+class Blank_Theme(Theme):
+
+    def draw_texture(self):
+        self.draw("fill", self.area, color=(0, 0, 0))
+
+
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
 
     defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : ''}
@@ -237,9 +248,11 @@ class Window_Object(Organized_Object):
 
     predefaults = {"scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
-                   "_text" : '', "_pack_mode" : '', "_sdl_window" : ''}
+                   "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
+                   "queue_scroll_operation" : False}
 
-    mutable_defaults = {"_draw_operations" : list, "_children" : list}
+    mutable_defaults = {"_draw_operations" : list, "_children" : list,
+                        "scroll_instructions" : list}
     verbosity = {"press" : "vv", "release" : "vv", "packed" : "packed"}
 
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
@@ -295,15 +308,17 @@ class Window_Object(Organized_Object):
     def _get_texture_window_x(self):
         return self._texture_window_x
     def _set_texture_window_x(self, value):
-        self._texture_window_x = value
+        self._texture_window_x = max(0, value)
         self.texture_invalid = True
+        self.queue_scroll_operation = True
     texture_window_x = property(_get_texture_window_x, _set_texture_window_x)
 
     def _get_texture_window_y(self):
         return self._texture_window_y
     def _set_texture_window_y(self, value):
-        self._texture_window_y = value
+        self._texture_window_y = max(0, value)
         self.texture_invalid = True
+        self.queue_scroll_operation = True
     texture_window_y = property(_get_texture_window_y, _set_texture_window_y)
 
     def _get_parent_application(self):
@@ -334,6 +349,7 @@ class Window_Object(Organized_Object):
 
     def __init__(self, **kwargs):
         super(Window_Object, self).__init__(**kwargs)
+        #self.alert("Area: {}".format(self.area))
         self.texture_window_x = self.texture_window_y = 0
         self.texture_invalid = True
 
@@ -417,9 +433,13 @@ class Window_Object(Organized_Object):
     def toggle_hidden(self):
         if not self.hidden:
             sdl_user_input = pride.objects[self.sdl_window + "/SDL_User_Input"]
-            sdl_user_input._update_coordinates(self.reference,
-                                               self.area, -1)
+            sdl_user_input._remove_from_coordinates(self.reference)
+            self.texture_invalid = True
+        else:
+            pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self.reference, self.area, self.z)
         self.hidden = not self.hidden
+        for child in self.children:
+            child.toggle_hidden()
 
     def draw(self, figure, *args, **kwargs):
         """ Draws the specified figure on self. figure can be any shape supported
@@ -433,25 +453,29 @@ class Window_Object(Organized_Object):
 
     def _draw_texture(self):
         if self.hidden:
-            return []
+            self._draw_operations = []
+            self.texture_invalid = False
+            return
 
         del self._draw_operations[:]
         self.draw_texture()
         instructions = self._draw_operations[:]
 
-        if self._texture_window_x or self._texture_window_y:
-            x, y, w, h = self.area
-            source_rect = (x + self.texture_window_x,
-                           y + self.texture_window_y, w, h)
+        #self.alert("Queueing draw instructions; Includes scrolling: {}".format(self.queue_scroll_operation))
+        #if self.queue_scroll_operation:
+        #    x, y, w, h = self.area
+        #    source_rect = (x + self.texture_window_x,
+        #                   y + self.texture_window_y, w, h)
 
-            if x + w > MAX_W:
-                w = MAX_W - x
-            if y + h > MAX_H:
-                h = MAX_H - y
-            destination = (x, y, w, h)
-          #  assert destination == self.area
-            instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
-
+        #    #if x + w > MAX_W:
+        #    #    w = MAX_W - x
+        #    #if y + h > MAX_H:
+        #    #    h = MAX_H - y
+        #    destination = (x, y, w, h)
+        #  #  assert destination == self.area
+        #    self.alert("Copying: {} to {}".format(source_rect, destination))
+        #    #instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
+        #    self.scroll_instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
         self.texture_invalid = False
 
     def draw_texture(self):
@@ -460,46 +484,54 @@ class Window_Object(Organized_Object):
     def pack(self):
         super(Window_Object, self).pack()
         self.texture_invalid = True
-        #try:
-        #    pack_modes = objects[self.sdl_window + "/Organizer"]._pack_modes[self.reference]
-        #except KeyError:
-        #    pass
-        #else:
-        #    total_height = sum((objects[name].h for name in pack_modes["top"] + pack_modes["bottom"]))
-        #    total_width = sum((objects[name].w for name in pack_modes["right"] + pack_modes["left"]))
-        # #   if total_height > self.h:
-        # #       if total_width > self.w:
-        # #           self.texture_size = (total_width, total_height)
-        # #       else:
-        # #           self.texture_size = (self.texture_size[0], total_height)
-        # #       self.texture = create_texture(self.texture_size)
-        # #       self.alert("Resized texture to: {}".format(self.texture_size), level=0)
-        # #   elif total_width > self.w:
-        # #       self.texture_size = (total_width, self.texture_size[1])
-
-        #    if self.scroll_bars_enabled:
-        #        excess_height = total_height > self.h
-        #        excess_width = total_width > self.w
-        #        if not self._scroll_bar_h:
-        #            if excess_height:
-        #                bar = self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
-        #                                target=(self.reference, "texture_window_y"))
-        #                self._scroll_bar_h = bar.reference
-        #                bar.pack()
-        #        elif not excess_height:
-        #            objects[self._scroll_bar_h].delete()
-        #            self._scroll_bar_h = None
-
-        #        if not self._scroll_bar_w:
-        #            if excess_width:
-        #                bar = self.create("pride.gui.widgetlibrary.Scroll_Bar",
-        #                                pack_mode="bottom", target=(self.reference,
-        #                                                            "texture_window_x"))
-        #                self._scroll_bar_w = bar.reference
-        #                bar.pack()
-        #        elif not excess_width:
-        #            objects[self._scroll_bar_w].delete()
-        #            self._scroll_bar_w = None
+        return
+        children = list(self.children)
+        top = [child for child in children if child.pack_mode == "top"]
+        main = [child for child in children if child.pack_mode == "main"]
+        bottom = [child for child in children if child.pack_mode == "bottom"]
+        left = [child for child in children if child.pack_mode == "left"]
+        right = [child for child in children if child.pack_mode == "right"]
+        total_height = sum(child.h for child in top + main + bottom)
+        if any((left, main, right)):
+            total_height = max(total_height, max(child.h for child in left + main + right))
+        total_width = sum(child.w for child in children if child.pack_mode in ("left", "main", "right"))
+     #   if total_height > self.h:
+     #       if total_width > self.w:
+     #           self.texture_size = (total_width, total_height)
+     #       else:
+     #           self.texture_size = (self.texture_size[0], total_height)
+     #       self.texture = create_texture(self.texture_size)
+     #       self.alert("Resized texture to: {}".format(self.texture_size), level=0)
+     #   elif total_width > self.w:
+     #       self.texture_size = (total_width, self.texture_size[1])
+        if self.scroll_bars_enabled:
+            excess_height = total_height > self.h
+            excess_width = total_width > self.w
+            self.alert("Scroll bar logic checking excess height: {} {}".format(total_height, self.h))
+            if not self._scroll_bar_h:
+                if excess_height:
+                    bar = self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
+                                      target=(self.reference, "texture_window_y"))
+                    self._scroll_bar_h = bar.reference
+                    bar.alert("Created; Organizing {}".format(bar.area))
+                    window = pride.objects[self.sdl_window]
+                    pride.objects[self.sdl_window + "/Organizer"].pack_children(window, list(window.gui_children))
+                    bar.alert("Done organizing {}".format(bar.area))
+                    #self.parent.pack()
+                    #pride.objects[self.sdl_window + "/Organizer"].pack_children(self, [bar])
+            elif not excess_height:
+                objects[self._scroll_bar_h].delete()
+                self._scroll_bar_h = None
+            if not self._scroll_bar_w:
+                if excess_width:
+                    bar = self.create("pride.gui.widgetlibrary.Scroll_Bar",
+                                    pack_mode="bottom", target=(self.reference,
+                                                                "texture_window_x"))
+                    self._scroll_bar_w = bar.reference
+                    bar.pack()
+            elif not excess_width:
+                objects[self._scroll_bar_w].delete()
+                self._scroll_bar_w = None
 
     def delete(self):
         pride.objects[self.sdl_window].remove_window_object(self)
@@ -526,7 +558,7 @@ class Window_Object(Organized_Object):
 
 class Window(Window_Object):
 
-    defaults = {"pack_mode" : "main", "size" : pride.gui.SCREEN_SIZE}
+    defaults = {"pack_mode" : "main"}#, "size" : pride.gui.SCREEN_SIZE}
 
 
 class Container(Window_Object):
@@ -536,7 +568,7 @@ class Container(Window_Object):
 
 class Button(Window_Object):
 
-    defaults = {"shape" : "rect", "pack_mode" : "top"}
+    defaults = {"pack_mode" : "top"}
 
 
 class Application(Window):
@@ -547,7 +579,13 @@ class Application(Window):
 
     def __init__(self, **kwargs):
         super(Application, self).__init__(**kwargs)
-        self.application_window = self.create(self.application_window_type)
+        window = self.application_window = self.create(self.application_window_type)
+        #self.vertical_scroll = self.create("pride.gui.widgetlibrary.Scroll_Bar",
+        #                                   pack_mode="right", amount=10,
+        #                                   target=(window.reference, "texture_window_y"))
+        #self.horizontal_scroll = self.create("pride.gui.widgetlibrary.Scroll_Bar",
+        #                                     pack_mode="bottom", amount=10,
+        #                                     target=(window.reference, "texture_window_x"))
 
     def draw_texture(self):
         assert not self.deleted

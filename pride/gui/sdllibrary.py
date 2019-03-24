@@ -23,10 +23,14 @@ sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
 def instruction_generator(instructions):
-    for layer in instructions.values():
+    for layer in instructions.itervalues():
         for window_object in layer:
             for operation in window_object._draw_operations:
                 yield operation
+    #for layer in instructions.itervalues():
+    #    for window_object in (item for item in layer if item.scroll_instructions):
+    #        for operation in window_object.scroll_instructions:
+    #            yield operation
 
 class SDL_Component(base.Proxy): pass
 
@@ -132,13 +136,15 @@ class SDL_Window(SDL_Component):
         instructions = self.drawing_instructions
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
-            old_z = self.user_input._update_coordinates(window_object.reference, window_object.area, window_object.z)
+            old_z = self.user_input._update_coordinates(window_object.reference,
+                                                        window_object.area,
+                                                        window_object.z)
 
             #draw_position = texture_atlas.add_to_atlas(window_object)
             #backup_position = window_object.position
             #self._ignore_invalidation = window_object
             #window_object.position = draw_position
-
+        #    window_object.alert("Drawing")
             window_object._draw_texture()
 
             #window_object.position = backup_position
@@ -164,11 +170,9 @@ class SDL_Window(SDL_Component):
         renderer.set_render_target(texture)
         renderer.clear()
         for operation, args, kwargs in instructions:
-            if operation == "text":
-                if not args[0]:
-                    continue
-            #if operation == "fill":
-            #    print args, kwargs
+            if operation == "text" and not args[0]:
+                #if not args[0]:
+                continue
             draw_procedures[operation](*args, **kwargs)
 
         renderer.set_render_target(None)
@@ -289,7 +293,7 @@ class Window_Handler(pride.components.base.Base):
 class SDL_User_Input(scheduler.Process):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None}
-    mutable_defaults = {"coordinate_tracker" : dict, "_coordinate_tracker" : collections.OrderedDict}
+    mutable_defaults = {"coordinate_tracker" : dict, "_layer_tracker" : collections.OrderedDict}
 
     verbosity = {"handle_text_input" : "vvv"}
 
@@ -378,18 +382,18 @@ class SDL_User_Input(scheduler.Process):
         except KeyError:
             old_z = 0
         else:
-            self._coordinate_tracker[old_z].remove(item)
+            self._layer_tracker[old_z].remove(item)
         try:
-            self._coordinate_tracker[z].append(item)
+            self._layer_tracker[z].append(item)
         except KeyError:
-            self._coordinate_tracker[z] = [item]
+            self._layer_tracker[z] = [item]
 
         self.coordinate_tracker[item] = (area, z)
         return old_z
 
     def _remove_from_coordinates(self, item):
         _, old_z = self.coordinate_tracker[item]
-        self._coordinate_tracker[old_z].remove(item)
+        self._layer_tracker[old_z].remove(item)
         del self.coordinate_tracker[item]
         if self.active_item == item:
             self.active_item = None
@@ -401,7 +405,7 @@ class SDL_User_Input(scheduler.Process):
         self.alert("Handling textinput {} {} {}".format(text, cursor, selection_length),
                    level=self.verbosity["handle_text_input"])
         if self.active_item:
-            instance = objects[self.active_item]
+            instance = pride.objects[self.active_item]
             instance.text_entry(text)
 
     def handle_unhandled_event(self, event):
@@ -416,36 +420,33 @@ class SDL_User_Input(scheduler.Process):
         mouse = event.button
         mouse_position = (mouse.x, mouse.y)
         self.alert("mouse button down at {}".format(mouse_position), level='v')
+        objects = pride.objects
+        # find the top-most item such that the mouse position is within its area
         active_item = None
-        max_z = 0
-        coordinates = self.coordinate_tracker
-        possible = []
-        for layer_number, layer in reversed(self._coordinate_tracker.items()):
+        for layer_number, layer in reversed(self._layer_tracker.items()):
             for item in layer:
-                assert item in pride.objects
-                area, z = coordinates[item]
-                if pride.gui.point_in_area(area, mouse_position):
-                    possible.append((item, area[0]))
-            if len(possible) > 1:
-                active_item = sorted(possible, key=operator.itemgetter(1))[-1][0]
-            elif possible:
-                active_item = possible[0][0]
+                assert item in objects
+                if pride.gui.point_in_area(objects[item].area, mouse_position):
+                    active_item = item
+                    break
             if active_item:
                 break
 
+        # deselect old active item
         old_active_item = self.active_item
-        if old_active_item and pride.objects[old_active_item]._selected: # item can deselect itself
+        if old_active_item and objects[old_active_item]._selected: # item can deselect itself
             try:
-                pride.objects[old_active_item].deselect(mouse, active_item)
+                objects[old_active_item].deselect(mouse, active_item)
             except KeyError:
-                if old_active_item in pride.objects:
+                if old_active_item in objects:
                     raise
 
+        # select new active item
         self.active_item = active_item
         try:
-            pride.objects[active_item].select(mouse)
+            objects[active_item].select(mouse)
         except KeyError:
-            if active_item in pride.objects:
+            if active_item in objects:
                 raise
 
         if active_item:
@@ -453,9 +454,9 @@ class SDL_User_Input(scheduler.Process):
                 self._ignore_click = False
             else:
                 try:
-                    pride.objects[active_item].press(mouse)
+                    objects[active_item].press(mouse)
                 except KeyError:
-                    if active_item in pride.objects:
+                    if active_item in objects:
                         raise
                     else:
                         self.alert("Active item has been deleted {}".format(active_item, ), level=0)
@@ -532,9 +533,9 @@ class SDL_User_Input(scheduler.Process):
         pass
 
     def save(self):
-        with pride.functions.contextmanagers.backup(self, "handlers", "_coordinate_tracker"):
+        with pride.functions.contextmanagers.backup(self, "handlers", "_layer_tracker"):
             self.handlers = None
-            self._coordinate_tracker = self._coordinate_tracker.items()
+            self._layer_tracker = self._layer_tracker.items()
             attributes = super(SDL_User_Input, self).save()
         return attributes
 
@@ -581,7 +582,7 @@ class Renderer(SDL_Component):
         #                                w - 2, _h),
         #              srcrect=(0, 0, w, _h))
         #else:
-        if kwargs["center_text"]:
+        if kwargs.get("center_text", False):
             destination = ((x + (w / 2)) - (_w / 2),
                            (y + (h / 2)) - (_h / 2),
                            _w - 2, _h)

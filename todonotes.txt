@@ -9,6 +9,14 @@ deal with certificates properly?
 
 changes
 -----
+fixed bug with base create machinery
+   - base object A creates base object B
+   - base object B instantiates base object C (not via 'create')
+   - base object C would become a child of base object A
+fixed gui z coordinate bug
+improved organizer code
+fixed/improved support for Window_Object.hidden and toggle_hidden
+added database.db_info method
 
 
 notes

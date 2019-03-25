@@ -387,25 +387,25 @@ class Dropdown_Box(pride.gui.gui.Container):
         self.entries = [self.create(entry_type, h_range=self.entry_h_range) for
                         entry_type in self.entry_types]
         for entry in self.entries[1:]:
-            entry.toggle_hidden()
+            entry.hide()
+        self.selection = self.entries[0].selection_value
 
     def show_menu(self):
         self.menu_open = True
         for entry in self.entries:
-            if entry.hidden:
-                entry.toggle_hidden()
+            entry.show()
 
     def hide_menu(self, selection):
         self.menu_open = False
-        self.selection = selection.reference
+        self.selection = selection.selection_value
         for entry in self.entries:
-            if not entry.hidden and entry is not selection:
-                entry.toggle_hidden()
+            if entry is not selection:
+                entry.hide()
 
 
 class Dropdown_Box_Entry(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"pack_mode" : "top", "selection_value" : None}
 
     def left_click(self, mouse):
         dropdown_box = self.parent
@@ -413,6 +413,22 @@ class Dropdown_Box_Entry(pride.gui.gui.Button):
             dropdown_box.show_menu()
         else:
             dropdown_box.hide_menu(self)
-            if self.hidden:
-                self.toggle_hidden()
+            self.show()
         self.pack()
+
+
+class Dropdown_Field(pride.gui.gui.Container):
+
+    defaults = {"field_name" : '', "entry_types" : tuple()}
+    required_attributes = ("field_name", "entry_types")
+
+    def _get_selection(self):
+        return pride.objects[self.dropdown_box].selection
+    selection = property(_get_selection)
+
+    def __init__(self, **kwargs):
+        super(Dropdown_Field, self).__init__(**kwargs)
+        self.create("pride.gui.gui.Button", text=self.field_name, pack_mode="left")
+        self.dropdown_box = self.create("pride.gui.widgetlibrary.Dropdown_Box",
+                                        pack_mode="left",
+                                        entry_types=self.entry_types).reference

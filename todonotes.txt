@@ -9,15 +9,13 @@ deal with certificates properly?
 
 changes
 -----
-fixed bug with base create machinery
-   - base object A creates base object B
-   - base object B instantiates base object C (not via 'create')
-   - base object C would become a child of base object A
-fixed gui z coordinate bug
-improved organizer code
-fixed/improved support for Window_Object.hidden and toggle_hidden
-added database.db_info method
-
+changed tracking of window_objects old z coordinate
+fixed a bug where an item would get drawn multiple times
+changed toggle_hidden to hide/show
+fixed bug with hiding then showing an instance that has hidden child object(s)
+changed _update_coordinates arguments
+removed coordinate_tracker dictionary, simplified mouse handling logic
+added Dropdown_Field widget
 
 notes
 ----

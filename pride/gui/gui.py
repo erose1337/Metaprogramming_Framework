@@ -203,7 +203,7 @@ class Minimal_Theme(Theme):
         self.draw("fill", area, color=self.background_color)
         self.draw("rect_width", area, color=self.color, width=self.outline_width)
         if self.text:
-            assert isinstance(self.text, str), (type(self.text), self.text, self)
+            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
                       center_text=self.center_text)
@@ -249,7 +249,8 @@ class Window_Object(Organized_Object):
     predefaults = {"scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
                    "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
-                   "queue_scroll_operation" : False}
+                   "queue_scroll_operation" : False, "_old_hidden_flag" : False,
+                   "_old_z" : 0}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list}
@@ -355,7 +356,7 @@ class Window_Object(Organized_Object):
 
         self.theme = self.create(self.theme_type, wrapped_object=self)
         self._children.remove(self.theme)
-        pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self.reference, self.area, self.z)
+        pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
 
     def create(self, *args, **kwargs):
         kwargs.setdefault('z', self.z + 1)
@@ -430,16 +431,25 @@ class Window_Object(Organized_Object):
                 instance.mousemotion(x_difference, y_difference, top_level=False)
                 instance.held = False
 
-    def toggle_hidden(self):
-        if not self.hidden:
-            sdl_user_input = pride.objects[self.sdl_window + "/SDL_User_Input"]
-            sdl_user_input._remove_from_coordinates(self.reference)
-            self.texture_invalid = True
-        else:
-            pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self.reference, self.area, self.z)
-        self.hidden = not self.hidden
+    def hide(self):
+        #assert not self.hidden
+        pride.objects[self.sdl_window + "/SDL_User_Input"]._remove_from_coordinates(self.reference)
+        self.texture_invalid = True
+        # prevents the following: B is hidden; Parent A uses hide(); A uses show(); B becomes un-hidden (should remain hidden)
+        self._old_hidden_flag = self.hidden
+        self.hidden = True
         for child in self.children:
-            child.toggle_hidden()
+            child.hide()
+
+    def show(self):
+        #assert self.hidden
+        pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
+        self.texture_invalid = True
+        #if toggle_hidden:
+        self.hidden = self._old_hidden_flag
+        self._old_hidden_flag = False
+        for child in self.children:
+            child.show()
 
     def draw(self, figure, *args, **kwargs):
         """ Draws the specified figure on self. figure can be any shape supported

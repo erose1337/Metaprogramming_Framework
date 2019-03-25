@@ -115,7 +115,7 @@ class SDL_Window(SDL_Component):
         return instance
 
     def remove_window_object(self, window_object):
-        old_z = self.user_input._remove_from_coordinates(window_object.reference)
+        self.user_input._remove_from_coordinates(window_object.reference)
         try:
             self.redraw_objects.remove(window_object)
         except ValueError:
@@ -136,7 +136,8 @@ class SDL_Window(SDL_Component):
         instructions = self.drawing_instructions
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
-            old_z = self.user_input._update_coordinates(window_object.reference,
+            old_z = self.user_input._update_coordinates(window_object,
+                                                        window_object.reference,
                                                         window_object.area,
                                                         window_object.z)
 
@@ -157,10 +158,16 @@ class SDL_Window(SDL_Component):
                 instructions[old_z].remove(window_object)
             except (KeyError, ValueError):
                 pass
+            z = window_object.z
+            assert window_object not in instructions.get(z, [])
+            #try:
+            #    instructions[z].remove(window_object)
+            #except (KeyError, ValueError):
+            #    pass
             try:
-                instructions[window_object.z].append(window_object)
+                instructions[z].append(window_object)
             except KeyError:
-                instructions[window_object.z] = [window_object]
+                instructions[z] = [window_object]
         del self.redraw_objects[:]
 
     def draw(self, instructions):
@@ -170,15 +177,16 @@ class SDL_Window(SDL_Component):
         renderer.set_render_target(texture)
         renderer.clear()
         for operation, args, kwargs in instructions:
-            if operation == "text" and not args[0]:
+            #if operation == "text" and not args[0]:
                 #if not args[0]:
-                continue
+            #    continue
             draw_procedures[operation](*args, **kwargs)
 
         renderer.set_render_target(None)
         area = (0, 0, self.size[0], self.size[1])
         renderer.copy(texture, area, area)
         renderer.present()
+
 
     def get_mouse_state(self):
         mouse = sdl2.mouse
@@ -293,7 +301,7 @@ class Window_Handler(pride.components.base.Base):
 class SDL_User_Input(scheduler.Process):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None}
-    mutable_defaults = {"coordinate_tracker" : dict, "_layer_tracker" : collections.OrderedDict}
+    mutable_defaults = {"_layer_tracker" : collections.OrderedDict}
 
     verbosity = {"handle_text_input" : "vvv"}
 
@@ -376,25 +384,23 @@ class SDL_User_Input(scheduler.Process):
                                                                    traceback.format_exc()),
                                 level=0)
 
-    def _update_coordinates(self, item, area, z):
+    def _update_coordinates(self, item, reference, area, z):
+        old_z = pride.objects[reference]._old_z
         try:
-            _, old_z = self.coordinate_tracker[item]
-        except KeyError:
-            old_z = 0
-        else:
-            self._layer_tracker[old_z].remove(item)
+            self._layer_tracker[old_z].remove(reference)
+        except (KeyError, ValueError):
+            pass
+        assert reference not in self._layer_tracker.get(z, []), (z, reference)
         try:
-            self._layer_tracker[z].append(item)
+            self._layer_tracker[z].append(reference)
         except KeyError:
-            self._layer_tracker[z] = [item]
-
-        self.coordinate_tracker[item] = (area, z)
+            self._layer_tracker[z] = [reference]
+        pride.objects[reference]._old_z = z
         return old_z
 
     def _remove_from_coordinates(self, item):
-        _, old_z = self.coordinate_tracker[item]
-        self._layer_tracker[old_z].remove(item)
-        del self.coordinate_tracker[item]
+        self._layer_tracker[pride.objects[item]._old_z].remove(item)
+        assert pride.objects[item] not in self._layer_tracker.get(pride.objects[item].z, [])
         if self.active_item == item:
             self.active_item = None
 
@@ -467,7 +473,7 @@ class SDL_User_Input(scheduler.Process):
         if active_item:
             instance = pride.objects[active_item]
             if instance.held:
-                area, z = self.coordinate_tracker[active_item]
+                area = instance.area
                 mouse = event.button
                 if pride.gui.point_in_area(area, (mouse.x, mouse.y)):
                     instance.release(mouse)

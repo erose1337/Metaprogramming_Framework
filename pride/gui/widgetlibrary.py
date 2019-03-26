@@ -39,8 +39,8 @@ class Instruction_Button(gui.Button):
 
 class Method_Button(gui.Button):
 
-    defaults = {"args" : tuple(), "kwargs" : None, "method" : '', "target" : ''}
-    predefaults = {"scale_to_text" : True}
+    defaults = {"args" : tuple(), "kwargs" : None, "method" : '', "target" : '',
+                "scale_to_text" : True}
 
     def left_click(self, mouse):
         try:
@@ -52,8 +52,8 @@ class Method_Button(gui.Button):
 
 class Delete_Button(Method_Button):
 
-    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete"}
-    predefaults = {"scale_to_text" : True}
+    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete",
+                "scale_to_text" : True}
 
 
 class Exit_Button(Delete_Button):
@@ -379,16 +379,21 @@ class Form(pride.gui.gui.Window):
 
 class Dropdown_Box(pride.gui.gui.Container):
 
-    defaults = {"entry_h_range" : (40, 40), "selection" : None,
-                "menu_open" : False}
+    defaults = {"entry_h_range" : (20, 40), "selection" : None,
+                "menu_open" : False, "callback" : tuple()}
 
     def __init__(self, **kwargs):
         super(Dropdown_Box, self).__init__(**kwargs)
-        self.entries = [self.create(entry_type, h_range=self.entry_h_range) for
+        self.entries = [self.create(entry_type, h_range=self.entry_h_range, callback=self.callback) for
                         entry_type in self.entry_types]
         for entry in self.entries[1:]:
             entry.hide()
         self.selection = self.entries[0].selection_value
+
+    def call_callback(self):
+        if self.callback:
+            reference, method_name = self.callback
+            getattr(pride.objects[reference], method_name)(self.selection)
 
     def show_menu(self):
         self.menu_open = True
@@ -415,12 +420,15 @@ class Dropdown_Box_Entry(pride.gui.gui.Button):
             dropdown_box.hide_menu(self)
             self.show()
         self.pack()
+        dropdown_box.call_callback()
 
 
 class Dropdown_Field(pride.gui.gui.Container):
 
-    defaults = {"field_name" : '', "entry_types" : tuple()}
+    defaults = {"field_name" : '', "entry_types" : tuple(), "callback" : tuple(),
+                "orientation" : "side by side"}
     required_attributes = ("field_name", "entry_types")
+    allowed_values = {"orientation" : ("side by side", "stacked")}
 
     def _get_selection(self):
         return pride.objects[self.dropdown_box].selection
@@ -428,7 +436,116 @@ class Dropdown_Field(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(Dropdown_Field, self).__init__(**kwargs)
-        self.create("pride.gui.gui.Button", text=self.field_name, pack_mode="left")
+        if self.orientation == "side by side":
+            pack_mode = "left"
+        else:
+            pack_mode = "top"
+        self.create("pride.gui.gui.Button", text=self.field_name, pack_mode=pack_mode)
         self.dropdown_box = self.create("pride.gui.widgetlibrary.Dropdown_Box",
-                                        pack_mode="left",
+                                        pack_mode=pack_mode, callback=self.callback,
                                         entry_types=self.entry_types).reference
+
+
+class Spin_Field_Entry(pride.gui.gui.Container):
+
+    defaults = {"text" : '0'}
+
+    def __init__(self, **kwargs):
+        super(Spin_Field_Entry, self).__init__(**kwargs)
+        self.create(pride.gui.widgetlibrary.Method_Button, target=self.reference,
+                    method="increment_value", pack_mode="right", w_range=(0, 20),
+                    text='+')
+        self.create(pride.gui.widgetlibrary.Method_Button, target=self.reference,
+                    method="decrement_value", pack_mode="right", w_range=(0, 20),
+                    text='-')
+
+    def increment_value(self):
+        new_value = self.on_increment(self.text)
+        self.text = str(new_value)
+        if self.write_field_method:
+            self.write_field_method(self.text)
+
+    def decrement_value(self):
+        new_value = self.on_decrement(self.text)
+        self.text = str(new_value)
+        if self.write_field_method:
+            self.write_field_method(self.text)
+
+
+class Spin_Field(pride.gui.gui.Container):
+
+    defaults = {"field_name" : '', "on_increment" : None, "on_decrement" : None,
+                "initial_value" : '', "field_entry_type" : Spin_Field_Entry,
+                "write_field_method" : None}
+    required_attributes = ("field_name", "on_increment", "on_decrement")
+
+    def __init__(self, **kwargs):
+        super(Spin_Field, self).__init__(**kwargs)
+        prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
+                             pack_mode="top")
+        kwargs = {"pack_mode" : "top", "on_increment" : self.on_increment,
+                  "on_decrement" : self.on_decrement, "write_field_method" : self.write_field_method}
+        if self.initial_value:
+            kwargs["text"] = self.initial_value
+        self.field = self.create(self.field_entry_type, **kwargs).reference
+
+
+class Field_Entry(Text_Box):
+
+    defaults = {"write_field_method" : None}
+    required_attributes = ("write_field_method", )
+
+    def deselect(self, mouse, next_active_object):
+        super(Field_Entry, self).deselect(mouse, next_active_object)
+        if self.text:
+            self.write_field_method(self.text)
+
+    def handle_return(self):
+        self.deselect(None, None)
+
+
+class Integer_Field_Entry(Field_Entry):
+
+    def text_entry(self, text):
+        if self.allow_text_edit:
+            try:
+                int(text)
+            except ValueError:
+                pass
+            else:
+                self.text += text
+
+
+class Field(pride.gui.gui.Container):
+
+    defaults = {"field_name" : "", "write_field_method" : None,
+                "field_entry_type" : Field_Entry}
+    required_attributes = ("write_field_method", )
+
+    def __init__(self, **kwargs):
+        super(Field, self).__init__(**kwargs)
+        prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
+                             w_range=(0, 120), pack_mode="left")
+        field = self.create(self.field_entry_type, pack_mode="left",
+                            write_field_method=lambda value: self.write_field_method(self.field_name, value))
+
+
+class New_Tab_Button(Method_Button):
+
+    defaults = {"pack_mode" : "left", "w_range" : (0, 40),
+                "scale_to_text" : False}
+
+
+class Tab_Button(Method_Button):
+
+    defaults = {"pack_mode" : "left"}
+
+
+class Tab_Bar(pride.gui.gui.Container):
+
+    defaults = {"h_range" : (0, 40)}
+
+    def __init__(self, **kwargs):
+        super(Tab_Bar, self).__init__(**kwargs)
+        self.create(New_Tab_Button, target=self.target, method=self.method,
+                    text='+')

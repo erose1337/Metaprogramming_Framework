@@ -199,6 +199,7 @@ class Theme(pride.base.Wrapper):
 class Minimal_Theme(Theme):
 
     def draw_texture(self):
+        assert not self.hidden
         area = self.area
         self.draw("fill", area, color=self.background_color)
         self.draw("rect_width", area, color=self.color, width=self.outline_width)
@@ -246,11 +247,11 @@ class Window_Object(Organized_Object):
                 "theme_type" : "pride.gui.gui.Minimal_Theme",
                 "_selected" : False}
 
-    predefaults = {"scale_to_text" : False, "_texture_invalid" : False,
+    predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
                    "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
-                   "queue_scroll_operation" : False, "_old_hidden_flag" : False,
-                   "_old_z" : 0}
+                   "queue_scroll_operation" : False,
+                   "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list}
@@ -279,11 +280,21 @@ class Window_Object(Organized_Object):
         if value and self.scale_to_text:
             assert self.sdl_window
             w, h = objects[self.sdl_window].renderer.get_text_size(self.area, value)
-            w += 2
+            w += 4
             self.w_range = (0, w)
-            self.w = w
+            #self.w = w
         self.texture_invalid = True
     text = property(_get_text, _set_text)
+
+    def _get_scale_to_text(self):
+        return self._scale_to_text
+    def _set_scale_to_text(self, value):
+        self._scale_to_text = value
+        if value:
+            # If text and scale_to_text are set as kwargs, there is no priority to set scale_to_text first
+            # if text is set first, then _set_text wouldn't scale w properly
+            self.text = self.text # triggers _set_text descriptor;
+    scale_to_text = property(_get_scale_to_text, _set_scale_to_text)
 
     def _get_bg_color(self):
         return self._background_color
@@ -321,6 +332,12 @@ class Window_Object(Organized_Object):
         self.texture_invalid = True
         self.queue_scroll_operation = True
     texture_window_y = property(_get_texture_window_y, _set_texture_window_y)
+
+    def _get_hidden(self):
+        return self._hidden or self._parent_hidden
+    def _set_hidden(self, value):
+        self._hidden = value
+    hidden = property(_get_hidden, _set_hidden)
 
     def _get_parent_application(self):
         result = None
@@ -431,25 +448,28 @@ class Window_Object(Organized_Object):
                 instance.mousemotion(x_difference, y_difference, top_level=False)
                 instance.held = False
 
-    def hide(self):
+    def hide(self, parent_call=False):
         #assert not self.hidden
         pride.objects[self.sdl_window + "/SDL_User_Input"]._remove_from_coordinates(self.reference)
         self.texture_invalid = True
-        # prevents the following: B is hidden; Parent A uses hide(); A uses show(); B becomes un-hidden (should remain hidden)
-        self._old_hidden_flag = self.hidden
-        self.hidden = True
+        if parent_call:
+            self._parent_hidden = True
+        else:
+            self.hidden = True
         for child in self.children:
-            child.hide()
+            child.hide(True)
 
-    def show(self):
+    def show(self, parent_call=False):
         #assert self.hidden
-        pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
-        self.texture_invalid = True
-        #if toggle_hidden:
-        self.hidden = self._old_hidden_flag
-        self._old_hidden_flag = False
-        for child in self.children:
-            child.show()
+        if parent_call:
+            self._parent_hidden = False
+        else:
+            self.hidden = False
+        if not self.hidden:
+            pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
+            self.texture_invalid = True
+            for child in self.children:
+                child.show(True)
 
     def draw(self, figure, *args, **kwargs):
         """ Draws the specified figure on self. figure can be any shape supported

@@ -9,13 +9,9 @@ deal with certificates properly?
 
 changes
 -----
-changed tracking of window_objects old z coordinate
-fixed a bug where an item would get drawn multiple times
-changed toggle_hidden to hide/show
-fixed bug with hiding then showing an instance that has hidden child object(s)
-changed _update_coordinates arguments
-removed coordinate_tracker dictionary, simplified mouse handling logic
-added Dropdown_Field widget
+fixed bug with scale_to_text not being applied properly
+    - scale_to_text is now assigned as a default rather than a predefault
+fixed hide/show bug
 
 notes
 ----

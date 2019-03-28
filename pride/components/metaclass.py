@@ -403,40 +403,7 @@ class Site_Configuration(type):
 
 class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
                 Site_Configuration):
-    """ A metaclass that applies other metaclasses.
-
-        Also Produces class dictionaries keyed by equivalent values.
-        This makes mass attribute assignment slightly faster.
-
-        i.e.:
-
-            {'attribute' : True, 'attribute2' : True, 'attribute3' : True}
-
-        becomes:
-
-            {True: ('attribute', 'attribute1', 'attribute2')}
-
-        This is an optimization used to speed up Base.__init__"""
-
-    #metaclasses = [Documented, Instance_Tracker, Parser_Metaclass, Method_Hook]
-   # _metaclass = type("Metaclass",
-     #                 tuple(metaclasses),
-      #                {})
-    localized_dictionaries = ("predefaults", "mutable_defaults", "defaults")
-    def __new__(cls, name, bases, attributes):
-        new_class = super(Metaclass, cls).__new__(cls, name, bases, attributes)
-        for attribute_name in cls.localized_dictionaries:
-            dictionary = getattr(new_class, attribute_name)
-            new_dictionary = {}
-
-            for key, value in dictionary.items():
-                try:
-                    new_dictionary[(value, type(value))].append(key)
-                except KeyError:
-                    new_dictionary[(value, type(value))] = [key]
-
-            setattr(new_class, "_localized_" + attribute_name, new_dictionary)
-        return new_class
+    """ A metaclass that applies other metaclasses. """
 
     @classmethod
     def __prepare__(metaclass, cls, bases):

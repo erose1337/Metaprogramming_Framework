@@ -406,6 +406,7 @@ class Dropdown_Box(pride.gui.gui.Container):
         for entry in self.entries:
             if entry is not selection:
                 entry.hide()
+        self.call_callback()
 
 
 class Dropdown_Box_Entry(pride.gui.gui.Button):
@@ -420,7 +421,6 @@ class Dropdown_Box_Entry(pride.gui.gui.Button):
             dropdown_box.hide_menu(self)
             self.show()
         self.pack()
-        dropdown_box.call_callback()
 
 
 class Dropdown_Field(pride.gui.gui.Container):
@@ -432,7 +432,15 @@ class Dropdown_Field(pride.gui.gui.Container):
 
     def _get_selection(self):
         return pride.objects[self.dropdown_box].selection
-    selection = property(_get_selection)
+    def _set_selection(self, value):
+        dropdown_box = pride.objects[self.dropdown_box]
+        for entry in dropdown_box.entries:
+            if entry.selection_value == value:
+                entry.left_click(None)
+                return dropdown_box.selection
+        else:
+            raise ValueError("Invalid selection '{}'".format(value))
+    selection = property(_get_selection, _set_selection)
 
     def __init__(self, **kwargs):
         super(Dropdown_Field, self).__init__(**kwargs)
@@ -519,14 +527,21 @@ class Integer_Field_Entry(Field_Entry):
 class Field(pride.gui.gui.Container):
 
     defaults = {"field_name" : "", "write_field_method" : None,
-                "field_entry_type" : Field_Entry}
+                "field_entry_type" : Field_Entry, "orientation" : "side by side"}
     required_attributes = ("write_field_method", )
+    allowed_values = {"orientation" : ("side by side", "stacked")}
 
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)
+        if self.orientation == "side by side":
+            pack_mode = "left"
+            scale_to_text = True
+        else:
+            pack_mode = "top"
+            scale_to_text = False
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
-                             w_range=(0, 120), pack_mode="left")
-        field = self.create(self.field_entry_type, pack_mode="left",
+                             scale_to_text=scale_to_text, pack_mode=pack_mode)
+        field = self.create(self.field_entry_type, pack_mode=pack_mode,
                             write_field_method=lambda value: self.write_field_method(self.field_name, value))
 
 

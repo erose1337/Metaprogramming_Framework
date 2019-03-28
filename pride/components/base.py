@@ -282,16 +282,13 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         # the objects attribute keeps track of instances created by this self
         self.objects = {}
 
-        for value, attributes in itertools.chain(self._localized_predefaults.items(),
-                                                 self._localized_defaults.items()):
-            value = value[0]
-            for attribute in attributes:
-                setattr(self, attribute, value)
+        for attribute, value in itertools.chain(self.predefaults.items(),
+                                                 self.defaults.items()):
+            setattr(self, attribute, value)
 
-        for value_type, attributes in self._localized_mutable_defaults.items():
-            value_type = value_type[0]
-            for attribute in attributes:
-                setattr(self, attribute, value_type())
+        for attribute, value_type in self.mutable_defaults.items():
+            setattr(self, attribute, value_type())
+
         if kwargs:
             for key, value in kwargs.items():
                 setattr(self, key, value)

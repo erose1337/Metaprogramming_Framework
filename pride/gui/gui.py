@@ -238,7 +238,7 @@ class Window_Object(Organized_Object):
             Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored
         A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
     defaults = {"outline_width" : 1, "center_text" : True,
-                "background_color" : (0, 0, 0, 0), "text_background_color" : (0, 0, 0, 255),
+                "background_color" : (0, 0, 0, 255), "text_background_color" : (0, 0, 0, 255),
                 "color" : (15, 165, 25, 255), "text_color" : (15, 165, 25, 255),
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
                 "_ignore_click" : False, "hidden" : False, "movable" : False,

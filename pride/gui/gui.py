@@ -513,7 +513,7 @@ class Window_Object(Organized_Object):
 
     def pack(self):
         super(Window_Object, self).pack()
-        self.texture_invalid = True
+        pride.objects[self.sdl_window]._schedule_run()
         return
         children = list(self.children)
         top = [child for child in children if child.pack_mode == "top"]
@@ -564,8 +564,11 @@ class Window_Object(Organized_Object):
                 self._scroll_bar_w = None
 
     def delete(self):
+        assert not self.deleted, self
         pride.objects[self.sdl_window].remove_window_object(self)
         self.theme.delete()
+        if self.parent.reference != self.sdl_window:
+            self.parent.pack()
         super(Window_Object, self).delete()
 
     def deselect(self, mouse, next_active_object):

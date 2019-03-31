@@ -100,10 +100,13 @@ class SDL_Window(SDL_Component):
     def invalidate_object(self, instance):
        # if instance is self._ignore_invalidation:
        #     return
+        self._schedule_run()
+        self.redraw_objects.append(instance)
+
+    def _schedule_run(self):
         if not self.running:
             self.running = True
             self.run_instruction.execute(priority=self.priority)
-        self.redraw_objects.append(instance)
 
     def create(self, *args, **kwargs):
         kwargs.setdefault("sdl_window", self.reference)
@@ -301,7 +304,8 @@ class Window_Handler(pride.components.base.Base):
 class SDL_User_Input(scheduler.Process):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None}
-    mutable_defaults = {"_layer_tracker" : collections.OrderedDict}
+    mutable_defaults = {"_layer_tracker" : collections.OrderedDict,
+                        "always_on_top" : list}
 
     verbosity = {"handle_text_input" : "vvv"}
 
@@ -429,14 +433,19 @@ class SDL_User_Input(scheduler.Process):
         objects = pride.objects
         # find the top-most item such that the mouse position is within its area
         active_item = None
-        for layer_number, layer in reversed(self._layer_tracker.items()):
-            for item in layer:
-                assert item in objects
-                if pride.gui.point_in_area(objects[item].area, mouse_position):
-                    active_item = item
-                    break
-            if active_item:
+        for item in self.always_on_top:
+            if pride.gui.point_in_area(objects[item].area, mouse_position):
+                active_item = item
                 break
+        else:
+            for layer_number, layer in reversed(self._layer_tracker.items()):
+                for item in layer:
+                    assert item in objects
+                    if pride.gui.point_in_area(objects[item].area, mouse_position):
+                        active_item = item
+                        break
+                if active_item:
+                    break
 
         # deselect old active item
         old_active_item = self.active_item
@@ -553,7 +562,7 @@ class SDL_User_Input(scheduler.Process):
 class Renderer(SDL_Component):
 
     defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
-                "blendmode_flag" : sdl2.SDL_BLENDMODE_ADD, # changed from SDL_BLENDMODE_BLEND to try and make alpha blending work for slider puzzles
+                "blendmode_flag" : sdl2.SDL_BLENDMODE_BLEND, # SDL_BLENDMODE_ADD for slider puzzles?
                 "logical_size" : (800, 600)}
 
     def __init__(self, window, **kwargs):

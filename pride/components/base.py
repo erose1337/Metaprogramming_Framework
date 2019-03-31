@@ -383,12 +383,30 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         self.deleted = True
 
     def delete_children(self):
-        for child in list(self.children):
-            try:
-                child.delete()
-            except DeleteError:
-                if self.reference in child.references_to:
-                    raise
+        while any(self.objects.values()):
+            keys = self.objects.keys()
+            for key in keys:
+                values = self.objects[key]
+                while values:
+                    for child in values:
+                        child.delete()
+        assert not list(self.children)
+        #children = list(self.children)
+        #while children:
+        #    for child in children:
+        #        try:
+        #            child.delete()
+        #        except DeleteError:
+        #            if self.reference in child.references_to:
+        #                raise
+        #    children = list(self.children)
+
+#        for child in list(self.children):
+#            try:
+#                child.delete()
+#            except DeleteError:
+#                if self.reference in child.references_to:
+#                    raise
 
     def add(self, instance):
         """ usage: object.add(instance)

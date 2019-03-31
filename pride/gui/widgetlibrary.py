@@ -398,12 +398,14 @@ class Dropdown_Box(pride.gui.gui.Container):
     def show_menu(self):
         self.menu_open = True
         for entry in self.entries:
+            entry.always_on_top = True
             entry.show()
 
     def hide_menu(self, selection):
         self.menu_open = False
         self.selection = selection.selection_value
         for entry in self.entries:
+            entry.always_on_top = False
             if entry is not selection:
                 entry.hide()
         self.call_callback()
@@ -412,6 +414,16 @@ class Dropdown_Box(pride.gui.gui.Container):
 class Dropdown_Box_Entry(pride.gui.gui.Button):
 
     defaults = {"pack_mode" : "top", "selection_value" : None}
+    predefaults = {"_always_on_top" : False}
+
+    def _get_always_on_top(self):
+        return self._always_on_top
+    def _set_always_on_top(self, value):
+        if value:
+            pride.objects[self.sdl_window].user_input.always_on_top.append(self.reference)
+        else:
+            pride.objects[self.sdl_window].user_input.always_on_top.remove(self.reference)
+    always_on_top = property(_get_always_on_top, _set_always_on_top)
 
     def left_click(self, mouse):
         dropdown_box = self.parent
@@ -421,6 +433,13 @@ class Dropdown_Box_Entry(pride.gui.gui.Button):
             dropdown_box.hide_menu(self)
             self.show()
         self.pack()
+
+    def delete(self):
+        try:
+            pride.objects[self.sdl_window].user_input.always_on_top.remove(self.reference)
+        except ValueError:
+            pass
+        super(Dropdown_Box_Entry, self).delete()
 
 
 class Dropdown_Field(pride.gui.gui.Container):
@@ -448,10 +467,15 @@ class Dropdown_Field(pride.gui.gui.Container):
             pack_mode = "left"
         else:
             pack_mode = "top"
+        if not self.callback:
+            self.callback = (self.reference, "on_dropdown_selection")
         self.create("pride.gui.gui.Button", text=self.field_name, pack_mode=pack_mode)
         self.dropdown_box = self.create("pride.gui.widgetlibrary.Dropdown_Box",
                                         pack_mode=pack_mode, callback=self.callback,
                                         entry_types=self.entry_types).reference
+
+    def on_dropdown_selection(self, selection):
+        pass
 
 
 class Spin_Field_Entry(pride.gui.gui.Container):
@@ -482,13 +506,14 @@ class Spin_Field_Entry(pride.gui.gui.Container):
 
 class Spin_Field(pride.gui.gui.Container):
 
-    defaults = {"field_name" : '', "on_increment" : None, "on_decrement" : None,
-                "initial_value" : '', "field_entry_type" : Spin_Field_Entry,
-                "write_field_method" : None}
-    required_attributes = ("field_name", "on_increment", "on_decrement")
+    defaults = {"field_name" : '',  "initial_value" : '',
+                "field_entry_type" : Spin_Field_Entry, "write_field_method" : None}
+    required_attributes = ("field_name", )
 
     def __init__(self, **kwargs):
         super(Spin_Field, self).__init__(**kwargs)
+        if not getattr(self, "on_increment", False) or not getattr(self, "on_decrement", False):
+            raise ValueError("on_increment/on_decrement not supplied to Spin_Field")
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
                              pack_mode="top")
         kwargs = {"pack_mode" : "top", "on_increment" : self.on_increment,
@@ -551,16 +576,142 @@ class New_Tab_Button(Method_Button):
                 "scale_to_text" : False}
 
 
+class _Tab_Button(pride.gui.gui.Button):
+
+    def left_click(self, mouse):
+        self.parent.left_click(mouse)
+
+
 class Tab_Button(Method_Button):
 
-    defaults = {"pack_mode" : "left"}
+    defaults = {"pack_mode" : "left", "scale_to_text" : False,
+                "include_delete_button" : True}
+#    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete",
+#                "scale_to_text" : True}
+
+    def __init__(self, **kwargs):
+        super(Tab_Button, self).__init__(**kwargs)
+        self.text_display = self.create(_Tab_Button, pack_mode="left")
+        if self.include_delete_button:
+            self.create(Method_Button, pack_mode="right", scale_to_text=True,
+                        target=self.reference, method="delete_tab", text='x')
+        self.set_text(self.text)
+        self.text = ''
+
+    def delete_tab(self):
+        # delete the tab
+        # delete the associated window
+        # remove the tab from tab_bar.tabs
+        # select the previous tab in tab_bar if possible
+        tabs = self.parent.tabs
+        self.delete()
+        pride.objects[self.window].delete()
+        tabs.remove(self.reference)
+        try:
+            pride.objects[tabs[-1]].left_click(None)
+        except IndexError:
+            pass
+
+
+    def set_text(self, text):
+        self.text_display.text = text
+
+    def delete(self):
+        del self.text_display
+        super(Tab_Button, self).delete()
+
+    def left_click(self, mouse):
+        self.parent.parent.select_tab(self.reference)
 
 
 class Tab_Bar(pride.gui.gui.Container):
 
-    defaults = {"h_range" : (0, 40)}
+    defaults = {"h_range" : (0, 40), "pack_mode" : "top", "label" : '',
+                "tab_type" : Tab_Button}
+    mutable_defaults = {"tabs" : list}
 
     def __init__(self, **kwargs):
         super(Tab_Bar, self).__init__(**kwargs)
-        self.create(New_Tab_Button, target=self.target, method=self.method,
-                    text='+')
+        self.initialize_tabs()
+
+    def initialize_tabs(self):
+        if self.label:
+            self.create("pride.gui.gui.Button", text=self.label,
+                        scale_to_text=True, pack_mode="left")
+        self.create(New_Tab_Button, text='+', target=self.parent.reference, method="new_tab")
+
+    def new_tab(self, **kwargs):
+        tab = self.create(self.tab_type, **kwargs).reference
+        self.tabs.append(tab)
+        return tab
+
+
+class Tab_Switcher_Bar(Tab_Bar):
+
+    defaults = {"tab_types" : tuple()}
+
+    def initialize_tabs(self):
+        if self.label:
+            self.create("pride.gui.gui.Button", text=self.label,
+                        scale_to_text=True, pack_mode="left")
+        for tab_type in self.tab_types:
+            self.tab_type = tab_type
+            self.new_tab()
+
+
+class Tab_Switching_Window(pride.gui.gui.Window):
+
+    defaults = {"tab_bar_type" : Tab_Switcher_Bar, "tab_types" : tuple(),
+                "tab_bar_label" : '', "window_types" : tuple()}
+
+    def __init__(self, **kwargs):
+        super(Tab_Switching_Window, self).__init__(**kwargs)
+        self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
+                                   tab_types=self.tab_types)
+        self.create_windows()
+
+    def create_windows(self):
+        tabs = self.tab_bar.tabs
+        for index, window_type in reversed(enumerate(self.window_types)):
+            window = self.create(window_type, tab=tabs[index])
+            tab.window = window.reference
+            if index:
+                window.hide()
+
+    def select_tab(self, selected_tab):
+        for tab_reference in self.tab_bar.tabs:
+            if tab_reference != selected_tab:
+                pride.objects[pride.objects[tab_reference].window].hide()
+            else:
+                window = pride.objects[pride.objects[selected_tab].window]
+                if window.hidden:
+                    window.show()
+        self.pack()
+
+
+class Tabbed_Window(pride.gui.gui.Window):
+
+    defaults = {"tab_bar_type" : Tab_Bar, "tab_type" : Tab_Button,
+                "tab_bar_label" : '', "window_type" : "pride.gui.gui.Window"}
+
+    def __init__(self, **kwargs):
+        super(Tabbed_Window, self).__init__(**kwargs)
+        self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
+                                   tab_type=self.tab_type)
+
+    def new_tab(self, window_kwargs, tab_kwargs):
+        window = self.create(self.window_type, **window_kwargs)
+        tab_kwargs.setdefault("window", window.reference)
+        new_tab = self.tab_bar.new_tab(**tab_kwargs)
+        window.tab = new_tab
+        self.select_tab(new_tab)
+
+    def select_tab(self, selected_tab):
+        for tab_reference in self.tab_bar.tabs:
+            if tab_reference != selected_tab:
+                pride.objects[pride.objects[tab_reference].window].hide()
+            else:
+                window = pride.objects[pride.objects[selected_tab].window]
+                if window.hidden:
+                    window.show()
+        self.pack()

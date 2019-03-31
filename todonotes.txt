@@ -9,9 +9,8 @@ deal with certificates properly?
 
 changes
 -----
-fixed bug with scale_to_text not being applied properly
-    - scale_to_text is now assigned as a default rather than a predefault
-fixed hide/show bug
+fixed bug where a dropdown box could not be clicked on (added always_on_top to SDL_User_Input)
+added Tabbed_Window/Tab_Switching_Window
 
 notes
 ----

@@ -56,6 +56,7 @@ class Organizer(base.Base):
             del self.pack_queue[:]
             for item in pack_queue:
                 self.pack_children(item, list(item.children))
+                item._pack_scheduled = False
 
     def pack_children(self, parent, children):
     #    parent.alert("Packing children {}".format(children))
@@ -72,6 +73,7 @@ class Organizer(base.Base):
                 except KeyError:
                     raise NotImplementedError("Unsupported pack mode '{}'".format(child.pack_mode))
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
+        assert len(main) in (0, 1), main
         area = parent.area
         z = parent.z + 1
 
@@ -89,6 +91,7 @@ class Organizer(base.Base):
         for child in children:
         #    self.unschedule_pack(child)
             assert child not in self.pack_queue
+            #child._pack_scheduled = False
             self.pack_children(child, list(child.children))
 
     def pack_horizontals(self, area, z, left, main, right, top_height, bottom_height):
@@ -218,7 +221,8 @@ class Blank_Theme(Theme):
 
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
 
-    defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : ''}
+    defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
+                "_pack_scheduled" : False}
 
     predefaults = {"sdl_window" : ''}
 
@@ -226,8 +230,16 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
     verbosity = {"packed" : "packed"}
 
     def pack(self):
-        organizer = objects[self.sdl_window + "/Organizer"]
-        organizer.schedule_pack(self.parent)
+        parent = self.parent
+        pack_scheduled = False
+        while parent.reference != self.sdl_window:
+            if parent._pack_scheduled:
+                pack_scheduled = True
+            else:
+                parent = parent.parent
+        if not pack_scheduled:
+            objects[self.sdl_window + "/Organizer"].schedule_pack(parent)
+            parent._pack_scheduled = True
 
 
 class Window_Object(Organized_Object):
@@ -250,14 +262,28 @@ class Window_Object(Organized_Object):
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
                    "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
-                   "queue_scroll_operation" : False,
-                   "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False}
+                   "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
+                   "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
+                   "_always_on_top" : False}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list}
     verbosity = {"press" : "vv", "release" : "vv", "packed" : "packed"}
 
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
+
+    def _get_always_on_top(self):
+        return self._always_on_top
+    def _set_always_on_top(self, value):
+        self._always_on_top = value
+        if value:
+            pride.objects[self.sdl_window].user_input.always_on_top.append(self.reference)
+        else:
+            try:
+                pride.objects[self.sdl_window].user_input.always_on_top.remove(self.reference)
+            except ValueError:
+                pass
+    always_on_top = property(_get_always_on_top, _set_always_on_top)
 
     def _get_texture_invalid(self):
         return self._texture_invalid
@@ -281,8 +307,11 @@ class Window_Object(Organized_Object):
             assert self.sdl_window
             w, h = objects[self.sdl_window].renderer.get_text_size(self.area, value)
             w += 4
+            if not self._backup_w_range:
+                self._backup_w_range = self.w_range
             self.w_range = (0, w)
-            #self.w = w
+        elif self._backup_w_range:
+            self.w_range = self._backup_w_range
         self.texture_invalid = True
     text = property(_get_text, _set_text)
 
@@ -290,10 +319,9 @@ class Window_Object(Organized_Object):
         return self._scale_to_text
     def _set_scale_to_text(self, value):
         self._scale_to_text = value
-        if value:
-            # If text and scale_to_text are set as kwargs, there is no priority to set scale_to_text first
-            # if text is set first, then _set_text wouldn't scale w properly
-            self.text = self.text # triggers _set_text descriptor;
+        # If text and scale_to_text are set as kwargs, there is no priority to set scale_to_text first
+        # if text is set first, then _set_text wouldn't scale w properly
+        self.text = self.text # triggers _set_text descriptor;
     scale_to_text = property(_get_scale_to_text, _set_scale_to_text)
 
     def _get_bg_color(self):
@@ -374,6 +402,7 @@ class Window_Object(Organized_Object):
         self.theme = self.create(self.theme_type, wrapped_object=self)
         self._children.remove(self.theme)
         pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
+        self.pack()
 
     def create(self, *args, **kwargs):
         kwargs.setdefault('z', self.z + 1)
@@ -450,7 +479,10 @@ class Window_Object(Organized_Object):
 
     def hide(self, parent_call=False):
         #assert not self.hidden
-        pride.objects[self.sdl_window + "/SDL_User_Input"]._remove_from_coordinates(self.reference)
+        try: # not sure if this is the right way to deal with this happening, but it appears to work
+            pride.objects[self.sdl_window + "/SDL_User_Input"]._remove_from_coordinates(self.reference)
+        except ValueError:
+            pass
         self.texture_invalid = True
         if parent_call:
             self._parent_hidden = True

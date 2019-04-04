@@ -23,10 +23,17 @@ sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
 def instruction_generator(instructions):
+    always_on_top = []
     for layer in instructions.itervalues():
         for window_object in layer:
-            for operation in window_object._draw_operations:
-                yield operation
+            if window_object.always_on_top:
+                always_on_top.append(window_object)
+            else:
+                for operation in window_object._draw_operations:
+                    yield operation
+    for window_object in always_on_top:
+        for operation in window_object._draw_operations:
+            yield operation
     #for layer in instructions.itervalues():
     #    for window_object in (item for item in layer if item.scroll_instructions):
     #        for operation in window_object.scroll_instructions:
@@ -118,12 +125,18 @@ class SDL_Window(SDL_Component):
         return instance
 
     def remove_window_object(self, window_object):
-        self.user_input._remove_from_coordinates(window_object.reference)
+        try:
+            self.user_input._remove_from_coordinates(window_object.reference)
+        except ValueError:
+            pass
+        try:
+            self.user_input.always_on_top.remove(window_object)
+        except ValueError:
+            pass
         try:
             self.redraw_objects.remove(window_object)
         except ValueError:
             pass
-
         try:
             self.drawing_instructions[window_object.z].remove(window_object)
         except (KeyError, ValueError):

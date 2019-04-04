@@ -9,8 +9,9 @@ deal with certificates properly?
 
 changes
 -----
-fixed bug where a dropdown box could not be clicked on (added always_on_top to SDL_User_Input)
-added Tabbed_Window/Tab_Switching_Window
+made dropdown boxes auto-hide when deselected
+fixed scale_to_text bug
+draw always_on_top objects on top of all other objects
 
 notes
 ----

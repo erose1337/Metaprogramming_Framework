@@ -196,7 +196,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # the defaults attribute sets what attributes new instances will initialize with
     # they can be overridden when initialized an object via keyword arguments
     # PITFALL: do not use mutable objects as a default. use mutable_defaults instead
-    defaults = {"deleted" : False, "dont_save" : False, "parse_args" : False,
+    defaults = {"dont_save" : False, "parse_args" : False,
                 "replace_reference_on_load" : True,
                 "startup_components" : tuple()}
 
@@ -215,7 +215,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # because dictionaries are unordered, the order in which defaults
     # are assigned cannot be guaranteed.
     # predefaults are guaranteed to be assigned before defaults.
-    predefaults = {}
+    predefaults = {"deleted" : False}
 
     # verbosity is an inherited class attribute used to store the verbosity
     # level of a particular message.
@@ -307,6 +307,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                     if not getattr(self, attribute):
                         raise ArgumentError("{}: Required attribute '{}' has falsey value".format(self.reference, attribute))
                 except AttributeError:
+                    if hasattr(self, attribute):
+                        raise
                     import pprint
                     pprint.pprint(kwargs)
                     raise ArgumentError("{}: Required attribute '{}' not assigned".format(self.reference, attribute))

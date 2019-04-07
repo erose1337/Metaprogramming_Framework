@@ -8,6 +8,8 @@ Instruction = pride.Instruction
 
 import sdl2
 
+FIELD_BACKGROUND_COLOR = (225, 225, 225, 200)
+
 class Attribute_Modifier_Button(gui.Button):
 
     defaults = {"amount" : 0, "operation" : "",  "target" : None}
@@ -159,15 +161,17 @@ class Task_Bar(gui.Container):
 
 class Text_Box(gui.Container):
 
-    defaults = {"h" : 16, "pack_mode" : "left",
+    defaults = {"h" : 16, "pack_mode" : "left", "background_color" : FIELD_BACKGROUND_COLOR,
                 "allow_text_edit" : True,  "editing" : False}
 
     def select(self, mouse):
+        super(Text_Box, self).select(mouse)
         self.alert("Turning text input on", level='vv')
         self.allow_text_edit = True
         sdl2.SDL_StartTextInput()
 
     def deselect(self, mouse, next_active_object):
+        super(Text_Box, self).deselect(mouse, next_active_object)
         self.alert("Disabling text input", level='vv')
         self.allow_text_edit = False
         sdl2.SDL_StopTextInput()
@@ -423,7 +427,8 @@ class Dropdown_Box(pride.gui.gui.Container):
 
 class Dropdown_Box_Entry(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : "top", "selection_value" : None}
+    defaults = {"pack_mode" : "top", "selection_value" : None,
+                "background_color" : FIELD_BACKGROUND_COLOR}
 
     def left_click(self, mouse, _deselect=False):
         dropdown_box = self.parent
@@ -485,7 +490,7 @@ class Dropdown_Field(pride.gui.gui.Container):
 
 class Spin_Field_Entry(pride.gui.gui.Container):
 
-    defaults = {"text" : '0'}
+    defaults = {"text" : '0', "background_color" : FIELD_BACKGROUND_COLOR}
 
     def __init__(self, **kwargs):
         super(Spin_Field_Entry, self).__init__(**kwargs)
@@ -530,7 +535,7 @@ class Spin_Field(pride.gui.gui.Container):
 
 class Field_Entry(Text_Box):
 
-    defaults = {"write_field_method" : None}
+    defaults = {"write_field_method" : None, "background_color" : FIELD_BACKGROUND_COLOR}
     required_attributes = ("write_field_method", )
 
     def deselect(self, mouse, next_active_object):
@@ -543,6 +548,8 @@ class Field_Entry(Text_Box):
 
 
 class Integer_Field_Entry(Field_Entry):
+
+    defaults = {"background_color" : FIELD_BACKGROUND_COLOR}
 
     def text_entry(self, text):
         if self.allow_text_edit:
@@ -575,6 +582,45 @@ class Field(pride.gui.gui.Container):
                             write_field_method=lambda value: self.write_field_method(self.field_name, value))
 
 
+class Status_Indicator_Theme(pride.gui.gui.Theme):
+
+    def draw_texture(self):
+        x, y, w, h = area = self.area
+        if not self._dont_draw:
+            self.draw("fill", (x, y, w, h), color=self.background_color)
+        for thickness in range(5):
+            self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
+                      color=(0, 0, 0, 255 / (thickness + 1)))
+
+
+class Status_Indicator(pride.gui.gui.Container):
+
+    defaults = {"w_range" : (0, 10), "pack_mode" : "left",
+                "top_color" : (185, 85, 85, 235), "color" : (125, 105, 95, 255),
+                "middle_color" : (85, 85, 185, 235), "_theme_type" : Status_Indicator_Theme,
+                "bottom_color" : (85, 185, 85, 255), "theme_type" : "pride.gui.gui.Spacer_Theme",
+                "_dont_draw" : True}
+
+    def __init__(self, **kwargs):
+        super(Status_Indicator, self).__init__(**kwargs)
+        self.create("pride.gui.gui.Container", pack_mode="top",
+                    theme_type="pride.gui.gui.Spacer_Theme")
+        self.status_light = self.create("pride.gui.gui.Container", pack_mode="top",
+                                        background_color=self.middle_color, theme_type=self._theme_type,
+                                        _dont_draw=True).reference
+        self.create("pride.gui.gui.Container", pack_mode="top",
+                    theme_type="pride.gui.gui.Spacer_Theme")
+
+    def enable_indicator(self):
+        pride.objects[self.status_light]._dont_draw = False
+
+    def disable_indicator(self):
+        pride.objects[self.status_light]._dont_draw = True
+
+    def change_color(self, color):
+        pride.objects[self.status_light].background_color = color
+
+
 class New_Tab_Button(Method_Button):
 
     defaults = {"pack_mode" : "left", "w_range" : (0, 40),
@@ -594,26 +640,41 @@ class _Editable_Tab_Button(Text_Box):
         self.parent.left_click(mouse)
 
 
+class _Text_Only_Theme(pride.gui.gui.Theme):
+
+    def draw_texture(self):
+        if self.text:
+            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
+            self.draw("text", self.area, self.text, w=self.w if self.wrap_text else None,
+                      bg_color=self.text_background_color, color=self.text_color,
+                      center_text=self.center_text)
+
+
 class Tab_Button(Method_Button):
 
     defaults = {"pack_mode" : "left", "scale_to_text" : False,
-                "include_delete_button" : True, "editable" : False,
-                "_tab_button_type" : _Tab_Button}
-#    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete",
-#                "scale_to_text" : True}
+                "include_delete_button" : True,
+                "_tab_button_type" : _Tab_Button, "w_range" : (0, 200),
+                "allow_text_edit" : True, "editing" : False}
+    predefaults = {"_editable" : False}
+
+    def _get_editable(self):
+        return self._editable
+    def _set_editable(self, value):
+        if not value and self.allow_text_edit:
+            self.allow_text_edit = False
+            sdl2.SDL_StopTextInput()
+        self._editable = value
+    editable = property(_get_editable, _set_editable)
 
     def __init__(self, **kwargs):
         super(Tab_Button, self).__init__(**kwargs)
-        if self.editable:
-            self.text_display = self.create(_Editable_Tab_Button, pack_mode="left")
-        else:
-            self.text_display = self.create(_Tab_Button, pack_mode="left")
-
         if self.include_delete_button:
             self.create(Method_Button, pack_mode="right", scale_to_text=True,
-                        target=self.reference, method="delete_tab", text='x')
-        self.set_text(self.text)
-        self.text = ''
+                        target=self.reference, method="delete_tab", text='x',
+                        theme_type=_Text_Only_Theme, w_range=(0, 10))
+        indicator = self.create(Status_Indicator)
+        self.indicator = indicator.reference
 
     def delete_tab(self):
         # delete the tab
@@ -632,15 +693,25 @@ class Tab_Button(Method_Button):
             if tabs:
                 raise
 
-    def set_text(self, text):
-        self.text_display.text = text
-
-    def delete(self):
-        del self.text_display
-        super(Tab_Button, self).delete()
-
     def left_click(self, mouse):
         self.parent.parent.select_tab(self.reference)
+
+    def select(self, mouse):
+        super(Tab_Button, self).select(mouse)
+        if self.editable:
+            self.alert("Turning text input on", level='vv')
+            self.allow_text_edit = True
+            sdl2.SDL_StartTextInput()
+
+    def deselect(self, mouse, next_active_object):
+        super(Tab_Button, self).deselect(mouse, next_active_object)
+        if self.editable:
+            self.alert("Disabling text input", level='vv')
+            self.allow_text_edit = False
+            sdl2.SDL_StopTextInput()
+
+    def handle_return(self):
+        self.deselect(None, None)
 
 
 class Tab_Bar(pride.gui.gui.Container):
@@ -675,7 +746,7 @@ class Tab_Switcher_Bar(Tab_Bar):
                         scale_to_text=True, pack_mode="left")
         for tab_type in self.tab_types:
             self.tab_type = tab_type
-            self.new_tab()
+            self.new_tab(scale_to_text=False)
 
 
 class Tab_Switching_Window(pride.gui.gui.Window):
@@ -696,15 +767,25 @@ class Tab_Switching_Window(pride.gui.gui.Window):
             tab.window = window.reference
             if index:
                 window.hide()
+                tab.indicator.disable_indicator()
+            else:
+                tab.indicator.enable_indicator()
 
     def select_tab(self, selected_tab):
         for tab_reference in self.tab_bar.tabs:
+            tab = pride.objects[tab_reference]
             if tab_reference != selected_tab:
-                pride.objects[pride.objects[tab_reference].window].hide()
+                pride.objects[tab.window].hide()
+                pride.objects[tab.indicator].disable_indicator()
+                #pride.objects[tab.indicator].hide()
             else:
-                window = pride.objects[pride.objects[selected_tab].window]
+                window = pride.objects[tab.window]
                 if window.hidden:
                     window.show()
+                indicator = pride.objects[tab.indicator]
+                indicator.enable_indicator()
+                #if indicator.hidden:
+                #    indicator.show()
         self.pack()
 
 
@@ -728,13 +809,18 @@ class Tabbed_Window(pride.gui.gui.Window):
         new_tab = self.tab_bar.new_tab(**tab_kwargs)
         window.tab = new_tab
         self.select_tab(new_tab)
+        return (new_tab, window)
 
     def select_tab(self, selected_tab):
         for tab_reference in self.tab_bar.tabs:
+            tab = pride.objects[tab_reference]
             if tab_reference != selected_tab:
-                pride.objects[pride.objects[tab_reference].window].hide()
+                pride.objects[tab.window].hide()
+                pride.objects[tab.indicator].disable_indicator()
             else:
-                window = pride.objects[pride.objects[selected_tab].window]
+                window = pride.objects[tab.window]
                 if window.hidden:
                     window.show()
+                indicator = pride.objects[tab.indicator]
+                indicator.enable_indicator()
         self.pack()

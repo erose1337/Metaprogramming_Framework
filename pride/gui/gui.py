@@ -12,10 +12,7 @@ import sdl2
 import sdl2.ext
 SDL_Rect = sdl2.SDL_Rect
 
-R, G, B, A = 0, 80, 255, 30
-
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
-_OPPOSING_SIDE = {"left" : "right", "right" : "left", "top" : "bottom", "bottom" : "top"}
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Python/SDL_Window/Renderer/SpriteFactory",
@@ -56,7 +53,7 @@ class Organizer(base.Base):
             del self.pack_queue[:]
             for item in pack_queue:
                 self.pack_children(item, list(item.children))
-                item._pack_scheduled = False
+                item._pack_scheduled2 = item._pack_scheduled = False
 
     def pack_children(self, parent, children):
     #    parent.alert("Packing children {}".format(children))
@@ -91,6 +88,8 @@ class Organizer(base.Base):
         for child in children:
         #    self.unschedule_pack(child)
             assert child not in self.pack_queue
+            assert not child._pack_scheduled
+            child._pack_scheduled2 = False
             #child._pack_scheduled = False
             self.pack_children(child, list(child.children))
 
@@ -99,13 +98,23 @@ class Organizer(base.Base):
         left_main_right = left + main + right
         left_main_right_len = len(left_main_right)
         available_space = w
-        spacing = available_space / left_main_right_len
-        small_items = [child for child in left_main_right if child.w_range[1] < spacing]
+        _spacing = available_space / left_main_right_len
+        small_items = [child for child in left_main_right if child.w_range[1] < _spacing]
         if small_items:
-            spacing += sum(spacing - item.w_range[1] for item in small_items) / ((len(left_main_right) - len(small_items)) or 1)
-            extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
-                        sum(child.w_range[1] for child in small_items))
+            while True: # extra space caused by small items can make spacing larger and make items that were not small become small
+                spacing = _spacing + sum(_spacing - item.w_range[1] for item in small_items) / ((len(left_main_right) - len(small_items)) or 1)
+
+                extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
+                            sum(child.w_range[1] for child in small_items))
+
+                new_small_items = [child for child in left_main_right if child.w_range[1] < spacing and
+                                child not in small_items]
+                if new_small_items:
+                    small_items += new_small_items
+                else:
+                    break
         else:
+            spacing = _spacing
             extra = w - (spacing * left_main_right_len)
         assert extra >= 0, extra
 
@@ -147,13 +156,22 @@ class Organizer(base.Base):
         top_main_bottom = top + main + bottom
         top_main_bottom_len = len(top_main_bottom)
         available_space = h
-        spacing = available_space / (top_main_bottom_len or 1)
-        small_items = [child for child in top_main_bottom if child.h_range[1] < spacing]
+
+        _spacing = available_space / (top_main_bottom_len or 1)
+        small_items = [child for child in top_main_bottom if child.h_range[1] < _spacing]
         if small_items:
-            spacing += sum(spacing - item.h_range[1] for item in small_items) / ((top_main_bottom_len - len(small_items)) or 1)
-            extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
-                        sum(child.h_range[1] for child in small_items))
+            while True:
+                spacing = _spacing + sum(_spacing - item.h_range[1] for item in small_items) / ((top_main_bottom_len - len(small_items)) or 1)
+                extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
+                            sum(child.h_range[1] for child in small_items))
+                new_small_items = [child for child in top_main_bottom if child.h_range[1] < spacing and
+                                   child not in small_items]
+                if new_small_items:
+                    small_items += new_small_items
+                else:
+                    break
         else:
+            spacing = _spacing
             extra = h - (spacing * top_main_bottom_len)
         assert extra >= 0, extra
 
@@ -203,9 +221,12 @@ class Minimal_Theme(Theme):
 
     def draw_texture(self):
         assert not self.hidden
-        area = self.area
+        x, y, w, h = area = self.area
         self.draw("fill", area, color=self.background_color)
-        self.draw("rect_width", area, color=self.color, width=self.outline_width)
+        #self.draw("rect_width", area, color=self.color, width=self.outline_width)
+        for thickness in range(5):
+            self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
+                      color=(0, 0, 0, 255 / (thickness + 1)))
         if self.text:
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
@@ -219,27 +240,35 @@ class Blank_Theme(Theme):
         self.draw("fill", self.area, color=(0, 0, 0))
 
 
+class Spacer_Theme(Theme):
+
+    def draw_texture(self):
+        return
+
+
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
 
     defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
                 "_pack_scheduled" : False}
 
-    predefaults = {"sdl_window" : ''}
+    predefaults = {"sdl_window" : '', "_pack_scheduled2" : False}
 
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
 
     def pack(self):
-        parent = self.parent
-        pack_scheduled = False
-        while parent.reference != self.sdl_window:
-            if parent._pack_scheduled:
-                pack_scheduled = True
-            else:
-                parent = parent.parent
-        if not pack_scheduled:
-            objects[self.sdl_window + "/Organizer"].schedule_pack(parent)
-            parent._pack_scheduled = True
+        if not self._pack_scheduled2:
+            parent = self.parent
+            pack_scheduled = False
+            while parent.reference != self.sdl_window:
+                if parent._pack_scheduled:
+                    pack_scheduled = True
+                else:
+                    parent = parent.parent
+            if not pack_scheduled:
+                objects[self.sdl_window + "/Organizer"].schedule_pack(parent)
+                parent._pack_scheduled = True
+                self._pack_scheduled2 = True
 
 
 class Window_Object(Organized_Object):
@@ -250,8 +279,8 @@ class Window_Object(Organized_Object):
             Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored
         A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
     defaults = {"outline_width" : 1, "center_text" : True,
-                "background_color" : (0, 0, 0, 255), "text_background_color" : (0, 0, 0, 255),
-                "color" : (15, 165, 25, 255), "text_color" : (15, 165, 25, 255),
+                "background_color" : (180, 180, 180, 200), "text_background_color" : (0, 0, 0, 255),
+                "color" : (110, 110, 110, 255), "text_color" : (45, 45, 45, 255),
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
@@ -288,7 +317,7 @@ class Window_Object(Organized_Object):
     def _get_texture_invalid(self):
         return self._texture_invalid
     def _set_texture_invalid(self, value):
-        if not self._texture_invalid and value:
+        if not self._texture_invalid and value and not self.deleted:
           #  assert self.sdl_window
             objects[self.sdl_window].invalidate_object(self)
         self._texture_invalid = value
@@ -307,10 +336,12 @@ class Window_Object(Organized_Object):
             assert self.sdl_window
             w, h = objects[self.sdl_window].renderer.get_text_size(self.area, value)
             w += 4
+        #    print("Scaling to text {} ({}) ({})".format(value, w, self.texture_invalid))
             if not self._backup_w_range:
                 self._backup_w_range = self.w_range
             self.w_range = (0, w)
-        elif self._backup_w_range:
+            #self.w = w
+        elif self._backup_w_range and self._backup_w_range != self.w_range:
             self.w_range = self._backup_w_range
         self.texture_invalid = True
     text = property(_get_text, _set_text)
@@ -600,7 +631,8 @@ class Window_Object(Organized_Object):
         pride.objects[self.sdl_window].remove_window_object(self)
         self.theme.delete()
         if self.parent.reference != self.sdl_window:
-            self.parent.pack()
+            #self.parent.pack()
+            self.pack()
         super(Window_Object, self).delete()
 
     def deselect(self, mouse, next_active_object):

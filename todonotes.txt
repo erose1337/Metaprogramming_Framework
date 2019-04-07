@@ -9,9 +9,9 @@ deal with certificates properly?
 
 changes
 -----
-made dropdown boxes auto-hide when deselected
-fixed scale_to_text bug
-draw always_on_top objects on top of all other objects
+fixed organizer bug
+fixed deletion bug with gui objects and texture_invalid flag
+
 
 notes
 ----

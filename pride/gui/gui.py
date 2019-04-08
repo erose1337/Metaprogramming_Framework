@@ -224,14 +224,15 @@ class Minimal_Theme(Theme):
         x, y, w, h = area = self.area
         self.draw("fill", area, color=self.background_color)
         #self.draw("rect_width", area, color=self.color, width=self.outline_width)
+        r, g, b = self.shadow_color[:3]
         for thickness in range(5):
             self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
-                      color=(0, 0, 0, 255 / (thickness + 1)))
+                      color=(r, g, b, 255 / (thickness + 1)))
         if self.text:
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text)
+                      center_text=self.center_text, hide_excess_text=self.hide_excess_text)
 
 
 class Blank_Theme(Theme):
@@ -286,7 +287,8 @@ class Window_Object(Organized_Object):
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.gui.Minimal_Theme",
-                "_selected" : False}
+                "_selected" : False, "hide_excess_text" : True,
+                "shadow_color" : (0, 0, 0)}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
@@ -324,8 +326,11 @@ class Window_Object(Organized_Object):
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
 
     def _on_set(self, coordinate, value):
-        if not self.texture_invalid and coordinate in ('z', 'x', 'y', 'w', 'h', 'r', 'g', 'b', 'a'):
+        if not self.texture_invalid:# and coordinate in ('z', 'x', 'y', 'w', 'h', 'r', 'g', 'b', 'a'):
             self.texture_invalid = True
+        #if self.scale_to_text and coordinate == 'w' and self.w_range[1] > value:
+        #    self._backup_text = self.text
+
         super(Window_Object, self)._on_set(coordinate, value)
 
     def _get_text(self):
@@ -335,7 +340,7 @@ class Window_Object(Organized_Object):
         if value and self.scale_to_text:
             assert self.sdl_window
             w, h = objects[self.sdl_window].renderer.get_text_size(self.area, value)
-            w += 4
+            w += 11
         #    print("Scaling to text {} ({}) ({})".format(value, w, self.texture_invalid))
             if not self._backup_w_range:
                 self._backup_w_range = self.w_range

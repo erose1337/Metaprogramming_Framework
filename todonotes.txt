@@ -9,9 +9,6 @@ deal with certificates properly?
 
 changes
 -----
-fixed organizer bug
-fixed deletion bug with gui objects and texture_invalid flag
-
 
 notes
 ----

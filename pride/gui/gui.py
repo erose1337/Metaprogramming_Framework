@@ -5,6 +5,7 @@ import pride
 import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
+import pride.gui.color
 import pride.gui.sdllibrary
 Instruction = pride.Instruction
 
@@ -13,6 +14,12 @@ import sdl2.ext
 SDL_Rect = sdl2.SDL_Rect
 
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
+DEFAULT_COLORS = {"background" : pride.gui.color.Color(180, 180, 180, 200),
+                  "shadow" : pride.gui.color.Color(0, 0, 0, 255),
+                  "shadow_thickness" : 5, "shadow_fade_scalar" : 2,
+                  "text_background" : pride.gui.color.Color(0, 0, 0, 255),
+                  "text" : pride.gui.color.Color(45, 45, 45, 255),
+                  "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Python/SDL_Window/Renderer/SpriteFactory",
@@ -213,25 +220,37 @@ class Organizer(base.Base):
 
 class Theme(pride.base.Wrapper):
 
+    theme_colors = DEFAULT_COLORS.copy()
+
     def draw_texture(self):
         raise NotImplementedError
 
 
 class Minimal_Theme(Theme):
 
+    theme_colors = DEFAULT_COLORS.copy()
+
     def draw_texture(self):
         assert not self.hidden
         x, y, w, h = area = self.area
+        if self.use_custom_colors:
+            color = self.colors
+        else:
+            color = self.theme_colors
+
         self.draw("fill", area, color=self.background_color)
-        #self.draw("rect_width", area, color=self.color, width=self.outline_width)
-        r, g, b = self.shadow_color[:3]
-        for thickness in range(5):
-            self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
-                      color=(r, g, b, 255 / (thickness + 1)))
+        shadow_thickness = color["shadow_thickness"]
+        if shadow_thickness:
+            r, g, b, a = self.shadow_color
+            scalar = color["shadow_fade_scalar"]
+            for thickness in range(shadow_thickness):
+                self.draw("rect", (x + thickness, y + thickness,
+                                w - (scalar * thickness), h - (scalar * thickness)),
+                        color=(r, g, b, a / (thickness + 1)))
         if self.text:
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
-                      bg_color=self.text_background_color, color=self.text_color,
+                      bg_color=color["text_background"], color=self.text_color,
                       center_text=self.center_text, hide_excess_text=self.hide_excess_text)
 
 
@@ -280,26 +299,23 @@ class Window_Object(Organized_Object):
             Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored
         A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
     defaults = {"outline_width" : 1, "center_text" : True,
-                "background_color" : (180, 180, 180, 200), "text_background_color" : (0, 0, 0, 255),
-                "color" : (110, 110, 110, 255), "text_color" : (45, 45, 45, 255),
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.gui.Minimal_Theme",
-                "_selected" : False, "hide_excess_text" : True,
-                "shadow_color" : (0, 0, 0)}
+                "_selected" : False, "hide_excess_text" : True}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
                    "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
-                   "_always_on_top" : False}
+                   "_always_on_top" : False, "use_custom_colors" : False}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list}
-    verbosity = {"press" : "vv", "release" : "vv", "packed" : "packed"}
+    verbosity = {"press" : "vv", "release" : "vv"}
 
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
 
@@ -330,7 +346,6 @@ class Window_Object(Organized_Object):
             self.texture_invalid = True
         #if self.scale_to_text and coordinate == 'w' and self.w_range[1] > value:
         #    self._backup_text = self.text
-
         super(Window_Object, self)._on_set(coordinate, value)
 
     def _get_text(self):
@@ -360,42 +375,24 @@ class Window_Object(Organized_Object):
         self.text = self.text # triggers _set_text descriptor;
     scale_to_text = property(_get_scale_to_text, _set_scale_to_text)
 
-    def _get_bg_color(self):
-        return self._background_color
-    def _set_bg_color(self, color):
-        self.texture_invalid = True
-        self._background_color = color if self.transparency_enabled else color[:3] + (255, )#sdl2.ext.Color(*color)
-    background_color = property(_get_bg_color, _set_bg_color)
+    #_vars = vars()
+    for color_key in ("background", "text", "text_background", "shadow"):
+        def _getter(self, color_key=color_key):
+            if self.use_custom_colors:
+                return self.colors[color_key]
+            else:
+                return self.theme.theme_colors[color_key]
+        def _setter(self, value, color_key=color_key):
+            self.colors[color_key] = value
+            self.use_custom_colors = self.texture_invalid = True
+        vars()["{}_color".format(color_key)] = property(_getter, _setter)
 
     def _get_color(self):
-        return super(Window_Object, self)._get_color()
+        return self.colors["color"]
     def _set_color(self, colors):
-        super(Window_Object, self)._set_color(colors)
+        self.colors["color"] = colors
         self.texture_invalid = True
     color = property(_get_color, _set_color)
-
-    def _get_text_color(self):
-        return self._text_color
-    def _set_text_color(self, colors):
-        self._text_color = colors#sdl2.ext.Color(*colors)
-        self.texture_invalid = True
-    text_color = property(_get_text_color, _set_text_color)
-
-    def _get_texture_window_x(self):
-        return self._texture_window_x
-    def _set_texture_window_x(self, value):
-        self._texture_window_x = max(0, value)
-        self.texture_invalid = True
-        self.queue_scroll_operation = True
-    texture_window_x = property(_get_texture_window_x, _set_texture_window_x)
-
-    def _get_texture_window_y(self):
-        return self._texture_window_y
-    def _set_texture_window_y(self, value):
-        self._texture_window_y = max(0, value)
-        self.texture_invalid = True
-        self.queue_scroll_operation = True
-    texture_window_y = property(_get_texture_window_y, _set_texture_window_y)
 
     def _get_hidden(self):
         return self._hidden or self._parent_hidden
@@ -430,9 +427,8 @@ class Window_Object(Organized_Object):
     sdl_window = property(_get_sdl_window, _set_sdl_window)
 
     def __init__(self, **kwargs):
+        colors = self.colors = DEFAULT_COLORS.copy()
         super(Window_Object, self).__init__(**kwargs)
-        #self.alert("Area: {}".format(self.area))
-        self.texture_window_x = self.texture_window_y = 0
         self.texture_invalid = True
 
         self.theme = self.create(self.theme_type, wrapped_object=self)
@@ -558,22 +554,6 @@ class Window_Object(Organized_Object):
         del self._draw_operations[:]
         self.draw_texture()
         instructions = self._draw_operations[:]
-
-        #self.alert("Queueing draw instructions; Includes scrolling: {}".format(self.queue_scroll_operation))
-        #if self.queue_scroll_operation:
-        #    x, y, w, h = self.area
-        #    source_rect = (x + self.texture_window_x,
-        #                   y + self.texture_window_y, w, h)
-
-        #    #if x + w > MAX_W:
-        #    #    w = MAX_W - x
-        #    #if y + h > MAX_H:
-        #    #    h = MAX_H - y
-        #    destination = (x, y, w, h)
-        #  #  assert destination == self.area
-        #    self.alert("Copying: {} to {}".format(source_rect, destination))
-        #    #instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
-        #    self.scroll_instructions.append(("copy", (objects[self.sdl_window]._texture.texture, source_rect, destination), {}))
         self.texture_invalid = False
 
     def draw_texture(self):
@@ -582,54 +562,6 @@ class Window_Object(Organized_Object):
     def pack(self):
         super(Window_Object, self).pack()
         pride.objects[self.sdl_window]._schedule_run()
-        return
-        children = list(self.children)
-        top = [child for child in children if child.pack_mode == "top"]
-        main = [child for child in children if child.pack_mode == "main"]
-        bottom = [child for child in children if child.pack_mode == "bottom"]
-        left = [child for child in children if child.pack_mode == "left"]
-        right = [child for child in children if child.pack_mode == "right"]
-        total_height = sum(child.h for child in top + main + bottom)
-        if any((left, main, right)):
-            total_height = max(total_height, max(child.h for child in left + main + right))
-        total_width = sum(child.w for child in children if child.pack_mode in ("left", "main", "right"))
-     #   if total_height > self.h:
-     #       if total_width > self.w:
-     #           self.texture_size = (total_width, total_height)
-     #       else:
-     #           self.texture_size = (self.texture_size[0], total_height)
-     #       self.texture = create_texture(self.texture_size)
-     #       self.alert("Resized texture to: {}".format(self.texture_size), level=0)
-     #   elif total_width > self.w:
-     #       self.texture_size = (total_width, self.texture_size[1])
-        if self.scroll_bars_enabled:
-            excess_height = total_height > self.h
-            excess_width = total_width > self.w
-            self.alert("Scroll bar logic checking excess height: {} {}".format(total_height, self.h))
-            if not self._scroll_bar_h:
-                if excess_height:
-                    bar = self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
-                                      target=(self.reference, "texture_window_y"))
-                    self._scroll_bar_h = bar.reference
-                    bar.alert("Created; Organizing {}".format(bar.area))
-                    window = pride.objects[self.sdl_window]
-                    pride.objects[self.sdl_window + "/Organizer"].pack_children(window, list(window.gui_children))
-                    bar.alert("Done organizing {}".format(bar.area))
-                    #self.parent.pack()
-                    #pride.objects[self.sdl_window + "/Organizer"].pack_children(self, [bar])
-            elif not excess_height:
-                objects[self._scroll_bar_h].delete()
-                self._scroll_bar_h = None
-            if not self._scroll_bar_w:
-                if excess_width:
-                    bar = self.create("pride.gui.widgetlibrary.Scroll_Bar",
-                                    pack_mode="bottom", target=(self.reference,
-                                                                "texture_window_x"))
-                    self._scroll_bar_w = bar.reference
-                    bar.pack()
-            elif not excess_width:
-                objects[self._scroll_bar_w].delete()
-                self._scroll_bar_w = None
 
     def delete(self):
         assert not self.deleted, self
@@ -682,12 +614,6 @@ class Application(Window):
     def __init__(self, **kwargs):
         super(Application, self).__init__(**kwargs)
         window = self.application_window = self.create(self.application_window_type)
-        #self.vertical_scroll = self.create("pride.gui.widgetlibrary.Scroll_Bar",
-        #                                   pack_mode="right", amount=10,
-        #                                   target=(window.reference, "texture_window_y"))
-        #self.horizontal_scroll = self.create("pride.gui.widgetlibrary.Scroll_Bar",
-        #                                     pack_mode="bottom", amount=10,
-        #                                     target=(window.reference, "texture_window_x"))
 
     def draw_texture(self):
         assert not self.deleted

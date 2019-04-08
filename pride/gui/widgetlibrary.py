@@ -586,11 +586,19 @@ class Status_Indicator_Theme(pride.gui.gui.Theme):
 
     def draw_texture(self):
         x, y, w, h = area = self.area
+        if self.use_custom_colors:
+            colors = self.colors
+        else:
+            colors = self.theme_colors
         if not self._dont_draw:
             self.draw("fill", (x, y, w, h), color=self.background_color)
-        for thickness in range(5):
-            self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
-                      color=(0, 0, 0, 255 / (thickness + 1)))
+
+        shadow_thickness = colors["shadow_thickness"]
+        if shadow_thickness:
+            r, g, b, a = colors["shadow"]
+            for thickness in range(shadow_thickness):
+                self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
+                        color=(r, g, b, a / (thickness + 1)))
 
 
 class Status_Indicator(pride.gui.gui.Container):

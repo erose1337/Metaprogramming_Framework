@@ -233,7 +233,7 @@ class Theme(pride.base.Wrapper):
 
     def delete(self):
         self._theme_users.remove(self.wrapped_object)
-        super(Minimal_Theme, self).delete()
+        super(Theme, self).delete()
 
     @classmethod
     def update_theme_users(cls):

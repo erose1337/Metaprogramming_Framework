@@ -14,6 +14,7 @@ import sdl2.ext
 SDL_Rect = sdl2.SDL_Rect
 
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
+
 DEFAULT_COLORS = {"background" : pride.gui.color.Color(180, 180, 180, 200),
                   "shadow" : pride.gui.color.Color(0, 0, 0, 255),
                   "shadow_thickness" : 5, "shadow_fade_scalar" : 2,
@@ -221,9 +222,23 @@ class Organizer(base.Base):
 class Theme(pride.base.Wrapper):
 
     theme_colors = DEFAULT_COLORS.copy()
+    _theme_users = []
 
     def draw_texture(self):
         raise NotImplementedError
+
+    def wraps(self, _object):
+        super(Theme, self).wraps(_object)
+        self._theme_users.append(_object)
+
+    def delete(self):
+        self._theme_users.remove(self.wrapped_object)
+        super(Minimal_Theme, self).delete()
+
+    @classmethod
+    def update_theme_users(cls):
+        for instance in cls._theme_users:
+            instance.texture_invalid = True
 
 
 class Minimal_Theme(Theme):
@@ -245,7 +260,7 @@ class Minimal_Theme(Theme):
             scalar = color["shadow_fade_scalar"]
             for thickness in range(shadow_thickness):
                 self.draw("rect", (x + thickness, y + thickness,
-                                w - (scalar * thickness), h - (scalar * thickness)),
+                                   w - (scalar * thickness), h - (scalar * thickness)),
                         color=(r, g, b, a / (thickness + 1)))
         if self.text:
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
@@ -264,6 +279,16 @@ class Spacer_Theme(Theme):
 
     def draw_texture(self):
         return
+
+
+class Text_Only_Theme(Theme):
+
+    def draw_texture(self):
+        if self.text:
+            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
+            self.draw("text", self.area, self.text, w=self.w if self.wrap_text else None,
+                      bg_color=self.text_background_color, color=self.text_color,
+                      center_text=self.center_text)
 
 
 class Organized_Object(pride.gui.shapes.Bounded_Shape):

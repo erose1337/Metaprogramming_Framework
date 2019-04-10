@@ -637,8 +637,10 @@ class Wrapper(Base):
 
     def __init__(self, **kwargs):
         super(Wrapper, self).__init__(**kwargs)
-        if self.wrapped_object_name:
-            setattr(self, self.wrapped_object_name, self.wrapped_object)
+        if self.wrapped_object is not None:
+            self.wraps(self.wrapped_object)
+        #if self.wrapped_object_name:
+        #    setattr(self, self.wrapped_object_name, self.wrapped_object)
 
     def __getattr__(self, attribute):
         try:
@@ -649,6 +651,7 @@ class Wrapper(Base):
     def wraps(self, _object):
         """ Sets the specified object as the object wrapped by this object. """
         assert _object is not self
+        assert _object is not None
         self.wrapped_object = _object
         if self.wrapped_object_name:
             setattr(self, self.wrapped_object_name, _object)

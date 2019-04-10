@@ -648,16 +648,6 @@ class _Editable_Tab_Button(Text_Box):
         self.parent.left_click(mouse)
 
 
-class _Text_Only_Theme(pride.gui.gui.Theme):
-
-    def draw_texture(self):
-        if self.text:
-            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", self.area, self.text, w=self.w if self.wrap_text else None,
-                      bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text)
-
-
 class Tab_Button(Method_Button):
 
     defaults = {"pack_mode" : "left", "scale_to_text" : False,
@@ -680,7 +670,7 @@ class Tab_Button(Method_Button):
         if self.include_delete_button:
             self.create(Method_Button, pack_mode="right", scale_to_text=True,
                         target=self.reference, method="delete_tab", text='x',
-                        theme_type=_Text_Only_Theme, w_range=(0, 10))
+                        theme_type="pride.gui.gui.Text_Only_Theme", w_range=(0, 10))
         indicator = self.create(Status_Indicator)
         self.indicator = indicator.reference
 
@@ -720,6 +710,13 @@ class Tab_Button(Method_Button):
 
     def handle_return(self):
         self.deselect(None, None)
+
+    @classmethod
+    def from_info(cls, **kwargs):
+        def _callable(**_kwargs):
+            _kwargs.update(kwargs)
+            return cls(**_kwargs)
+        return _callable
 
 
 class Tab_Bar(pride.gui.gui.Container):
@@ -832,3 +829,77 @@ class Tabbed_Window(pride.gui.gui.Window):
                 indicator = pride.objects[tab.indicator]
                 indicator.enable_indicator()
         self.pack()
+
+
+class _Slider_Dragger(pride.gui.gui.Button):
+
+    defaults = {"target" : tuple(), "bounds" : tuple()}
+    required_attributes = ("target", "bounds" )
+
+    def set_initial_position(self):
+        parent = self.parent
+        px, py, pw, ph = parent.area
+        _object, name = self.target
+        _min, _max = self.bounds
+        value = getattr(_object, name)
+        x = int(self.parent.w * ((value + _min) / float(_max)))
+        self.x = max(min(pride.objects[parent.parent.right_end].x - self.w,
+                         x),
+                     pride.objects[parent.parent.left_end].w)
+        self.theme.update_theme_users()
+
+    def mousemotion(self, x_change, y_change):
+        if self.held:
+            parent = self.parent
+            px, py, pw, ph = parent.area
+            self.x = max(min(pride.objects[parent.parent.right_end].x - self.w,
+                             self.x + x_change),
+                         pride.objects[parent.parent.left_end].w)
+            _object, name = self.target
+            _min, _max = self.bounds
+            scalar = max(min(self.x / float(pw), 1.0), 0)
+            value = int((_max * scalar) - _min)
+            setattr(_object, name, value)
+
+            queue = pride.objects[self.sdl_window].predraw_queue
+            method = self.theme.update_theme_users
+            if method not in queue:
+                queue.append(method)
+
+
+class _Slider_Bar(pride.gui.gui.Container):
+
+    defaults = {"target" : tuple(), "bounds" : tuple()}
+    predefaults = {"dragger" : None}
+    required_attributes = ("target", "bounds")
+
+    def _on_set(self, coordinate, value):
+        super(_Slider_Bar, self)._on_set(coordinate, value)
+        if coordinate == 'w' and self.dragger is not None:
+            pride.objects[self.sdl_window].schedule_predraw_operation(self.dragger.set_initial_position)
+
+    def __init__(self, **kwargs):
+        super(_Slider_Bar, self).__init__(**kwargs)
+        self.dragger = self.create(_Slider_Dragger, target=self.target, bounds=self.bounds,
+                                   w_range=(0, 20))
+
+    def delete(self):
+        del self.dragger
+        super(_Slider_Bar, self).delete()
+
+
+class Slider_Widget(pride.gui.gui.Container):
+
+    defaults = {"label" : '', "bounds" : (0, 255), "target" : tuple()}
+    required_attributes = ("target", )
+
+    def __init__(self, **kwargs):
+        super(Slider_Widget, self).__init__(**kwargs)
+        lower, upper = self.bounds
+        self.create("pride.gui.gui.Container", text=self.label, pack_mode="bottom")
+        slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
+        slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=str(lower), pack_mode="left",
+                                                scale_to_text=True, theme_type="pride.gui.gui.Text_Only_Theme").reference
+        slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target, bounds=self.bounds)
+        slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(upper), pack_mode="right",
+                                                 scale_to_text=True, theme_type="pride.gui.gui.Text_Only_Theme").reference

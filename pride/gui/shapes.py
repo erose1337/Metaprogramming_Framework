@@ -68,6 +68,17 @@ class Bounded_Shape(Shape):
     def _get_w_range(self):
         return self._w_range
     def _set_w_range(self, value):
+        screen_w, screen_h = pride.objects[self.sdl_window].size
+        if isinstance(value[0], float):
+            lower = value[0]
+            if 0 > lower < 1.0:
+                raise ValueError("float w_range must be between 0.0 and 1.0; got {}".format(lower))
+            value = (int(lower * screen_w), value[1])
+        if isinstance(value[1], float):
+            upper = value[1]
+            if 0 > lower < 1.0:
+                raise ValueError("float h_range must be between 0.0 and 1.0; got {}".format(upper))
+            value = (value[0], int(upper * screen_w))
         self._w_range = value
         self.w = self._w
     w_range = property(_get_w_range, _set_w_range)
@@ -75,6 +86,11 @@ class Bounded_Shape(Shape):
     def _get_h_range(self):
         return self._h_range
     def _set_h_range(self, value):
+        screen_w, screen_h = pride.objects[self.sdl_window].size
+        if isinstance(value[0], float):
+            value = (int(value[0] * screen_h), value[1])
+        if isinstance(value[1], float):
+            value = (value[0], int(value[1] * screen_h))
         self._h_range = value
         self.h = self._h
     h_range = property(_get_h_range, _set_h_range)

@@ -52,7 +52,8 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
-    mutable_defaults = {"redraw_objects" : list, "drawing_instructions" : collections.OrderedDict}
+    mutable_defaults = {"redraw_objects" : list, "predraw_queue" : list,
+                        "drawing_instructions" : collections.OrderedDict}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None}
 
@@ -144,6 +145,9 @@ class SDL_Window(SDL_Component):
 
     def run(self):
         self.organizer.pack_items()
+        for callable in self.predraw_queue:
+            callable()
+        del self.predraw_queue[:]
         self.update_drawing_instructions()
         self.draw(instruction_generator(self.drawing_instructions))
         self.running = False
@@ -203,6 +207,8 @@ class SDL_Window(SDL_Component):
         renderer.copy(texture, area, area)
         renderer.present()
 
+    def schedule_predraw_operation(self, callable):
+        self.predraw_queue.append(callable)
 
     def get_mouse_state(self):
         mouse = sdl2.mouse
@@ -222,6 +228,7 @@ class SDL_Window(SDL_Component):
         for child in self.children:
             if hasattr(child, "pack"):
                 child.delete()
+        del self.predraw_queue[:]
         super(SDL_Window, self).delete()
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)

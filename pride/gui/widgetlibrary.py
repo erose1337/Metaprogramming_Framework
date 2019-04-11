@@ -1,8 +1,9 @@
 import time
 
 import pride
-import pride.gui.gui as gui
 import pride.gui
+import pride.gui.gui as gui
+import pride.gui.color
 import pride.components.base as base
 Instruction = pride.Instruction
 
@@ -161,8 +162,8 @@ class Task_Bar(gui.Container):
 
 class Text_Box(gui.Container):
 
-    defaults = {"h" : 16, "pack_mode" : "left", "background_color" : FIELD_BACKGROUND_COLOR,
-                "allow_text_edit" : True,  "editing" : False}
+    defaults = {"h" : 16, "pack_mode" : "left", "allow_text_edit" : True,
+                "editing" : False}
 
     def select(self, mouse):
         super(Text_Box, self).select(mouse)
@@ -427,8 +428,8 @@ class Dropdown_Box(pride.gui.gui.Container):
 
 class Dropdown_Box_Entry(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : "top", "selection_value" : None,
-                "background_color" : FIELD_BACKGROUND_COLOR}
+    defaults = {"pack_mode" : "top", "selection_value" : None}
+                #"background_color" : FIELD_BACKGROUND_COLOR}
 
     def left_click(self, mouse, _deselect=False):
         dropdown_box = self.parent
@@ -490,7 +491,8 @@ class Dropdown_Field(pride.gui.gui.Container):
 
 class Spin_Field_Entry(pride.gui.gui.Container):
 
-    defaults = {"text" : '0', "background_color" : FIELD_BACKGROUND_COLOR}
+    defaults = {"text" : '0'}#, "background_color" : FIELD_BACKGROUND_COLOR}
+    predefaults = {"theme_profile" : "interactive"}
 
     def __init__(self, **kwargs):
         super(Spin_Field_Entry, self).__init__(**kwargs)
@@ -535,7 +537,8 @@ class Spin_Field(pride.gui.gui.Container):
 
 class Field_Entry(Text_Box):
 
-    defaults = {"write_field_method" : None, "background_color" : FIELD_BACKGROUND_COLOR}
+    defaults = {"write_field_method" : None}#, "background_color" : FIELD_BACKGROUND_COLOR}
+    predefaults = {"theme_profile" : "interactive"}
     required_attributes = ("write_field_method", )
 
     def deselect(self, mouse, next_active_object):
@@ -584,29 +587,31 @@ class Field(pride.gui.gui.Container):
 
 class Status_Indicator_Theme(pride.gui.gui.Theme):
 
+    theme_colors = pride.gui.gui.Theme.theme_colors.copy()
+    theme_colors["indicator"] = pride.gui.gui._default_colors()
+    theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
+
     def draw_texture(self):
         x, y, w, h = area = self.area
-        if self.use_custom_colors:
-            colors = self.colors
-        else:
-            colors = self.theme_colors
         if not self._dont_draw:
             self.draw("fill", (x, y, w, h), color=self.background_color)
 
-        shadow_thickness = colors["shadow_thickness"]
+        shadow_thickness = self.shadow_thickness
         if shadow_thickness:
-            r, g, b, a = colors["shadow"]
+            r, g, b, a = self.shadow_color
+            scalar = self.shadow_fade_scalar
             for thickness in range(shadow_thickness):
-                self.draw("rect", (x + thickness, y + thickness, w - (2 * thickness), h - (2 * thickness)),
-                        color=(r, g, b, a / (thickness + 1)))
+                self.draw("rect", (x + thickness, y + thickness,
+                                   w - (scalar * thickness), h - (scalar * thickness)),
+                          color=(r, g, b, a / (thickness + 1)))
 
 
 class Status_Indicator(pride.gui.gui.Container):
 
     defaults = {"w_range" : (0, 10), "pack_mode" : "left",
-                "top_color" : (185, 85, 85, 235), "color" : (125, 105, 95, 255),
-                "middle_color" : (85, 85, 185, 235), "_theme_type" : Status_Indicator_Theme,
-                "bottom_color" : (85, 185, 85, 255), "theme_type" : "pride.gui.gui.Spacer_Theme",
+                "indicator_theme_type" : Status_Indicator_Theme,
+                "indicator_color" : (85, 85, 185, 235),
+                "theme_type" : "pride.gui.gui.Spacer_Theme",
                 "_dont_draw" : True}
 
     def __init__(self, **kwargs):
@@ -614,7 +619,9 @@ class Status_Indicator(pride.gui.gui.Container):
         self.create("pride.gui.gui.Container", pack_mode="top",
                     theme_type="pride.gui.gui.Spacer_Theme")
         self.status_light = self.create("pride.gui.gui.Container", pack_mode="top",
-                                        background_color=self.middle_color, theme_type=self._theme_type,
+                                        background_color=self.indicator_color,
+                                        theme_type=self.indicator_theme_type,
+                                        theme_profile="indicator",
                                         _dont_draw=True).reference
         self.create("pride.gui.gui.Container", pack_mode="top",
                     theme_type="pride.gui.gui.Spacer_Theme")
@@ -761,6 +768,9 @@ class Tab_Switching_Window(pride.gui.gui.Window):
 
     def __init__(self, **kwargs):
         super(Tab_Switching_Window, self).__init__(**kwargs)
+        self.initialize_tabs_and_windows()
+
+    def initialize_tabs_and_windows(self):
         self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
                                    tab_types=self.tab_types)
         self.create_windows()
@@ -841,7 +851,13 @@ class _Slider_Dragger(pride.gui.gui.Button):
         px, py, pw, ph = parent.area
         _object, name = self.target
         _min, _max = self.bounds
-        value = getattr(_object, name)
+        try:
+            value = getattr(_object, name)
+        except AttributeError as error:
+            try:
+                value = _object[name]
+            except KeyError:
+                raise error
         x = int(self.parent.w * ((value + _min) / float(_max)))
         self.x = max(min(pride.objects[parent.parent.right_end].x - self.w,
                          x),
@@ -852,14 +868,18 @@ class _Slider_Dragger(pride.gui.gui.Button):
         if self.held:
             parent = self.parent
             px, py, pw, ph = parent.area
+            left_end_w = pride.objects[parent.parent.left_end].w
             self.x = max(min(pride.objects[parent.parent.right_end].x - self.w,
                              self.x + x_change),
-                         pride.objects[parent.parent.left_end].w)
+                         left_end_w)
             _object, name = self.target
             _min, _max = self.bounds
-            scalar = max(min(self.x / float(pw), 1.0), 0)
+            scalar = max(min((self.x - left_end_w) / float(pw), 1.0), 0)
             value = int((_max * scalar) - _min)
-            setattr(_object, name, value)
+            if isinstance(_object, dict):
+                _object[name] = value
+            else:
+                setattr(_object, name, value)
 
             queue = pride.objects[self.sdl_window].predraw_queue
             method = self.theme.update_theme_users
@@ -896,10 +916,13 @@ class Slider_Widget(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Slider_Widget, self).__init__(**kwargs)
         lower, upper = self.bounds
-        self.create("pride.gui.gui.Container", text=self.label, pack_mode="bottom")
+        self.create("pride.gui.gui.Container", text=self.label.replace('_', ' '),
+                    pack_mode="bottom")
         slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
-        slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=str(lower), pack_mode="left",
-                                                scale_to_text=True, theme_type="pride.gui.gui.Text_Only_Theme").reference
+        slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=str(lower),
+                                                pack_mode="left", scale_to_text=True,
+                                                theme_type="pride.gui.gui.Text_Only_Theme").reference
         slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target, bounds=self.bounds)
-        slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(upper), pack_mode="right",
-                                                 scale_to_text=True, theme_type="pride.gui.gui.Text_Only_Theme").reference
+        slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(upper),
+                                                 pack_mode="right", scale_to_text=True,
+                                                 theme_type="pride.gui.gui.Text_Only_Theme").reference

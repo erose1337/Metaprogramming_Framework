@@ -15,12 +15,13 @@ SDL_Rect = sdl2.SDL_Rect
 
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
 
-DEFAULT_COLORS = {"background" : pride.gui.color.Color(180, 180, 180, 200),
-                  "shadow" : pride.gui.color.Color(0, 0, 0, 255),
-                  "shadow_thickness" : 5, "shadow_fade_scalar" : 2,
-                  "text_background" : pride.gui.color.Color(0, 0, 0, 255),
-                  "text" : pride.gui.color.Color(45, 45, 45, 255),
-                  "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
+def _default_colors():
+    return {"background" : pride.gui.color.Color(180, 180, 180, 200),
+            "shadow" : pride.gui.color.Color(0, 0, 0, 255),
+            "shadow_thickness" : 5, "shadow_fade_scalar" : 2,
+            "text_background" : pride.gui.color.Color(0, 0, 0, 255),
+            "text" : pride.gui.color.Color(45, 45, 45, 255),
+            "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Python/SDL_Window/Renderer/SpriteFactory",
@@ -221,7 +222,9 @@ class Organizer(base.Base):
 
 class Theme(pride.base.Wrapper):
 
-    theme_colors = DEFAULT_COLORS.copy()
+    theme_profiles = ("default", "interactive")
+    theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
+    theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
     _theme_users = []
 
     def draw_texture(self):
@@ -243,21 +246,17 @@ class Theme(pride.base.Wrapper):
 
 class Minimal_Theme(Theme):
 
-    theme_colors = DEFAULT_COLORS.copy()
+    theme_colors = Theme.theme_colors.copy()
 
     def draw_texture(self):
         assert not self.hidden
         x, y, w, h = area = self.area
-        if self.use_custom_colors:
-            color = self.colors
-        else:
-            color = self.theme_colors
 
         self.draw("fill", area, color=self.background_color)
-        shadow_thickness = color["shadow_thickness"]
+        shadow_thickness = self.shadow_thickness
         if shadow_thickness:
             r, g, b, a = self.shadow_color
-            scalar = color["shadow_fade_scalar"]
+            scalar = self.shadow_fade_scalar
             for thickness in range(shadow_thickness):
                 self.draw("rect", (x + thickness, y + thickness,
                                    w - (scalar * thickness), h - (scalar * thickness)),
@@ -265,7 +264,7 @@ class Minimal_Theme(Theme):
         if self.text:
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
-                      bg_color=color["text_background"], color=self.text_color,
+                      bg_color=self.text_background_color, color=self.text_color,
                       center_text=self.center_text, hide_excess_text=self.hide_excess_text)
 
 
@@ -336,10 +335,11 @@ class Window_Object(Organized_Object):
                    "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
-                   "_always_on_top" : False, "use_custom_colors" : False}
+                   "_always_on_top" : False, "use_custom_colors" : False,
+                   "theme_profile" : "default"}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
-                        "scroll_instructions" : list}
+                        "scroll_instructions" : list, "colors" : dict}
     verbosity = {"press" : "vv", "release" : "vv"}
 
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
@@ -400,17 +400,25 @@ class Window_Object(Organized_Object):
         self.text = self.text # triggers _set_text descriptor;
     scale_to_text = property(_get_scale_to_text, _set_scale_to_text)
 
-    #_vars = vars()
-    for color_key in ("background", "text", "text_background", "shadow"):
+
+    for color_key in ("background", "text", "text_background", "shadow",
+                      "shadow_thickness", "shadow_fade_scalar"):
         def _getter(self, color_key=color_key):
-            if self.use_custom_colors:
-                return self.colors[color_key]
-            else:
-                return self.theme.theme_colors[color_key]
+            profile = self.theme_profile
+            if profile in self.colors and color_key in self.colors[profile]:
+                return self.colors[profile][color_key]
+            return self.theme.theme_colors[profile][color_key]
         def _setter(self, value, color_key=color_key):
-            self.colors[color_key] = value
-            self.use_custom_colors = self.texture_invalid = True
-        vars()["{}_color".format(color_key)] = property(_getter, _setter)
+            try:
+                self.colors[self.theme_profile][color_key] = value
+            except KeyError:
+                self.colors[self.theme_profile] = {color_key : value}
+            self.texture_invalid = True
+        if color_key not in ("shadow_thickness", "shadow_fade_scalar"):
+            vars()["{}_color".format(color_key)] = property(_getter, _setter)
+        else:
+            vars()[color_key] = property(_getter, _setter)
+
 
     def _get_color(self):
         return self.colors["color"]
@@ -452,7 +460,7 @@ class Window_Object(Organized_Object):
     sdl_window = property(_get_sdl_window, _set_sdl_window)
 
     def __init__(self, **kwargs):
-        colors = self.colors = DEFAULT_COLORS.copy()
+        #self.colors = self.theme_type.theme_colors.copy()#DEFAULT_COLORS.copy()
         super(Window_Object, self).__init__(**kwargs)
         self.texture_invalid = True
 
@@ -628,6 +636,7 @@ class Container(Window_Object):
 class Button(Window_Object):
 
     defaults = {"pack_mode" : "top"}
+    predefaults = {"theme_profile" : "interactive"}
 
 
 class Application(Window):

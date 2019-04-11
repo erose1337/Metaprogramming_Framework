@@ -620,8 +620,8 @@ class Renderer(SDL_Component):
             _w, _h = texture.size
             if kwargs.get("center_text", False):
                 destination = ((x + (w / 2)) - (_w / 2),
-                            (y + (h / 2)) - (_h / 2),
-                            _w - 2, _h)
+                               (y + (h / 2)) - (_h / 2),
+                               _w - 2, _h)
             else:
                 destination = (x + 2, y + 2, _w - 2, _h)
 

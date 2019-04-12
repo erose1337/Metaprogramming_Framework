@@ -11,7 +11,14 @@ class Color_Field(pride.gui.gui.Container):
         field_name, _object = self.field_info
         for key, bounds in self.field_attributes.items():
             self.create(pride.gui.widgetlibrary.Slider_Widget, label=key,
-                        bounds=bounds, target=(_object, key), h_range=(0, .10))
+                        bounds=bounds, target=(_object, key), h_range=(0, .10),
+                        on_adjustment=self._adjustment_callback)
+
+    def _adjustment_callback(self):
+        queue = pride.objects[self.sdl_window].predraw_queue
+        method = self.target_theme.update_theme_users
+        if method not in queue:
+            queue.append(method)
 
 
 class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
@@ -28,6 +35,7 @@ class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
     def create_windows(self):
         # create r/g/b/a/ sliders for each color key in profile_info
         info = self.profile_info
+        target_theme = self.target_theme
         for index, tab_reference in enumerate(self.tab_bar.tabs):
             tab = pride.objects[tab_reference]
             key = tab.text
@@ -39,7 +47,7 @@ class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
             except AttributeError:
                 kwargs = {"field_attributes" : {key : (0, 16)},
                           "field_info" : (key, info)}
-
+            kwargs["target_theme"] = target_theme
             field = self.create(Color_Field, tab=tab_reference, **kwargs)
             tab.window = field.reference
             if index:
@@ -62,15 +70,17 @@ class Theme_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
         super(Theme_Customizer, self).initialize_tabs_and_windows()
 
     def create_windows(self):
+        target_theme = self.target_theme
         try:
-            profiles = self.target_theme.colors
+            profiles = target_theme.colors
         except AttributeError:
-            profiles = self.target_theme.theme_colors
+            profiles = target_theme.theme_colors
         for index, tab_reference in enumerate(self.tab_bar.tabs):
             tab = pride.objects[tab_reference]
             key = tab.text
             profile = profiles[key]
-            switcher = self.create(Profile_Customizer, profile_info=profile)
+            switcher = self.create(Profile_Customizer, target_theme=target_theme,
+                                   profile_info=profile)
 
             tab.window = switcher.reference
             if index:

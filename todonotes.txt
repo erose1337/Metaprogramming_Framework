@@ -9,10 +9,8 @@ deal with certificates properly?
 
 changes
 -----
-partial re-work of base save/load
-added show_status and hide_status on Window_Objects
-added Popup_Notification for fade-out notifications
-changed some items that were buttons to be containers if they are not interactive
+implemented hover profile, on_hover, and hover_end
+changed handling for mousebuttondown events
 
 notes
 ----

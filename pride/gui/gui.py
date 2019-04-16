@@ -224,9 +224,10 @@ class Organizer(base.Base):
 class Theme(pride.base.Wrapper):
 
     defaults = {"dont_save" : True}
-    theme_profiles = ("default", "interactive")
+    theme_profiles = ("default", "interactive", "hover")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
+    theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
     _theme_users = []
 
     def draw_texture(self):
@@ -442,7 +443,7 @@ class Window_Object(Organized_Object):
 
     def _get_parent_application(self):
         result = None
-        instance = self
+        instance = self.parent
         while not result:
             if isinstance(instance, Application):
                 result = instance
@@ -450,7 +451,10 @@ class Window_Object(Organized_Object):
                 try:
                     instance = instance.parent
                 except AttributeError:
-                    raise ValueError("Unable to find parent application of {}".format(self))
+                    if isinstance(self, Application):
+                        result = self
+                    else:
+                        raise ValueError("Unable to find parent application of {}".format(self))
         return result
     parent_application = property(_get_parent_application)
 
@@ -500,7 +504,7 @@ class Window_Object(Organized_Object):
             instance.held = True
 
     def release(self, mouse):
-        self.alert("Releasing", level=self.verbosity["release"])
+        self.alert("Releasing", self.verbosity["release"])
         self.held = False
         if self._ignore_click:
             self._ignore_click = False
@@ -519,6 +523,17 @@ class Window_Object(Organized_Object):
 
     def mousewheel(self, x_amount, y_amount):
         pass
+
+    def on_hover(self):
+        #self.alert("Mouse hovering")
+        if self.theme_profile == "interactive":
+            self.theme_profile = "hover"
+            self.texture_invalid = True
+
+    def hover_ends(self):
+        if self.theme_profile == "hover":
+            self.theme_profile = "interactive"
+            self.texture_invalid = True
 
     def mousemotion(self, x_change, y_change, top_level=True):
         if self.movable and self.held:

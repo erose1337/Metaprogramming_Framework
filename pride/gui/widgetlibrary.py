@@ -492,7 +492,7 @@ class Dropdown_Field(pride.gui.gui.Container):
 class Spin_Field_Entry(pride.gui.gui.Container):
 
     defaults = {"text" : '0'}#, "background_color" : FIELD_BACKGROUND_COLOR}
-    predefaults = {"theme_profile" : "interactive"}
+    #predefaults = {"theme_profile" : "interactive"}
 
     def __init__(self, **kwargs):
         super(Spin_Field_Entry, self).__init__(**kwargs)

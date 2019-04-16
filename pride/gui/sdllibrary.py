@@ -135,6 +135,8 @@ class SDL_Window(SDL_Component):
             self.user_input.always_on_top.remove(window_object)
         except ValueError:
             pass
+        if self.user_input.under_mouse == window_object.reference:
+            self.user_input.under_mouse = None
         try:
             self.redraw_objects.remove(window_object)
         except ValueError:
@@ -334,7 +336,8 @@ class Window_Handler(pride.components.base.Base):
 
 class SDL_User_Input(scheduler.Process):
 
-    defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None}
+    defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None,
+                "under_mouse" : None}
     mutable_defaults = {"_layer_tracker" : collections.OrderedDict,
                         "always_on_top" : list}
 
@@ -461,22 +464,9 @@ class SDL_User_Input(scheduler.Process):
         mouse = event.button
         mouse_position = (mouse.x, mouse.y)
         self.alert("mouse button down at {}".format(mouse_position), level='v')
+
+        active_item = self.under_mouse#self._get_object_under_mouse(mouse_position)
         objects = pride.objects
-        # find the top-most item such that the mouse position is within its area
-        active_item = None
-        for item in self.always_on_top:
-            if pride.gui.point_in_area(objects[item].area, mouse_position):
-                active_item = item
-                break
-        else:
-            for layer_number, layer in reversed(self._layer_tracker.items()):
-                for item in layer:
-                    assert item in objects
-                    if pride.gui.point_in_area(objects[item].area, mouse_position):
-                        active_item = item
-                        break
-                if active_item:
-                    break
 
         # deselect old active item
         old_active_item = self.active_item
@@ -508,6 +498,25 @@ class SDL_User_Input(scheduler.Process):
                         self.alert("Active item has been deleted {}".format(active_item, ), level=0)
                         self.active_item = None
 
+    def _get_object_under_mouse(self, mouse_position):
+        # find the top-most item such that the mouse position is within its area
+        objects = pride.objects
+        active_item = None
+        for item in self.always_on_top:
+            if pride.gui.point_in_area(objects[item].area, mouse_position):
+                active_item = item
+                break
+        else:
+            for layer_number, layer in reversed(self._layer_tracker.items()):
+                for item in layer:
+                    assert item in objects
+                    if pride.gui.point_in_area(objects[item].area, mouse_position):
+                        active_item = item
+                        break
+                if active_item:
+                    break
+        return active_item
+
     def handle_mousebuttonup(self, event):
         active_item = self.active_item
         if active_item:
@@ -527,6 +536,34 @@ class SDL_User_Input(scheduler.Process):
         if self.active_item:
             motion = event.motion
             pride.objects[self.active_item].mousemotion(motion.xrel, motion.yrel)
+        #else:
+        motion = event.motion
+        position = (motion.x, motion.y)
+        if not self.under_mouse:
+            self.under_mouse = under_mouse = self._get_object_under_mouse(position)
+            pride.objects[under_mouse].on_hover()
+        else:
+
+            under_mouse = pride.objects[self.under_mouse]
+            if under_mouse.children:
+                new_under_mouse = self._get_object_under_mouse(position)
+                if under_mouse.reference != new_under_mouse:
+                    under_mouse.hover_ends()
+                    self.under_mouse = new_under_mouse
+                    pride.objects[new_under_mouse].on_hover()
+            else:
+                if not pride.gui.point_in_area(under_mouse.area, position):
+                    new_under_mouse = self._get_object_under_mouse(position)
+                    under_mouse.hover_ends()
+                    self.under_mouse = new_under_mouse
+                    pride.objects[new_under_mouse].on_hover()
+        #    pride.objects[self.under_mouse].mousemotion(position.xrel, position.yrel)
+            #if not pride.gui.point_in_area(under_mouse.area, position):
+            #    under_mouse.hover_ends()
+            #    self.under_mouse = under_mouse = self._get_object_under_mouse(position)
+            #    pride.objects[under_mouse].on_hover()
+        #    else:
+        #        print("Mouse still within {}".format(under_mouse))
 
     def handle_keydown(self, event):
         try:

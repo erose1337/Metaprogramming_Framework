@@ -2,6 +2,7 @@ import operator
 from math import floor, sqrt
 
 import pride
+import pride.functions.utilities
 import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
@@ -222,6 +223,7 @@ class Organizer(base.Base):
 
 class Theme(pride.base.Wrapper):
 
+    defaults = {"dont_save" : True}
     theme_profiles = ("default", "interactive")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
@@ -242,6 +244,11 @@ class Theme(pride.base.Wrapper):
     def update_theme_users(cls):
         for instance in cls._theme_users:
             instance.texture_invalid = True
+
+    def __getstate__(self):
+        state = super(Theme, self).__getstate__()
+        del state["wrapped_object"]
+        return state
 
 
 class Minimal_Theme(Theme):
@@ -336,7 +343,7 @@ class Window_Object(Organized_Object):
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
                    "_always_on_top" : False, "use_custom_colors" : False,
-                   "theme_profile" : "default"}
+                   "theme_profile" : "default", "_status" : None}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list, "colors" : dict}
@@ -586,7 +593,7 @@ class Window_Object(Organized_Object):
 
         del self._draw_operations[:]
         self.draw_texture()
-        instructions = self._draw_operations[:]
+        #instructions = self._draw_operations[:]
         self.texture_invalid = False
 
     def draw_texture(self):
@@ -622,6 +629,43 @@ class Window_Object(Organized_Object):
         if self.allow_text_edit:
             self.text = self.text[:-1]
 
+    def __getstate__(self):
+        state = super(Window_Object, self).__getstate__()
+        state["theme"] = self.theme.save()
+        del state["_draw_operations"]
+        del state["_children"]
+        print self, "getstate"
+        import pprint
+        pprint.pprint(self.objects)
+
+        return state
+
+    def on_load(self, state):
+        super(Window_Object, self).on_load(state)
+        self.theme = pride.functions.utilities.resolve_string(self.theme_type).load(self.theme)
+        self.theme.wraps(self)
+        self._draw_operations = []
+        self._children = list(super(Window_Object, self).children)
+        print self, "on load"
+        import pprint
+        pprint.pprint(self.objects)
+        self._children.remove(self.theme)
+
+    def show_status(self, text, fade_out=True, **kwargs):
+        if self._status is not None:
+            assert False
+        _kwargs = {"h_range" : (0, .10), "pack_mode" : "bottom"}
+        _kwargs.update(kwargs)
+        if fade_out:
+            self._status = self.create("pride.gui.widgetlibrary.Popup_Notification", text=text, **_kwargs).reference
+        else:
+            self._status = self.create("pride.gui.gui.Container", text=text, **_kwargs).reference
+        pride.objects[self.sdl_window].run()
+
+    def hide_status(self):
+        pride.objects[self._status].delete()
+        self._status = None
+
 
 class Window(Window_Object):
 
@@ -653,6 +697,15 @@ class Application(Window):
         assert not self.deleted
         super(Application, self).draw_texture()
         self.application_window.texture_invalid = True
+
+    def __getstate__(self):
+        state = super(Application, self).__getstate__()
+        del state["application_window"]
+        return state
+
+    def on_load(self, state):
+        super(Application, self).on_load(state)
+        self.application_window = self.objects["Window"][0] # brittle, needs to be done properly
 
 
 class Placeholder(Organized_Object):

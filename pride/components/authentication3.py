@@ -235,6 +235,15 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
                   level=self.verbosity["validate_success"])
         return True
 
+    def __getstate__(self):
+        state = super(Authenticated_Service, self).__getstate__()
+        del state["_rate"]
+        return state
+
+    def on_load(self, state):
+        super(Authenticated_Service, self).on_load(state)
+        self._rate = dict()
+
 
 class Authenticated_Client(pride.components.rpc.RPC_Client):
 

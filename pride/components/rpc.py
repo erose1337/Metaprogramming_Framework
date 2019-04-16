@@ -313,6 +313,18 @@ class Rpc_Worker(pride.components.base.Base):
     def serialize(self, data):
         return self.serializer.dumps(data)
 
+    def __getstate__(self):
+        state = super(Rpc_Worker, self).__getstate__()
+        state["serializer"] = state["serializer"].__name__
+        return state
+
+    def on_load(self, state):
+        super(Rpc_Worker, self).on_load(state)
+        if state["serializer"] == "Serializer":
+            self.serializer = DEFAULT_SERIALIZER
+        else:
+            raise ValueError("Unsupported serializer '{}'".format(state["serializer"]))
+
 
 class RPC_Service(pride.components.base.Base):
 
@@ -397,12 +409,12 @@ class RPC_Service(pride.components.base.Base):
             return getattr(self, method_name)(*args, **kwargs)
 
     def __getstate__(self):
-        state = super(Authenticated_Service, self).__getstate__()
+        state = super(RPC_Service, self).__getstate__()
         del state["database"]
         return state
 
     def on_load(self, attributes):
-        super(Authenticated_Service, self).on_load(attributes)
+        super(RPC_Service, self).on_load(attributes)
         self._load_database()
 
 

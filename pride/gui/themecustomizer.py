@@ -20,12 +20,20 @@ class Color_Field(pride.gui.gui.Container):
         if method not in queue:
             queue.append(method)
 
+    def readjust_sliders(self):
+        for slider_widget in self.objects["Slider_Widget"]:
+            slider_widget.readjust_sliders()
+
 
 class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
 
     color_keys = ("background", "shadow", "text", "text_background")
     defaults = {"profile_info" : None}
     required_attributes = ("profile_info", )
+
+    def readjust_sliders(self):
+        for tab_reference in pride.objects[self.tab_bar].tabs:
+            pride.objects[pride.objects[tab_reference].window].readjust_sliders()
 
     def initialize_tabs_and_windows(self):
         self.tab_types = tuple(pride.gui.widgetlibrary.Tab_Button.from_info(text=text, include_delete_button=False) for
@@ -36,7 +44,7 @@ class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
         # create r/g/b/a/ sliders for each color key in profile_info
         info = self.profile_info
         target_theme = self.target_theme
-        for index, tab_reference in enumerate(self.tab_bar.tabs):
+        for index, tab_reference in enumerate(pride.objects[self.tab_bar].tabs):
             tab = pride.objects[tab_reference]
             key = tab.text
             _object = info[key]
@@ -60,6 +68,10 @@ class Theme_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
 
     defaults = {"target_theme" : None}
 
+    def readjust_sliders(self):
+        for tab_reference in pride.objects[self.tab_bar].tabs:
+            pride.objects[pride.objects[tab_reference].window].readjust_sliders()
+
     def initialize_tabs_and_windows(self):
         try:
             profiles = self.target_theme.colors
@@ -75,7 +87,7 @@ class Theme_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
             profiles = target_theme.colors
         except AttributeError:
             profiles = target_theme.theme_colors
-        for index, tab_reference in enumerate(self.tab_bar.tabs):
+        for index, tab_reference in enumerate(pride.objects[self.tab_bar].tabs):
             tab = pride.objects[tab_reference]
             key = tab.text
             profile = profiles[key]

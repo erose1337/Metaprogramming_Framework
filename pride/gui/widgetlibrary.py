@@ -479,7 +479,7 @@ class Dropdown_Field(pride.gui.gui.Container):
             pack_mode = "top"
         if not self.callback:
             self.callback = (self.reference, "on_dropdown_selection")
-        self.create("pride.gui.gui.Button", text=self.field_name, pack_mode=pack_mode)
+        self.create("pride.gui.gui.Container", text=self.field_name, pack_mode=pack_mode)
         self.dropdown_box = self.create("pride.gui.widgetlibrary.Dropdown_Box",
                                         pack_mode=pack_mode, callback=self.callback,
                                         entry_types=self.entry_types,
@@ -738,7 +738,7 @@ class Tab_Bar(pride.gui.gui.Container):
 
     def initialize_tabs(self):
         if self.label:
-            self.create("pride.gui.gui.Button", text=self.label,
+            self.create("pride.gui.gui.Container", text=self.label,
                         scale_to_text=True, pack_mode="left")
         self.create(New_Tab_Button, text='+', target=self.parent.reference, method="new_tab")
 
@@ -772,11 +772,11 @@ class Tab_Switching_Window(pride.gui.gui.Window):
 
     def initialize_tabs_and_windows(self):
         self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
-                                   tab_types=self.tab_types)
+                                   tab_types=self.tab_types).reference
         self.create_windows()
 
     def create_windows(self):
-        tabs = self.tab_bar.tabs
+        tabs = pride.objects[self.tab_bar].tabs
         for index, window_type in reversed(enumerate(self.window_types)):
             window = self.create(window_type, tab=tabs[index])
             tab.window = window.reference
@@ -787,7 +787,7 @@ class Tab_Switching_Window(pride.gui.gui.Window):
                 tab.indicator.enable_indicator()
 
     def select_tab(self, selected_tab):
-        for tab_reference in self.tab_bar.tabs:
+        for tab_reference in pride.objects[self.tab_bar].tabs:
             tab = pride.objects[tab_reference]
             if tab_reference != selected_tab:
                 pride.objects[tab.window].hide()
@@ -813,7 +813,7 @@ class Tabbed_Window(pride.gui.gui.Window):
     def __init__(self, **kwargs):
         super(Tabbed_Window, self).__init__(**kwargs)
         self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
-                                   tab_type=self.tab_type)
+                                   tab_type=self.tab_type).reference
 
     def new_tab(self, window_kwargs=None, tab_kwargs=None):
         window_kwargs = window_kwargs if window_kwargs is not None else dict()
@@ -821,13 +821,13 @@ class Tabbed_Window(pride.gui.gui.Window):
         window = self.create(self.window_type, **window_kwargs)
         self.window_listing.append(window.reference)
         tab_kwargs.setdefault("window", window.reference)
-        new_tab = self.tab_bar.new_tab(**tab_kwargs)
+        new_tab = pride.objects[self.tab_bar].new_tab(**tab_kwargs)
         window.tab = new_tab
         self.select_tab(new_tab)
         return (new_tab, window)
 
     def select_tab(self, selected_tab):
-        for tab_reference in self.tab_bar.tabs:
+        for tab_reference in pride.objects[self.tab_bar].tabs:
             tab = pride.objects[tab_reference]
             if tab_reference != selected_tab:
                 pride.objects[tab.window].hide()
@@ -903,13 +903,15 @@ class _Slider_Bar(pride.gui.gui.Container):
     def _on_set(self, coordinate, value):
         super(_Slider_Bar, self)._on_set(coordinate, value)
         if coordinate == 'w' and self.dragger is not None:
-            pride.objects[self.sdl_window].schedule_predraw_operation(self.dragger.set_initial_position)
+            window = pride.objects[self.sdl_window]
+            dragger = pride.objects[self.dragger]
+            window.schedule_predraw_operation(dragger.set_initial_position)
 
     def __init__(self, **kwargs):
         super(_Slider_Bar, self).__init__(**kwargs)
         self.dragger = self.create(_Slider_Dragger, target=self.target, bounds=self.bounds,
                                    w_range=(0, 20), on_adjustment=self.on_adjustment,
-                                   _slider_label=self._slider_label)
+                                   _slider_label=self._slider_label).reference
 
     def delete(self):
         self.dragger = None
@@ -937,13 +939,85 @@ class Slider_Widget(pride.gui.gui.Container):
         label = self.label.replace('_', ' ')
         slider_label = self.create(Slider_Label, label=label, text=label,
                                    pack_mode="bottom").reference
-        slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
+        self.slider_bar = slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
         slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=str(lower),
                                                 pack_mode="left", scale_to_text=True,
                                                 theme_type="pride.gui.gui.Text_Only_Theme").reference
-        slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target,
-                          bounds=self.bounds, on_adjustment=self.on_adjustment,
-                          _slider_label=slider_label)
+        self._slider_bar = slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target,
+                                             bounds=self.bounds, on_adjustment=self.on_adjustment,
+                                             _slider_label=slider_label).reference
         slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(upper),
                                                  pack_mode="right", scale_to_text=True,
                                                  theme_type="pride.gui.gui.Text_Only_Theme").reference
+
+    def readjust_sliders(self):
+        pride.objects[pride.objects[self._slider_bar].dragger].set_initial_position()
+
+
+class Popup_Notification(pride.gui.gui.Container):
+
+    defaults = {"h_range" : (0, .10), "pack_mode" : "bottom", "colors_setup" : False,
+                "fade_duration" : 1.0}
+
+    def __init__(self, **kwargs):
+        super(Popup_Notification, self).__init__(**kwargs)
+        self.setup_colors()
+
+    def setup_colors(self, from_backup=False):
+        assert not self.deleted
+        maximum = 1
+        for color_key in ("background", "shadow", "text", "text_background"):
+            color_key = "{}_color".format(color_key)
+            if from_backup:
+                _color = getattr(self, "_original_{}".format(color_key))
+            else:
+                _color = getattr(self, color_key)
+                setattr(self, "_original_{}".format(color_key), _color)
+            value = pride.gui.color.Color(*_color)
+            setattr(self, color_key, pride.gui.color.Color(*_color))
+            alpha = value.a
+            if alpha > maximum:
+                maximum = alpha
+        self.colors_setup = True
+
+        refresh_rate = pride.objects[self.sdl_window].priority
+        updates = self.fade_duration / refresh_rate
+        self.change = max(1, int(maximum / updates))
+        assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
+        pride.objects[self.sdl_window].schedule_postdraw_operation(self.fade_alpha)
+
+    def fade_alpha(self):
+        assert not self.deleted
+        finished = True
+        change = self.change
+        for color_key in ("background", "shadow", "text"):
+            color_key = "{}_color".format(color_key)
+            _color = getattr(self, color_key)
+            for value in ('r', 'g', 'b', 'a'):
+                new_value = getattr(_color, value) - change
+                setattr(_color, value, new_value)
+                if new_value > 0:
+                    finished = False
+                    self.texture_invalid = True
+        if not finished:
+            assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
+            pride.objects[self.sdl_window].schedule_postdraw_operation(self.fade_alpha)
+        else:
+            assert self.parent._status == self.reference
+            assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
+            self.parent._status = None
+            self.delete()
+
+    #def mousemotion(self, x_motion, y_motion):
+    #    print("reseting fade")
+    #    self.setup_colors(True)
+
+    def delete(self):
+        queue = pride.objects[self.sdl_window].postdraw_queue
+        try:
+            queue.remove(self.fade_alpha)
+        except ValueError:
+            pass
+        else:
+            assert self.fade_alpha not in queue
+        super(Popup_Notification, self).delete()

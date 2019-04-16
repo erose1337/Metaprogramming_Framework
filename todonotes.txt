@@ -9,10 +9,10 @@ deal with certificates properly?
 
 changes
 -----
-added ability to use floating point/percentages to h_range/w_range
-added slider widget
-small adjustment to base.Wrapper init that doesn't appear to be to negatively change functionality
-added _theme_users and update_theme_users to gui.gui.Theme
+partial re-work of base save/load
+added show_status and hide_status on Window_Objects
+added Popup_Notification for fade-out notifications
+changed some items that were buttons to be containers if they are not interactive
 
 notes
 ----

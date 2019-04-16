@@ -6,6 +6,7 @@ import sys
 import heapq
 import pprint
 import inspect
+import importlib
 from six import with_metaclass
 
 import pride
@@ -20,33 +21,40 @@ __all__ = ["DeleteError", "AddError", "load", "Base", "Reactor", "Wrapper", "Pro
 
 def rebuild_object(saved_data):
     """ usage: load(saved_data) => restored_instance, attributes """
-    user = pride.objects["/User"]
-    attributes = user.load_data(saved_data)
-    repo_id = user.generate_tag(user.username)
-    version_control = pride.objects["/Python/Version_Control"]
-    _required_modules = []
-    module_info = attributes.pop("_required_modules")
-    class_name = module_info.pop()
-    for module_name, module_id in module_info:
-        source = version_control.load_module(module_name, module_id, repo_id)
-        module_object = pride.functions.module_utilities.create_module(module_name, source)
-        _required_modules.append((module_name, module_id, module_object))
-
+    #user = pride.objects["/User"]
+    #attributes = user.load_data(saved_data)
+    #repo_id = user.generate_tag(user.username)
+    #version_control = pride.objects["/Python/Version_Control"]
+    #_required_modules = []
+    #module_info = attributes.pop("_required_modules")
+    #class_name = saved_data["_required_modules"].pop()
+    #module_object = importlib.import_module(module_info[-1])
+    #for module_name in module_info:
+        #source = version_control.load_module(module_name, module_id, repo_id)
+        #module_object = pride.functions.module_utilities.create_module(module_name, source)
+    #    _required_modules.append((module_name, module_id, module_object))
+    saved_data = utilities.load_data(saved_data)
+    module_name, class_name = saved_data.pop("_type_info")
+    module_object = importlib.import_module(module_name)
     self_class = getattr(module_object, class_name)
-    attributes["_required_modules"] = _required_modules
+    #attributes["_required_modules"] = _required_modules
 
     self = self_class.__new__(self_class)
-    return self, attributes
+    return self, saved_data
 
 def restore_attributes(new_self, attributes):
     """ Loads and instance from a bytestream or file produced by pride.components.base.Base.save.
         Currently being reimplemented"""
 
     saved_objects = attributes["objects"]
+    assert not attributes["objects"]
     objects = attributes["objects"] = {}
-
+    print repr(new_self), "restoring"
     for instance_type, saved_instances in saved_objects.items():
+        assert saved_instances
         objects[instance_type] = [load(instance) for instance in saved_instances]
+    import pprint
+    pprint.pprint(objects)
 
     attribute_modifier = attributes.pop("_attribute_type")
     for key, value in attributes.items():
@@ -55,7 +63,7 @@ def restore_attributes(new_self, attributes):
             attributes[key] = pride.objects[value]
         elif modifier == "save":
             attributes[key] = load(value)
-
+    print repr(new_self), "Calling on load"
     new_self.on_load(attributes)
     return new_self
 
@@ -220,7 +228,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # verbosity is an inherited class attribute used to store the verbosity
     # level of a particular message.
     verbosity = {"delete" : "vv", "initialized" : "vv", "remove" : "vv",
-                 "add" : "vv", "update" : "v"}
+                 "add" : "vv", "update" : "v", "save" : "vv"}
 
     auto_verbosity_ignore = ("alert", )
 
@@ -488,12 +496,12 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         """ usage: base_object.save(_file=None)
 
             Saves the state of the calling objects __dict__. If _file is not
-            specified, a pickled stream is returned. If _file is specified,
-            the stream is written to the supplied file like object via
-            pickle.dump and then returned.
+            specified, a serialized stream is returned. If _file is specified,
+            the stream is written to the supplied file like object and then
+            returned.
 
-            This method and load are under being reimplemented"""
-        self.alert("Saving")
+            This method and load are being reimplemented"""
+        self.alert("Saving", level=self.verbosity["save"])
         attributes = self.__getstate__()
         self_objects = attributes.pop("objects", {})
         saved_objects = attributes["objects"] = {}
@@ -515,24 +523,25 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 attributes[key] = value.save()
                 attribute_type[key] = "saved"
 
-        required_modules = pride.functions.module_utilities.get_all_modules_for_class(type(self))
-        version_control = objects["/Python/Version_Control"]
-        user = objects["/User"]
-        hash_function = user.generate_tag
-        repo_id = hash_function(user.username)
-        _required_modules = []
-        for module_name, source, module_object in required_modules:
-            module_id = hash_function(source)
-            version_control.save_module(module_name, source, module_id, repo_id)
-            _required_modules.append((module_name, module_id))
+        #required_modules = pride.functions.module_utilities.get_all_modules_for_class(type(self))
+        #version_control = objects["/Python/Version_Control"]
+        #user = objects["/User"]
+        #hash_function = user.generate_tag
+        #repo_id = hash_function(user.username)
+        #_required_modules = []
+        #for module_name, source, module_object in required_modules:
+            #module_id = hash_function(source)
+            #version_control.save_module(module_name, source, module_id, repo_id)
+            #_required_modules.append(module_name)
 
-        attributes["_required_modules"] = _required_modules + [self.__class__.__name__]
-        try:
-            saved_data = pride.objects["/User"].save_data(attributes)
-        except TypeError:
-            self.alert("Unable to save attributes '{}'".format(pprint.pformat(attributes)), level=0)
-            raise
-
+        #attributes["_required_modules"] = _required_modules + [self.__class__.__name__]
+        attributes["_type_info"] = (self.__module__, self.__class__.__name__)
+        #try:
+        #    saved_data = pride.objects["/User"].save_data(attributes)
+        #except TypeError:
+        #    self.alert("Unable to save attributes '{}'".format(pprint.pformat(attributes)), level=0)
+        #    raise
+        saved_data = utilities.save_data(attributes)
         if _file:
             _file.write(saved_data)
         return saved_data
@@ -655,6 +664,11 @@ class Wrapper(Base):
         self.wrapped_object = _object
         if self.wrapped_object_name:
             setattr(self, self.wrapped_object_name, _object)
+
+#    def __getstate__(self):
+#        state = super(Wrapper, self).__getstate__()
+#        del state["wrapped_object"]
+#        return state
 
 
 class Proxy(Base):

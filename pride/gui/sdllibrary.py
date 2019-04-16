@@ -53,6 +53,7 @@ class SDL_Window(SDL_Component):
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
     mutable_defaults = {"redraw_objects" : list, "predraw_queue" : list,
+                        "postdraw_queue" : list,
                         "drawing_instructions" : collections.OrderedDict}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None}
@@ -145,12 +146,19 @@ class SDL_Window(SDL_Component):
 
     def run(self):
         self.organizer.pack_items()
-        for callable in self.predraw_queue:
-            callable()
-        del self.predraw_queue[:]
+        if self.predraw_queue:
+            queue = self.predraw_queue[:]
+            del self.predraw_queue[:]
+            for callable in queue:
+                callable()
         self.update_drawing_instructions()
         self.draw(instruction_generator(self.drawing_instructions))
         self.running = False
+        if self.postdraw_queue:
+            queue = self.postdraw_queue[:]
+            del self.postdraw_queue[:]
+            for callable in queue:
+                callable()
 
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions
@@ -209,6 +217,9 @@ class SDL_Window(SDL_Component):
 
     def schedule_predraw_operation(self, callable):
         self.predraw_queue.append(callable)
+
+    def schedule_postdraw_operation(self, callable):
+        self.postdraw_queue.append(callable)
 
     def get_mouse_state(self):
         mouse = sdl2.mouse

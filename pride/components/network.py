@@ -275,6 +275,7 @@ class Socket(base.Wrapper):
         stats = super(Socket, self).__getstate__()
         del stats["wrapped_object"]
         del stats["socket"]
+        stats["serializer"] = stats["serializer"].__name__
         stats["connecting"] = False
         stats["_connected"] = False
         return stats
@@ -296,6 +297,15 @@ class Socket(base.Wrapper):
 
     def deserialize(self, data):
         return self.serializer.loads(data)
+
+
+    #def __setstate__(self, state):
+    #    if state["serializer"] == "Serializer":
+    #        state["serializer"] = DEFAULT_SERIALIZER
+    #    else:
+    #        raise ValueError("Unsupported serializer '{}'".format(state["serializer"]))
+    #    dict["socket"] =
+    #    super(Socket, self).__setstate__(state)
 
 
 class Raw_Socket(Socket):

@@ -541,7 +541,11 @@ class SDL_User_Input(scheduler.Process):
         position = (motion.x, motion.y)
         if not self.under_mouse:
             self.under_mouse = under_mouse = self._get_object_under_mouse(position)
-            pride.objects[under_mouse].on_hover()
+            try:
+                pride.objects[under_mouse].on_hover()
+            except KeyError:
+                if under_mouse is not None:
+                    raise
         else:
 
             under_mouse = pride.objects[self.under_mouse]

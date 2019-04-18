@@ -279,7 +279,6 @@ class Python(base.Base):
                        level=self.verbosity["os_environ_set"])
             os.environ[variable] = result
             assert os.getenv(variable) == result
-            print("Set {} = {}".format(variable, result))
 
     def start_machine(self):
         """ Begins the processing of Instruction objects."""

@@ -71,12 +71,12 @@ class Bounded_Shape(Shape):
         screen_w, screen_h = pride.objects[self.sdl_window].size
         if isinstance(value[0], float):
             lower = value[0]
-            if 0 > lower < 1.0:
+            if lower < 0.0 or lower > 1.0:
                 raise ValueError("float w_range must be between 0.0 and 1.0; got {}".format(lower))
             value = (int(lower * screen_w), value[1])
         if isinstance(value[1], float):
             upper = value[1]
-            if 0 > lower < 1.0:
+            if upper < 0.0 or upper > 1.0:
                 raise ValueError("float h_range must be between 0.0 and 1.0; got {}".format(upper))
             value = (value[0], int(upper * screen_w))
         self._w_range = value

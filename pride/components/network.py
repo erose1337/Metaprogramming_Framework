@@ -576,6 +576,7 @@ class Network(scheduler.Process):
                 error_handler.dispatch(_socket, error, ERROR_CODES[error.errno].lower())
             except Exception as error:
                 _socket = readable[read_progress + read_counter]
+                message = "Caught non socket.error during recv: {}".format(traceback.format_exc())
                 _socket.alert(message, level=0)
                 _socket.delete()
               #  raise

@@ -278,6 +278,8 @@ class Python(base.Base):
             self.alert("Setting os.environ[{}] = {}".format(variable, result),
                        level=self.verbosity["os_environ_set"])
             os.environ[variable] = result
+            assert os.getenv(variable) == result
+            print("Set {} = {}".format(variable, result))
 
     def start_machine(self):
         """ Begins the processing of Instruction objects."""

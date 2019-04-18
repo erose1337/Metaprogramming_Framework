@@ -46,6 +46,9 @@
 # site_config
 # defaults specified here will override defaults defined in the source code
 import os
+import ast
+import ConfigParser
+import base64
 
 def ensure_folder_exists(pathname):
     path_progress = r''
@@ -53,11 +56,13 @@ def ensure_folder_exists(pathname):
         path_progress = os.path.join(path_progress, directory)
         if not os.path.exists(path_progress) or not os.path.isdir(path_progress):
             os.mkdir(path_progress)
+        assert os.path.exists(path_progress)
+        assert os.path.isdir(path_progress)
 
 PRIDE_DIRECTORY = os.path.split(os.path.abspath(__file__))[0]
 AUDIO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "audio")
 
-DATA_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "data")
+DATA_DIRECTORY = os.path.join(os.path.expanduser('~'), "pride")
 DATABASE_DIRECTORY = os.path.join(DATA_DIRECTORY, "database")
 LOG_DIRECTORY = os.path.join(DATA_DIRECTORY, "log")
 
@@ -70,25 +75,59 @@ GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")
 OBJECTLIBRARY_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "components")
 PROGRAMS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "programs")
 
-SITE_CONFIG_FILE = __file__ if __file__[-1] != 'c' else __file__[:-1]
-del os
+CONFIGURATION_FILE = os.path.join(DATA_DIRECTORY, "default.ini")#__file__ if __file__[-1] != 'c' else __file__[:-1]
 
-import sys
-def write_to(entry, **values):
-    site_config_module = sys.modules[__name__]
-    values = str(values)
-    file_data = """
-try:
-    config["{}"].update({})
-except KeyError:
-    config["{}"] = {}""".format(entry, values, entry, values)
-    with open(SITE_CONFIG_FILE, 'a') as _file:
-        _file.write(file_data)
-        _file.flush()
+class Config_File(object):
 
-config = dict()
-config["pride.components.interpreter.Shell.defaults"] = \
-{"startup_definitions" : \
+    def __init__(self, filename):
+        self._config = ConfigParser.ConfigParser()
+        self.setup_file(filename)
+
+    def setup_file(self, filename):
+        self.filename = filename
+        entries = self.mapping = dict()
+        _config = self._config
+        _config.read(filename)
+        for section in _config.sections():
+            entry_dict = entries[section] = dict()
+            for option, value in _config.items(section):
+                value = ast.literal_eval(value)
+                if isinstance(value, str):
+                    value = base64.standard_b64decode(value)
+                entry_dict[option] = value
+
+    def write_to(self, entry, **values):
+        for key, value in values.items():
+            self[entry, key] = value
+
+    def __contains__(self, key):
+        return self._config.has_section(key)
+
+    def __getitem__(self, key):
+        length = len(key)
+        if length > 2 or length == 1:
+                return self.mapping[key]
+        else:
+            return self.mapping[key[0]][key[1]]
+
+    def __setitem__(self, key, value):
+        _config = self._config
+        key0, key1 = key
+        try:
+            self.mapping[key0][key1] = value
+        except KeyError:
+            if key0 not in self.mapping:
+                _config.add_section(key0)
+                self.mapping[key0] = {key1 : value}
+            else:
+                raise
+        _config.set(key0, key1, "'{}'".format(base64.standard_b64encode(value)))
+        with open(self.filename, 'r+') as _file:
+            _config.write(_file)
+
+config = Config_File(CONFIGURATION_FILE)
+write_to = config.write_to
+config["pride.components.interpreter.Shell.defaults", "startup_definitions"] = \
 r"""import pride.components.base
 import pride
 
@@ -109,5 +148,4 @@ def delete(reference):
     objects[reference].delete()
 
 def logout(program="/User/Shell"):
-    objects[program].logout()
-"""}
+    objects[program].logout()"""

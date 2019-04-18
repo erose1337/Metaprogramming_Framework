@@ -1,30 +1,38 @@
-import contextlib
+import getpass
+import argparse
 import sys
 
 import pride
-import pride.components.shell
-import pride.errors
-import pride.functions.utilities
-        
+
+_argparser = argparse.ArgumentParser()
+_argparser.add_argument("service", help="The local-residing service to register with")
+_argparser.add_argument("username")
+
+def register(service, username, password=None):
+    print("Registering '{}' with local {} service".format(username, service))
+    if password is None:
+        password = getpass.getpass("Please enter the password ")
+    success, message = pride.objects[service].register(username, password)
+    if not success:
+        raise ValueError("{} user {} already exists")
+
 class Registration(pride.components.base.Base):
-    """ Launcher program for registering a new user with an 
-        Authenticated_Service. Dispatches the appropriate 
+    """ Launcher program for registering a new user with an
+        Authenticated_Service. Dispatches the appropriate
         authenticated client to start registration. """
-    defaults = {"name" : "registration",                 
+    defaults = {"name" : "registration",
                 "authentication_client_name" : "pride.components.interpreter.Shell"}
-    
+
     parser_ignore = ("name", )
 
     def __init__(self, **kwargs):
         super(Registration, self).__init__(**kwargs)
         client = pride.objects["/Python"].create(self.authentication_client_name,
                                                   parse_args=True, auto_login=False,
-                                                  _register_results=sys.exit)        
-        client.register()                   
-        
+                                                  _register_results=sys.exit)
+        client.register()
+
 if __name__ == "__main__":
-    #import pride.components.user
-  #  pride.Instruction("/User", "create", Registration, parse_args=True).execute(priority=.011)    
-    #user = pride.components.user.User()
-    #python = pride.components.interpreter.Python()
+    #args, _  = _argparser.parse_known_args()
+    #register(args.service, args.username)
     registration = Registration(parse_args=True)

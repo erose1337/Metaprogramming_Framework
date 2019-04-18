@@ -29,15 +29,9 @@ def parse_site_config(alert_handler_config=_alert_handler_config):
                     alert_handler_config[attribute].update(value)
                 except KeyError:
                     alert_handler_config[attribute] = value
-            try:
-                site_config_entry = configuration[name]
-            except KeyError:
-                configuration[name] = value
-            else:
-                try:
-                    site_config_entry.update(value) # update dicts in place
-                except AttributeError:
-                    configuration[name] = value # replace other types completely
+            for key, entry in value.items():
+                configuration[(name, key)] = entry
+    
 parse_site_config()
 
 import additional_builtins

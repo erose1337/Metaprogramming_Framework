@@ -79,7 +79,6 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
             On success, inserts (identifier, hashed_password_verifier, salt) into database and returns register_success()
             On failure, returns register_failure() """
-
         identifier_in_use = self.database.query("Users", retrieve_fields=("identifier", ),
                                                          where={"identifier" : identifier})
         salt = os.urandom(self.salt_size)
@@ -133,7 +132,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
         try:
             correct_hash, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
-                                                            where={"identifier" : username})
+                                                     where={"identifier" : username})
         except ValueError:
             constant_time = self._hash_password("\x00", "\x00")
             return self.login_failure(username)
@@ -201,7 +200,20 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
             (session_id not in self.session_id and method_name not in ("register", "login")) or
             (method_name == "register" and not self.allow_registration) or
             (method_name == "login" and not self.allow_login)):
-
+            #print("Failed validation\n\n")
+            #if method_name not in self.remotely_available_procedures:
+            #    print("     {} not remotely available".format(method_name))
+            #elif peername[0] in self.ip_blacklist:
+            #    print("     ip blacklisted")
+            #elif peername[0] not in self.ip_whitelist and self.ip_whitelist:
+            #    print("     not in ip white list")
+            #elif session_id == '0' and method_name not in ("register", "login"):
+            #    print("     invalid session id '0' for method {}".format(method_name))
+            #elif method_name == "register" and not self.allow_registration:
+            #    print("     registration disabled")
+            #else:
+            #    assert method_name == "login" and not self.allow_login
+            #    print("     login disabled")
             self.alert(self.validation_failure_string.format(peername[0] in self.ip_blacklist,
                                                              peername[0] in self.ip_whitelist,
                                                              session_id in self.session_id,
@@ -323,7 +335,12 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
 
     def register_results(self, server_response):
         self._registering = False
-        success, message = server_response
+        try:
+            success, message = server_response
+        except ValueError:
+            if not isinstance(server_response, UnauthorizedError):
+                raise
+            success, message = False, "UnauthorizedError"
         self.alert("{}".format(message), level=0)
         if success:
             self.register_success()
@@ -342,6 +359,10 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             self.login()
 
     def register_failure(self):
+        if self.ip in ("localhost", "127.0.0.1"):
+            success, _ = pride.objects[self.target_service].register(self.username, self.password)
+            if success:
+                return self.register_success()
         self.alert(self.registration_failed_message.format(self.target_service, self.ip, self.username),
                    level=self.verbosity["register_failure"])
 

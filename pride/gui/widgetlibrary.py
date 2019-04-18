@@ -1021,3 +1021,52 @@ class Popup_Notification(pride.gui.gui.Container):
         else:
             assert self.fade_alpha not in queue
         super(Popup_Notification, self).delete()
+
+
+class Page_Control_Bar(pride.gui.gui.Container):
+
+    defaults = {"h_range" : (0, 40), "pack_mode" : "top", "label" : '',
+                "page_type" : "pride.gui.gui.Container", "index" : 0}
+    mutable_defaults = {"pages" : list}
+
+    def __init__(self, **kwargs):
+        super(Page_Control_Bar, self).__init__(**kwargs)
+        self.create(Method_Button, target=self.reference, method="page_left",
+                    pack_mode="left", w_range=(0, .10), text='<')
+        self.create(Method_Button, target=self.reference, method="page_right",
+                    pack_mode="right", w_range=(0, .10), text='>')
+
+    def page_left(self):
+        if self.pages:
+            pride.objects[self.pages[self.index]].hide()
+            self.index = max(self.index - 1, 0)
+            pride.objects[self.pages[self.index]].show()
+
+    def page_right(self):
+        if self.pages:
+            pride.objects[self.pages[self.index]].hide()
+            self.index = min(self.index + 1, len(self.pages))
+            pride.objects[self.pages[self.index]].show()
+
+    def new_page(self, **kwargs):
+        page = self.create(self.page_type, **kwargs).reference
+        self.pages.append(page)
+        return page
+
+
+class Page_Switching_Window(pride.gui.gui.Window):
+
+    defaults = {"page_control_type" : Page_Control_Bar, "open_to_page" : 0}
+    mutable_defaults = {"pages" : list}
+
+    def __init__(self, **kwargs):
+        super(Page_Switching_Window, self).__init__(**kwargs)
+        self.create(self.page_control_type, pages=self.pages).reference
+        self.initialize_pages(self.open_to_page)
+
+    def initialize_pages(self, open_to_page=0):
+        for page_number, page in enumerate(self.pages):
+            if page_number == open_to_page:
+                pride.objects[page].show()
+            else:
+                pride.objects[page].hide()

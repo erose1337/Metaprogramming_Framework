@@ -225,7 +225,7 @@ class Rpc_Client_Socket(Packet_Client):
             else:
                 if isinstance(_response, BaseException):
                     self.handle_exception(_call, callback, _response)
-                elif callback is not None:
+                if callback is not None:
                     callback(_response)
 
     def handle_exception(self, _call, callback, response):
@@ -284,7 +284,6 @@ class Rpc_Socket(Packet_Socket):
             else:
                 self.alert("Sending result of {}.{}: {}".format(component_name, method, result),
                            level=self.verbosity["request_result"])
-
             self.send(self.serialize(result))
 
     def delete(self):
@@ -333,7 +332,9 @@ class RPC_Service(pride.components.base.Base):
                 "validation_failure_string" :\
                    ".validate: Authorization Failure:\n" +
                    "    ip blacklisted: {}    ip whitelisted: {}\n" +
-                   "    method_name: '{}'    method available remotely: {}\n"}
+                   "    session exists: {}    method name:    {}\n" +
+                   "    method available remotely: {}\n" +
+                   "    login enabled: {}    registration enabled: {}\n"}
     mutable_defaults = {"_rate" : dict, "ip_whitelist" : list, "ip_blacklist" : list,
                         "session_id" : dict}
     predefaults = {"current_session" : ('', None)}

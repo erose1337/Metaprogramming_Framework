@@ -1,0 +1,5 @@
+to fix PYSDL2 SDL2_TTF not found on debian:
+
+    sudo apt-get install libsdl2-dev
+    sudo apt-get install libsdl2-ttf-dev
+    find /usr|grep SDL2_ttf-2.0

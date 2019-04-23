@@ -100,8 +100,6 @@ class Bounded_Shape(Shape):
         self._w_range, self._h_range = (0, max_width), (0, max_height)
   #      self._x_range, self._y_range = (0, max_width), (0, max_height)
         super(Bounded_Shape, self).__init__(**kwargs)
-        for color in self.colors:
-            setattr(self, color + "_range", (0, 255))
 
     def _on_set(self, coordinate, value):
         lower_bound, upper_bound = getattr(self,

@@ -50,6 +50,7 @@ class SDL_Window(SDL_Component):
                 "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .04,
                 "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
+                "software_renderer_flags" : sdl2.SDL_RENDERER_SOFTWARE | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
     mutable_defaults = {"redraw_objects" : list, "predraw_queue" : list,
@@ -99,12 +100,13 @@ class SDL_Window(SDL_Component):
         if self.showing:
             self.show()
 
-        create_texture = self.renderer.sprite_factory.create_texture_sprite
-        self._texture = create_texture(self.renderer.wrapped_object,
-                                       self.renderer.max_size,
-                                       access=self.texture_access_flag)
+        self._texture = self.create_texture(self.renderer.max_size, self.texture_access_flag)
 
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
+
+    def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET):
+        _create_texture = self.renderer.sprite_factory.create_texture_sprite
+        return _create_texture(self.renderer.wrapped_object, size, access=access)
 
     def invalidate_object(self, instance):
        # if instance is self._ignore_invalidation:
@@ -651,10 +653,17 @@ class Renderer(SDL_Component):
         self.instructions["fill"] = self.fill
         self.instructions["copy"] = self.copy
         self.instructions["copy_subsection"] = self.render_copy
+        self.instructions["copyex"] = self.copyex
         self.clear()
 
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
+
+    def copyex(self, texture, srcrect, dstrect, angle=0.0, center=None,
+               flip_value=sdl2.SDL_FLIP_NONE):
+        sdl2.SDL_RenderCopyEx(self.wrapped_object.renderer, texture.texture,
+                              sdl2.SDL_Rect(*srcrect), sdl2.SDL_Rect(*dstrect),
+                              angle, center, flip_value)
 
     def render_copy(self, source_area, destination_area):
         self.copy(self.parent._texture.texture, source_area, destination_area)
@@ -662,18 +671,20 @@ class Renderer(SDL_Component):
     def draw_text(self, area, text, **kwargs):
         x, y, w, h = area
         assert w
+        #kwargs.setdefault("width", w)
         ellipses = ''
         _text = text
-        hide_excess = kwargs.get("hide_excess_text", False)
+        assert "width" in kwargs
+        hide_excess = False#kwargs.get("hide_excess_text", False) # needs to be re-done
         while True:
             texture = self.sprite_factory.from_text(text + ellipses,
                                                     fontmanager=self.font_manager,
                                                     **kwargs)
             _w, _h = texture.size
-            if kwargs.get("center_text", False):
-                destination = ((x + (w / 2)) - (_w / 2),
-                               (y + (h / 2)) - (_h / 2),
-                               _w - 2, _h)
+            if kwargs.get("center_text", False) and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
+                    destination = ((x + (w / 2)) - (_w / 2),
+                                   (y + (h / 2)) - (_h / 2),
+                                   _w - 2, _h)
             else:
                 destination = (x + 2, y + 2, _w - 2, _h)
 
@@ -681,6 +692,7 @@ class Renderer(SDL_Component):
                 if destination[2] <= w - 12:
                     break
                 else:
+                #    print "Shrinking...", destination, area
                     text = text[:-3]
                     ellipses = "..."
                     if not text:

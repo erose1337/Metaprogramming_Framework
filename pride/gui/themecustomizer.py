@@ -47,6 +47,7 @@ class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
         for index, tab_reference in enumerate(pride.objects[self.tab_bar].tabs):
             tab = pride.objects[tab_reference]
             key = tab.text
+            tab.text = key.replace('_', ' ')
             _object = info[key]
             try:
                 kwargs = {"field_attributes" : {'r' : _object.r_range, 'g' : _object.g_range,

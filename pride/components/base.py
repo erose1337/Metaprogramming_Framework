@@ -363,7 +363,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             try:
                 instance = instance_type(*args, **kwargs)
             except TypeError:
-                if isinstance(instance_type, type):
+                if isinstance(instance_type, type) or hasattr(instance_type, "__call__"):
                     raise
                 instance = utilities.resolve_string(instance_type)(*args, **kwargs)
         return instance

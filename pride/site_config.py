@@ -49,6 +49,7 @@ import os
 import ast
 import ConfigParser
 import base64
+import platform
 
 def ensure_folder_exists(pathname):
     path_progress = r''
@@ -72,6 +73,10 @@ ensure_folder_exists(LOG_DIRECTORY)
 
 FUNCTIONS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "functions")
 GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")
+if "win" in platform.platform():
+    PYSDL2_PATH = GUI_DIRECTORY + os.path.sep
+else:
+    PYSDL2_PATH = "/usr/lib/x86_64-linux-gnu/"
 OBJECTLIBRARY_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "components")
 PROGRAMS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "programs")
 

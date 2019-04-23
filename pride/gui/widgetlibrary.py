@@ -95,7 +95,7 @@ class Objects_Explorer(pride.gui.gui.Application):
 
 class Icon(pride.gui.gui.Button):
 
-    defaults = {"h_range" : (0, 40), "w_range" : (0, 40), "pack_mode" : "grid"}
+    defaults = {"h_range" : (0, 40), "w_range" : (0, 40), "pack_mode" : "left"}
     required_attributes = ("popup_type", )
 
     def left_click(self, mouse):
@@ -281,11 +281,11 @@ class Indicator(gui.Button):
         super(Indicator, self).__init__(**kwargs)
         self.text = self.text or self.parent_name
 
-    def draw_texture(self):
-        super(Indicator, self).draw_texture()
-        #x, y, w, h = self.parent.area
-        self.draw("text", self.area, self.text, color=self.text_color, w=self.w,
-                  center_text=self.center_text)
+    #def draw_texture(self):
+    #    super(Indicator, self).draw_texture()
+    #    #x, y, w, h = self.parent.area
+    #    self.draw("text", self.area, self.text, color=self.text_color, width=self.w,
+    #              center_text=self.center_text, background_color=self.text_background_color)
 
 
 class Done_Button(gui.Button):
@@ -585,32 +585,9 @@ class Field(pride.gui.gui.Container):
                             write_field_method=lambda value: self.write_field_method(self.field_name, value))
 
 
-class Status_Indicator_Theme(pride.gui.gui.Theme):
-
-    theme_colors = pride.gui.gui.Theme.theme_colors.copy()
-    theme_colors["indicator"] = pride.gui.gui._default_colors()
-    theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
-
-    def draw_texture(self):
-        x, y, w, h = area = self.area
-        if not self._dont_draw:
-            self.draw("fill", (x, y, w, h), color=self.background_color)
-
-        shadow_thickness = self.shadow_thickness
-        if shadow_thickness:
-            r, g, b, a = self.shadow_color
-            scalar = self.shadow_fade_scalar
-            for thickness in range(shadow_thickness):
-                self.draw("rect", (x + thickness, y + thickness,
-                                   w - (scalar * thickness), h - (scalar * thickness)),
-                          color=(r, g, b, a / (thickness + 1)))
-
-
 class Status_Indicator(pride.gui.gui.Container):
 
     defaults = {"w_range" : (0, 10), "pack_mode" : "left",
-                "indicator_theme_type" : Status_Indicator_Theme,
-                "indicator_color" : (85, 85, 185, 235),
                 "theme_type" : "pride.gui.gui.Spacer_Theme",
                 "_dont_draw" : True}
 
@@ -619,18 +596,15 @@ class Status_Indicator(pride.gui.gui.Container):
         self.create("pride.gui.gui.Container", pack_mode="top",
                     theme_type="pride.gui.gui.Spacer_Theme")
         self.status_light = self.create("pride.gui.gui.Container", pack_mode="top",
-                                        background_color=self.indicator_color,
-                                        theme_type=self.indicator_theme_type,
-                                        theme_profile="indicator",
-                                        _dont_draw=True).reference
+                                        theme_profile="placeholder").reference
         self.create("pride.gui.gui.Container", pack_mode="top",
                     theme_type="pride.gui.gui.Spacer_Theme")
 
     def enable_indicator(self):
-        pride.objects[self.status_light]._dont_draw = False
+        pride.objects[self.status_light].theme_profile = "indicator"
 
     def disable_indicator(self):
-        pride.objects[self.status_light]._dont_draw = True
+        pride.objects[self.status_light].theme_profile = "placeholder"
 
     def change_color(self, color):
         pride.objects[self.status_light].background_color = color
@@ -754,7 +728,7 @@ class Tab_Switcher_Bar(Tab_Bar):
 
     def initialize_tabs(self):
         if self.label:
-            self.create("pride.gui.gui.Button", text=self.label,
+            self.create("pride.gui.gui.Container", text=self.label,
                         scale_to_text=True, pack_mode="left")
         for tab_type in self.tab_types:
             self.tab_type = tab_type
@@ -777,14 +751,16 @@ class Tab_Switching_Window(pride.gui.gui.Window):
 
     def create_windows(self):
         tabs = pride.objects[self.tab_bar].tabs
-        for index, window_type in reversed(enumerate(self.window_types)):
-            window = self.create(window_type, tab=tabs[index])
+        for index, window_type in reversed(list(enumerate(self.window_types))):
+            tab = tabs[index]
+            window = self.create(window_type, tab=tab)
+            tab = pride.objects[tab]
             tab.window = window.reference
             if index:
                 window.hide()
-                tab.indicator.disable_indicator()
+                pride.objects[tab.indicator].disable_indicator()
             else:
-                tab.indicator.enable_indicator()
+                pride.objects[tab.indicator].enable_indicator()
 
     def select_tab(self, selected_tab):
         for tab_reference in pride.objects[self.tab_bar].tabs:
@@ -843,9 +819,8 @@ class Tabbed_Window(pride.gui.gui.Window):
 
 class _Slider_Dragger(pride.gui.gui.Button):
 
-    defaults = {"target" : tuple(), "bounds" : tuple(), "on_adjustment" : None,
-                "_slider_label" : ''}
-    required_attributes = ("target", "bounds", "on_adjustment", "_slider_label")
+    defaults = {"target" : tuple(), "bounds" : tuple(), "on_adjustment" : None}
+    required_attributes = ("target", "bounds", "on_adjustment")
 
     def set_initial_position(self):
         parent = self.parent
@@ -865,7 +840,7 @@ class _Slider_Dragger(pride.gui.gui.Button):
                          x),
                      pride.objects[parent.parent.left_end].w)
         self.on_adjustment()
-        pride.objects[self._slider_label].set_label_value(value)
+        self.parent.parent.parent.set_value_indicator(value)
 
     def mousemotion(self, x_change, y_change):
         if self.held:
@@ -886,7 +861,7 @@ class _Slider_Dragger(pride.gui.gui.Button):
                 setattr(_object, name, value)
 
             self.on_adjustment()
-            pride.objects[self._slider_label].set_label_value(value)
+            self.parent.parent.parent.set_value_indicator(value)
 
     def delete(self):
         self.on_adjustment = None
@@ -895,10 +870,9 @@ class _Slider_Dragger(pride.gui.gui.Button):
 
 class _Slider_Bar(pride.gui.gui.Container):
 
-    defaults = {"target" : tuple(), "bounds" : tuple(), "on_adjustment" : None,
-                "_slider_label" : ''}
+    defaults = {"target" : tuple(), "bounds" : tuple(), "on_adjustment" : None}
     predefaults = {"dragger" : None}
-    required_attributes = ("target", "bounds", "on_adjustment", "_slider_label")
+    required_attributes = ("target", "bounds", "on_adjustment")
 
     def _on_set(self, coordinate, value):
         super(_Slider_Bar, self)._on_set(coordinate, value)
@@ -909,22 +883,13 @@ class _Slider_Bar(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(_Slider_Bar, self).__init__(**kwargs)
-        self.dragger = self.create(_Slider_Dragger, target=self.target, bounds=self.bounds,
-                                   w_range=(0, 20), on_adjustment=self.on_adjustment,
-                                   _slider_label=self._slider_label).reference
+        self.dragger = self.create(_Slider_Dragger, target=self.target,
+                                   bounds=self.bounds, w_range=(0, 20),
+                                   on_adjustment=self.on_adjustment).reference
 
     def delete(self):
         self.dragger = None
         super(_Slider_Bar, self).delete()
-
-
-class Slider_Label(pride.gui.gui.Container):
-
-    defaults = {"label" : ''}
-    required_attributes = ("label", )
-
-    def set_label_value(self, value):
-        self.text = "{} ({})".format(self.label, value)
 
 
 class Slider_Widget(pride.gui.gui.Container):
@@ -935,23 +900,33 @@ class Slider_Widget(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(Slider_Widget, self).__init__(**kwargs)
-        lower, upper = self.bounds
         label = self.label.replace('_', ' ')
-        slider_label = self.create(Slider_Label, label=label, text=label,
-                                   pack_mode="bottom").reference
-        self.slider_bar = slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
-        slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=str(lower),
+        slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
+        slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=label,
                                                 pack_mode="left", scale_to_text=True,
                                                 theme_type="pride.gui.gui.Text_Only_Theme").reference
         self._slider_bar = slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target,
                                              bounds=self.bounds, on_adjustment=self.on_adjustment,
-                                             _slider_label=slider_label).reference
-        slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(upper),
+                                             ).reference
+        self.slider_bar = slider_bar.reference
+
+        _object, _attribute = self.target
+        try:
+            value = getattr(_object, _attribute)
+        except AttributeError:
+            value = _object[_attribute]
+        slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(value),
                                                  pack_mode="right", scale_to_text=True,
                                                  theme_type="pride.gui.gui.Text_Only_Theme").reference
 
     def readjust_sliders(self):
         pride.objects[pride.objects[self._slider_bar].dragger].set_initial_position()
+
+    def set_value_indicator(self, value):
+        pride.objects[pride.objects[self.slider_bar].right_end].text = str(value)
+
+    def set_label(self, value):
+        pride.objects[pride.objects[self.slider_bar].left_end].text = value
 
 
 class Popup_Notification(pride.gui.gui.Container):

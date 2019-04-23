@@ -187,8 +187,7 @@ class Python(base.Base):
 
         will result in the cryptographic key for the session being logged."""
     defaults = {"command" : '',
-                "environment_setup" : ("PYSDL2_DLL_PATH = " +
-                                       pride.site_config.GUI_DIRECTORY + os.path.sep, ),
+                "environment_setup" : ("PYSDL2_DLL_PATH = " + pride.site_config.PYSDL2_PATH, ),
                 "startup_components" : ("pride.components.storage.Persistent_Storage",
                                         "pride.components.vcs.Version_Control",
                                         "pride.components.scheduler.Processor",

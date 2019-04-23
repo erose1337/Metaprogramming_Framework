@@ -66,19 +66,22 @@ class Organizer(base.Base):
                 item._pack_scheduled2 = item._pack_scheduled = False
 
     def pack_children(self, parent, children):
-    #    parent.alert("Packing children {}".format(children))
         if not children:
             return
 
         _lists = {"top" : [], "main" : [], "bottom" : [], "left" : [], "right" : []}
         for child in children:
+            pack_mode = child.pack_mode
+            if pack_mode is None:
+                continue
             if child.hidden:
                 child.area = (0, 0, 0, 0)
             else:
                 try:
-                    _lists[child.pack_mode].append(child)
+                    _lists[pack_mode].append(child)
                 except KeyError:
-                    raise NotImplementedError("Unsupported pack mode '{}'".format(child.pack_mode))
+                    raise NotImplementedError("Unsupported pack mode '{}' on {}".format(pack_mode, child))
+
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
         assert len(main) in (0, 1), main
         area = parent.area
@@ -96,10 +99,10 @@ class Organizer(base.Base):
                                   top_height, bottom_height)
 
         for child in children:
-        #    self.unschedule_pack(child)
-            assert child not in self.pack_queue
-            assert not child._pack_scheduled
-            child._pack_scheduled2 = False
+            self.unschedule_pack(child)
+            #assert child not in self.pack_queue
+            #assert not child._pack_scheduled
+            child._pack_scheduled2 = child._pack_scheduled = False
             #child._pack_scheduled = False
             self.pack_children(child, list(child.children))
 
@@ -113,15 +116,13 @@ class Organizer(base.Base):
         if small_items:
             while True: # extra space caused by small items can make spacing larger and make items that were not small become small
                 spacing = _spacing + sum(_spacing - item.w_range[1] for item in small_items) / ((len(left_main_right) - len(small_items)) or 1)
-
-                extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
-                            sum(child.w_range[1] for child in small_items))
-
                 new_small_items = [child for child in left_main_right if child.w_range[1] < spacing and
                                 child not in small_items]
                 if new_small_items:
                     small_items += new_small_items
                 else:
+                    extra = w - ((spacing * len([child for child in left_main_right if child not in small_items])) +
+                                sum(child.w_range[1] for child in small_items))
                     break
         else:
             spacing = _spacing
@@ -172,13 +173,13 @@ class Organizer(base.Base):
         if small_items:
             while True:
                 spacing = _spacing + sum(_spacing - item.h_range[1] for item in small_items) / ((top_main_bottom_len - len(small_items)) or 1)
-                extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
-                            sum(child.h_range[1] for child in small_items))
                 new_small_items = [child for child in top_main_bottom if child.h_range[1] < spacing and
                                    child not in small_items]
                 if new_small_items:
                     small_items += new_small_items
                 else:
+                    extra = h - ((spacing * len([child for child in top_main_bottom if child not in small_items])) +
+                                sum(child.h_range[1] for child in small_items))
                     break
         else:
             spacing = _spacing
@@ -224,11 +225,14 @@ class Organizer(base.Base):
 class Theme(pride.base.Wrapper):
 
     defaults = {"dont_save" : True}
-    theme_profiles = ("default", "interactive", "hover")
+    theme_profiles = ("default", "interactive", "hover", "placeholder", "indicator")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
     theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
-    _theme_users = []
+    theme_colors["placeholder"]["background"] = pride.gui.color.Color(0, 0, 0, 255)
+    theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
+
+    _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
 
     def draw_texture(self):
         raise NotImplementedError
@@ -239,6 +243,7 @@ class Theme(pride.base.Wrapper):
 
     def delete(self):
         self._theme_users.remove(self.wrapped_object)
+        self.wrapped_object = None
         super(Theme, self).delete()
 
     @classmethod
@@ -258,6 +263,9 @@ class Minimal_Theme(Theme):
 
     def draw_texture(self):
         assert not self.hidden
+        #if self._cached:
+        #    self.draw("copy", self.texture, self.area, self.area)
+        #else:
         x, y, w, h = area = self.area
 
         self.draw("fill", area, color=self.background_color)
@@ -270,10 +278,14 @@ class Minimal_Theme(Theme):
                                    w - (scalar * thickness), h - (scalar * thickness)),
                         color=(r, g, b, a / (thickness + 1)))
         if self.text:
+            assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", area, self.text, w=self.w if self.wrap_text else None,
-                      bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text, hide_excess_text=self.hide_excess_text)
+            self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
+                    bg_color=self.text_background_color, color=self.text_color,
+                    center_text=self.center_text, hide_excess_text=self.hide_excess_text)
+        #renderer = pride.objects[self.sdl_window].renderer
+        #renderer.draw(self.texture.texture, self._draw_operations)
+        #self._cached= True
 
 
 class Blank_Theme(Theme):
@@ -293,7 +305,7 @@ class Text_Only_Theme(Theme):
     def draw_texture(self):
         if self.text:
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", self.area, self.text, w=self.w if self.wrap_text else None,
+            self.draw("text", self.area, self.text, width=self.w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
                       center_text=self.center_text)
 
@@ -315,12 +327,18 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
             while parent.reference != self.sdl_window:
                 if parent._pack_scheduled:
                     pack_scheduled = True
+                    break
                 else:
                     parent = parent.parent
-            if not pack_scheduled:
-                objects[self.sdl_window + "/Organizer"].schedule_pack(parent)
-                parent._pack_scheduled = True
-                self._pack_scheduled2 = True
+            if not pack_scheduled and not parent.deleted:
+                parent = self.parent
+                if not parent.deleted:
+                    #print
+                    #print objects[objects[self.sdl_window].organizer.reference] # somehow causes KeyError
+                    #print
+                    objects[self.sdl_window].organizer.schedule_pack(parent)
+                    parent._pack_scheduled = True
+                    self._pack_scheduled2 = True
 
 
 class Window_Object(Organized_Object):
@@ -336,7 +354,8 @@ class Window_Object(Organized_Object):
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.gui.Minimal_Theme",
-                "_selected" : False, "hide_excess_text" : True}
+                "_selected" : False, "hide_excess_text" : True,
+                "_cached" : False}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
@@ -414,7 +433,10 @@ class Window_Object(Organized_Object):
         def _getter(self, color_key=color_key):
             profile = self.theme_profile
             if profile in self.colors and color_key in self.colors[profile]:
+        #        assert profile != "placeholder"
                 return self.colors[profile][color_key]
+        #    if profile == "placeholder" and color_key == "background":
+        #        print("placholder {}: {}".format(color_key, list(self.theme.theme_colors[profile][color_key])))
             return self.theme.theme_colors[profile][color_key]
         def _setter(self, value, color_key=color_key):
             try:
@@ -422,11 +444,20 @@ class Window_Object(Organized_Object):
             except KeyError:
                 self.colors[self.theme_profile] = {color_key : value}
             self.texture_invalid = True
-        if color_key not in ("shadow_thickness", "shadow_fade_scalar"):
-            vars()["{}_color".format(color_key)] = property(_getter, _setter)
-        else:
-            vars()[color_key] = property(_getter, _setter)
+        def _deleter(self, color_key=color_key):
+            del self.colors[self.theme_profile][color_key]
 
+        if color_key not in ("shadow_thickness", "shadow_fade_scalar"):
+            vars()["{}_color".format(color_key)] = property(_getter, _setter, _deleter)
+        else:
+            vars()[color_key] = property(_getter, _setter, _deleter)
+
+    def _get_theme_profile(self):
+        return self._theme_profile
+    def _set_theme_profile(self, value):
+        self._theme_profile = value
+        self.texture_invalid = True
+    theme_profile = property(_get_theme_profile, _set_theme_profile)
 
     def _get_color(self):
         return self.colors["color"]
@@ -472,12 +503,15 @@ class Window_Object(Organized_Object):
 
     def __init__(self, **kwargs):
         #self.colors = self.theme_type.theme_colors.copy()#DEFAULT_COLORS.copy()
+        self._sdl_window = ''
         super(Window_Object, self).__init__(**kwargs)
         self.texture_invalid = True
 
         self.theme = self.create(self.theme_type, wrapped_object=self)
         self._children.remove(self.theme)
-        pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
+        window = pride.objects[self.sdl_window]
+        window.user_input._update_coordinates(self, self.reference, self.area, self.z)
+        #self.texture = window.create_texture(window.size)
         self.pack()
 
     def create(self, *args, **kwargs):
@@ -494,6 +528,7 @@ class Window_Object(Organized_Object):
             self._children.remove(_object)
         except ValueError:
             if _object is not self.theme:
+                self.alert("Failed to remove {} from _children".format(_object))
                 raise
         super(Window_Object, self).remove(_object)
 
@@ -668,7 +703,7 @@ class Window_Object(Organized_Object):
 
     def show_status(self, text, fade_out=True, **kwargs):
         if self._status is not None:
-            assert False
+            return
         _kwargs = {"h_range" : (0, .10), "pack_mode" : "bottom"}
         _kwargs.update(kwargs)
         if fade_out:
@@ -723,17 +758,28 @@ class Application(Window):
         self.application_window = self.objects["Window"][0] # brittle, needs to be done properly
 
 
-class Placeholder(Organized_Object):
+class Placeholder(Container):
 
-    defaults = {"pack_mode" : "left"}
+    defaults = {"pack_mode" : "left", "theme_profile" : "placeholder"}
 
 
-class Texture_Atlas(Organized_Object):
+class Texture_Atlas(pride.components.base.Base):
 
-    defaults = {"size" : (4096, 4096), "screen_size" : pride.gui.SCREEN_SIZE, "subsections" : tuple(),
-                "placeholder_type" : Placeholder, "pack_mode" : "main"}
+    defaults = {'x' : 0, 'y' : 0, 'w' : 4096, 'h' : 4096, 'z' : -1,
+                "size" : (4096, 4096), "subsections" : tuple(),
+                "placeholder_type" : Placeholder, "pack_mode" : "main",
+                "sdl_window" : None}
 
-   # predefaults = {"sdl_window" : ''}
+    predefaults = {"_pack_scheduled" : False}#{"sdl_window" : ''}
+    required_attributes = ("sdl_window", )
+
+    def _get_area(self):
+        return self.x, self.y, self.w, self.h
+    area = property(_get_area)
+
+    def _get_position(self):
+        return self.x, self.y
+    position = property(_get_position)
 
     def __init__(self, *args, **kwargs):
         super(Texture_Atlas, self).__init__(*args, **kwargs)
@@ -743,24 +789,28 @@ class Texture_Atlas(Organized_Object):
         placeholder_type = self.placeholder_type
         sdl_window = self.sdl_window
 
-        top = self.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
+        screen_w, screen_h = self.screen_size = pride.objects[sdl_window].size
+
+        top = self.create(placeholder_type, pack_mode="top",
+                          sdl_window=sdl_window, h_range=(screen_h, screen_h))
         bottom = self.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
 
-        screen_w, screen_h = self.screen_size
+        #top_left = top.create(placeholder_type, w_range=(screen_w, screen_w),
+        #                      pack_mode="left", sdl_window=sdl_window)
+        #top_right = top.create(placeholder_type, pack_mode="left", sdl_window=sdl_window)
 
-        top_left = top.create(placeholder_type, h_range=(screen_h, screen_h), pack_mode="left", sdl_window=sdl_window)
-        top_right = top.create(placeholder_type, pack_mode="left", sdl_window=sdl_window)
-        bottom_top = bottom.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
-        bottom_bottom = bottom.create(placeholder_type, pack_mode="bottom", sdl_window=sdl_window)
-        self.subsections = (top_left, top_right, bottom_top, bottom_bottom)
-
-        top.pack()
+        #bottom_top = bottom.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
+        #bottom_bottom = bottom.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
+        #self.subsections = (top_left, top_right, bottom_top, bottom_bottom)
 
     def add_to_atlas(self, window_object):
         subsection, pack_mode = self.determine_subsection(window_object)
-        placeholder = subsection.create(self.placeholder_type, pack_mode=pack_mode, sdl_window=self.sdl_window)
+        placeholder = subsection.create(self.placeholder_type, pack_mode=pack_mode,
+                                        sdl_window=self.sdl_window,
+                                        w_range=(window_object.w, window_object.w),
+                                        h_range=(window_object.h, window_object.h))
         window_object._texture_atlas_reference = placeholder.reference
-        placeholder.pack()
+        #placeholder.pack()
         return placeholder.position
 
     def remove_from_atlas(self, window_object):

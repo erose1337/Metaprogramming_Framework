@@ -9,8 +9,10 @@ deal with certificates properly?
 
 changes
 -----
-implemented hover profile, on_hover, and hover_end
-changed handling for mousebuttondown events
+fixed Organized_Object.pack
+working on texture atlas
+adding widget package to pride.gui
+added autoreferences
 
 notes
 ----

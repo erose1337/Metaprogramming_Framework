@@ -381,7 +381,8 @@ class Defaults(Inherited_Attributes):
                             "parser_ignore" : tuple, "predefaults" : dict,
                             "mutable_defaults" : dict, "required_attributes" : tuple,
                             "site_config_support" : tuple, "post_initializer" : str,
-                            "allowed_values" : dict, "auto_verbosity_ignore" : tuple}
+                            "allowed_values" : dict, "auto_verbosity_ignore" : tuple,
+                            "autoreferences" : dict}
 
 
 class Site_Configuration(type):
@@ -401,8 +402,40 @@ class Site_Configuration(type):
         return new_class
 
 
+def _create_pointers_to_base_object(pointers):
+    for pointer_id, pointer_type in pointers.iteritems():
+        if pointer_type == any:
+            pointer_type = pride.components.base.Base
+        pointer_name = "_pointer_{}".format(pointer_id)
+        def _getter(self, _pointer_name=pointer_name):
+            try:
+                return pride.objects[getattr(self, _pointer_name)]
+            except AttributeError:
+                raise Warning("Pointer '{}' value not set before pointer was accessed".format(_pointer_name[9:]))
+        def _deler(self, _pointer_name=pointer_name):
+            delattr(self, _pointer_name)
+        def _setter(self, value, _pointer_name=pointer_name, _type=pointer_type):
+            #assert isinstance(value, _type)
+            if not isinstance(value, _type):
+                raise Warning("Tried to store value of type {} in pointer for type {}".format(type(value), _type))
+            setattr(self, _pointer_name, value.reference)
+        yield pointer_id, property(_getter, _setter, _deler)
+
+
+class Autodereferencer(type):
+
+    def __new__(cls, name, bases, attributes):
+        try:
+            for pointer_name, _property in _create_pointers_to_base_object(attributes["autoreferences"]):
+                attributes[pointer_name] = _property
+        except KeyError:
+            if "pointers" in attributes:
+                raise
+        return super(Autodereferencer, cls).__new__(cls, name, bases, attributes)
+
+
 class Metaclass(Documented, Parser_Metaclass, Method_Hook, Defaults,
-                Site_Configuration):
+                Site_Configuration, Autodereferencer):
     """ A metaclass that applies other metaclasses. """
 
     @classmethod

@@ -34,15 +34,20 @@ from pride.functions.utilities import slide
 
 class Option_Button(pride.gui.gui.Button):
 
+    def __init__(self, **kwargs):
+        super(Option_Button, self).__init__(**kwargs)
+        self.indicator = self.create("pride.gui.widgetlibrary.Status_Indicator").reference
+
     def left_click(self, mouse):
-        self.parent_application.select_option(self.text)
+        self.parent_application.select_option(self, self.text)
 
 
 class Recursive_Menu(pride.gui.gui.Application):
 
     defaults = {"row_type" : "pride.gui.gui.Container", "row_pack_mode" : "top",
                 "tree" : None, "initial_options" : tuple(), "menu_name" : '',
-                "option_type" : Option_Button, "startup_components" : tuple()}
+                "option_type" : Option_Button, "startup_components" : tuple(),
+                "current_button" : ''}
     mutable_defaults = {"rows" : list}
 
     def __init__(self, **kwargs):
@@ -74,7 +79,14 @@ class Recursive_Menu(pride.gui.gui.Application):
             for option_name in options:
                 row.create(option_type, text=option_name, pack_mode="left")
 
-    def select_option(self, option_name):
+    def select_option(self, button, option_name):
+        try:
+            pride.objects[pride.objects[self.current_button].indicator].disable_indicator()
+        except KeyError:
+            if self.current_button in pride.objects:
+                raise
+        self.current_button = button.reference
+        pride.objects[button.indicator].enable_indicator()
         result = self.tree[option_name]
         try:
             result(option_name)
@@ -83,6 +95,8 @@ class Recursive_Menu(pride.gui.gui.Application):
                 raise
             pride.objects[self._name].text += '/' + option_name
             self.create_menu(result)
+        else:
+            return True
 
     def handle_back(self):
         _name = pride.objects[self._name]

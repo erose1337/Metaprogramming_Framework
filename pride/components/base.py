@@ -259,6 +259,41 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # key : values pairs; if getattr(self, key) not in values, raises ValueError in __init__
     allowed_values = {}
 
+    # stores name:type pairs; type must be either: Base, a subclass of Base, or the function `any` (which is interpreted to mean any Base object)
+    # the instance attribute indicated by 'name' is configured to store/dereference objects/references of the specified type
+    # Solves the following problem/automates the following pattern:
+    #   # (the problem)
+    #   self.component = self.create(Base_object)
+    #   self.delete()
+    #   # self.component still holds a reference to the Base_object that was created
+    #   # this can prevent it from being garbage collected
+    #
+    #   # (the pattern that solves the problem)
+    #   self.component = self.create(Base_object).reference # store a reference instead of the object
+    #   self.delete()
+    #   # the created Base_object is not stored in self.component, so it can be deleted
+    #
+    #   # (the problem with the pattern)
+    #   self.component = self.create(Base_object).reference
+    #   # (at some other point in the code...)
+    #   component = pride.objects[self.component]
+    #   # must dereference component before it can be used - can clutter up code
+    #
+    #
+    #   # autoreferences solve the problem while retaining the cleaner-looking code of the problematic example
+    #   class Demo(pride.components.base.Base):
+    #       autoreferences = {"component" : any}
+    #
+    #       def __init__(self, **kwargs):
+    #           super(Demo, self).__init__(**kwargs)
+    #           self.component = self.create("pride.components.base.Base") # is actually storing a reference
+    #
+    #       def do_something(self):
+    #           component = self.component # no need to dereference; it's already been done
+    #           component.do_thing1()
+    #           component.do_thing2()
+    autoreferences = dict()
+
     def _get_parent(self):
         return objects[self.parent_name] if self.parent_name else None
     parent = property(_get_parent)

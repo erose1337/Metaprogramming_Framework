@@ -978,7 +978,7 @@ class Popup_Notification(pride.gui.gui.Container):
             assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
             pride.objects[self.sdl_window].schedule_postdraw_operation(self.fade_alpha)
         else:
-            assert self.parent._status == self.reference
+            assert self.parent._status == self.reference, (self.parent._status, self.reference)
             assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
             self.parent._status = None
             self.delete()

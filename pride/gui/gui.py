@@ -706,6 +706,10 @@ class Window_Object(Organized_Object):
             return
         _kwargs = {"h_range" : (0, .10), "pack_mode" : "bottom"}
         _kwargs.update(kwargs)
+        if hasattr(self, "application_window"):
+            self.application_window.show_status(text, fade_out, **_kwargs)
+            return
+
         if fade_out:
             self._status = self.create("pride.gui.widgetlibrary.Popup_Notification", text=text, **_kwargs).reference
         else:
@@ -713,6 +717,9 @@ class Window_Object(Organized_Object):
         pride.objects[self.sdl_window].run()
 
     def hide_status(self):
+        if hasattr(self, "application_window"):
+            self.application_window.hide_status()
+            return
         pride.objects[self._status].delete()
         self._status = None
 

@@ -292,7 +292,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     #           component = self.component # no need to dereference; it's already been done
     #           component.do_thing1()
     #           component.do_thing2()
-    autoreferences = dict()
+    autoreferences = tuple()
 
     def _get_parent(self):
         return objects[self.parent_name] if self.parent_name else None

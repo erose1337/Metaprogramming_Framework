@@ -225,12 +225,14 @@ class Organizer(base.Base):
 class Theme(pride.base.Wrapper):
 
     defaults = {"dont_save" : True}
-    theme_profiles = ("default", "interactive", "hover", "placeholder", "indicator")
+    theme_profiles = ("default", "interactive", "hover", "placeholder",
+                      "indicator", "unusable")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
     theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
     theme_colors["placeholder"]["background"] = pride.gui.color.Color(0, 0, 0, 255)
     theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
+    theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 75)
 
     _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
 
@@ -355,7 +357,7 @@ class Window_Object(Organized_Object):
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.gui.Minimal_Theme",
                 "_selected" : False, "hide_excess_text" : True,
-                "_cached" : False}
+                "_cached" : False, "tip_bar_text" : ''}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
@@ -363,7 +365,8 @@ class Window_Object(Organized_Object):
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
                    "_always_on_top" : False, "use_custom_colors" : False,
-                   "theme_profile" : "default", "_status" : None}
+                   "theme_profile" : "default", "_status" : None,
+                   "_tip_set" : False}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list, "colors" : dict}
@@ -565,10 +568,26 @@ class Window_Object(Organized_Object):
             self.theme_profile = "hover"
             self.texture_invalid = True
 
+        if not self._tip_set and self.tip_bar_text:
+            try:
+                window = self.parent_application
+            except ValueError:
+                pass
+            else:
+                window.set_tip_bar_text(self.tip_bar_text)
+                self._tip_set = True
+
     def hover_ends(self):
         if self.theme_profile == "hover":
             self.theme_profile = "interactive"
             self.texture_invalid = True
+        try:
+            window = self.parent_application
+        except ValueError:
+            pass
+        else:
+            window.clear_tip_bar_text()
+            self._tip_set = False
 
     def mousemotion(self, x_change, y_change, top_level=True):
         if self.movable and self.held:
@@ -743,12 +762,27 @@ class Button(Window_Object):
 class Application(Window):
 
     defaults = {"startup_components" : ("pride.gui.widgetlibrary.Task_Bar", ),
-                "application_window_type" : "pride.gui.gui.Window"}
+                "application_window_type" : "pride.gui.gui.Window",
+                "tip_bar_type" : "pride.gui.gui.Container",
+                "tip_bar_enabled" : True}
     predefaults = {"transparency_enabled" : False}
+    autoreferences = ("tip_bar", )
 
     def __init__(self, **kwargs):
         super(Application, self).__init__(**kwargs)
         window = self.application_window = self.create(self.application_window_type)
+        self.initialize_tip_bar()
+
+    def initialize_tip_bar(self):
+        if self.tip_bar_enabled:
+            self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05),
+                                    pack_mode="bottom", text="tip bar")
+
+    def set_tip_bar_text(self, text):
+        self.tip_bar.text = text
+
+    def clear_tip_bar_text(self):
+        self.tip_bar.text = ''
 
     def draw_texture(self):
         assert not self.deleted

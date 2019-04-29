@@ -382,7 +382,7 @@ class Defaults(Inherited_Attributes):
                             "mutable_defaults" : dict, "required_attributes" : tuple,
                             "site_config_support" : tuple, "post_initializer" : str,
                             "allowed_values" : dict, "auto_verbosity_ignore" : tuple,
-                            "autoreferences" : dict}
+                            "autoreferences" : tuple}
 
 
 class Site_Configuration(type):
@@ -403,22 +403,21 @@ class Site_Configuration(type):
 
 
 def _create_pointers_to_base_object(pointers):
-    for pointer_id, pointer_type in pointers.iteritems():
-        if pointer_type == any:
-            pointer_type = pride.components.base.Base
+    for pointer_id in pointers:
         pointer_name = "_pointer_{}".format(pointer_id)
         def _getter(self, _pointer_name=pointer_name):
             try:
                 return pride.objects[getattr(self, _pointer_name)]
             except AttributeError:
-                raise Warning("Pointer '{}' value not set before pointer was accessed".format(_pointer_name[9:]))
+                pass
+            except KeyError:
+                pass
+                #raise Warning("Autodereferencer: '{}' value not set before descriptor was accessed".format(_pointer_name[9:]))
+        def _setter(self, value, _pointer_name=pointer_name):
+            if value:
+                setattr(self, _pointer_name, value.reference)
         def _deler(self, _pointer_name=pointer_name):
             delattr(self, _pointer_name)
-        def _setter(self, value, _pointer_name=pointer_name, _type=pointer_type):
-            #assert isinstance(value, _type)
-            if not isinstance(value, _type):
-                raise Warning("Tried to store value of type {} in pointer for type {}".format(type(value), _type))
-            setattr(self, _pointer_name, value.reference)
         yield pointer_id, property(_getter, _setter, _deler)
 
 

@@ -226,13 +226,13 @@ class Theme(pride.base.Wrapper):
 
     defaults = {"dont_save" : True}
     theme_profiles = ("default", "interactive", "hover", "placeholder",
-                      "indicator", "unusable")
+                      "indicator", "inert")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
     theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
     theme_colors["placeholder"]["background"] = pride.gui.color.Color(0, 0, 0, 255)
     theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
-    theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 75)
+    theme_colors["inert"]["background"] = pride.gui.color.Color(85, 85, 185, 75)
 
     _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
 
@@ -581,6 +581,10 @@ class Window_Object(Organized_Object):
         if self.theme_profile == "hover":
             self.theme_profile = "interactive"
             self.texture_invalid = True
+        if self._tip_set:
+            self._clear_tip_bar_text()
+
+    def _clear_tip_bar_text(self):
         try:
             window = self.parent_application
         except ValueError:
@@ -674,6 +678,10 @@ class Window_Object(Organized_Object):
 
     def delete(self):
         assert not self.deleted, self
+        try:
+            self._clear_tip_bar_text()
+        except AttributeError:
+            pass # self.tip_bar is None
         pride.objects[self.sdl_window].remove_window_object(self)
         self.theme.delete()
         if self.parent.reference != self.sdl_window:
@@ -723,7 +731,7 @@ class Window_Object(Organized_Object):
     def show_status(self, text, fade_out=True, **kwargs):
         if self._status is not None:
             return
-        _kwargs = {"h_range" : (0, .10), "pack_mode" : "bottom"}
+        _kwargs = {"h_range" : (0, .10), "pack_mode" : "top"}
         _kwargs.update(kwargs)
         if hasattr(self, "application_window"):
             self.application_window.show_status(text, fade_out, **_kwargs)
@@ -776,7 +784,9 @@ class Application(Window):
     def initialize_tip_bar(self):
         if self.tip_bar_enabled:
             self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05),
-                                    pack_mode="bottom", text="tip bar")
+                                       pack_mode="bottom", text="tip bar")
+        else:
+            self.tip_bar = self.parent_application.tip_bar
 
     def set_tip_bar_text(self, text):
         self.tip_bar.text = text

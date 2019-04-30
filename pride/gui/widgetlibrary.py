@@ -527,7 +527,7 @@ class Spin_Field(pride.gui.gui.Container):
         if not getattr(self, "on_increment", False) or not getattr(self, "on_decrement", False):
             raise ValueError("on_increment/on_decrement not supplied to Spin_Field")
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
-                             pack_mode="top")
+                             pack_mode="top", tip_bar_text=self.tip_bar_text)
         kwargs = {"pack_mode" : "top", "on_increment" : self.on_increment,
                   "on_decrement" : self.on_decrement, "write_field_method" : self.write_field_method}
         if self.initial_value:
@@ -567,7 +567,8 @@ class Integer_Field_Entry(Field_Entry):
 class Field(pride.gui.gui.Container):
 
     defaults = {"field_name" : "", "write_field_method" : None, "initial_value" : '0',
-                "field_entry_type" : Field_Entry, "orientation" : "side by side"}
+                "field_entry_type" : Field_Entry, "orientation" : "side by side",
+                "tip_bar_text" : ''}
     required_attributes = ("write_field_method", )
     allowed_values = {"orientation" : ("side by side", "stacked")}
 
@@ -582,7 +583,8 @@ class Field(pride.gui.gui.Container):
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
                              scale_to_text=scale_to_text, pack_mode=pack_mode)
         field = self.create(self.field_entry_type, pack_mode=pack_mode, text=str(self.initial_value),
-                            write_field_method=lambda value: self.write_field_method(self.field_name, value))
+                            write_field_method=lambda value: self.write_field_method(self.field_name, value),
+                            tip_bar_text=self.tip_bar_text)
 
 
 class Status_Indicator(pride.gui.gui.Container):
@@ -632,10 +634,11 @@ class _Editable_Tab_Button(Text_Box):
 class Tab_Button(Method_Button):
 
     defaults = {"pack_mode" : "left", "scale_to_text" : False,
-                "include_delete_button" : True,
+                "include_delete_button" : True, "delete_tip" : "Close this window",
                 "_tab_button_type" : _Tab_Button, "w_range" : (0, 200),
                 "allow_text_edit" : True, "editing" : False}
     predefaults = {"_editable" : False}
+    autoreferences = ("delete_button", )
 
     def _get_editable(self):
         return self._editable
@@ -649,11 +652,23 @@ class Tab_Button(Method_Button):
     def __init__(self, **kwargs):
         super(Tab_Button, self).__init__(**kwargs)
         if self.include_delete_button:
-            self.create(Method_Button, pack_mode="right", scale_to_text=True,
-                        target=self.reference, method="delete_tab", text='x',
-                        theme_type="pride.gui.gui.Text_Only_Theme", w_range=(0, 10))
+            self.delete_button = self.create(Method_Button, pack_mode="right", scale_to_text=True,
+                                             target=self.reference, method="delete_tab", text='x',
+                                             theme_type="pride.gui.gui.Text_Only_Theme", w_range=(0, 10),
+                                             tip_bar_text=self.delete_tip,
+                                             theme_profile="placeholder")
         indicator = self.create(Status_Indicator)
         self.indicator = indicator.reference
+
+    #def on_hover(self):
+    #    super(Tab_Button, self).on_hover()
+    #    if self.delete_button is not None:
+    #        self.delete_button.theme_profile = "interactive"
+
+    #def hover_ends(self):
+    #    super(Tab_Button, self).hover_ends()
+    #    if self.delete_button is not None:
+    #        self.delete_button.theme_profile = "placeholder"
 
     def delete_tab(self):
         # delete the tab
@@ -703,7 +718,7 @@ class Tab_Button(Method_Button):
 class Tab_Bar(pride.gui.gui.Container):
 
     defaults = {"h_range" : (0, 40), "pack_mode" : "top", "label" : '',
-                "tab_type" : Tab_Button}
+                "tab_type" : Tab_Button, "new_button_tip" : ''}
     mutable_defaults = {"tabs" : list}
 
     def __init__(self, **kwargs):
@@ -714,7 +729,8 @@ class Tab_Bar(pride.gui.gui.Container):
         if self.label:
             self.create("pride.gui.gui.Container", text=self.label,
                         scale_to_text=True, pack_mode="left")
-        self.create(New_Tab_Button, text='+', target=self.parent.reference, method="new_tab")
+        self.create(New_Tab_Button, text='+', target=self.parent.reference,
+                    method="new_tab", tip_bar_text=self.new_button_tip)
 
     def new_tab(self, **kwargs):
         tab = self.create(self.tab_type, **kwargs).reference
@@ -783,13 +799,15 @@ class Tab_Switching_Window(pride.gui.gui.Window):
 class Tabbed_Window(pride.gui.gui.Window):
 
     defaults = {"tab_bar_type" : Tab_Bar, "tab_type" : Tab_Button,
-                "tab_bar_label" : '', "window_type" : "pride.gui.gui.Window"}
+                "tab_bar_label" : '', "window_type" : "pride.gui.gui.Window",
+                "new_button_tip" : ''}
     mutable_defaults = {"window_listing" : list}
 
     def __init__(self, **kwargs):
         super(Tabbed_Window, self).__init__(**kwargs)
         self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
-                                   tab_type=self.tab_type).reference
+                                   tab_type=self.tab_type,
+                                   new_button_tip=self.new_button_tip).reference
 
     def new_tab(self, window_kwargs=None, tab_kwargs=None):
         window_kwargs = window_kwargs if window_kwargs is not None else dict()

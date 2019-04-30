@@ -653,17 +653,11 @@ class Renderer(SDL_Component):
         self.instructions["fill"] = self.fill
         self.instructions["copy"] = self.copy
         self.instructions["copy_subsection"] = self.render_copy
-        self.instructions["copyex"] = self.copyex
+        #self.instructions["copyex"] = self.copyex
         self.clear()
 
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
-
-    def copyex(self, texture, srcrect, dstrect, angle=0.0, center=None,
-               flip_value=sdl2.SDL_FLIP_NONE):
-        sdl2.SDL_RenderCopyEx(self.wrapped_object.renderer, texture.texture,
-                              sdl2.SDL_Rect(*srcrect), sdl2.SDL_Rect(*dstrect),
-                              angle, center, flip_value)
 
     def render_copy(self, source_area, destination_area):
         self.copy(self.parent._texture.texture, source_area, destination_area)

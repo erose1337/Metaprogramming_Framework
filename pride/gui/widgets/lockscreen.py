@@ -72,6 +72,7 @@ class Username_Password_Field(pride.gui.gui.Container):
         pride.objects[self.sdl_window].run()
         user.username = self.username
         user.password = self.user_password
+        user.kdf_iterations = 1 # remove me!
         success = user.attempt_login()
         if success:
             self.user_password = ''
@@ -105,7 +106,7 @@ class Login_Screen(pride.gui.gui.Application):
 
         text = "Log in to {}@({}:{})\n".format(self.service_name, *self.host_info)
         self.status_display = field_space.create(Status_Display, pack_mode="left",
-                                                 text=text)
+                                                 text=text, theme_profile="interactive")
         self.bottom_spacer = window.create("pride.gui.gui.Container", pack_mode="top")
         self.parent_application.show_status("Login Screen")
 
@@ -117,6 +118,11 @@ class Login_Screen(pride.gui.gui.Application):
 
     def login_failed(self):
         self.parent_application.show_status("Login attempt failed")
+        display = self.status_display
+        display.text = text = display.text + "Login attempt failed\n"
+
+        if text.count("\n") > self.h / 43:
+            display.text = '\n'.join(text.split('\n')[-self.h / 43:])
 
 def main():
     if "/SDL_Window" not in pride.objects:

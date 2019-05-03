@@ -33,10 +33,14 @@ class Username_Password_Field(pride.gui.gui.Container):
         self.username = value
 
     def submit_credentials(self):
+        user = self.user
+        text = "Computing: {}\n".format(user.get_derivation_description())
+        self.parent_application.status_display.text += text
         self.parent_application.parent_application.show_status("Attempting login...")
-        self.user.username = self.username
-        self.user.password = self.user_password
-        success = self.user.attempt_login()
+        pride.objects[self.sdl_window].run()
+        user.username = self.username
+        user.password = self.user_password
+        success = user.attempt_login()
         if success:
             self.user_password = ''
             self.parent_application.login_success()
@@ -44,12 +48,18 @@ class Username_Password_Field(pride.gui.gui.Container):
             self.parent_application.login_failed()
 
 
+class Status_Display(pride.gui.gui.Container):
+
+    defaults = {"center_text" : False, "scale_to_text" : False}
+
+
 class Login_Screen(pride.gui.gui.Application):
 
     defaults = {"user" : None, "startup_components" : tuple(),
-                "tip_bar_enabled" : False}
-    required_attributes = ("user", )
-    autoreferences = ("field_space", "top_spacer", "bottom_spacer")
+                "tip_bar_enabled" : False, "service_name" : '',
+                "host_info" : ('', 0)}
+    required_attributes = ("user", "service_name", "host_info")
+    autoreferences = ("field_space", "top_spacer", "bottom_spacer", "status_display")
 
     def __init__(self, **kwargs):
         super(Login_Screen, self).__init__(**kwargs)
@@ -60,7 +70,10 @@ class Login_Screen(pride.gui.gui.Application):
                            w_range=(0, .10))
         field_space.create(Username_Password_Field, pack_mode="left", user=self.user,
                            w_range=(0, .50))
-        field_space.create("pride.gui.gui.Container", pack_mode="left")
+
+        text = "Log in to {}@({}:{})\n".format(self.service_name, *self.host_info)
+        self.status_display = field_space.create(Status_Display, pack_mode="left",
+                                                 text=text)
         self.bottom_spacer = window.create("pride.gui.gui.Container", pack_mode="top")
         self.parent_application.show_status("Login Screen")
 

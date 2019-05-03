@@ -40,7 +40,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
     verbosity = {"register" : "vv", "validate_success" : 'vvv',
                  "login" : "vv", "authentication_success" : "vv",
                  "login_success" : 'vv', "login_failure" : 'vv',
-                 "authentication_failure" : "v", "validate_failure" : "vvv",
+                 "authentication_failure" : "v", "validate_failure" : "v",
                  "authentication_failure_already_logged_in" : 'v'}
 
     predefaults = {"current_session" : ('', None)} # session_id and peer name
@@ -52,7 +52,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
     remotely_available_procedures = ("register", "login", "change_credentials", "logout")
 
-    rate_limit = {"login" : 2, "register" : 2}
+    rate_limit = {"login" : 1, "register" : 1}
 
     mutable_defaults = {"_rate" : dict, "ip_whitelist" : list, "ip_blacklist" : list,
                         "session_id" : dict}
@@ -244,7 +244,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
                     message = "Rate of {} calls exceeded 1/{}s ({}); Denying request".format(method_name,
                                                                                              self.rate_limit[method_name],
                                                                                              current_rate)
-                    self.alert(message, level=self.verbosity["validate_failure"])
+                    self.alert(message, level=0)#self.verbosity["validate_failure"])
                     return False
 
         self.alert("Authorizing: {} for {}".format(peername, method_name),
@@ -267,7 +267,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                  "login" : 0, "login_success" : 0, "login_failure" : 0,
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "login_failed" : 0, "logout_success" : 0, "auto_register" : "vv",
-                 "not_registered" : 0, "change_credentials" : 0, "invalid_password" : 0}
+                 "not_registered" : 0, "change_credentials" : 0, "invalid_password" : 0,
+                 "registering_locally" : 0}
 
     defaults = {"target_service" : "/Python/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -363,6 +364,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
 
     def register_failure(self):
         if self.ip in ("localhost", "127.0.0.1"):
+            self.alert("Online registration is closed. Registering via local service...", level=self.verbosity["registering_locally"])
             success, _ = pride.objects[self.target_service].register(self.username, self.password)
             if success:
                 return self.register_success()
@@ -381,7 +383,13 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
 
     def login_result(self, server_response):
         self._logging_in = False
-        success, message, self.session.id = server_response
+        try:
+            success, message, self.session.id = server_response
+        except ValueError:
+            if not isinstance(server_response, BaseException):
+                raise
+            success = False
+            message = type(server_response).__name__
         if success:
             self.login_success(message)
         else:
@@ -413,8 +421,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                     self.register()
                 else:
                     self.delete() # to keep or not?
-            else:
-                self.alert("Invalid password", level=self.verbosity["invalid_password"])
+        #    else:
+        #        self.alert("Invalid password", level=self.verbosity["invalid_password"])
 
     @pride.functions.decorators.call_if(logged_in=True)
     @pride.functions.decorators.exit(_reset_login_flags)

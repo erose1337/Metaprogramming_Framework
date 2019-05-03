@@ -5,13 +5,12 @@ improve auto-documentation (pride.components.package)
 add api file + start using versionhelper
     - separate gui into separate package due to different levels of stability
 change user.encrypt to use a per-cryptogram key to avoid dealing with nonces
+use a random salt in user2.User.derive_master_keys
 deal with certificates properly?
 
 changes
 -----
-set_status uses tip bar if parent application has it available
-add workable lock screen and gui launcher program
-reset some alert levels back 
+
 
 notes
 ----

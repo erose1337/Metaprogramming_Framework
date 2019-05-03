@@ -73,7 +73,8 @@ class Command_Line(pride.components.base.Base):
                 "default_programs" : ("pride.components.shell.OS_Shell",
                                       "pride.components.shell.Switch_Program"),
                 "idle_threshold" : 1000,
-                "screensaver_type" : "pride.components.shell.Random_Screensaver"}
+                "screensaver_type" : "pride.components.shell.Random_Screensaver",
+                "_raw_input_callback" : None}
 
     def __init__(self, **kwargs):
         self._idle = True
@@ -161,6 +162,10 @@ class Command_Line(pride.components.base.Base):
 
     def handle_input(self, input):
         self.alert("Got user input {}".format(input), level='vvv')
+        if self._raw_input_callback:
+            callback = self._raw_input_callback
+            self._raw_input_callback = None
+            return callback(input)
         try:
             program_name, program_input = input.split(' ', 1)
         except ValueError:

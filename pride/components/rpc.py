@@ -186,7 +186,8 @@ class Rpc_Server(pride.components.networkssl.SSL_Server):
 class Rpc_Client_Socket(Packet_Client):
     """ Client socket for making rpc requests using packetized tcp stream. """
     verbosity = {"delayed_request_sent" : "vvv", "request_delayed" : "vvv",
-                 "request_sent" : "vvv", "unresolved_callback" : 0, "handle_exception" : 0}
+                 "request_sent" : "vvv", "unresolved_callback" : 0,
+                 "handle_exception" : 0}
 
     mutable_defaults = {"_requests" : list, "_callbacks" : list}
 
@@ -225,6 +226,7 @@ class Rpc_Client_Socket(Packet_Client):
             else:
                 if isinstance(_response, BaseException):
                     self.handle_exception(_call, callback, _response)
+                #print("Calling {}".format(callback))
                 if callback is not None:
                     callback(_response)
 
@@ -233,9 +235,8 @@ class Rpc_Client_Socket(Packet_Client):
             isinstance(response, KeyboardInterrupt)):
             raise response
         else:
-            message = "\nRemote Traceback: Exception calling {}\n{}: {}\n"#Unable to proceed with callback {}"
-            self.alert(message.format('.'.join(_call), response.__class__.__name__,
-                                      getattr(response, "traceback", response)),# callback),
+            message = "\nRemote Traceback: {} calling {}"#Unable to proceed with callback {}"
+            self.alert(message.format(response.__class__.__name__, '.'.join(_call)),# callback),
                         level=self.verbosity["handle_exception"])
 
 

@@ -242,7 +242,8 @@ class Python(base.Base):
             User = pride.components.user.User
             with pride.functions.contextmanagers.backup(User, "verbosity"):
                 User.verbosity["login_success"] = "vv"
-                user = User(username=machine_id, password=machine_password, auto_register=True)
+                user = User(username=machine_id, password=machine_password,
+                            auto_register=True, kdf_iterations=1)
             command = self.command
         source = ''
         if self.startup_definitions:

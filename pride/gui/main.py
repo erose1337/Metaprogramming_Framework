@@ -23,7 +23,8 @@ class Gui(pride.gui.gui.Application):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
         user = self.user = pride.components.user.User(auto_login=False, auto_register=True)
-        self.application_window.create(self.lockscreen_type, user=user)
+        self.application_window.create(self.lockscreen_type, user=user,
+                                       service_name="User", host_info=("localhost", 40022))
 
     def set_theme_colors(self, filename):
         self.show_status("Importing color options...")

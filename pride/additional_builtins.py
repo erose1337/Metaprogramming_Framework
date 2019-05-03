@@ -8,6 +8,7 @@ import importlib
 import platform
 import itertools
 import pprint
+import time
 is_version_two = platform.python_version_tuple()[0] == '2'
 
 __all__ = ("raw_input" if is_version_two else "input",
@@ -21,7 +22,23 @@ if is_version_two:
     __raw_input = raw_input
     class RequestDenied(BaseException): pass
 
-    def raw_input(prompt='', must_reply=False):
+
+    _PERSISTENCE = [] # readline in one thread and raw_input in another doesn't play nicely
+    def _store(text, _persistence=_PERSISTENCE):
+        _persistence.append(text)
+
+    def _get_input(_persistence=_PERSISTENCE):
+        try:
+            objects["/User/Command_Line"]._raw_input_callback = _store
+        except KeyError:
+            reply = __raw_input('')
+        else:
+            while not _persistence:
+                time.sleep(.005)
+            reply = _persistence.pop(0)
+        return reply
+
+    def raw_input(prompt='', must_reply=False, _persistence=_PERSISTENCE):
         """ raw_input function that plays nicely when sys.stdout is swapped.
             If must_reply equals True, then the prompt will be redisplayed
             until a non empty string is returned.
@@ -35,11 +52,11 @@ if is_version_two:
             while not reply:
                 sys.__stdout__.write(prompt)
                 sys.__stdout__.flush()
-                reply = __raw_input('')
+                reply = _get_input()
         else:
             sys.__stdout__.write(prompt)
             sys.__stdout__.flush()
-            reply = __raw_input('')
+            reply = _get_input()
         return reply
 else:
     __input = input

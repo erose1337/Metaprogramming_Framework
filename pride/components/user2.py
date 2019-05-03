@@ -5,7 +5,7 @@ import pride.functions.security
 import pride.components.asymmetric
 import pride.components.shell
 from pride.functions.persistence import save_data, load_data
-from pride.functions.utilities import invoke
+from pride.functions.utilities import slide
 
 def generate_identity(identifier=None, keypair=None, secret=None,
                       identifier_size=32, secret_size=32):
@@ -57,7 +57,7 @@ def load_identity(identifier, encryption_key, mac_key, storage="/Python/Persiste
 class User(pride.components.base.Base):
     """ Handles the master username and password, as well as derived cryptographic materials, and provides an interface for utilizing them. """
 
-    defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iterations" : 100000,
+    defaults = {"kdf_hash_algorithm" : "sha256", "kdf_iterations" : 1000000,
                 "encryption_key_size" : 32, "mac_key_size" : 32,
                 "iv_size" : 12, "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
                 "mac_hash_algorithm" : "sha256",
@@ -74,6 +74,7 @@ class User(pride.components.base.Base):
     mutable_defaults = {"login_token" : dict}
     predefaults = {"_password" : None}
     verbosity = {"login_success" : "vv", "registering" : "vv"}
+
 
     def _get_password(self):
         if self._password is None:
@@ -163,9 +164,10 @@ class User(pride.components.base.Base):
 
     def derive_master_keys(self):
         size1, size2 = self.encryption_key_size, self.mac_key_size
-        kdf = invoke("pride.functions.security.key_derivation_function",
-                     algorithm=self.kdf_hash_algorithm, length=size1 + size2,
-                     salt=self.username, iterations=self.kdf_iterations)
+        kdf = pride.functions.security.key_derivation_function(
+                algorithm=self.kdf_hash_algorithm, length=size1 + size2,
+                salt=self.username, iterations=self.kdf_iterations)
+                #salt needs to be changed to something that's actually random
         master_key = kdf.derive(self.password)
 
         self.master_encryption_key = master_key[:size1]
@@ -295,6 +297,10 @@ class User(pride.components.base.Base):
     def sign(self, data):
         """ Signs a block of data using the Users private key """
         return self.private_key.sign(data)
+
+    def get_derivation_description(self):
+        iterations = ','.join(chunk for chunk in slide(str(reversed(str(self.kdf_iterations))), 3))
+        return "PBKDF2-{} {} iterations".format(self.kdf_hash_algorithm, self.kdf_iterations)
 
 
 class Session(User):

@@ -1,5 +1,36 @@
 import pride.components.user
 import pride.gui.gui
+import pride.gui.widgetlibrary
+
+
+class Confidential_Entry(pride.gui.widgetlibrary.Field_Entry):
+
+    defaults = {"symbol" : '*', #"constant_length_field" : True,
+                "_confidential_text" : ''}
+
+    #def __init__(self, **kwargs):
+    #    super(Confidential_Entry, self).__init__(**kwargs)
+    #    self.create("pride.gui.widgetlibrary.Method_Button", method="toggle_constant_length",
+    #                target=self.reference)
+
+    def text_entry(self, text):
+        if self.allow_text_edit:
+            self._confidential_text += text
+            self.text = self.symbol * 16
+            #else:
+            #self.text += self.symbol * len(text)
+
+    def deselect(self, mouse, next_active_object):
+        super(Confidential_Entry, self).deselect(mouse, next_active_object)
+        if self.text:
+            self.write_field_method(self._confidential_text)
+
+    def handle_backspace(self):
+        if self.allow_text_edit:
+            self._confidential_text = self._confidential_text[:-1]
+            if not self._confidential_text:
+                self.text = ''
+
 
 class Username_Password_Field(pride.gui.gui.Container):
 
@@ -15,6 +46,7 @@ class Username_Password_Field(pride.gui.gui.Container):
                                           write_field_method=self._set_username,
                                           orientation="stacked")
         self.password_field = self.create("pride.gui.widgetlibrary.Field",
+                                          field_entry_type=Confidential_Entry,
                                           field_name="Password", initial_value='',
                                           tip_bar_text="Enter your password here",
                                           pack_mode="top",

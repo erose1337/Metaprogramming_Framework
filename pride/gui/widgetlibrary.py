@@ -537,7 +537,7 @@ class Spin_Field(pride.gui.gui.Container):
 
 class Field_Entry(Text_Box):
 
-    defaults = {"write_field_method" : None}#, "background_color" : FIELD_BACKGROUND_COLOR}
+    defaults = {"write_field_method" : None, "return_method" : None}
     predefaults = {"theme_profile" : "interactive"}
     required_attributes = ("write_field_method", )
 
@@ -548,6 +548,8 @@ class Field_Entry(Text_Box):
 
     def handle_return(self):
         self.deselect(None, None)
+        if self.return_method:
+            self.return_method()
 
 
 class Integer_Field_Entry(Field_Entry):
@@ -568,7 +570,7 @@ class Field(pride.gui.gui.Container):
 
     defaults = {"field_name" : "", "write_field_method" : None, "initial_value" : '0',
                 "field_entry_type" : Field_Entry, "orientation" : "side by side",
-                "tip_bar_text" : ''}
+                "tip_bar_text" : '', "return_method" : None}
     required_attributes = ("write_field_method", )
     allowed_values = {"orientation" : ("side by side", "stacked")}
 
@@ -584,8 +586,9 @@ class Field(pride.gui.gui.Container):
                              scale_to_text=scale_to_text, pack_mode=pack_mode)
         field = self.create(self.field_entry_type, pack_mode=pack_mode, text=str(self.initial_value),
                             write_field_method=lambda value: self.write_field_method(self.field_name, value),
-                            tip_bar_text=self.tip_bar_text)
-
+                            tip_bar_text=self.tip_bar_text,
+                            return_method=self.return_method)
+        
 
 class Status_Indicator(pride.gui.gui.Container):
 

@@ -51,6 +51,7 @@ class Username_Password_Field(pride.gui.gui.Container):
                                           tip_bar_text="Enter your password here",
                                           pack_mode="top",
                                           write_field_method=self._set_password,
+                                          return_method=self.submit_credentials,
                                           orientation="stacked")
         buttons_field = self.create("pride.gui.gui.Container", pack_mode="top",
                                     h_range=(0, .10))
@@ -72,7 +73,6 @@ class Username_Password_Field(pride.gui.gui.Container):
         pride.objects[self.sdl_window].run()
         user.username = self.username
         user.password = self.user_password
-        user.kdf_iterations = 1 # remove me!
         success = user.attempt_login()
         if success:
             self.user_password = ''

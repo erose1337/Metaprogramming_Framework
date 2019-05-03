@@ -69,11 +69,11 @@ class User(pride.components.base.Base):
 
                 "storage_reference" : "/Python/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password for {{}}: ",
-                "auto_register" : False}
+                "auto_register" : False, "auto_login" : True}
 
     mutable_defaults = {"login_token" : dict}
     predefaults = {"_password" : None}
-    verbosity = {"login_success" : 0, "registering" : 0}
+    verbosity = {"login_success" : "vv", "registering" : "vv"}
 
     def _get_password(self):
         if self._password is None:
@@ -94,7 +94,8 @@ class User(pride.components.base.Base):
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference)
-        self.login()
+        if self.auto_login:
+            self.login()
 
     def login(self):
         while True:
@@ -123,6 +124,31 @@ class User(pride.components.base.Base):
         self.add(self.private_key)
         self.add(self.public_key)
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
+
+    def attempt_login(self):
+        self.derive_master_keys()
+
+        try:
+            cryptogram = self.find_identity(self.username)
+        except ValueError:
+            self.username = self.password = None
+            return False
+        else:
+            try:
+                private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)
+            except pride.functions.security.InvalidTag:
+                self.password = self.username = None
+                return False
+
+        self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)
+        self.public_key = pride.components.asymmetric.EC_Public_Key.deserialize(public_key)
+        self.secret = secret
+        self.derive_data_keys(secret)
+
+        self.add(self.private_key)
+        self.add(self.public_key)
+        self.alert("Logged in successfully", level=self.verbosity["login_success"])
+        return True
 
     def find_identity(self, identifier):
         try:

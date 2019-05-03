@@ -9,10 +9,9 @@ deal with certificates properly?
 
 changes
 -----
-fixed Organized_Object.pack
-working on texture atlas
-adding widget package to pride.gui
-added autoreferences
+set_status uses tip bar if parent application has it available
+add workable lock screen and gui launcher program
+reset some alert levels back 
 
 notes
 ----

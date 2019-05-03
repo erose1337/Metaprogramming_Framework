@@ -226,14 +226,14 @@ class Theme(pride.base.Wrapper):
 
     defaults = {"dont_save" : True}
     theme_profiles = ("default", "interactive", "hover", "placeholder",
-                      "indicator", "inert")
+                      "indicator", "inert", "borderless")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
     theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
     theme_colors["placeholder"]["background"] = pride.gui.color.Color(0, 0, 0, 255)
     theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
     theme_colors["inert"]["background"] = pride.gui.color.Color(85, 85, 185, 75)
-
+    theme_colors["borderless"]["shadow_thickness"] = 0
     _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
 
     def draw_texture(self):
@@ -391,7 +391,7 @@ class Window_Object(Organized_Object):
         return self._texture_invalid
     def _set_texture_invalid(self, value):
         if not self._texture_invalid and value and not self.deleted:
-          #  assert self.sdl_window
+            assert self.sdl_window
             objects[self.sdl_window].invalidate_object(self)
         self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
@@ -488,7 +488,7 @@ class Window_Object(Organized_Object):
                     if isinstance(self, Application):
                         result = self
                     else:
-                        raise ValueError("Unable to find parent application of {}".format(self))
+                        raise AttributeError("Unable to find parent application of {}".format(self))
         return result
     parent_application = property(_get_parent_application)
 
@@ -736,6 +736,13 @@ class Window_Object(Organized_Object):
         if hasattr(self, "application_window"):
             self.application_window.show_status(text, fade_out, **_kwargs)
             return
+        try:
+            app = self.parent_application
+        except AttributeError:
+            pass
+        else:
+            if self != app.application_window:
+                return app.show_status(text, fade_out, **_kwargs)
 
         if fade_out:
             self._status = self.create("pride.gui.widgetlibrary.Popup_Notification", text=text, **_kwargs).reference
@@ -747,8 +754,9 @@ class Window_Object(Organized_Object):
         if hasattr(self, "application_window"):
             self.application_window.hide_status()
             return
-        pride.objects[self._status].delete()
-        self._status = None
+        if self._status is not None:
+            pride.objects[self._status].delete()
+            self._status = None
 
 
 class Window(Window_Object):
@@ -793,6 +801,18 @@ class Application(Window):
 
     def clear_tip_bar_text(self):
         self.tip_bar.text = ''
+
+    def show_status(self, text, *args, **kwargs):
+        if self.tip_bar_enabled:
+            self.set_tip_bar_text(text)
+        else:
+            super(Application, self).show_status(text, *args, **kwargs)
+
+    def hide_status(self):
+        if self.tip_bar_enabled:
+            self.clear_tip_bar_text()
+        else:
+            super(Application, self).hide_status()
 
     def draw_texture(self):
         assert not self.deleted

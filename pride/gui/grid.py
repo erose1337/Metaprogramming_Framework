@@ -63,12 +63,12 @@ class Grid(pride.gui.gui.Window):
     def setup_grid(self):
         for child in self.children:
             child.delete()
-
+        assert self.rows
         for row in range(self.rows):
             container = self.create(self.row_container_type, pack_mode="left")
             for column in range(self.columns):
                 button = container.create(self.column_button_type, pack_mode="top",
-                                          grid_position=(row, column))                
+                                          grid_position=(row, column))
 
         self._container_type = type(container).__name__
         self._button_type = type(button).__name__

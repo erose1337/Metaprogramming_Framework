@@ -15,6 +15,10 @@ from pride.errors import SecurityError, UnauthorizedError
 remote_procedure_call = pride.components.rpc.remote_procedure_call
 
 class Authenticated_Service(pride.components.rpc.RPC_Service):
+    """ Faq: My new authenticated service keeps raising UnauthorizedErrors
+        Response:
+            - make sure the service has been created
+            - make sure the desired methods have been whitelisted in the "remotely_available_procedures" attribute"""
 
     defaults = {# security related configuration options
                 "iterations" : 100000, "password_hashing_algorithm" : "pbkdf2hmac",
@@ -341,7 +345,6 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             if not isinstance(server_response, UnauthorizedError):
                 raise
             success, message = False, "UnauthorizedError"
-        self.alert("{}".format(message), level=0)
         if success:
             self.register_success()
         else:
@@ -385,7 +388,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             self.login_failure(message)
 
     def login_success(self, login_message):
-        self.alert("{}".format(login_message, level=self.verbosity['login_success']))
+        self.alert("{}".format(login_message), level=self.verbosity['login_success'])
         self.logged_in = True
 
         for instruction, callback in self._delayed_requests:

@@ -233,9 +233,9 @@ class Rpc_Client_Socket(Packet_Client):
             isinstance(response, KeyboardInterrupt)):
             raise response
         else:
-            message = "\nRemote Traceback: Exception calling {}\n{}: {}\nUnable to proceed with callback {}"
+            message = "\nRemote Traceback: Exception calling {}\n{}: {}\n"#Unable to proceed with callback {}"
             self.alert(message.format('.'.join(_call), response.__class__.__name__,
-                                      getattr(response, "traceback", response), callback),
+                                      getattr(response, "traceback", response)),# callback),
                         level=self.verbosity["handle_exception"])
 
 

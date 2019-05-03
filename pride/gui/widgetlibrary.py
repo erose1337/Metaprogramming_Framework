@@ -805,6 +805,9 @@ class Tabbed_Window(pride.gui.gui.Window):
 
     def __init__(self, **kwargs):
         super(Tabbed_Window, self).__init__(**kwargs)
+        self.initialize_tab_bar()
+
+    def initialize_tab_bar(self):
         self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
                                    tab_type=self.tab_type,
                                    new_button_tip=self.new_button_tip).reference

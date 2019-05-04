@@ -35,7 +35,7 @@ class Confidential_Entry(pride.gui.widgetlibrary.Field_Entry):
 class Username_Password_Field(pride.gui.gui.Container):
 
     defaults = {"username" : '', "user_password" : ''}
-    autoreferences = ("username_field", "password_field")
+    autoreferences = ("username_field", "password_field", "autoregister")
 
     def __init__(self, **kwargs):
         super(Username_Password_Field, self).__init__(**kwargs)
@@ -55,6 +55,8 @@ class Username_Password_Field(pride.gui.gui.Container):
                                           orientation="stacked")
         buttons_field = self.create("pride.gui.gui.Container", pack_mode="top",
                                     h_range=(0, .10))
+        self.autoregister = buttons_field.create("pride.gui.widgets.buttons.Toggle", text="auto register",
+                                                 state=False, pack_mode="left", scale_to_text=True)
         buttons_field.create("pride.gui.widgetlibrary.Method_Button", text="Submit",
                              method="submit_credentials", target=self.reference,
                              scale_to_text=False, pack_mode="left")
@@ -73,6 +75,7 @@ class Username_Password_Field(pride.gui.gui.Container):
         pride.objects[self.sdl_window].run()
         user.username = self.username
         user.password = self.user_password
+        user.auto_register = self.autoregister.state
         success = user.attempt_login()
         if success:
             self.user_password = ''

@@ -28,3 +28,16 @@ Selecting an option:
     - Either:
         - The selected option opens a new menu
         - The selected option performs some function
+
+
+
+Login Screen
+============
+
+    field   |---------|
+    field   |-display-|
+    button  |---------|
+
+display:
+    what service is being logged into (user or service_name @ ip:port)
+    description of key derivation process (when submit button is pressed)

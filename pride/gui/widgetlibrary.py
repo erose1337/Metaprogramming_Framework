@@ -588,13 +588,12 @@ class Field(pride.gui.gui.Container):
                             write_field_method=lambda value: self.write_field_method(self.field_name, value),
                             tip_bar_text=self.tip_bar_text,
                             return_method=self.return_method)
-        
+
 
 class Status_Indicator(pride.gui.gui.Container):
 
     defaults = {"w_range" : (0, 10), "pack_mode" : "left",
-                "theme_type" : "pride.gui.gui.Spacer_Theme",
-                "_dont_draw" : True}
+                "theme_type" : "pride.gui.gui.Spacer_Theme"}
 
     def __init__(self, **kwargs):
         super(Status_Indicator, self).__init__(**kwargs)
@@ -606,7 +605,7 @@ class Status_Indicator(pride.gui.gui.Container):
                     theme_type="pride.gui.gui.Spacer_Theme")
 
     def enable_indicator(self):
-        pride.objects[self.status_light].theme_profile = "indicator"
+        pride.objects[self.status_light].theme_profile = "interactive"
 
     def disable_indicator(self):
         pride.objects[self.status_light].theme_profile = "placeholder"

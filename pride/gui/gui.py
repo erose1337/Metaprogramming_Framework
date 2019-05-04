@@ -22,6 +22,8 @@ def _default_colors():
             "shadow_thickness" : 5, "shadow_fade_scalar" : 2,
             "text_background" : pride.gui.color.Color(0, 0, 0, 255),
             "text" : pride.gui.color.Color(45, 45, 45, 255),
+            "glow" : pride.gui.color.Color(255, 255, 255, 235),
+            "glow_thickness" : 0, "glow_fade_scalar" : 2,
             "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
@@ -279,6 +281,18 @@ class Minimal_Theme(Theme):
                 self.draw("rect", (x + thickness, y + thickness,
                                    w - (scalar * thickness), h - (scalar * thickness)),
                         color=(r, g, b, a / (thickness + 1)))
+
+        glow_thickness = self.glow_thickness
+        if glow_thickness:
+            r, g, b, a = self.glow_color
+            scalar = self.glow_fade_scalar
+            for thickness in range(glow_thickness):
+                self.draw("rect", (x - thickness, y - thickness,
+                                   w + (scalar * thickness), h + (scalar * thickness)),
+                        color=(r, g, b, a / (thickness + 1)))
+        #elif shadow_thickness:
+
+
         if self.text:
             assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
@@ -410,7 +424,7 @@ class Window_Object(Organized_Object):
         if value and self.scale_to_text:
             assert self.sdl_window
             w, h = objects[self.sdl_window].renderer.get_text_size(self.area, value)
-            w += 11
+            w += 20
         #    print("Scaling to text {} ({}) ({})".format(value, w, self.texture_invalid))
             if not self._backup_w_range:
                 self._backup_w_range = self.w_range
@@ -432,7 +446,8 @@ class Window_Object(Organized_Object):
 
 
     for color_key in ("background", "text", "text_background", "shadow",
-                      "shadow_thickness", "shadow_fade_scalar"):
+                      "shadow_thickness", "shadow_fade_scalar", "glow",
+                      "glow_thickness", "glow_fade_scalar"):
         def _getter(self, color_key=color_key):
             profile = self.theme_profile
             if profile in self.colors and color_key in self.colors[profile]:
@@ -450,7 +465,8 @@ class Window_Object(Organized_Object):
         def _deleter(self, color_key=color_key):
             del self.colors[self.theme_profile][color_key]
 
-        if color_key not in ("shadow_thickness", "shadow_fade_scalar"):
+        if color_key not in ("shadow_thickness", "shadow_fade_scalar",
+                             "glow_thickness", "glow_fade_scalar"):
             vars()["{}_color".format(color_key)] = property(_getter, _setter, _deleter)
         else:
             vars()[color_key] = property(_getter, _setter, _deleter)
@@ -733,16 +749,17 @@ class Window_Object(Organized_Object):
             return
         _kwargs = {"h_range" : (0, .10), "pack_mode" : "top"}
         _kwargs.update(kwargs)
-        if hasattr(self, "application_window"):
-            self.application_window.show_status(text, fade_out, **_kwargs)
-            return
-        try:
-            app = self.parent_application
-        except AttributeError:
-            pass
-        else:
-            if self != app.application_window:
-                return app.show_status(text, fade_out, **_kwargs)
+
+        app = self.parent_application
+        while True:
+            if app.tip_bar_enabled:
+                app.set_tip_bar_text(text)
+                pride.objects[self.sdl_window].run()
+                return
+            try:
+                app = app.parent_application
+            except AttributeError:
+                break
 
         if fade_out:
             self._status = self.create("pride.gui.widgetlibrary.Popup_Notification", text=text, **_kwargs).reference

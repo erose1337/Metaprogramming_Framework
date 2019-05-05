@@ -605,7 +605,7 @@ class Status_Indicator(pride.gui.gui.Container):
                     theme_type="pride.gui.gui.Spacer_Theme")
 
     def enable_indicator(self):
-        pride.objects[self.status_light].theme_profile = "interactive"
+        pride.objects[self.status_light].theme_profile = "indicator"
 
     def disable_indicator(self):
         pride.objects[self.status_light].theme_profile = "placeholder"
@@ -846,10 +846,7 @@ class _Slider_Dragger(pride.gui.gui.Button):
     required_attributes = ("target", "bounds", "on_adjustment")
 
     def set_initial_position(self):
-        parent = self.parent
-        px, py, pw, ph = parent.area
         _object, name = self.target
-        _min, _max = self.bounds
         try:
             value = getattr(_object, name)
         except AttributeError as error:
@@ -857,34 +854,61 @@ class _Slider_Dragger(pride.gui.gui.Button):
                 value = _object[name]
             except KeyError:
                 raise error
-        scalar = (value + _min) / float(_max)
-        x = int(scalar * (pw - self.w)) + self.w
-        self.x = max(min(pride.objects[parent.parent.right_end].x - self.w,
-                         x),
-                     pride.objects[parent.parent.left_end].w)
+
+        # value = (left_edge - left_intersection) * increment
+        # value / increment = left_edge - left_intersection
+        # (value / increment) + left_intersection = left_edge
+        indicator_w = self.w
+        parent = self.parent
+        left_end = parent.parent.left_end
+        right_end = parent.parent.right_end
+        left_intersection = left_end.x + left_end.w
+        right_intersection = right_end.x
+
+        _min, _max = self.bounds
+        length = right_intersection - left_intersection
+        increment = (_max - _min) / max(1, float(length - indicator_w))
+
+        left_edge = (value / increment) + left_intersection
+        self.x = int(left_edge)
+
         self.on_adjustment()
         self.parent.parent.parent.set_value_indicator(value)
 
     def mousemotion(self, x_change, y_change):
         if self.held:
+            self_x = self.x + x_change
+
+            indicator_w = self.w
             parent = self.parent
-            px, py, pw, ph = parent.area
-            self_w = self.w
-            left_end_w = pride.objects[parent.parent.left_end].w
-            self.x = max(min(pride.objects[parent.parent.right_end].x - self_w,
-                             self.x + x_change),
-                         left_end_w)
-            _object, name = self.target
+            left_end = parent.parent.left_end
+            right_end = parent.parent.right_end
+            left_intersection = left_end.x + left_end.w
+            right_intersection = right_end.x
+
+            left_edge = self_x
+            if left_edge <= left_intersection:
+                left_edge = left_intersection
+
+            right_edge = left_edge + indicator_w
+            if right_edge >= right_intersection:
+                right_edge = right_intersection
+                left_edge = right_edge - indicator_w
+            self.x = left_edge
+
             _min, _max = self.bounds
-            scalar = max(min((self.x - self_w) / float(pw - self_w), 1.0), 0)
-            value = int((_max * scalar) - _min)
+            length = right_intersection - left_intersection
+            increment = (_max - _min) / float(length - indicator_w)
+            value = int((left_edge - left_intersection) * increment)
+
+            _object, name = self.target
             if isinstance(_object, dict):
                 _object[name] = value
             else:
                 setattr(_object, name, value)
 
             self.on_adjustment()
-            self.parent.parent.parent.set_value_indicator(value)
+            parent.parent.parent.set_value_indicator(value)
 
     def delete(self):
         self.on_adjustment = None
@@ -894,25 +918,27 @@ class _Slider_Dragger(pride.gui.gui.Button):
 class _Slider_Bar(pride.gui.gui.Container):
 
     defaults = {"target" : tuple(), "bounds" : tuple(), "on_adjustment" : None}
-    predefaults = {"dragger" : None}
+    #predefaults = {"dragger" : None}
     required_attributes = ("target", "bounds", "on_adjustment")
+    autoreferences = ("dragger", )
 
     def _on_set(self, coordinate, value):
         super(_Slider_Bar, self)._on_set(coordinate, value)
         if coordinate == 'w' and self.dragger is not None:
             window = pride.objects[self.sdl_window]
-            dragger = pride.objects[self.dragger]
-            window.schedule_predraw_operation(dragger.set_initial_position)
+            window.schedule_predraw_operation(self.dragger.set_initial_position)
 
     def __init__(self, **kwargs):
         super(_Slider_Bar, self).__init__(**kwargs)
         self.dragger = self.create(_Slider_Dragger, target=self.target,
                                    bounds=self.bounds, w_range=(0, 20),
-                                   on_adjustment=self.on_adjustment).reference
+                                   on_adjustment=self.on_adjustment)
 
-    def delete(self):
-        self.dragger = None
-        super(_Slider_Bar, self).delete()
+
+class Slider_Bar(pride.gui.gui.Container):
+
+    defaults = {"pack_mode" : "top"}
+    autoreferences = ("left_end", "right_end")
 
 
 class Slider_Widget(pride.gui.gui.Container):
@@ -920,6 +946,7 @@ class Slider_Widget(pride.gui.gui.Container):
     defaults = {"label" : '', "bounds" : (0, 255), "target" : tuple(),
                 "on_adjustment" : None}
     required_attributes = ("target", "on_adjustment")
+    autoreferences = ("slider_bar", "_slider_bar")
 
     def __init__(self, **kwargs):
         super(Slider_Widget, self).__init__(**kwargs)
@@ -927,11 +954,10 @@ class Slider_Widget(pride.gui.gui.Container):
         slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
         slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=label,
                                                 pack_mode="left", scale_to_text=True,
-                                                theme_type="pride.gui.gui.Text_Only_Theme").reference
+                                                theme_type="pride.gui.gui.Text_Only_Theme")
         self._slider_bar = slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target,
-                                             bounds=self.bounds, on_adjustment=self.on_adjustment,
-                                             ).reference
-        self.slider_bar = slider_bar.reference
+                                             bounds=self.bounds, on_adjustment=self.on_adjustment)
+        self.slider_bar = slider_bar
 
         _object, _attribute = self.target
         try:
@@ -940,16 +966,16 @@ class Slider_Widget(pride.gui.gui.Container):
             value = _object[_attribute]
         slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(value),
                                                  pack_mode="right", scale_to_text=True,
-                                                 theme_type="pride.gui.gui.Text_Only_Theme").reference
+                                                 theme_type="pride.gui.gui.Text_Only_Theme")
 
     def readjust_sliders(self):
-        pride.objects[pride.objects[self._slider_bar].dragger].set_initial_position()
+        self._slider_bar.dragger.set_initial_position()
 
     def set_value_indicator(self, value):
-        pride.objects[pride.objects[self.slider_bar].right_end].text = str(value)
+        self.slider_bar.right_end.text = str(value)
 
     def set_label(self, value):
-        pride.objects[pride.objects[self.slider_bar].left_end].text = value
+        self.slider_bar.left_end.text = value
 
 
 class Popup_Notification(pride.gui.gui.Container):

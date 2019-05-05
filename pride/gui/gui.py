@@ -288,8 +288,8 @@ class Minimal_Theme(Theme):
             scalar = self.glow_fade_scalar
             for thickness in range(glow_thickness):
                 self.draw("rect", (x - thickness, y - thickness,
-                                   w + (scalar * thickness), h + (scalar * thickness)),
-                        color=(r, g, b, a / (thickness + 1)))
+                                   w + thickness, h + thickness),
+                        color=(r, g, b, int(a / float(thickness + 1))))
         #elif shadow_thickness:
 
 
@@ -610,33 +610,7 @@ class Window_Object(Organized_Object):
             self._tip_set = False
 
     def mousemotion(self, x_change, y_change, top_level=True):
-        if self.movable and self.held:
-            self._ignore_click = True
-            #self.alert("Mousemotion {} {}".format(x_change, y_change), level=0)
-            _x, _y = self.position
-            self.x += x_change
-            self.y += y_change
-
-            if top_level:
-                mouse_position = objects[self.sdl_window].get_mouse_position()
-                parent = self.parent
-                if not pride.gui.point_in_area(parent.area, mouse_position):
-                    if self in parent.children:
-                    #    self.parent.alert("Removing {}; {} not in {}", [self, objects["SDL_Window"].get_mouse_position(), self.parent.area], level=0)
-                        parent.remove(self)
-                        parent.pack({"position" : parent.position})
-                        self.z -= 1
-                elif self not in parent.children:
-                 #   self.parent.alert("Adding {}", [self], level=0)
-                    parent.add(self)
-                    parent.pack({"position" : parent.position})
-                    #self.held = False
-            x_difference = self.x - _x
-            y_difference = self.y - _y
-            for instance in self.children:
-                instance.held = True
-                instance.mousemotion(x_difference, y_difference, top_level=False)
-                instance.held = False
+        pass
 
     def hide(self, parent_call=False):
         #assert not self.hidden

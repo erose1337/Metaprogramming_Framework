@@ -528,6 +528,7 @@ class SDL_User_Input(scheduler.Process):
                 mouse = event.button
                 if pride.gui.point_in_area(area, (mouse.x, mouse.y)):
                     instance.release(mouse)
+            instance.held = False
 
     def handle_mousewheel(self, event):
         if self.active_item:
@@ -535,12 +536,12 @@ class SDL_User_Input(scheduler.Process):
             pride.objects[self.active_item].mousewheel(wheel.x, wheel.y)
 
     def handle_mousemotion(self, event):
+        motion = event.motion
+        mouse_x, mouse_y = position = (motion.x, motion.y)
         if self.active_item:
             motion = event.motion
-            pride.objects[self.active_item].mousemotion(motion.xrel, motion.yrel)
-        #else:
-        motion = event.motion
-        position = (motion.x, motion.y)
+            pride.objects[self.active_item].mousemotion(mouse_x, mouse_y,
+                                                        motion.xrel, motion.yrel)
         if not self.under_mouse:
             self.under_mouse = under_mouse = self._get_object_under_mouse(position)
             try:
@@ -559,7 +560,7 @@ class SDL_User_Input(scheduler.Process):
                     pride.objects[new_under_mouse].on_hover()
             else:
                 if not pride.gui.point_in_area(under_mouse.area, position):
-                    under_mouse.held = False 
+#                    if under_mouse.held:
                     new_under_mouse = self._get_object_under_mouse(position)
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse

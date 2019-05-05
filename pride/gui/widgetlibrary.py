@@ -875,9 +875,9 @@ class _Slider_Dragger(pride.gui.gui.Button):
         self.on_adjustment()
         self.parent.parent.parent.set_value_indicator(value)
 
-    def mousemotion(self, x_change, y_change):
+    def mousemotion(self, x, y, x_change, y_change):
         if self.held:
-            self_x = self.x + x_change
+            self_x = x#self.x + x_change
 
             indicator_w = self.w
             parent = self.parent
@@ -937,8 +937,18 @@ class _Slider_Bar(pride.gui.gui.Container):
 
 class Slider_Bar(pride.gui.gui.Container):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"pack_mode" : "top", "label" : ''}
     autoreferences = ("left_end", "right_end")
+
+    def __init__(self, **kwargs):
+        super(Slider_Bar, self).__init__(**kwargs)
+        self.left_end = self.create("pride.gui.gui.Container", text=self.label,
+                                    pack_mode="left", scale_to_text=True,
+                                    theme_type="pride.gui.gui.Text_Only_Theme")
+        self.parent._slider_bar = self.create(_Slider_Bar, pack_mode="main",
+                                              target=self.target,
+                                              bounds=self.bounds,
+                                              on_adjustment=self.on_adjustment)
 
 
 class Slider_Widget(pride.gui.gui.Container):
@@ -951,12 +961,9 @@ class Slider_Widget(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Slider_Widget, self).__init__(**kwargs)
         label = self.label.replace('_', ' ')
-        slider_bar = self.create("pride.gui.gui.Container", pack_mode="top")
-        slider_bar.left_end = slider_bar.create("pride.gui.gui.Container", text=label,
-                                                pack_mode="left", scale_to_text=True,
-                                                theme_type="pride.gui.gui.Text_Only_Theme")
-        self._slider_bar = slider_bar.create(_Slider_Bar, pack_mode="main", target=self.target,
-                                             bounds=self.bounds, on_adjustment=self.on_adjustment)
+        slider_bar = self.create(Slider_Bar, pack_mode="top", label=label,
+                                 target=self.target, bounds=self.bounds,
+                                 on_adjustment=self.on_adjustment)
         self.slider_bar = slider_bar
 
         _object, _attribute = self.target
@@ -1032,7 +1039,7 @@ class Popup_Notification(pride.gui.gui.Container):
             self.parent._status = None
             self.delete()
 
-    #def mousemotion(self, x_motion, y_motion):
+    #def mousemotion(self, x, y, x_motion, y_motion):
     #    print("reseting fade")
     #    self.setup_colors(True)
 

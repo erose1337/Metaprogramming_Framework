@@ -609,7 +609,7 @@ class Window_Object(Organized_Object):
             window.clear_tip_bar_text()
             self._tip_set = False
 
-    def mousemotion(self, x_change, y_change, top_level=True):
+    def mousemotion(self, x, y, x_change, y_change):
         pass
 
     def hide(self, parent_call=False):

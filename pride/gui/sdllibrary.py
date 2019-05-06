@@ -464,10 +464,25 @@ class SDL_User_Input(scheduler.Process):
 
     def handle_mousebuttondown(self, event):
         mouse = event.button
-        mouse_position = (mouse.x, mouse.y)
-        self.alert("mouse button down at {}".format(mouse_position), level='v')
+        self.alert("mouse button down at {}".format((mouse.x, mouse.y)), level='v')
+        active_item = self.under_mouse
+        self.select_active_item(active_item, mouse)
+        if active_item:
+            if self._ignore_click:
+                self._ignore_click = False
+            else:
+                try:
+                    objects[active_item].press(mouse)
+                except KeyError:
+                    if active_item in objects:
+                        raise
+                    else:
+                        #self.alert("Active item has been deleted {}".format(active_item, ), 
+                        #           level=self.verbosity["active_item_deleted"])
+                        self.active_item = None
 
-        active_item = self.under_mouse#self._get_object_under_mouse(mouse_position)
+    def select_active_item(self, active_item, mouse):
+#        active_item = self.under_mouse#self._get_object_under_mouse(mouse_position)
         objects = pride.objects
 
         # deselect old active item
@@ -486,19 +501,6 @@ class SDL_User_Input(scheduler.Process):
         except KeyError:
             if active_item in objects:
                 raise
-
-        if active_item:
-            if self._ignore_click:
-                self._ignore_click = False
-            else:
-                try:
-                    objects[active_item].press(mouse)
-                except KeyError:
-                    if active_item in objects:
-                        raise
-                    else:
-                        self.alert("Active item has been deleted {}".format(active_item, ), level=0)
-                        self.active_item = None
 
     def _get_object_under_mouse(self, mouse_position):
         # find the top-most item such that the mouse position is within its area

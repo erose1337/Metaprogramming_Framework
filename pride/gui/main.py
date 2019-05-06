@@ -11,18 +11,28 @@ except ImportError:
     print("install cefparser package from https://github.com/erose1337/cef_parser")
     raise
 
+class User(pride.components.user.User):
+
+    def handle_not_registered(self, identifier):
+        if self.auto_register:
+            super(User, self).handle_not_registered(identifier)
+        else:
+            raise ValueError()
+
+
 class Gui(pride.gui.gui.Application):
 
     defaults = {"lockscreen_type" : "pride.gui.widgets.lockscreen.Login_Screen",
                 "startup_components" : tuple(), "startup_programs" : tuple(),
                 "theme_file" : os.path.join(pride.site_config.GUI_DIRECTORY,
                                             "resources", "themes",
-                                            "default.theme")}
+                                            "default.theme"),
+                "user_type" : User}
 
     def __init__(self, **kwargs):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
-        user = self.user = pride.components.user.User(auto_login=False, auto_register=True)
+        user = self.user = self.user_type(auto_login=False, auto_register=True)
         self.application_window.create(self.lockscreen_type, user=user,
                                        service_name="User", host_info=("localhost", 40022))
 
@@ -55,6 +65,8 @@ class Gui(pride.gui.gui.Application):
 
     def login_failed(self):
         self.alert("Login failed")
+
+
 
 
 def main(**kwargs):

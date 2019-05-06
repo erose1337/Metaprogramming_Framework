@@ -568,11 +568,11 @@ class Integer_Field_Entry(Field_Entry):
 
 class Field(pride.gui.gui.Container):
 
-    defaults = {"field_name" : "", "write_field_method" : None, "initial_value" : '0',
+    defaults = {"field_name" : "", "initial_value" : '0',
                 "field_entry_type" : Field_Entry, "orientation" : "side by side",
-                "tip_bar_text" : '', "return_method" : None}
-    required_attributes = ("write_field_method", )
+                "tip_bar_text" : ''}
     allowed_values = {"orientation" : ("side by side", "stacked")}
+    autoreferences = ("entry", )
 
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)
@@ -584,10 +584,14 @@ class Field(pride.gui.gui.Container):
             scale_to_text = False
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
                              scale_to_text=scale_to_text, pack_mode=pack_mode)
-        field = self.create(self.field_entry_type, pack_mode=pack_mode, text=str(self.initial_value),
-                            write_field_method=lambda value: self.write_field_method(self.field_name, value),
-                            tip_bar_text=self.tip_bar_text,
-                            return_method=self.return_method)
+        self.entry = self.create(self.field_entry_type, pack_mode=pack_mode, text=str(self.initial_value),
+                                 write_field_method=lambda value: self.write_field_method(self.field_name, value),
+                                 tip_bar_text=self.tip_bar_text,
+                                 return_method=self.return_method)
+
+    def select(self, mouse):
+        super(Field, self).select(mouse)
+        pride.objects[self.sdl_window].user_input.select_active_item(self.entry.reference, mouse)
 
 
 class Status_Indicator(pride.gui.gui.Container):
@@ -860,8 +864,9 @@ class _Slider_Dragger(pride.gui.gui.Button):
         # (value / increment) + left_intersection = left_edge
         indicator_w = self.w
         parent = self.parent
-        left_end = parent.parent.left_end
-        right_end = parent.parent.right_end
+        p3 = parent.parent.parent
+        left_end = p3.left_end
+        right_end = p3.right_end
         left_intersection = left_end.x + left_end.w
         right_intersection = right_end.x
 
@@ -873,7 +878,7 @@ class _Slider_Dragger(pride.gui.gui.Button):
         self.x = int(left_edge)
 
         self.on_adjustment()
-        self.parent.parent.parent.set_value_indicator(value)
+        p3.parent.set_value_indicator(value)
 
     def mousemotion(self, x, y, x_change, y_change):
         if self.held:
@@ -881,8 +886,9 @@ class _Slider_Dragger(pride.gui.gui.Button):
 
             indicator_w = self.w
             parent = self.parent
-            left_end = parent.parent.left_end
-            right_end = parent.parent.right_end
+            p3 = parent.parent.parent
+            left_end = p3.left_end
+            right_end = p3.right_end
             left_intersection = left_end.x + left_end.w
             right_intersection = right_end.x
 
@@ -908,7 +914,7 @@ class _Slider_Dragger(pride.gui.gui.Button):
                 setattr(_object, name, value)
 
             self.on_adjustment()
-            parent.parent.parent.set_value_indicator(value)
+            p3.parent.set_value_indicator(value)
 
     def delete(self):
         self.on_adjustment = None
@@ -937,7 +943,8 @@ class _Slider_Bar(pride.gui.gui.Container):
 
 class Slider_Bar(pride.gui.gui.Container):
 
-    defaults = {"pack_mode" : "top", "label" : ''}
+    defaults = {"pack_mode" : "top", "label" : '', "initial_value" : '',
+                "target" : None, "bounds" : tuple(), "on_adjustment" : None}
     autoreferences = ("left_end", "right_end")
 
     def __init__(self, **kwargs):
@@ -945,10 +952,15 @@ class Slider_Bar(pride.gui.gui.Container):
         self.left_end = self.create("pride.gui.gui.Container", text=self.label,
                                     pack_mode="left", scale_to_text=True,
                                     theme_type="pride.gui.gui.Text_Only_Theme")
-        self.parent._slider_bar = self.create(_Slider_Bar, pack_mode="main",
-                                              target=self.target,
-                                              bounds=self.bounds,
-                                              on_adjustment=self.on_adjustment)
+        middle = self.create("pride.gui.gui.Container", pack_mode="left")
+        self.parent._slider_bar = middle.create(_Slider_Bar, pack_mode="left",
+                                                target=self.target,
+                                                bounds=self.bounds,
+                                                on_adjustment=self.on_adjustment)
+        #middle.create(Toggle_Bar, bounds=self.bounds,
+        self.right_end = self.create("pride.gui.gui.Container", text=str(self.initial_value),
+                                     pack_mode="left", scale_to_text=True,
+                                     theme_type="pride.gui.gui.Text_Only_Theme")
 
 
 class Slider_Widget(pride.gui.gui.Container):
@@ -960,20 +972,17 @@ class Slider_Widget(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(Slider_Widget, self).__init__(**kwargs)
-        label = self.label.replace('_', ' ')
-        slider_bar = self.create(Slider_Bar, pack_mode="top", label=label,
-                                 target=self.target, bounds=self.bounds,
-                                 on_adjustment=self.on_adjustment)
-        self.slider_bar = slider_bar
-
         _object, _attribute = self.target
         try:
             value = getattr(_object, _attribute)
         except AttributeError:
             value = _object[_attribute]
-        slider_bar.right_end = slider_bar.create("pride.gui.gui.Container", text=str(value),
-                                                 pack_mode="right", scale_to_text=True,
-                                                 theme_type="pride.gui.gui.Text_Only_Theme")
+
+        label = self.label.replace('_', ' ')
+        self.slider_bar = self.create(Slider_Bar, pack_mode="top", label=label,
+                                      target=self.target, bounds=self.bounds,
+                                      on_adjustment=self.on_adjustment,
+                                      initial_value=value)
 
     def readjust_sliders(self):
         self._slider_bar.dragger.set_initial_position()

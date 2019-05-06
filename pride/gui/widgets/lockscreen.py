@@ -32,19 +32,34 @@ class Confidential_Entry(pride.gui.widgetlibrary.Field_Entry):
                 self.text = ''
 
 
+class Username_Field(pride.gui.widgetlibrary.Field):
+
+    defaults = {"field_name" : "Username", "initial_value" : '',
+                "tip_bar_text" : "Enter your user name here",
+                "pack_mode" : "top", "orientation" : "stacked",
+                "write_field_method" : None}
+
+    hotkeys = {("\t", None) : "handle_tab"}
+
+    def return_method(self):
+        self.parent.submit_credentials()
+
+    def handle_tab(self):
+        pride.objects[self.sdl_window].user_input.select_active_item(self.parent.password_field.reference, None)
+
+
 class Username_Password_Field(pride.gui.gui.Container):
 
     defaults = {"username" : '', "user_password" : ''}
     autoreferences = ("username_field", "password_field", "autoregister")
+    verbosity = {"login_attempt" : 'v'}
 
     def __init__(self, **kwargs):
         super(Username_Password_Field, self).__init__(**kwargs)
-        self.username_field = self.create("pride.gui.widgetlibrary.Field",
-                                          field_name="Username", initial_value='',
-                                          tip_bar_text="Enter your user name here",
-                                          pack_mode="top",
-                                          write_field_method=self._set_username,
-                                          orientation="stacked")
+        self.username_field = self.create(Username_Field,
+                                          write_field_method=self._set_username)
+        window = pride.objects[self.sdl_window]#.select_active_item(self.username_field.reference, None) # change to this
+        window.schedule_postdraw_operation(lambda: window.user_input.select_active_item(self.username_field.reference, None))
         self.password_field = self.create("pride.gui.widgetlibrary.Field",
                                           field_entry_type=Confidential_Entry,
                                           field_name="Password", initial_value='',
@@ -77,6 +92,9 @@ class Username_Password_Field(pride.gui.gui.Container):
         user.password = self.user_password
         user.auto_register = self.autoregister.state
         success = user.attempt_login()
+
+        self.alert("{} attempted login (success:{})".format(self.username, success),
+                   level=self.verbosity["login_attempt"])
         if success:
             self.user_password = ''
             self.parent_application.login_success()

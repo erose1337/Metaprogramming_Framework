@@ -387,6 +387,7 @@ class Window_Object(Organized_Object):
     verbosity = {"press" : "vv", "release" : "vv"}
 
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
+    inherited_attributes = {"hotkeys" : dict}
 
     def _get_always_on_top(self):
         return self._always_on_top

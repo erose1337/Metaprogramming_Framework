@@ -56,6 +56,9 @@ class Profile_Customizer(pride.gui.widgetlibrary.Tab_Switching_Window):
             except AttributeError:
                 kwargs = {"field_attributes" : {key : (0, 16)},
                           "field_info" : (key, info)}
+            else:
+                if key == "text":
+                    del kwargs["field_attributes"]['a']
             kwargs["target_theme"] = target_theme
             field = self.create(Color_Field, tab=tab_reference, **kwargs)
             tab.window = field.reference

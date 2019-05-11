@@ -2,7 +2,7 @@ import pride.gui.gui
 
 class Toggle(pride.gui.gui.Button):
 
-    defaults = {"state" : False,
+    defaults = {"state" : False, "pack_mode" : "left",
                 "indicator_type" : "pride.gui.widgetlibrary.Status_Indicator"}
     autoreferences = ("indicator", )
 
@@ -23,3 +23,19 @@ class Toggle(pride.gui.gui.Button):
         else:
             #self.theme_profile = "placeholder"
             self.indicator.disable_indicator()
+
+    @classmethod
+    def from_info(cls, **kwargs):
+        return lambda: cls(**kwargs)
+
+
+class Toggle_Bar(pride.gui.gui.Container):
+
+    defaults = {"button_type" : Toggle, "toggle_count" : 0}
+
+    def __init__(self, **kwargs):
+        super(Toggle_Bar, self).__init__(**kwargs)
+        self.initialize_buttons()
+
+    def initialize_buttons(self):
+        self.buttons = [self.create(self.button_type) for count in range(self.toggle_count)]

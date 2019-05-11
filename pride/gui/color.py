@@ -1,7 +1,9 @@
+#import sdl2.ext
+#Color = sdl2.ext.Color # does not have _range attributes
+
 class Color(object):
 
     colors = ('r', 'g', 'b', 'a')
-
 
     def _on_set(self, coordinate, value):
         lower_bound, upper_bound = getattr(self,
@@ -91,3 +93,6 @@ class Color(object):
 
     def __getitem__(self, index):
         return (self.r, self.g, self.b, self.a)[index]
+
+    def __str__(self):
+        return "{}({}, {}, {}, {})".format(self.__class__.__name__, self.r, self.g, self.b, self.a)

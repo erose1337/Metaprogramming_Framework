@@ -19,11 +19,11 @@ MAX_W, MAX_H = pride.gui.SCREEN_SIZE
 def _default_colors():
     return {"background" : pride.gui.color.Color(180, 180, 180, 200),
             "shadow" : pride.gui.color.Color(0, 0, 0, 255),
-            "shadow_thickness" : 5, "shadow_fade_scalar" : 2,
-            "text_background" : pride.gui.color.Color(0, 0, 0, 255),
+            "shadow_thickness" : 5,
+            "text_background" : pride.gui.color.Color(0, 0, 85, 255),
             "text" : pride.gui.color.Color(45, 45, 45, 255),
             "glow" : pride.gui.color.Color(255, 255, 255, 235),
-            "glow_thickness" : 0, "glow_fade_scalar" : 2,
+            "glow_thickness" : 0,
             "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
@@ -40,7 +40,8 @@ class Organizer(base.Base):
         if isinstance(item, pride.gui.sdllibrary.SDL_Window):
             if item not in self.window_queue:
                 self.window_queue.append(item)
-        elif item not in self.pack_queue:
+        else:
+            assert item not in self.pack_queue
             self.pack_queue.append(item)
 
     def unschedule_pack(self, item):
@@ -54,35 +55,37 @@ class Organizer(base.Base):
 
     def pack_items(self):
         if self.window_queue:
-            #self.alert("Packing Window")
             window_queue = self.window_queue[:]
             del self.window_queue[:]
             for sdl_window in window_queue:
                 self.pack_children(sdl_window, list(sdl_window.gui_children))
+                sdl_window._in_pack_queue = False
         if self.pack_queue:
-            #self.alert("Packing items")
+            #self.alert("Packing {} top-level items".format(len(self.pack_queue)))
             pack_queue = sorted(self.pack_queue, key=operator.attrgetter('z'))
             del self.pack_queue[:]
             for item in pack_queue:
                 self.pack_children(item, list(item.children))
-                item._pack_scheduled2 = item._pack_scheduled = False
+                item._in_pack_queue = item._pack_requested = False
 
     def pack_children(self, parent, children):
         if not children:
             return
 
         _lists = {"top" : [], "main" : [], "bottom" : [], "left" : [], "right" : []}
+        old_area = []
         for child in children:
             pack_mode = child.pack_mode
             if pack_mode is None:
                 continue
             if child.hidden:
-                child.area = (0, 0, 0, 0)
+                continue
             else:
                 try:
                     _lists[pack_mode].append(child)
                 except KeyError:
                     raise NotImplementedError("Unsupported pack mode '{}' on {}".format(pack_mode, child))
+                old_area.append(child.area)
 
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
         assert len(main) in (0, 1), main
@@ -99,14 +102,14 @@ class Organizer(base.Base):
         if left or main or right:
             self.pack_horizontals(area, z, left, main, right,
                                   top_height, bottom_height)
-
+        index = 0
         for child in children:
-            self.unschedule_pack(child)
-            #assert child not in self.pack_queue
-            #assert not child._pack_scheduled
-            child._pack_scheduled2 = child._pack_scheduled = False
-            #child._pack_scheduled = False
-            self.pack_children(child, list(child.children))
+            if child.hidden or child._parent_hidden:
+                continue
+            if parent._in_pack_queue or child.area != old_area[index]:
+                index += 1
+                self.pack_children(child, list(child.children))
+                child._pack_requested = False
 
     def pack_horizontals(self, area, z, left, main, right, top_height, bottom_height):
         x, y, w, h = area
@@ -230,6 +233,7 @@ class Theme(pride.base.Wrapper):
     theme_profiles = ("default", "interactive", "hover", "placeholder",
                       "indicator", "inert", "borderless")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
+    assert theme_colors["default"]["text_background"].b == 85, str(theme_colors["default"]["text_background"])
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
     theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
     theme_colors["placeholder"]["background"] = pride.gui.color.Color(0, 0, 0, 255)
@@ -276,19 +280,17 @@ class Minimal_Theme(Theme):
         shadow_thickness = self.shadow_thickness
         if shadow_thickness:
             r, g, b, a = self.shadow_color
-            scalar = self.shadow_fade_scalar
             for thickness in range(shadow_thickness):
                 self.draw("rect", (x + thickness, y + thickness,
-                                   w - (scalar * thickness), h - (scalar * thickness)),
+                                   w - (2 * thickness), h - (2 * thickness)),
                         color=(r, g, b, a / (thickness + 1)))
 
         glow_thickness = self.glow_thickness
         if glow_thickness:
             r, g, b, a = self.glow_color
-            scalar = self.glow_fade_scalar
             for thickness in range(glow_thickness):
                 self.draw("rect", (x - thickness, y - thickness,
-                                   w + thickness, h + thickness),
+                                   w + (2 * thickness), h + (2 * thickness)),
                         color=(r, g, b, int(a / float(thickness + 1))))
         #elif shadow_thickness:
 
@@ -326,35 +328,46 @@ class Text_Only_Theme(Theme):
                       center_text=self.center_text)
 
 
+class Copy_Theme(Theme):
+
+    def draw_texture(self):
+        texture = self.texture
+        self.draw("copy", texture, (0, 0) + self.size, self.area)
+
+
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
 
     defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
-                "_pack_scheduled" : False}
+                "_pack_requested" : False, "_in_pack_queue" : False}
 
-    predefaults = {"sdl_window" : '', "_pack_scheduled2" : False}
+    predefaults = {"sdl_window" : ''}
 
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
 
     def pack(self):
-        if not self._pack_scheduled2:
-            parent = self.parent
-            pack_scheduled = False
-            while parent.reference != self.sdl_window:
-                if parent._pack_scheduled:
-                    pack_scheduled = True
-                    break
-                else:
-                    parent = parent.parent
-            if not pack_scheduled and not parent.deleted:
-                parent = self.parent
-                if not parent.deleted:
-                    #print
-                    #print objects[objects[self.sdl_window].organizer.reference] # somehow causes KeyError
-                    #print
-                    objects[self.sdl_window].organizer.schedule_pack(parent)
-                    parent._pack_scheduled = True
-                    self._pack_scheduled2 = True
+        parent = self.parent
+        if not parent._in_pack_queue:
+            parent._in_pack_queue = self._pack_requested = True
+            pride.objects[self.sdl_window].organizer.schedule_pack(parent)
+        #if not self._pack_scheduled2:
+        #    parent = self.parent
+        #    pack_scheduled = False
+        #    while parent.reference != self.sdl_window:
+        #        if parent._pack_scheduled:
+        #            pack_scheduled = True
+        #            break
+        #        else:
+        #            parent = parent.parent
+        #    if not pack_scheduled and not parent.deleted:
+        #        parent = self.parent
+        #        if not parent.deleted:
+        #            #print
+        #            #print objects[objects[self.sdl_window].organizer.reference] # somehow causes KeyError
+        #            #print
+        #            objects[self.sdl_window].organizer.schedule_pack(parent)
+        #            parent._pack_scheduled = True
+        #            self._pack_scheduled2 = True
 
 
 class Window_Object(Organized_Object):
@@ -371,7 +384,8 @@ class Window_Object(Organized_Object):
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.gui.Minimal_Theme",
                 "_selected" : False, "hide_excess_text" : True,
-                "_cached" : False, "tip_bar_text" : ''}
+                "_cached" : False, "tip_bar_text" : '',
+                "theme_profile" : "default"}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
@@ -379,8 +393,8 @@ class Window_Object(Organized_Object):
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
                    "_always_on_top" : False, "use_custom_colors" : False,
-                   "theme_profile" : "default", "_status" : None,
-                   "_tip_set" : False}
+                   "_status" : None, "_tip_set" : False,
+                   "_theme_profile" : "default"}
 
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list, "colors" : dict}
@@ -405,8 +419,9 @@ class Window_Object(Organized_Object):
     def _get_texture_invalid(self):
         return self._texture_invalid
     def _set_texture_invalid(self, value):
-        if not self._texture_invalid and value and not self.deleted:
+        if not self._texture_invalid and value and not self.deleted and not self.hidden:
             assert self.sdl_window
+            assert not self.hidden
             objects[self.sdl_window].invalidate_object(self)
         self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
@@ -447,15 +462,11 @@ class Window_Object(Organized_Object):
 
 
     for color_key in ("background", "text", "text_background", "shadow",
-                      "shadow_thickness", "shadow_fade_scalar", "glow",
-                      "glow_thickness", "glow_fade_scalar"):
+                      "shadow_thickness", "glow", "glow_thickness"):
         def _getter(self, color_key=color_key):
             profile = self.theme_profile
             if profile in self.colors and color_key in self.colors[profile]:
-        #        assert profile != "placeholder"
                 return self.colors[profile][color_key]
-        #    if profile == "placeholder" and color_key == "background":
-        #        print("placholder {}: {}".format(color_key, list(self.theme.theme_colors[profile][color_key])))
             return self.theme.theme_colors[profile][color_key]
         def _setter(self, value, color_key=color_key):
             try:
@@ -466,8 +477,7 @@ class Window_Object(Organized_Object):
         def _deleter(self, color_key=color_key):
             del self.colors[self.theme_profile][color_key]
 
-        if color_key not in ("shadow_thickness", "shadow_fade_scalar",
-                             "glow_thickness", "glow_fade_scalar"):
+        if color_key not in ("shadow_thickness", "glow_thickness"):
             vars()["{}_color".format(color_key)] = property(_getter, _setter, _deleter)
         else:
             vars()[color_key] = property(_getter, _setter, _deleter)
@@ -614,18 +624,16 @@ class Window_Object(Organized_Object):
         pass
 
     def hide(self, parent_call=False):
-        #assert not self.hidden
-        try: # not sure if this is the right way to deal with this happening, but it appears to work
-            pride.objects[self.sdl_window + "/SDL_User_Input"]._remove_from_coordinates(self.reference)
-        except ValueError:
-            pass
-        self.texture_invalid = True
+        pride.objects[self.sdl_window].remove_window_object(self)
+        assert self not in pride.objects[self.sdl_window].redraw_objects
+        #self.texture_invalid = True
         if parent_call:
             self._parent_hidden = True
         else:
             self.hidden = True
         for child in self.children:
             child.hide(True)
+        self.hover_ends()
 
     def show(self, parent_call=False):
         #assert self.hidden
@@ -634,7 +642,11 @@ class Window_Object(Organized_Object):
         else:
             self.hidden = False
         if not self.hidden:
-            pride.objects[self.sdl_window + "/SDL_User_Input"]._update_coordinates(self, self.reference, self.area, self.z)
+            window = pride.objects[self.sdl_window]
+            window.user_input._update_coordinates(self, self.reference, self.area, self.z)
+            window.invalidate_object(self) # needed because of `remove_window_object`
+            #if not self._in_pack_queue:
+            #    window.organizer.schedule_pack(self)
             self.texture_invalid = True
             for child in self.children:
                 child.show(True)
@@ -661,6 +673,7 @@ class Window_Object(Organized_Object):
         self.texture_invalid = False
 
     def draw_texture(self):
+        assert not self.hidden or self._parent_hidden
         self.theme.draw_texture()
 
     def pack(self):
@@ -755,6 +768,12 @@ class Window(Window_Object):
 
     defaults = {"pack_mode" : "main"}#, "size" : pride.gui.SCREEN_SIZE}
 
+#    def __init__(self, **kwargs):
+#        super(Window, self).__init__(**kwargs)
+#        self.texture = create_texture(pride.gui.SCREEN_SIZE) # could possibly be done after being organized
+
+
+
 
 class Container(Window_Object):
 
@@ -763,8 +782,7 @@ class Container(Window_Object):
 
 class Button(Window_Object):
 
-    defaults = {"pack_mode" : "top"}
-    predefaults = {"theme_profile" : "interactive"}
+    defaults = {"pack_mode" : "top", "theme_profile" : "interactive"}
 
 
 class Application(Window):
@@ -790,9 +808,11 @@ class Application(Window):
 
     def set_tip_bar_text(self, text):
         self.tip_bar.text = text
+        self._current_text = text
 
     def clear_tip_bar_text(self):
         self.tip_bar.text = ''
+        self._current_text = ''
 
     def show_status(self, text, *args, **kwargs):
         if self.tip_bar_enabled:

@@ -491,8 +491,7 @@ class Dropdown_Field(pride.gui.gui.Container):
 
 class Spin_Field_Entry(pride.gui.gui.Container):
 
-    defaults = {"text" : '0'}#, "background_color" : FIELD_BACKGROUND_COLOR}
-    #predefaults = {"theme_profile" : "interactive"}
+    defaults = {"text" : '0'}
 
     def __init__(self, **kwargs):
         super(Spin_Field_Entry, self).__init__(**kwargs)
@@ -537,8 +536,8 @@ class Spin_Field(pride.gui.gui.Container):
 
 class Field_Entry(Text_Box):
 
-    defaults = {"write_field_method" : None, "return_method" : None}
-    predefaults = {"theme_profile" : "interactive"}
+    defaults = {"write_field_method" : None, "return_method" : None,
+                "theme_profile" : "interactive"}
     required_attributes = ("write_field_method", )
 
     def deselect(self, mouse, next_active_object):
@@ -588,6 +587,9 @@ class Field(pride.gui.gui.Container):
                                  write_field_method=lambda value: self.write_field_method(self.field_name, value),
                                  tip_bar_text=self.tip_bar_text,
                                  return_method=self.return_method)
+
+    def return_method(self):
+        pass
 
     def select(self, mouse):
         super(Field, self).select(mouse)
@@ -858,7 +860,6 @@ class _Slider_Dragger(pride.gui.gui.Button):
                 value = _object[name]
             except KeyError:
                 raise error
-
         # value = (left_edge - left_intersection) * increment
         # value / increment = left_edge - left_intersection
         # (value / increment) + left_intersection = left_edge
@@ -953,11 +954,12 @@ class Slider_Bar(pride.gui.gui.Container):
                                     pack_mode="left", scale_to_text=True,
                                     theme_type="pride.gui.gui.Text_Only_Theme")
         middle = self.create("pride.gui.gui.Container", pack_mode="left")
-        self.parent._slider_bar = middle.create(_Slider_Bar, pack_mode="left",
+        self.parent._slider_bar = middle.create(_Slider_Bar, pack_mode="bottom",
                                                 target=self.target,
                                                 bounds=self.bounds,
                                                 on_adjustment=self.on_adjustment)
-        #middle.create(Toggle_Bar, bounds=self.bounds,
+        #middle.create("pride.gui.widgets.buttons.Toggle_Bar", toggle_count=5,
+        #              pack_mode="top")
         self.right_end = self.create("pride.gui.gui.Container", text=str(self.initial_value),
                                      pack_mode="left", scale_to_text=True,
                                      theme_type="pride.gui.gui.Text_Only_Theme")
@@ -967,6 +969,7 @@ class Slider_Widget(pride.gui.gui.Container):
 
     defaults = {"label" : '', "bounds" : (0, 255), "target" : tuple(),
                 "on_adjustment" : None}
+    mutable_defaults = {"level" : dict}
     required_attributes = ("target", "on_adjustment")
     autoreferences = ("slider_bar", "_slider_bar")
 
@@ -992,6 +995,10 @@ class Slider_Widget(pride.gui.gui.Container):
 
     def set_label(self, value):
         self.slider_bar.left_end.text = value
+
+    def set_level(self, level):
+        self._slider_bar.dragger.set_position(self.level[level])
+
 
 
 class Popup_Notification(pride.gui.gui.Container):

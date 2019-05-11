@@ -31,13 +31,11 @@ def instruction_generator(instructions):
             else:
                 for operation in window_object._draw_operations:
                     yield operation
+
     for window_object in always_on_top:
         for operation in window_object._draw_operations:
             yield operation
-    #for layer in instructions.itervalues():
-    #    for window_object in (item for item in layer if item.scroll_instructions):
-    #        for operation in window_object.scroll_instructions:
-    #            yield operation
+
 
 class SDL_Component(base.Proxy): pass
 
@@ -47,7 +45,7 @@ class SDL_Window(SDL_Component):
     defaults = {"size" : pride.gui.SCREEN_SIZE, "showing" : True,
                 'position' : (0, 0), 'x' : 0, 'y' : 0, 'z' : 0,
                 'w' : pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .04,
+                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .001,
                 "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "software_renderer_flags" : sdl2.SDL_RENDERER_SOFTWARE | sdl2.SDL_RENDERER_TARGETTEXTURE,
@@ -57,7 +55,8 @@ class SDL_Window(SDL_Component):
                         "postdraw_queue" : list,
                         "drawing_instructions" : collections.OrderedDict}
 
-    predefaults = {"running" : False, "_ignore_invalidation" : None}
+    predefaults = {"running" : False, "_ignore_invalidation" : None,
+                   "_in_pack_queue" : False} # smoothes Organizer optimization out
 
     def _get_size(self):
         return (self.w, self.h)
@@ -168,34 +167,19 @@ class SDL_Window(SDL_Component):
         instructions = self.drawing_instructions
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
+            assert not window_object.hidden
             old_z = self.user_input._update_coordinates(window_object,
                                                         window_object.reference,
                                                         window_object.area,
                                                         window_object.z)
-
-            #draw_position = texture_atlas.add_to_atlas(window_object)
-            #backup_position = window_object.position
-            #self._ignore_invalidation = window_object
-            #window_object.position = draw_position
-        #    window_object.alert("Drawing")
             window_object._draw_texture()
-
-            #window_object.position = backup_position
-            #self._ignore_invalidation = None
-
-            #instructions.extend(draw_operations)
-
-            #copy_instruction = ("copy_subsection", draw_position + window_object.size, window_object.area)
             try:
                 instructions[old_z].remove(window_object)
             except (KeyError, ValueError):
                 pass
             z = window_object.z
             assert window_object not in instructions.get(z, [])
-            #try:
-            #    instructions[z].remove(window_object)
-            #except (KeyError, ValueError):
-            #    pass
+
             try:
                 instructions[z].append(window_object)
             except KeyError:
@@ -425,12 +409,12 @@ class SDL_User_Input(scheduler.Process):
                                 level=0)
 
     def _update_coordinates(self, item, reference, area, z):
-        old_z = pride.objects[reference]._old_z
+        old_z = item._old_z
         try:
             self._layer_tracker[old_z].remove(reference)
         except (KeyError, ValueError):
             pass
-        assert reference not in self._layer_tracker.get(z, []), (z, reference)
+        #assert reference not in self._layer_tracker.get(z, []), (z, reference)
         try:
             self._layer_tracker[z].append(reference)
         except KeyError:
@@ -440,7 +424,6 @@ class SDL_User_Input(scheduler.Process):
 
     def _remove_from_coordinates(self, item):
         self._layer_tracker[pride.objects[item]._old_z].remove(item)
-        assert pride.objects[item] not in self._layer_tracker.get(pride.objects[item].z, [])
         if self.active_item == item:
             self.active_item = None
 
@@ -477,7 +460,7 @@ class SDL_User_Input(scheduler.Process):
                     if active_item in objects:
                         raise
                     else:
-                        #self.alert("Active item has been deleted {}".format(active_item, ), 
+                        #self.alert("Active item has been deleted {}".format(active_item, ),
                         #           level=self.verbosity["active_item_deleted"])
                         self.active_item = None
 
@@ -514,6 +497,7 @@ class SDL_User_Input(scheduler.Process):
             for layer_number, layer in reversed(self._layer_tracker.items()):
                 for item in layer:
                     assert item in objects
+                    assert not pride.objects[item].hidden
                     if pride.gui.point_in_area(objects[item].area, mouse_position):
                         active_item = item
                         break
@@ -640,7 +624,7 @@ class SDL_User_Input(scheduler.Process):
 class Renderer(SDL_Component):
 
     defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
-                "blendmode_flag" : sdl2.SDL_BLENDMODE_BLEND, # SDL_BLENDMODE_ADD for slider puzzles?
+                "blendmode_flag" : sdl2.SDL_BLENDMODE_ADD, # SDL_BLENDMODE_ADD for slider puzzles?
                 "logical_size" : (800, 600)}
 
     def __init__(self, window, **kwargs):
@@ -673,11 +657,14 @@ class Renderer(SDL_Component):
         ellipses = ''
         _text = text
         assert "width" in kwargs
+        if "hide_excess_text" in kwargs:
+            del kwargs["hide_excess_text"]
         hide_excess = False#kwargs.get("hide_excess_text", False) # needs to be re-done
         while True:
             texture = self.sprite_factory.from_text(text + ellipses,
                                                     fontmanager=self.font_manager,
                                                     **kwargs)
+            #print type(texture)
             _w, _h = texture.size
             if kwargs.get("center_text", False) and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
                     destination = ((x + (w / 2)) - (_w / 2),

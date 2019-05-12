@@ -288,10 +288,12 @@ class Minimal_Theme(Theme):
         glow_thickness = self.glow_thickness
         if glow_thickness:
             r, g, b, a = self.glow_color
+            fade_scalar = a / glow_thickness
+            assert fade_scalar > 0
             for thickness in range(glow_thickness):
                 self.draw("rect", (x - thickness, y - thickness,
                                    w + (2 * thickness), h + (2 * thickness)),
-                        color=(r, g, b, int(a / float(thickness + 1))))
+                        color=(r, g, b, a - (thickness * fade_scalar)))
         #elif shadow_thickness:
 
 
@@ -625,6 +627,7 @@ class Window_Object(Organized_Object):
 
     def hide(self, parent_call=False):
         pride.objects[self.sdl_window].remove_window_object(self)
+        pride.objects[self.sdl_window].dirty_layers.add(self.z)
         assert self not in pride.objects[self.sdl_window].redraw_objects
         #self.texture_invalid = True
         if parent_call:

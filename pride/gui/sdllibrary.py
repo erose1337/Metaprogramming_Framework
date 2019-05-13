@@ -45,7 +45,7 @@ class SDL_Window(SDL_Component):
     defaults = {"size" : pride.gui.SCREEN_SIZE, "showing" : True,
                 'position' : (0, 0), 'x' : 0, 'y' : 0, 'z' : 0,
                 'w' : pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .001,
+                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .038,
                 "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "software_renderer_flags" : sdl2.SDL_RENDERER_SOFTWARE | sdl2.SDL_RENDERER_TARGETTEXTURE,
@@ -105,7 +105,7 @@ class SDL_Window(SDL_Component):
         layer_texture = self.create_texture(self.size, self.texture_access_flag)
         sdl2.SDL_SetTextureBlendMode(layer_texture.texture,
                                     sdl2.SDL_BLENDMODE_ADD)
-        self.layer_cache.append(layer_texture)
+        self.layer_cache.append((0, layer_texture))
 
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
 
@@ -175,6 +175,7 @@ class SDL_Window(SDL_Component):
         dirty_layers = self.dirty_layers
         _size = self.size
         flag = self.texture_access_flag
+        needs_sorting = False
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
             assert not window_object.hidden
@@ -195,7 +196,9 @@ class SDL_Window(SDL_Component):
                     layer_texture = self.create_texture(_size, flag)
                     sdl2.SDL_SetTextureBlendMode(layer_texture.texture,
                                                 sdl2.SDL_BLENDMODE_ADD)
-                    layer_cache.append(layer_texture)
+                    layer_cache.append((old_z, layer_texture))
+                    #assert layer_texture is sorted(layer_cache)[old_z][1]
+                    needs_sorting = True
                 except ValueError:
                     pass
                 assert window_object not in instructions.get(z, [])
@@ -207,9 +210,13 @@ class SDL_Window(SDL_Component):
                     layer_texture = self.create_texture(_size, flag)
                     sdl2.SDL_SetTextureBlendMode(layer_texture.texture,
                                                 sdl2.SDL_BLENDMODE_ADD)
-                    layer_cache.append(layer_texture)
+                    layer_cache.append((z, layer_texture))
+#                    assert layer_texture is sorted(layer_cache)[z][1]
+                    needs_sorting = True
 
         del self.redraw_objects[:]
+        if needs_sorting:
+            layer_cache = sorted(layer_cache)
 
     def draw(self, instructions):
         area = (0, 0) + self.size
@@ -223,21 +230,24 @@ class SDL_Window(SDL_Component):
 
         # redraw dirty layers onto cache
         # copy layers to screen
-        for layer_number, layer_texture in enumerate(layer_cache):
+        for layer_number, layer_texture in layer_cache:
+            items = instructions[layer_number]
+            if not items:
+                continue
             layer_texture = layer_texture.texture
             if dirty_layers and layer_number in dirty_layers:
                 renderer.set_render_target(layer_texture)
                 renderer.clear()
-                items = instructions[layer_number]
-                if items:
-                    for item in items:
-                        if item.always_on_top:
-                            always_on_top.append(item)
-                            continue
-                        for operation, args, kwargs in item._draw_operations:
-                            draw_procedures[operation](*args, **kwargs)
+                for item in items:
+                    if item.always_on_top:
+                        always_on_top.append(item)
+                        continue
+                    for operation, args, kwargs in item._draw_operations:
+                        draw_procedures[operation](*args, **kwargs)
                 renderer.set_render_target(None)
             renderer.copy(layer_texture, area, area)
+        #    renderer.present()
+        #    raw_input(str(layer_number))
         self.dirty_layers.clear()
 
         if always_on_top:
@@ -245,7 +255,6 @@ class SDL_Window(SDL_Component):
                 for operation, args, kwargs in item._draw_operations:
                     draw_procedures[operation](*args, **kwargs)
         renderer.present()
-
 
     def schedule_predraw_operation(self, callable):
         self.predraw_queue.append(callable)

@@ -84,6 +84,9 @@ class Username_Password_Field(pride.gui.gui.Container):
 
     def submit_credentials(self):
         user = self.user
+        if not self.username:
+            self.show_status("Must enter a username")
+            return
         text = "Computing: {}\n".format(user.get_derivation_description())
         self.parent_application.status_display.text += text
         self.parent_application.parent_application.show_status("Attempting login...")

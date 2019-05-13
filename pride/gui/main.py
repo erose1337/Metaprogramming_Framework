@@ -13,6 +13,8 @@ except ImportError:
 
 class User(pride.components.user.User):
 
+    defaults = {"auto_login" : False, "auto_register" : True} 
+
     def handle_not_registered(self, identifier):
         if self.auto_register:
             super(User, self).handle_not_registered(identifier)
@@ -32,7 +34,7 @@ class Gui(pride.gui.gui.Application):
     def __init__(self, **kwargs):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
-        user = self.user = self.user_type(auto_login=False, auto_register=True)
+        user = self.user = self.user_type()
         self.application_window.create(self.lockscreen_type, user=user,
                                        service_name="User", host_info=("localhost", 40022))
 

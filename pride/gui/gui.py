@@ -685,6 +685,7 @@ class Window_Object(Organized_Object):
 
     def delete(self):
         assert not self.deleted, self
+        pride.objects[self.sdl_window].dirty_layers.add(self.z)
         try:
             self._clear_tip_bar_text()
         except AttributeError:

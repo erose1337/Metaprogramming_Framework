@@ -1,30 +1,14 @@
 import operator
-from math import floor, sqrt
 
 import pride
 import pride.functions.utilities
 import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
-import pride.gui.color
 import pride.gui.sdllibrary
 Instruction = pride.Instruction
 
 import sdl2
-import sdl2.ext
-SDL_Rect = sdl2.SDL_Rect
-
-MAX_W, MAX_H = pride.gui.SCREEN_SIZE
-
-def _default_colors():
-    return {"background" : pride.gui.color.Color(180, 180, 180, 200),
-            "shadow" : pride.gui.color.Color(0, 0, 0, 255),
-            "shadow_thickness" : 5,
-            "text_background" : pride.gui.color.Color(0, 0, 85, 255),
-            "text" : pride.gui.color.Color(45, 45, 45, 255),
-            "glow" : pride.gui.color.Color(255, 255, 255, 235),
-            "glow_thickness" : 0,
-            "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Python/SDL_Window/Renderer/SpriteFactory",
@@ -227,116 +211,6 @@ class Organizer(base.Base):
             child.z = z
 
 
-class Theme(pride.base.Wrapper):
-
-    defaults = {"dont_save" : True}
-    theme_profiles = ("default", "interactive", "hover", "placeholder",
-                      "indicator", "inert", "borderless")
-    theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
-    assert theme_colors["default"]["text_background"].b == 85, str(theme_colors["default"]["text_background"])
-    theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)
-    theme_colors["hover"]["background"] = pride.gui.color.Color(245, 245, 220)
-    theme_colors["placeholder"]["background"] = pride.gui.color.Color(0, 0, 0, 255)
-    theme_colors["indicator"]["background"] = pride.gui.color.Color(85, 85, 185, 235)
-    theme_colors["inert"]["background"] = pride.gui.color.Color(85, 85, 185, 75)
-    theme_colors["borderless"]["shadow_thickness"] = 0
-    _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
-
-    def draw_texture(self):
-        raise NotImplementedError
-
-    def wraps(self, _object):
-        super(Theme, self).wraps(_object)
-        self._theme_users.append(_object)
-
-    def delete(self):
-        self._theme_users.remove(self.wrapped_object)
-        self.wrapped_object = None
-        super(Theme, self).delete()
-
-    @classmethod
-    def update_theme_users(cls):
-        for instance in cls._theme_users:
-            instance.texture_invalid = True
-
-    def __getstate__(self):
-        state = super(Theme, self).__getstate__()
-        del state["wrapped_object"]
-        return state
-
-
-class Minimal_Theme(Theme):
-
-    theme_colors = Theme.theme_colors.copy()
-
-    def draw_texture(self):
-        assert not self.hidden
-        #if self._cached:
-        #    self.draw("copy", self.texture, self.area, self.area)
-        #else:
-        x, y, w, h = area = self.area
-
-        self.draw("fill", area, color=self.background_color)
-        shadow_thickness = self.shadow_thickness
-        if shadow_thickness:
-            r, g, b, a = self.shadow_color
-            for thickness in range(shadow_thickness):
-                self.draw("rect", (x + thickness, y + thickness,
-                                   w - (2 * thickness), h - (2 * thickness)),
-                        color=(r, g, b, a / (thickness + 1)))
-
-        glow_thickness = self.glow_thickness
-        if glow_thickness:
-            r, g, b, a = self.glow_color
-            fade_scalar = a / glow_thickness
-            assert fade_scalar > 0
-            for thickness in range(glow_thickness):
-                self.draw("rect", (x - thickness, y - thickness,
-                                   w + (2 * thickness), h + (2 * thickness)),
-                        color=(r, g, b, a - (thickness * fade_scalar)))
-        #elif shadow_thickness:
-
-
-        if self.text:
-            assert self.wrap_text
-            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
-                    bg_color=self.text_background_color, color=self.text_color,
-                    center_text=self.center_text, hide_excess_text=self.hide_excess_text)
-        #renderer = pride.objects[self.sdl_window].renderer
-        #renderer.draw(self.texture.texture, self._draw_operations)
-        #self._cached= True
-
-
-class Blank_Theme(Theme):
-
-    def draw_texture(self):
-        self.draw("fill", self.area, color=(0, 0, 0))
-
-
-class Spacer_Theme(Theme):
-
-    def draw_texture(self):
-        return
-
-
-class Text_Only_Theme(Theme):
-
-    def draw_texture(self):
-        if self.text:
-            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", self.area, self.text, width=self.w if self.wrap_text else None,
-                      bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text)
-
-
-class Copy_Theme(Theme):
-
-    def draw_texture(self):
-        texture = self.texture
-        self.draw("copy", texture, (0, 0) + self.size, self.area)
-
-
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
 
     defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
@@ -384,7 +258,7 @@ class Window_Object(Organized_Object):
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
-                "theme_type" : "pride.gui.gui.Minimal_Theme",
+                "theme_type" : "pride.gui.themes.Perspective_Theme",
                 "_selected" : False, "hide_excess_text" : True,
                 "_cached" : False, "tip_bar_text" : '',
                 "theme_profile" : "default"}
@@ -464,7 +338,8 @@ class Window_Object(Organized_Object):
 
 
     for color_key in ("background", "text", "text_background", "shadow",
-                      "shadow_thickness", "glow", "glow_thickness"):
+                      "shadow_thickness", "glow", "glow_thickness",
+                      "vanishing_point"):
         def _getter(self, color_key=color_key):
             profile = self.theme_profile
             if profile in self.colors and color_key in self.colors[profile]:
@@ -479,7 +354,7 @@ class Window_Object(Organized_Object):
         def _deleter(self, color_key=color_key):
             del self.colors[self.theme_profile][color_key]
 
-        if color_key not in ("shadow_thickness", "glow_thickness"):
+        if color_key not in ("shadow_thickness", "glow_thickness", "vanishing_point"):
             vars()["{}_color".format(color_key)] = property(_getter, _setter, _deleter)
         else:
             vars()[color_key] = property(_getter, _setter, _deleter)

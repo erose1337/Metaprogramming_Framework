@@ -596,18 +596,10 @@ class SDL_User_Input(scheduler.Process):
                     pride.objects[new_under_mouse].on_hover()
             else:
                 if not pride.gui.point_in_area(under_mouse.area, position):
-#                    if under_mouse.held:
                     new_under_mouse = self._get_object_under_mouse(position)
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse
                     pride.objects[new_under_mouse].on_hover()
-        #    pride.objects[self.under_mouse].mousemotion(position.xrel, position.yrel)
-            #if not pride.gui.point_in_area(under_mouse.area, position):
-            #    under_mouse.hover_ends()
-            #    self.under_mouse = under_mouse = self._get_object_under_mouse(position)
-            #    pride.objects[under_mouse].on_hover()
-        #    else:
-        #        print("Mouse still within {}".format(under_mouse))
 
     def handle_keydown(self, event):
         try:
@@ -622,7 +614,7 @@ class SDL_User_Input(scheduler.Process):
         key_value = event.key.keysym.sym
         modifier = event.key.keysym.mod
 
-      #  if key_value < 256 or key_value > 0: # in ascii range
+        #  if key_value < 256 or key_value > 0: # in ascii range
 
         try:
             key = chr(key_value)
@@ -691,6 +683,7 @@ class Renderer(SDL_Component):
         self.instructions["fill"] = self.fill
         self.instructions["copy"] = self.copy
         self.instructions["copy_subsection"] = self.render_copy
+        self.instructions["rect_perspective"] = self.draw_rect_perspective
         #self.instructions["copyex"] = self.copyex
         self.clear()
 
@@ -699,6 +692,35 @@ class Renderer(SDL_Component):
 
     def render_copy(self, source_area, destination_area):
         self.copy(self.parent._texture.texture, source_area, destination_area)
+
+    def draw_rect_perspective(self, rect, vanishing_point, **kwargs):
+        # draw line from upper left corner of rect to vanishing point of length w
+        x, y, w, h = rect
+        points = [x, y]
+        vx, vy = vanishing_point
+        #top_left = (x, y)
+        a = y - vy
+        b = x - vx
+        try:
+            slope = a / float(b)
+        except ZeroDivisionError:
+            top_right_y = y
+        else:
+            top_right_y = y + int(slope * w)
+        top_right_x = x + w
+
+        #bottom_left = (x, y + h)
+        _y = y + h
+        a = _y - vy
+        try:
+            slope = a / float(b)
+        except ZeroDivisionError:
+            bottom_right_y = _y
+        else:
+            bottom_right_y = _y + int(slope * w)
+        bottom_right_x = x + w
+        points.extend((top_right_x, top_right_y, bottom_right_x, bottom_right_y, x, y + h, x, y))
+        self.draw_line(points, **kwargs)
 
     def draw_text(self, area, text, **kwargs):
         x, y, w, h = area

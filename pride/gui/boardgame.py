@@ -1,4 +1,5 @@
 import pride.gui.gui
+import pride.gui.themes
 
 class Gameboard_Square(pride.gui.gui.Button):
 
@@ -6,7 +7,7 @@ class Gameboard_Square(pride.gui.gui.Button):
     predefaults = {"current_piece" : None}
 
     def add(self, piece):
-        if not isinstance(piece, pride.gui.gui.Theme):
+        if not isinstance(piece, pride.gui.themes.Theme):
             self_reference = self.reference
 
             piece.current_square = self_reference
@@ -17,7 +18,7 @@ class Gameboard_Square(pride.gui.gui.Button):
         super(Gameboard_Square, self).add(piece)
 
     def remove(self, piece):
-        if not isinstance(piece, pride.gui.gui.Theme):
+        if not isinstance(piece, pride.gui.themes.Theme):
             piece.current_square = None
             self.current_piece = None
         super(Gameboard_Square, self).remove(piece)

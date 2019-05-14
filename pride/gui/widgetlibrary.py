@@ -598,16 +598,16 @@ class Field(pride.gui.gui.Container):
 class Status_Indicator(pride.gui.gui.Container):
 
     defaults = {"w_range" : (0, 10), "pack_mode" : "left",
-                "theme_type" : "pride.gui.gui.Spacer_Theme"}
+                "theme_type" : "pride.gui.themes.Spacer_Theme"}
 
     def __init__(self, **kwargs):
         super(Status_Indicator, self).__init__(**kwargs)
         self.create("pride.gui.gui.Container", pack_mode="top",
-                    theme_type="pride.gui.gui.Spacer_Theme")
+                    theme_type="pride.gui.themes.Spacer_Theme")
         self.status_light = self.create("pride.gui.gui.Container", pack_mode="top",
                                         theme_profile="placeholder").reference
         self.create("pride.gui.gui.Container", pack_mode="top",
-                    theme_type="pride.gui.gui.Spacer_Theme")
+                    theme_type="pride.gui.themes.Spacer_Theme")
 
     def enable_indicator(self):
         pride.objects[self.status_light].theme_profile = "indicator"
@@ -724,7 +724,7 @@ class Slider_Bar(pride.gui.gui.Container):
         super(Slider_Bar, self).__init__(**kwargs)
         self.left_end = self.create("pride.gui.gui.Container", text=self.label,
                                     pack_mode="left", scale_to_text=True,
-                                    theme_type="pride.gui.gui.Text_Only_Theme")
+                                    theme_type="pride.gui.themes.Text_Only_Theme")
         middle = self.create("pride.gui.gui.Container", pack_mode="left")
         self.parent._slider_bar = middle.create(_Slider_Bar, pack_mode="bottom",
                                                 target=self.target,
@@ -732,7 +732,7 @@ class Slider_Bar(pride.gui.gui.Container):
                                                 on_adjustment=self.on_adjustment)
         self.right_end = self.create("pride.gui.gui.Container", text=str(self.initial_value),
                                      pack_mode="left", scale_to_text=True,
-                                     theme_type="pride.gui.gui.Text_Only_Theme")
+                                     theme_type="pride.gui.themes.Text_Only_Theme")
 
 
 class Slider_Widget(pride.gui.gui.Container):

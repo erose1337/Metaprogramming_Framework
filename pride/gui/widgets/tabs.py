@@ -45,7 +45,7 @@ class Tab_Button(pride.gui.gui.Button):
         if self.include_delete_button:
             kwargs = dict(pack_mode="right", scale_to_text=True,
                           target=self.reference, method="delete_tab", text='x',
-                          theme_type="pride.gui.gui.Text_Only_Theme",
+                          theme_type="pride.gui.themes.Text_Only_Theme",
                           w_range=(0, 10), tip_bar_text=self.delete_tip,
                           theme_profile="placeholder")
             self.delete_button = self.create(pride.gui.widgetlibrary.Method_Button, **kwargs)

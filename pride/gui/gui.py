@@ -410,10 +410,10 @@ class Window_Object(Organized_Object):
     def _set_always_on_top(self, value):
         self._always_on_top = value
         if value:
-            pride.objects[self.sdl_window].user_input.always_on_top.append(self.reference)
+            pride.objects[self.sdl_window].user_input.always_on_top.append(self)
         else:
             try:
-                pride.objects[self.sdl_window].user_input.always_on_top.remove(self.reference)
+                pride.objects[self.sdl_window].user_input.always_on_top.remove(self)
             except ValueError:
                 pass
     always_on_top = property(_get_always_on_top, _set_always_on_top)

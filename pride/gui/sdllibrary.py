@@ -220,7 +220,6 @@ class SDL_Window(SDL_Component):
 
     def draw(self, instructions):
         area = (0, 0) + self.size
-        always_on_top = []
         renderer = self.renderer
         draw_procedures = renderer.instructions
         layer_cache = self.layer_cache
@@ -240,16 +239,14 @@ class SDL_Window(SDL_Component):
                 renderer.clear()
                 for item in items:
                     if item.always_on_top:
-                        always_on_top.append(item)
                         continue
                     for operation, args, kwargs in item._draw_operations:
                         draw_procedures[operation](*args, **kwargs)
                 renderer.set_render_target(None)
             renderer.copy(layer_texture, area, area)
-        #    renderer.present()
-        #    raw_input(str(layer_number))
-        self.dirty_layers.clear()
 
+        self.dirty_layers.clear()
+        always_on_top = self.user_input.always_on_top
         if always_on_top:
             for item in always_on_top:
                 for operation, args, kwargs in item._draw_operations:
@@ -543,8 +540,8 @@ class SDL_User_Input(scheduler.Process):
         objects = pride.objects
         active_item = None
         for item in self.always_on_top:
-            if pride.gui.point_in_area(objects[item].area, mouse_position):
-                active_item = item
+            if pride.gui.point_in_area(item.area, mouse_position):
+                active_item = item.reference
                 break
         else:
             for layer_number, layer in reversed(self._layer_tracker.items()):

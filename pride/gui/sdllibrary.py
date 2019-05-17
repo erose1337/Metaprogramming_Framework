@@ -45,7 +45,7 @@ class SDL_Window(SDL_Component):
     defaults = {"size" : pride.gui.SCREEN_SIZE, "showing" : True,
                 'position' : (0, 0), 'x' : 0, 'y' : 0, 'z' : 0,
                 'w' : pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .038,
+                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .02,
                 "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "software_renderer_flags" : sdl2.SDL_RENDERER_SOFTWARE | sdl2.SDL_RENDERER_TARGETTEXTURE,
@@ -156,16 +156,16 @@ class SDL_Window(SDL_Component):
     def run(self):
         self.organizer.pack_items()
         if self.predraw_queue:
-            queue = self.predraw_queue[:]
-            del self.predraw_queue[:]
+            queue = self.predraw_queue
+            self.predraw_queue = []
             for callable in queue:
                 callable()
         self.update_drawing_instructions()
         self.draw(self.drawing_instructions)
         self.running = False
         if self.postdraw_queue:
-            queue = self.postdraw_queue[:]
-            del self.postdraw_queue[:]
+            queue = self.postdraw_queue
+            self.postdraw_queue = []
             for callable in queue:
                 callable()
 
@@ -684,6 +684,7 @@ class Renderer(SDL_Component):
         self.instructions["copy"] = self.copy
         self.instructions["copy_subsection"] = self.render_copy
         self.instructions["rect_perspective"] = self.draw_rect_perspective
+        self.instructions["line_perspective"] = self.draw_line_perspective
         #self.instructions["copyex"] = self.copyex
         self.clear()
 
@@ -692,6 +693,20 @@ class Renderer(SDL_Component):
 
     def render_copy(self, source_area, destination_area):
         self.copy(self.parent._texture.texture, source_area, destination_area)
+
+    def draw_line_perspective(self, point, length, vanishing_point, **kwargs):
+        x, y = point
+        vx, vy = vanishing_point
+        a = y - vy
+        b = x - vx
+        try:
+            slope = a / float(b)
+        except ZeroDivisionError:
+            end_y = y
+        else:
+            end_y = y + int(slope * length)
+        end_x = x + length
+        self.draw_line((x, y, end_x, end_y), **kwargs)
 
     def draw_rect_perspective(self, rect, vanishing_point, **kwargs):
         # draw line from upper left corner of rect to vanishing point of length w
@@ -719,8 +734,11 @@ class Renderer(SDL_Component):
         else:
             bottom_right_y = _y + int(slope * w)
         bottom_right_x = x + w
-        points.extend((top_right_x, top_right_y, bottom_right_x, bottom_right_y, x, y + h, x, y))
-        self.draw_line(points, **kwargs)
+
+        self.draw_line((x, y, top_right_x, top_right_y,
+                        bottom_right_x, bottom_right_y,
+                        x, y + h, x, y),
+                       **kwargs)
 
     def draw_text(self, area, text, **kwargs):
         x, y, w, h = area

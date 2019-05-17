@@ -1,6 +1,7 @@
 import pride.gui.gui
 import pride.gui.widgetlibrary
 import pride.gui.widgets.tabs
+import pride.gui.widgets.sliders
 
 class Color_Field(pride.gui.gui.Container):
 
@@ -11,7 +12,7 @@ class Color_Field(pride.gui.gui.Container):
         super(Color_Field, self).__init__(**kwargs)
         field_name, _object = self.field_info
         for key, bounds in self.field_attributes.items():
-            self.create(pride.gui.widgetlibrary.Slider_Widget, label=key,
+            self.create(pride.gui.widgets.sliders.Slider_Widget, label=key,
                         bounds=bounds, target=(_object, key), h_range=(0, .10),
                         on_adjustment=self._adjustment_callback)
 

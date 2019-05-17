@@ -39,8 +39,8 @@ class Organizer(base.Base):
 
     def pack_items(self):
         if self.window_queue:
-            window_queue = self.window_queue[:]
-            del self.window_queue[:]
+            window_queue = self.window_queue
+            self.window_queue = []
             for sdl_window in window_queue:
                 self.pack_children(sdl_window, list(sdl_window.gui_children))
                 sdl_window._in_pack_queue = False
@@ -94,6 +94,7 @@ class Organizer(base.Base):
                 index += 1
                 self.pack_children(child, list(child.children))
                 child._pack_requested = False
+                child.handle_area_change()
 
     def pack_horizontals(self, area, z, left, main, right, top_height, bottom_height):
         x, y, w, h = area
@@ -415,6 +416,11 @@ class Window_Object(Organized_Object):
         self.texture_invalid = True
 
         self.theme = self.create(self.theme_type, wrapped_object=self)
+        #try:
+        #    self.theme.enable_animation()
+        #except AttributeError:
+        #    if hasattr(self.theme, "enable_animation"):
+        #        raise
         self._children.remove(self.theme)
         window = pride.objects[self.sdl_window]
         window.user_input._update_coordinates(self, self.reference, self.area, self.z)
@@ -641,6 +647,13 @@ class Window_Object(Organized_Object):
         if self._status is not None:
             pride.objects[self._status].delete()
             self._status = None
+
+    def handle_area_change(self):
+        try:
+            self.theme.draw_frames()
+        except AttributeError:
+            if hasattr(self.theme, "draw_frames"):
+                raise
 
 
 class Window(Window_Object):

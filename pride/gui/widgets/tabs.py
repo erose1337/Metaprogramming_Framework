@@ -1,6 +1,8 @@
 import pride.gui.gui
 import pride.gui.widgetlibrary
 
+import sdl2
+
 class New_Tab_Button(pride.gui.widgetlibrary.Method_Button):
 
     defaults = {"pack_mode" : "left", "w_range" : (0, 40),
@@ -70,9 +72,9 @@ class Tab_Button(pride.gui.gui.Button):
         tabs = self.parent.tabs
         tabs.remove(self)
         self.delete()
-        self.window.delete()
         tabbed_window = self.parent.parent
         tabbed_window.window_listing.remove(self.window)
+        self.window.delete()
         try:
             tabbed_window.select_tab(tabs[-1])
         except IndexError:

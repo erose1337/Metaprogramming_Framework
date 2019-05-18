@@ -45,7 +45,7 @@ class SDL_Window(SDL_Component):
     defaults = {"size" : pride.gui.SCREEN_SIZE, "showing" : True,
                 'position' : (0, 0), 'x' : 0, 'y' : 0, 'z' : 0,
                 'w' : pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .02,
+                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .038,
                 "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "software_renderer_flags" : sdl2.SDL_RENDERER_SOFTWARE | sdl2.SDL_RENDERER_TARGETTEXTURE,
@@ -57,6 +57,7 @@ class SDL_Window(SDL_Component):
                         "dirty_layers" : set}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
+                   "running2" : False,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
 
     def _get_size(self):
@@ -84,10 +85,10 @@ class SDL_Window(SDL_Component):
     def __init__(self, **kwargs):
         super(SDL_Window, self).__init__(**kwargs)
         self.run_instruction = Instruction(self.reference, "run")
+        self.run2_instruction = Instruction(self.reference, "run2")
+
         self.sdl_window = self.reference
-
         window = sdl2.ext.Window(self.name, size=self.size, flags=self.window_flags)
-
         self.wraps(window)
         self.window_handler = self.create(Window_Handler)
 
@@ -108,21 +109,23 @@ class SDL_Window(SDL_Component):
         self.layer_cache.append((0, layer_texture))
 
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
+        self.next_frame_at = utilities.timestamp() + self.priority
 
     def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET):
         _create_texture = self.renderer.sprite_factory.create_texture_sprite
         return _create_texture(self.renderer.wrapped_object, size, access=access)
 
     def invalidate_object(self, instance):
-       # if instance is self._ignore_invalidation:
-       #     return
         self._schedule_run()
         self.redraw_objects.append(instance)
 
     def _schedule_run(self):
         if not self.running:
             self.running = True
-            self.run_instruction.execute(priority=self.priority)
+            self.run_instruction.execute(priority=self.next_frame_at - utilities.timestamp())
+        elif not self.running2:
+            self.running2 = True
+            self.run2_instruction.execute(priority=0)
 
     def create(self, *args, **kwargs):
         kwargs.setdefault("sdl_window", self.reference)
@@ -153,16 +156,43 @@ class SDL_Window(SDL_Component):
         except (KeyError, ValueError):
             pass
 
+    def run2(self):
+        # draw objects early
+        # gives more time to draw objects compared to doing it right before the frame needs to be presented
+        organizer = self.organizer
+        if organizer.pack_queue or organizer.window_queue:
+            self.organizer.pack_items()
+
+        assert self.redraw_objects
+        if self.redraw_objects:
+            self.update_drawing_instructions()
+        self.running2 = False
+
     def run(self):
-        self.organizer.pack_items()
+        organizer = self.organizer
+        assert (self.running or self.predraw_queue or self.redraw_objects or
+                self.postdraw_queue or organizer.pack_queue or
+                organizer.window_queue)
+        if self.running2:
+            self.running2 = False
+            self.run2_instruction.unschedule()
+
+        if self.organizer.pack_queue or self.organizer.window_queue:
+            self.organizer.pack_items()
+
         if self.predraw_queue:
             queue = self.predraw_queue
             self.predraw_queue = []
             for callable in queue:
                 callable()
-        self.update_drawing_instructions()
+
+        if self.redraw_objects:
+            self.update_drawing_instructions()
+
         self.draw(self.drawing_instructions)
-        self.running = False
+        self.running = self.running2 = False
+        self.next_frame_at = utilities.timestamp() + self.priority
+
         if self.postdraw_queue:
             queue = self.postdraw_queue
             self.postdraw_queue = []

@@ -416,11 +416,11 @@ class Window_Object(Organized_Object):
         self.texture_invalid = True
 
         self.theme = self.create(self.theme_type, wrapped_object=self)
-        #try:
-        #    self.theme.enable_animation()
-        #except AttributeError:
-        #    if hasattr(self.theme, "enable_animation"):
-        #        raise
+        try:
+            self.theme.enable_animation()
+        except AttributeError:
+            if hasattr(self.theme, "enable_animation"):
+                raise
         self._children.remove(self.theme)
         window = pride.objects[self.sdl_window]
         window.user_input._update_coordinates(self, self.reference, self.area, self.z)

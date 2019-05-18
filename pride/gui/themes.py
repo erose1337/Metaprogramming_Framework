@@ -13,7 +13,7 @@ def _default_colors():
             "text_background" : pride.gui.color.Color(0, 0, 85, 255),
             "text" : pride.gui.color.Color(45, 45, 45, 255),
             "glow" : pride.gui.color.Color(255, 255, 255, 235),
-            "glow_thickness" : 0, "vanishing_point" : tuple(),#(MAX_W * 10, MAX_H / 2),
+            "glow_thickness" : 0, "vanishing_point" : (MAX_W, MAX_H / 2),
             "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 
@@ -107,7 +107,7 @@ class Perspective_Theme(Theme):
         x, y = self.vanishing_point
         x += abs(x) * 2
         #y -= 2000
-        if x >= 1 << 12:
+        if x >= 1 << 13:
             self.animating = False
             self.vanishing_point = tuple()
         else:

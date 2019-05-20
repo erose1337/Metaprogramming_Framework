@@ -13,7 +13,7 @@ def _default_colors():
             "text_background" : pride.gui.color.Color(0, 0, 85, 255),
             "text" : pride.gui.color.Color(45, 45, 45, 255),
             "glow" : pride.gui.color.Color(255, 255, 255, 235),
-            "glow_thickness" : 0, "vanishing_point" : (MAX_W, MAX_H / 2),
+            "glow_thickness" : 0,
             "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
 
 
@@ -95,18 +95,26 @@ class Minimal_Theme(Theme):
 class Perspective_Theme(Theme):
 
     theme_colors = Theme.theme_colors.copy()
-    defaults = {"animating" : False}
+    for profile in theme_colors.values():
+        profile["vanishing_point"] = (MAX_W, MAX_H / 2)
+
+    defaults = {"animating" : False, "vanishing_point_backup" : None}
+
+    def draw_frames(self):
+        self.enable_animation()
 
     def enable_animation(self):
+        if self.vanishing_point_backup is None:
+            self.vanishing_point_backup = self.vanishing_point
         if not self.animating:
             pride.objects[self.sdl_window].schedule_postdraw_operation(self.animate)
             self.animating = True
+            self.vanishing_point = self.vanishing_point_backup
             self.wrapped_object.texture_invalid = True
 
     def animate(self):
         x, y = self.vanishing_point
-        x += abs(x) * 2
-        #y -= 2000
+        x += (abs(x) * 2) + 1
         if x >= 1 << 13:
             self.animating = False
             self.vanishing_point = tuple()
@@ -128,13 +136,13 @@ class Perspective_Theme(Theme):
         vanishing_point = self.vanishing_point
         if shadow_thickness:
             r, g, b, a = self.shadow_color
-            if vanishing_point:
+            if vanishing_point and a:
                 for thickness in range(shadow_thickness):
                     self.draw("rect_perspective", (x + thickness, y + thickness,
                                     w - (2 * thickness), h - (2 * thickness)),
                               vanishing_point,
                               color=(r, g, b, a / (thickness + 1)))
-            else:
+            elif a:
                 for thickness in range(shadow_thickness):
                     self.draw("rect", (x + thickness, y + thickness,
                                        w - (2 * thickness), h - (2 * thickness)),
@@ -145,13 +153,13 @@ class Perspective_Theme(Theme):
             r, g, b, a = self.glow_color
             fade_scalar = a / glow_thickness
             assert fade_scalar > 0
-            if vanishing_point:
+            if vanishing_point and a:
                 for thickness in range(glow_thickness):
                     self.draw("rect_perspective", (x - thickness, y - thickness,
                                     w + (2 * thickness), h + (2 * thickness)),
                             vanishing_point,
                             color=(r, g, b, a - (thickness * fade_scalar)))
-            else:
+            elif a:
                 for thickness in range(glow_thickness):
                     self.draw("rect", (x - thickness, y - thickness,
                                     w + (2 * thickness), h + (2 * thickness)),
@@ -166,10 +174,8 @@ class Perspective_Theme(Theme):
 
 class Animated_Theme(Perspective_Theme):
 
-    defaults = {"frame_number" : 0, "frame_count" : 2, "frames" : None}
+    defaults = {"frame_number" : 0, "frame_count" : 1, "frames" : None}
     theme_colors = Perspective_Theme.theme_colors.copy()
-    for profile in theme_colors.values():
-        profile["animated"] = True
 
     def draw_texture(self):
         frame_number = self.frame_number
@@ -178,8 +184,9 @@ class Animated_Theme(Perspective_Theme):
         #texture = pride.objects[self.sdl_window].create_texture(self.size)
         #super(Animated_Theme, self).draw_texture()
         #pride.objects[self.sdl_window].renderer.draw(texture.texture, self._draw_operations)
+        #self.draw("copy", texture, area, area)
+        self.wrapped_object.alert("drawing at {}".format(self.area))
         self.draw("copy", self.frames[frame_number], area, area)
-        #self.draw("fill", (0, 0, 800, 600), color=(255, 255, 255, 255))#
         if frame_number + 1 < self.frame_count:
             self.frame_number = frame_number + 1
             pride.objects[self.sdl_window].schedule_postdraw_operation(self._next_frame)
@@ -188,36 +195,35 @@ class Animated_Theme(Perspective_Theme):
         self.wrapped_object.texture_invalid = True
 
     def draw_frames(self):
-        #self.wrapped_object.alert("Drawing frames")
-        frames = self.frames = []
-        generate_frame = super(Animated_Theme, self).draw_texture
-        window = pride.objects[self.sdl_window]
-        draw_frame = window.renderer.draw
-        new_texture = window.create_texture
+        self.wrapped_object.alert("caching at {}".format(self.area))
+        texture = pride.objects[self.sdl_window].create_texture(self.size)
+        super(Animated_Theme, self).draw_texture()
+        pride.objects[self.sdl_window].renderer.draw(texture.texture, self._draw_operations)
+        self.frames = [texture]
+        return
         size = self.size
-        try:
-            backup = x, y = self.vanishing_point
-        except ValueError:
-            frame_count = self.frame_count = 1
-            x, y = 0, 0
-        else:
-            frame_count = self.frame_count
-    #    print("Starting to draw frames")
-        for frame_number in range(frame_count):
-            texture = new_texture(size)
-            sdl2.SDL_SetTextureBlendMode(texture.texture,
-                                        sdl2.SDL_BLENDMODE_BLEND)
-        #    print "before generate frame"
-            generate_frame()
-        #    print "After generate frame"
-            draw_frame(texture.texture, self._draw_operations)
-            frames.append(texture)
-            self.vanishing_point = (x * 2, y)
-        #    print("Drew frame {}".format(frame_number))
-                #y = -x
+        backup = self.vanishing_point
+        frames = self.frames = []
+        window = pride.objects[self.sdl_window]
+        create_texture = window.create_texture
+        fetch_instructions = super(Animated_Theme, self).draw_texture
+        draw_to_texture = window.renderer.draw
+        operations = self._draw_operations
+        #for frame_number in range(self.frame_count - 1):
+        #    texture = create_texture(size)
+        #    fetch_instructions()
+        #    draw_to_texture(texture.texture, operations)
+        #    frames.append(texture)
         self.vanishing_point = backup
+        texture = create_texture(size)
+        fetch_instructions()
+        draw_to_texture(texture.texture, operations)
+        frames.append(texture)
 
     def start_animation(self):
+        pride.objects[self.sdl_window].schedule_postdraw_operation(self._enable_animation)
+
+    def _enable_animation(self):
         self.frame_number = 0
         self.texture_invalid = True
 

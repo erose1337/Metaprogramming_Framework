@@ -86,6 +86,7 @@ class SDL_Window(SDL_Component):
         super(SDL_Window, self).__init__(**kwargs)
         self.run_instruction = Instruction(self.reference, "run")
         self.run2_instruction = Instruction(self.reference, "run2")
+        self.run2_instruction.execute(priority=0)
 
         self.sdl_window = self.reference
         window = sdl2.ext.Window(self.name, size=self.size, flags=self.window_flags)
@@ -103,17 +104,15 @@ class SDL_Window(SDL_Component):
 
         self._texture = self.create_texture(self.renderer.max_size, self.texture_access_flag)
 
-        layer_texture = self.create_texture(self.size, self.texture_access_flag)
-        sdl2.SDL_SetTextureBlendMode(layer_texture.texture,
-                                    sdl2.SDL_BLENDMODE_ADD)
-        self.layer_cache.append((0, layer_texture))
-
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
         self.next_frame_at = utilities.timestamp() + self.priority
+        self.run_instruction.execute(priority=self.next_frame_at - utilities.timestamp())
 
     def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET):
         _create_texture = self.renderer.sprite_factory.create_texture_sprite
-        return _create_texture(self.renderer.wrapped_object, size, access=access)
+        texture = _create_texture(self.renderer.wrapped_object, size, access=access)
+        sdl2.SDL_SetTextureBlendMode(texture.texture, sdl2.SDL_BLENDMODE_BLEND)
+        return texture
 
     def invalidate_object(self, instance):
         self._schedule_run()
@@ -122,10 +121,8 @@ class SDL_Window(SDL_Component):
     def _schedule_run(self):
         if not self.running:
             self.running = True
-            self.run_instruction.execute(priority=self.next_frame_at - utilities.timestamp())
-        elif not self.running2:
+        if not self.running2:
             self.running2 = True
-            self.run2_instruction.execute(priority=0)
 
     def create(self, *args, **kwargs):
         kwargs.setdefault("sdl_window", self.reference)
@@ -157,28 +154,7 @@ class SDL_Window(SDL_Component):
             pass
 
     def run2(self):
-        # draw objects early
-        # gives more time to draw objects compared to doing it right before the frame needs to be presented
-        organizer = self.organizer
-        if organizer.pack_queue or organizer.window_queue:
-            self.organizer.pack_items()
-
-        assert self.redraw_objects
-        if self.redraw_objects:
-            self.update_drawing_instructions()
         self.running2 = False
-
-    def run(self):
-        organizer = self.organizer
-        assert (self.running or self.predraw_queue or self.redraw_objects or
-                self.postdraw_queue or organizer.pack_queue or
-                organizer.window_queue)
-        if self.running2:
-            self.running2 = False
-            self.run2_instruction.unschedule()
-
-        if self.organizer.pack_queue or self.organizer.window_queue:
-            self.organizer.pack_items()
 
         if self.predraw_queue:
             queue = self.predraw_queue
@@ -186,18 +162,32 @@ class SDL_Window(SDL_Component):
             for callable in queue:
                 callable()
 
+        organizer = self.organizer
+        if organizer.pack_queue or organizer.window_queue:
+            self.organizer.pack_items()
+
+        #assert self.redraw_objects
         if self.redraw_objects:
             self.update_drawing_instructions()
+        assert not self.redraw_objects
 
-        self.draw(self.drawing_instructions)
-        self.running = self.running2 = False
+    def run(self):
+        if self.running:
+            self.draw(self.drawing_instructions)
+            self.running = False
+
         self.next_frame_at = utilities.timestamp() + self.priority
+        self.run_instruction.execute(priority=self.priority)
 
         if self.postdraw_queue:
             queue = self.postdraw_queue
             self.postdraw_queue = []
             for callable in queue:
                 callable()
+
+        self.user_input.run()
+        if self.running2:
+            self.run2()
 
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions
@@ -224,8 +214,6 @@ class SDL_Window(SDL_Component):
                 except KeyError:
                     instructions[old_z] = []
                     layer_texture = self.create_texture(_size, flag)
-                    sdl2.SDL_SetTextureBlendMode(layer_texture.texture,
-                                                sdl2.SDL_BLENDMODE_ADD)
                     layer_cache.append((old_z, layer_texture))
                     #assert layer_texture is sorted(layer_cache)[old_z][1]
                     needs_sorting = True
@@ -238,10 +226,8 @@ class SDL_Window(SDL_Component):
                 except KeyError:
                     instructions[z] = [window_object]
                     layer_texture = self.create_texture(_size, flag)
-                    sdl2.SDL_SetTextureBlendMode(layer_texture.texture,
-                                                sdl2.SDL_BLENDMODE_ADD)
                     layer_cache.append((z, layer_texture))
-#                    assert layer_texture is sorted(layer_cache)[z][1]
+                    # assert layer_texture is sorted(layer_cache)[z][1]
                     needs_sorting = True
 
         del self.redraw_objects[:]
@@ -308,6 +294,8 @@ class SDL_Window(SDL_Component):
             if hasattr(child, "pack"):
                 child.delete()
         del self.predraw_queue[:]
+        self.run_instruction.unschedule()
+        self.run2_instruction.unschedule()
         super(SDL_Window, self).delete()
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)
@@ -400,7 +388,7 @@ class Window_Handler(pride.components.base.Base):
         pass
 
 
-class SDL_User_Input(scheduler.Process):
+class SDL_User_Input(pride.components.base.Base):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None,
                 "under_mouse" : None}

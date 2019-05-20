@@ -8,6 +8,20 @@ change user.encrypt to use a per-cryptogram key to avoid dealing with nonces
 use a random salt in user2.User.derive_master_keys
 deal with certificates properly?
 
+ideas
+-----
+
+post-initializer inheritance
+append each post-initializer into a list
+call them all in succession
+
+add_to method that adds a Base object to a list
+#self.append_to(list)
+#   keeps a handle on list
+#   on delete, removes `self` from list
+
+
+
 changes
 -----
 

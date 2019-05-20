@@ -111,7 +111,7 @@ class SDL_Window(SDL_Component):
     def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET):
         _create_texture = self.renderer.sprite_factory.create_texture_sprite
         texture = _create_texture(self.renderer.wrapped_object, size, access=access)
-        sdl2.SDL_SetTextureBlendMode(texture.texture, sdl2.SDL_BLENDMODE_BLEND)
+        sdl2.SDL_SetTextureBlendMode(texture.texture, sdl2.SDL_BLENDMODE_ADD)
         return texture
 
     def invalidate_object(self, instance):
@@ -684,7 +684,7 @@ class SDL_User_Input(pride.components.base.Base):
 class Renderer(SDL_Component):
 
     defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
-                "blendmode_flag" : sdl2.SDL_BLENDMODE_BLEND, # SDL_BLENDMODE_ADD for slider puzzles?
+                "blendmode_flag" : sdl2.SDL_BLENDMODE_NONE, # SDL_BLENDMODE_ADD for slider puzzles?
                 "logical_size" : (800, 600)}
 
     def __init__(self, window, **kwargs):

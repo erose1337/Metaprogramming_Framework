@@ -28,10 +28,10 @@ class File_Explorer(pride.gui.gui.Application):
 
                 self.file_details["Date_Created"].append(epoch_to_english(file_information.st_ctime))
                 self.file_details["Date_Modified"].append(epoch_to_english(file_information.st_mtime))
-        window = pride.objects[self.window]
-        window.create(Navigation_Bar)
-        window.create(Directory_Viewer)
-        self.create(Info_Bar, pack_mode="bottom")
+        window = self.application_window
+        #window.create(Navigation_Bar)
+    #    window.create(Directory_Viewer)
+        #self.create(Info_Bar, pack_mode="bottom")
       #  self.create(File_Open_Prompt, background_color=(255, 255, 255, 0), pack_mode="bottom")
 
 
@@ -62,7 +62,7 @@ class Forward_Button(pride.gui.widgetlibrary.Method_Button):
 
 class History_Dropdown(pride.gui.widgetlibrary.Popup_Button):
 
-    defaults = {"popup_type" : "pride.gui.fileexplorer.Directory_History",
+    defaults = {"popup_type" : "pride.gui.programs.fileexplorer.Directory_History",
                 "pack_mode" : "left", "text" : "history"}
     predefaults = {"scale_to_text" : True}
 
@@ -74,7 +74,7 @@ class Ascend_Button(pride.gui.widgetlibrary.Method_Button):
 
 class Search_Bar(pride.gui.widgetlibrary.Prompt):
 
-    defaults = {"pack_mode" : "left", "scroll_bar_enabled" : True}
+    defaults = {"pack_mode" : "left"}
 
 
 class Places_Bar(pride.gui.gui.Container):
@@ -106,8 +106,8 @@ class Directory_Viewer(pride.gui.gui.Window):
         super(Directory_Viewer, self).__init__(**kwargs)
         self.create(Places_Bar)
         viewer = self.create(Column_Viewer)
-        self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
-                    target=(viewer.reference, "texture_window_y"))
+    #    self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
+    #                target=(viewer.reference, "texture_window_y"))
 
 
 class Column_Viewer(pride.gui.gui.Window):
@@ -119,7 +119,7 @@ class Column_Viewer(pride.gui.gui.Window):
     def __init__(self, **kwargs):
         super(Column_Viewer, self).__init__(**kwargs)
         for column_name in self.default_columns:
-            container = self.create("pride.gui.gui.Container", pack_mode="left", scroll_bars_enabled=False)
+            container = self.create("pride.gui.gui.Container", pack_mode="left")
             container.create(Sort_Button, text=column_name, h_range=(20, 20))
             if column_name == "Name":
                 button_type = Filename_Button
@@ -156,10 +156,19 @@ class File_Open_Prompt(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(File_Open_Prompt, self).__init__(**kwargs)
         textbox = self.create("pride.gui.widgetlibrary.Text_Box",
-                              pack_mode="top", scroll_bars_enabled=False)
+                              pack_mode="top")
         self.create(Filetype_Filter_Selector)
 
 
 class Filetype_Filter_Selector(pride.gui.widgetlibrary.Popup_Button):
 
     defaults = {"popup_type" : "pride.gui.pyobjecttest.List"}
+
+
+def test():
+    import pride.gui
+    window = pride.objects[pride.gui.enable()]
+    gui = window.create("pride.gui.main.Gui", startup_programs=(File_Explorer, ))
+    
+if __name__ == "__main__":
+    test()

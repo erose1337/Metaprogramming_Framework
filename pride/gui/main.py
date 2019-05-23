@@ -13,7 +13,7 @@ except ImportError:
 
 class User(pride.components.user.User):
 
-    defaults = {"auto_login" : False, "auto_register" : True} 
+    defaults = {"auto_login" : False, "auto_register" : True}
 
     def handle_not_registered(self, identifier):
         if self.auto_register:
@@ -30,13 +30,14 @@ class Gui(pride.gui.gui.Application):
                                             "resources", "themes",
                                             "default.theme"),
                 "user_type" : User}
+    autrefer = ("lockscreen", )
 
     def __init__(self, **kwargs):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
         user = self.user = self.user_type()
-        self.application_window.create(self.lockscreen_type, user=user,
-                                       service_name="User", host_info=("localhost", 40022))
+        self.lockscreen = self.application_window.create(self.lockscreen_type, user=user,
+                                                         service_name="User", host_info=("localhost", 40022))
 
     def set_theme_colors(self, filename):
         self.show_status("Importing color options...")
@@ -61,9 +62,10 @@ class Gui(pride.gui.gui.Application):
 
     def login_success(self, username):
         self.show_status("Logged in as {}".format(username))
+        self.lockscreen.delete()
         window = self.application_window
         for program_type in self.startup_programs:
-            self.create(program_type)
+            window.create(program_type)
 
     def login_failed(self):
         self.alert("Login failed")

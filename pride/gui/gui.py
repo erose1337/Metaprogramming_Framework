@@ -259,7 +259,7 @@ class Window_Object(Organized_Object):
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
-                "theme_type" : "pride.gui.themes.Perspective_Theme",
+                "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "_selected" : False, "hide_excess_text" : True,
                 "_cached" : False, "tip_bar_text" : '',
                 "theme_profile" : "default"}

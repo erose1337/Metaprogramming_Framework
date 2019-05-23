@@ -147,7 +147,7 @@ class Perspective_Theme(Theme):
             texture, ready = self.frame_cache[profile][size][self.frame_number]
         except KeyError:
             _new_texture = pride.objects[self.sdl_window].create_texture
-            _cache = [(_new_texture(size, blendmode=sdl2.SDL_BLENDMODE_BLEND), False) for
+            _cache = [(_new_texture(size, blendmode=sdl2.SDL_BLENDMODE_ADD), False) for
                       count in range(self.frame_count)]
             if profile in self.frame_cache:
                 self.frame_cache[profile][size] = _cache
@@ -165,8 +165,8 @@ class Perspective_Theme(Theme):
                         bg_color=self.text_background_color, color=self.text_color,
                         center_text=self.center_text, hide_excess_text=self.hide_excess_text)
             return
-        #print("Drawing texture for {}/{} {} {}".format(self.frame_number, self.frame_count - 1, size, profile))
         self.draw("fill", area, color=self.background_color)
+        #print("Drawing texture for {}/{} {} {}".format(self.frame_number, self.frame_count - 1, size, profile))
         shadow_thickness = self.shadow_thickness
         vanishing_point = self.vanishing_point
     #    assert not vanishing_point

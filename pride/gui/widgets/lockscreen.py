@@ -32,12 +32,26 @@ class Confidential_Entry(pride.gui.widgetlibrary.Field_Entry):
                 self.text = ''
 
 
+class _Field_Entry(pride.gui.widgetlibrary.Field_Entry):
+
+    def text_entry(self, text):
+        super(_Field_Entry, self).text_entry(text)
+        if self.text:
+            self.parent.parent.submit.theme_profile = "interactive"
+
+    def handle_backspace(self):
+        super(_Field_Entry, self).handle_backspace()
+        if not self.text:
+            self.parent.parent.submit.theme_profile = "default"
+
+
 class Username_Field(pride.gui.widgetlibrary.Field):
 
     defaults = {"field_name" : "Username", "initial_value" : '',
                 "tip_bar_text" : "Enter your user name here",
                 "pack_mode" : "top", "orientation" : "stacked",
-                "write_field_method" : None}
+                "write_field_method" : None,
+                "field_entry_type" : _Field_Entry}
 
     hotkeys = {("\t", None) : "handle_tab"}
 
@@ -73,15 +87,20 @@ class Username_Password_Field(pride.gui.gui.Container):
         self.autoregister = buttons_field.create("pride.gui.widgets.buttons.Toggle", text="auto register",
                                                  state=False, pack_mode="left", scale_to_text=True,
                                                  tip_bar_text="Toggle: Automatically register entered username if it does not exist")
-        buttons_field.create("pride.gui.widgetlibrary.Method_Button", text="Submit",
-                             method="submit_credentials", target=self.reference,
-                             scale_to_text=False, pack_mode="left")
+        self.submit = buttons_field.create("pride.gui.widgetlibrary.Method_Button", text="Submit",
+                                           method="submit_credentials", target=self.reference,
+                                           scale_to_text=False, pack_mode="left",
+                                           theme_profile="default")
 
     def _set_password(self, field_name, value):
         self.user_password = value
 
     def _set_username(self, field_name, value):
         self.username = value
+    #    if value:
+    #        self.submit.theme_profile = "interactive"
+    #    else:
+    #        self.submit.theme_profile = "default"
 
     def submit_credentials(self):
         user = self.user

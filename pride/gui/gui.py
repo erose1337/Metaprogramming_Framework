@@ -300,7 +300,7 @@ class Window_Object(Organized_Object):
             assert self.sdl_window
             assert not self.hidden
             objects[self.sdl_window].invalidate_object(self)
-        self._texture_invalid = value
+        self._redraw_needed = self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
 
     def _on_set(self, coordinate, value):
@@ -525,9 +525,8 @@ class Window_Object(Organized_Object):
             window = pride.objects[self.sdl_window]
             window.user_input._update_coordinates(self, self.reference, self.area, self.z)
             window.invalidate_object(self) # needed because of `remove_window_object`
-            #if not self._in_pack_queue:
-            #    window.organizer.schedule_pack(self)
             self.texture_invalid = True
+            self._redraw_needed = False
             for child in self.children:
                 child.show(True)
 
@@ -541,15 +540,15 @@ class Window_Object(Organized_Object):
         # draw operations are enqueued and processed in batches by the Renderer
         self._draw_operations.append((figure, args, kwargs))
 
-    def _draw_texture(self):
+    def _redraw(self):
         if self.hidden:
             self._draw_operations = []
             self.texture_invalid = False
             return
 
-        del self._draw_operations[:]
-        self.draw_texture()
-        #instructions = self._draw_operations[:]
+        if self._redraw_needed or not self._draw_operations:
+            del self._draw_operations[:]
+            self.draw_texture()
         self.texture_invalid = False
 
     def draw_texture(self):

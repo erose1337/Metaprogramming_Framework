@@ -22,20 +22,60 @@ sdl2.ext.init()
 sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
 
-def instruction_generator(instructions):
-    always_on_top = []
-    for layer in instructions.itervalues():
-        for window_object in layer:
-            if window_object.always_on_top:
-                always_on_top.append(window_object)
+COPY_BLENDMODE = sdl2.SDL_BLENDMODE_ADD
+DRAW_BLENDMODE = sdl2.SDL_BLENDMODE_NONE
+TEXT_BLENDMODE = sdl2.SDL_BLENDMODE_BLEND
+
+def condense_instructions(layer):
+    raise NotImplementedError()
+    for operation_infos in zip(*(item._draw_operations for item in layer)):
+        if len(operation_infos) == 1:
+            # only one operation; unable to batch
+            #print operation_infos
+            print("Yielding1 {}".format(len(operation_infos[0])))
+            yield operation_infos[0]
+            raise StopIteration()
+        print operation_infos[0][0]
+        rects = []
+        fills = []
+        other = []
+        for op in operation_infos:
+            if op[0] == "rect":
+                rects.append(op)
+            elif op[0] == "fill":
+                fills.append(op)
             else:
-                for operation in window_object._draw_operations:
-                    yield operation
+                other.append(op)
+        if operation_infos[0][0] in ("rect", "fill"):
+            distinct = []
+            areas = []
+            extra = []
+            for op_info in operation_infos:
+                if op_info[0] not in ("rect", "fill"):
+                    extra.append(op_info)
+                    continue
+                if op_info[2] not in distinct:
+                    distinct.append(op_info[2])
+                    areas.append([op_info[1][0]])
+                else:
+                    areas[distinct.index(op_info[2])].append(op_info[1][0])
 
-    for window_object in always_on_top:
-        for operation in window_object._draw_operations:
-            yield operation
-
+            #for i, kwargs in enumerate(distinct):
+            #    yield op_info[0], areas[i], kwargs
+            new_instructions = tuple((op_info[0], (areas[i], ), kwargs) for i, kwargs
+                                     in enumerate(distinct)) #+ tuple(extra)
+            for item in new_instructions:
+                a, b, c = item
+                print("Yielding2 {} {}".format(len(item), item))
+                yield item#a, b, c
+            #yield new_instructions
+        else:
+            for op in operation_infos:
+                assert len(op) == 3, op
+                print("Yielding3 {} {}".format(len(item), item))
+                yield op
+            #print operation_infos
+            #raw_input()
 
 class SDL_Component(base.Proxy): pass
 
@@ -48,7 +88,6 @@ class SDL_Window(SDL_Component):
                 "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .038,
                 "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
-                "software_renderer_flags" : sdl2.SDL_RENDERER_SOFTWARE | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
     mutable_defaults = {"redraw_objects" : list, "predraw_queue" : list,
@@ -105,13 +144,18 @@ class SDL_Window(SDL_Component):
         self._texture = self.create_texture(self.renderer.max_size, self.texture_access_flag)
 
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
-        self.next_frame_at = utilities.timestamp() + self.priority
-        self.run_instruction.execute(priority=self.next_frame_at - utilities.timestamp())
+        self.run_instruction.execute(priority=self.priority)
 
-    def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET):
+    def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
+                       blendmode=COPY_BLENDMODE):
         _create_texture = self.renderer.sprite_factory.create_texture_sprite
         texture = _create_texture(self.renderer.wrapped_object, size, access=access)
-        sdl2.SDL_SetTextureBlendMode(texture.texture, sdl2.SDL_BLENDMODE_ADD)
+        sdl2.SDL_SetTextureBlendMode(texture.texture, blendmode)
+        return texture
+
+    def cache_operations(self, size, draw_operations):
+        texture = self.create_texture(size)
+        self.renderer.draw(texture.texture, draw_operations)
         return texture
 
     def invalidate_object(self, instance):
@@ -176,7 +220,6 @@ class SDL_Window(SDL_Component):
             self.draw(self.drawing_instructions)
             self.running = False
 
-        self.next_frame_at = utilities.timestamp() + self.priority
         self.run_instruction.execute(priority=self.priority)
 
         if self.postdraw_queue:
@@ -188,13 +231,14 @@ class SDL_Window(SDL_Component):
         self.user_input.run()
         if self.running2:
             self.run2()
+            assert not self.redraw_objects
+        assert not self.redraw_objects
 
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions
         layer_cache = self.layer_cache
         dirty_layers = self.dirty_layers
         _size = self.size
-        flag = self.texture_access_flag
         needs_sorting = False
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
@@ -203,7 +247,8 @@ class SDL_Window(SDL_Component):
                                                         window_object.reference,
                                                         window_object.area,
                                                         window_object.z)
-            window_object._draw_texture()
+            window_object._redraw()
+
             z = window_object.z
             dirty_layers.add(old_z)
             dirty_layers.add(z)
@@ -213,7 +258,7 @@ class SDL_Window(SDL_Component):
                     instructions[old_z].remove(window_object)
                 except KeyError:
                     instructions[old_z] = []
-                    layer_texture = self.create_texture(_size, flag)
+                    layer_texture = self.create_texture(_size)
                     layer_cache.append((old_z, layer_texture))
                     #assert layer_texture is sorted(layer_cache)[old_z][1]
                     needs_sorting = True
@@ -225,7 +270,7 @@ class SDL_Window(SDL_Component):
                     instructions[z].append(window_object)
                 except KeyError:
                     instructions[z] = [window_object]
-                    layer_texture = self.create_texture(_size, flag)
+                    layer_texture = self.create_texture(_size)
                     layer_cache.append((z, layer_texture))
                     # assert layer_texture is sorted(layer_cache)[z][1]
                     needs_sorting = True
@@ -246,20 +291,22 @@ class SDL_Window(SDL_Component):
         # redraw dirty layers onto cache
         # copy layers to screen
         for layer_number, layer_texture in layer_cache:
-            items = instructions[layer_number]
-            if not items:
+            layer = instructions[layer_number]
+            if not layer:
                 continue
             layer_texture = layer_texture.texture
             if dirty_layers and layer_number in dirty_layers:
                 renderer.set_render_target(layer_texture)
                 renderer.clear()
-                for item in items:
+                for item in layer:
                     if item.always_on_top:
                         continue
                     for operation, args, kwargs in item._draw_operations:
                         draw_procedures[operation](*args, **kwargs)
                 renderer.set_render_target(None)
             renderer.copy(layer_texture, area, area)
+            #renderer.present()
+#            raw_input()
 
         self.dirty_layers.clear()
         always_on_top = self.user_input.always_on_top
@@ -306,11 +353,7 @@ class Window_Context(SDL_Window):
     defaults = {"showing" : False}
 
     def run(self):
-        self.update_drawing_instructions()
-        return list(instruction_generator(self.drawing_instructions))
-
-    def invalidate_object(self, item):
-        self.redraw_objects.append(item)
+        raise NotImplementedError()
 
 
 class Window_Handler(pride.components.base.Base):
@@ -684,8 +727,7 @@ class SDL_User_Input(pride.components.base.Base):
 class Renderer(SDL_Component):
 
     defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
-                "blendmode_flag" : sdl2.SDL_BLENDMODE_NONE, # SDL_BLENDMODE_ADD for slider puzzles?
-                "logical_size" : (800, 600)}
+                "blendmode_flag" : DRAW_BLENDMODE, "logical_size" : (800, 600)}
 
     def __init__(self, window, **kwargs):
         super(Renderer, self).__init__(**kwargs)
@@ -785,7 +827,7 @@ class Renderer(SDL_Component):
                 if destination[2] <= w - 12:
                     break
                 else:
-                #    print "Shrinking...", destination, area
+                    #    print "Shrinking...", destination, area
                     text = text[:-3]
                     ellipses = "..."
                     if not text:
@@ -793,6 +835,7 @@ class Renderer(SDL_Component):
                         break
             else:
                 break
+        sdl2.SDL_SetTextureBlendMode(texture.texture, TEXT_BLENDMODE)
         self.copy(texture, dstrect=destination)
 
     def get_text_size(self, area, text, **kwargs):
@@ -825,17 +868,27 @@ class Renderer(SDL_Component):
         if code < 0:
             raise ValueError("error code {}. Could not set render target of renderer {} to texture {}".format(code, self.wrapped_object.renderer, texture))
 
-    def draw(self, texture, draw_instructions, background=None, clear=True):
+    def get_render_target(self):
+        target = sdl2.SDL_GetRenderTarget(self.wrapped_object.renderer)
+        return target
+
+    def draw(self, texture, draw_instructions, background=None, clear=True,
+             blendmode=DRAW_BLENDMODE):
+        blendmode_backup = self.blendmode
+        target_backup = self.get_render_target()
+        self.blendmode = blendmode
         self.set_render_target(texture)
+
         if clear:
             self.clear()
         if background:
             self.copy(background)
-
         instructions = self.instructions
         for shape, args, kwargs in draw_instructions:
             instructions[shape](*args, **kwargs)
-        self.set_render_target(None)
+
+        self.set_render_target(target_backup)
+        self.blendmode = blendmode_backup
         return texture
 
     def get_renderer_info(self):

@@ -95,10 +95,14 @@ class Bounded_Shape(Shape):
         self.h = self._h
     h_range = property(_get_h_range, _set_h_range)
 
+    def __new__(cls, *args, **kwargs):
+        instance = super(Shape, cls).__new__(cls, *args, **kwargs)
+        kwargs["_sdl_window"] = instance._sdl_window = kwargs.pop("sdl_window", '')
+        return instance
+
     def __init__(self, **kwargs):
-        max_width, max_height = pride.gui.SCREEN_SIZE
+        max_width, max_height = pride.objects[self._sdl_window].size
         self._w_range, self._h_range = (0, max_width), (0, max_height)
-  #      self._x_range, self._y_range = (0, max_width), (0, max_height)
         super(Bounded_Shape, self).__init__(**kwargs)
 
     def _on_set(self, coordinate, value):

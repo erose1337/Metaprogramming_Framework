@@ -411,7 +411,6 @@ class Window_Object(Organized_Object):
 
     def __init__(self, **kwargs):
         #self.colors = self.theme_type.theme_colors.copy()#DEFAULT_COLORS.copy()
-        self._sdl_window = ''
         super(Window_Object, self).__init__(**kwargs)
         self.texture_invalid = True
 

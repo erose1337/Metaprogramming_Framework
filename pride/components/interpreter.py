@@ -9,6 +9,7 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
+import socket # for .error
 
 import pride
 import pride.components.base as base
@@ -196,16 +197,18 @@ class Python(base.Base):
                                         "pride.components.network.Network",
                                         "pride.components.interpreter.Interpreter",
                                         "pride.components.rpc.Rpc_Connection_Manager",
-                                        "pride.components.rpc.Rpc_Server",
                                         "pride.components.rpc.Rpc_Worker",
                                         "pride.components.datatransfer.Data_Transfer_Service",
                                         "pride.components.datatransfer.Background_Refresh",
                                         "pride.components.encryptedstorage.Encryption_Service"),
-                "startup_definitions" : '',
-                "interpreter_type" : "pride.components.interpreter.Interpreter"}
+                "startup_definitions" : '', "use_existing_server" : True,
+                "interpreter_type" : "pride.components.interpreter.Interpreter",
+                "rpc_server_type" : "pride.components.rpc.Rpc_Server",
+                }
 
     parser_ignore = ("environment_setup", "startup_components",
-                     "startup_definitions", "interpreter_type")
+                     "startup_definitions", "interpreter_type",
+                     "rpc_server_type", "use_existing_server")
 
     # make an optional "command" positional argument and allow
     # both -h and --help flags
@@ -219,6 +222,11 @@ class Python(base.Base):
 
     def __init__(self, **kwargs):
         super(Python, self).__init__(**kwargs)
+        try:
+            self.rpc_server = self.create(self.rpc_server_type)
+        except socket.error as exception:
+            if exception.errno != 98 or not self.use_existing_server:
+                raise
         self.setup_os_environ()
 
         # ephemeral keys for encrypted in memory only data storage

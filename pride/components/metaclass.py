@@ -314,7 +314,6 @@ class Parser(object):
 
         is_keyword_argument = False
         positionals = self.positionals_count
-
         while positionals and len(sys.argv) > 1:
             positionals -= 1
             for item in sys.argv[1:]:

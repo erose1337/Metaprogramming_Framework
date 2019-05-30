@@ -550,6 +550,9 @@ class Field_Entry(Text_Box):
         if self.return_method:
             self.return_method()
 
+    def get_value(self):
+        return self.text
+
 
 class Integer_Field_Entry(Field_Entry):
 
@@ -564,6 +567,9 @@ class Integer_Field_Entry(Field_Entry):
             else:
                 self.text += text
 
+    def get_value(self):
+        return int(self.text)
+
 
 class Field(pride.gui.gui.Container):
 
@@ -572,6 +578,12 @@ class Field(pride.gui.gui.Container):
                 "tip_bar_text" : ''}
     allowed_values = {"orientation" : ("side by side", "stacked")}
     autoreferences = ("entry", )
+
+    def _get_field_value(self):
+        return self.entry.get_value()
+    def _set_field_value(self, value):
+        self.entry.text_entry(value)
+    field_value = property(_get_field_value, _set_field_value)
 
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)

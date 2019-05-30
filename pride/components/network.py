@@ -49,6 +49,7 @@ except:
     CONNECTION_WAS_ABORTED = errno.ECONNABORTED
     CONNECTION_RESET = errno.ECONNRESET
     CONNECTION_CLOSED = errno.ENOTCONN
+    ERROR_CODES[22] = "EINVAL"
 
 ERROR_CODES.update({CALL_WOULD_BLOCK : "CALL_WOULD_BLOCK",
                     CONNECTION_IN_PROGRESS : "CONNECTION_IN_PROGRESS",
@@ -265,7 +266,7 @@ class Socket(base.Wrapper):
 
     def close(self):
         self.alert("Closing", level=self.verbosity["close"])
-    #    objects["/Python/Network"].remove(self)
+        objects["/Python/Network"].remove(self)
         if self.shutdown_on_close and self.connected:
             self.wrapped_object.shutdown(self.shutdown_flag)
         self.wrapped_object.close()
@@ -381,7 +382,11 @@ class Server(Tcp_Socket):
     def __init__(self, **kwargs):
         super(Server, self).__init__(**kwargs)
         self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, self.reuse_port)
-        self.bind((self.interface, self.port))
+        try:
+            self.bind((self.interface, self.port))
+        except socket.error as exception:
+            self.delete()
+            raise
         self.listen(self.backlog)
         pride.objects["/Python/Network_Connection_Manager"].servers[(self.interface, self.port)] = self.reference
 

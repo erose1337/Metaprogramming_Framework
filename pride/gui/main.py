@@ -30,7 +30,7 @@ class Gui(pride.gui.gui.Application):
                                             "resources", "themes",
                                             "default.theme"),
                 "user_type" : User}
-    autrefer = ("lockscreen", )
+    autoreferences = ("lockscreen", )
 
     def __init__(self, **kwargs):
         super(Gui, self).__init__(**kwargs)
@@ -63,18 +63,18 @@ class Gui(pride.gui.gui.Application):
     def login_success(self, username):
         self.show_status("Logged in as {}".format(username))
         self.lockscreen.delete()
-        window = self.application_window
+        window = pride.objects[self.sdl_window]
         for program_type in self.startup_programs:
             window.create(program_type)
+        self.delete()
 
     def login_failed(self):
         self.alert("Login failed")
 
 
-
-
 def main(**kwargs):
     window = pride.objects[pride.gui.enable()]
+    kwargs["startup_programs"] = kwargs.get("startup_programs", tuple()) + ("pride.gui.programs.fileexplorer.File_Explorer", )
     gui = window.create(Gui, **kwargs)
 
 if __name__ == "__main__":

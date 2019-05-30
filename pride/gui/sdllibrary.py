@@ -82,11 +82,10 @@ class SDL_Component(base.Proxy): pass
 
 class SDL_Window(SDL_Component):
 
-    defaults = {"size" : pride.gui.SCREEN_SIZE, "showing" : True,
-                'position' : (0, 0), 'x' : 0, 'y' : 0, 'z' : 0,
-                'w' : pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                "area" : (0, 0) + pride.gui.SCREEN_SIZE, "priority" : .038,
-                "name" : "/Python", "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
+    defaults = {"showing" : True,
+                'x' : 0, 'y' : 0, 'z' : 0, 'w' : 1024, 'h' : 768,#pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
+                 "priority" : .038, "name" : "/Python",
+                "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
@@ -128,7 +127,8 @@ class SDL_Window(SDL_Component):
         self.run2_instruction.execute(priority=0)
 
         self.sdl_window = self.reference
-        window = sdl2.ext.Window(self.name, size=self.size, flags=self.window_flags)
+        window = sdl2.ext.Window(self.name, position=self.position,
+                                 size=self.size, flags=self.window_flags)
         self.wraps(window)
         self.window_handler = self.create(Window_Handler)
 
@@ -141,7 +141,7 @@ class SDL_Window(SDL_Component):
         if self.showing:
             self.show()
 
-        self._texture = self.create_texture(self.renderer.max_size, self.texture_access_flag)
+        #self.top_texture = self.create_texture(self.renderer.max_size, self.texture_access_flag)# for drawing always_on_top separately
 
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
         self.run_instruction.execute(priority=self.priority)
@@ -216,6 +216,10 @@ class SDL_Window(SDL_Component):
         assert not self.redraw_objects
 
     def run(self):
+    #    if self.running2:
+    #        self.run2_instruction.unschedule()
+    #        self.run2()
+
         if self.running:
             self.draw(self.drawing_instructions)
             self.running = False
@@ -295,25 +299,16 @@ class SDL_Window(SDL_Component):
             if not layer:
                 continue
             layer_texture = layer_texture.texture
-            if dirty_layers and layer_number in dirty_layers:
+            if layer_number in dirty_layers:
                 renderer.set_render_target(layer_texture)
                 renderer.clear()
                 for item in layer:
-                    if item.always_on_top:
-                        continue
                     for operation, args, kwargs in item._draw_operations:
                         draw_procedures[operation](*args, **kwargs)
                 renderer.set_render_target(None)
             renderer.copy(layer_texture, area, area)
-            #renderer.present()
-#            raw_input()
 
         self.dirty_layers.clear()
-        always_on_top = self.user_input.always_on_top
-        if always_on_top:
-            for item in always_on_top:
-                for operation, args, kwargs in item._draw_operations:
-                    draw_procedures[operation](*args, **kwargs)
         renderer.present()
 
     def schedule_predraw_operation(self, callable):
@@ -576,7 +571,6 @@ class SDL_User_Input(pride.components.base.Base):
                         self.active_item = None
 
     def select_active_item(self, active_item, mouse):
-        # active_item = self.under_mouse#self._get_object_under_mouse(mouse_position)
         objects = pride.objects
 
         # deselect old active item
@@ -742,17 +736,15 @@ class Renderer(SDL_Component):
                                   name in ("point", "line", "rect", "rect_width", "text"))
         self.instructions["fill"] = self.fill
         self.instructions["copy"] = self.copy
-        self.instructions["copy_subsection"] = self.render_copy
         self.instructions["rect_perspective"] = self.draw_rect_perspective
         self.instructions["line_perspective"] = self.draw_line_perspective
-        #self.instructions["copyex"] = self.copyex
         self.clear()
 
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
 
     def render_copy(self, source_area, destination_area):
-        self.copy(self.parent._texture.texture, source_area, destination_area)
+        raise NotImplementedError() # needs to be re-done now that there is no window texture
 
     def draw_line_perspective(self, point, length, vanishing_point, **kwargs):
         x, y = point

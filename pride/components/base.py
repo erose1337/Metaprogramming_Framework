@@ -318,7 +318,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         while name in objects:
             instance_count += 1
             name = _name + str(instance_count)
-        self._instance_count = instance_count
+
         self.reference = name
         objects[self.reference] = self
 

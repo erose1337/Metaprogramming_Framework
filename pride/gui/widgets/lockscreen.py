@@ -5,20 +5,15 @@ import pride.gui.widgetlibrary
 
 class Confidential_Entry(pride.gui.widgetlibrary.Field_Entry):
 
-    defaults = {"symbol" : '*', #"constant_length_field" : True,
-                "_confidential_text" : ''}
+    defaults = {"symbol" : '*', "_confidential_text" : ''}
 
-    #def __init__(self, **kwargs):
-    #    super(Confidential_Entry, self).__init__(**kwargs)
-    #    self.create("pride.gui.widgetlibrary.Method_Button", method="toggle_constant_length",
-    #                target=self.reference)
+    def get_value(self):
+        return self._confidential_text
 
     def text_entry(self, text):
         if self.allow_text_edit:
             self._confidential_text += text
             self.text = self.symbol * 16
-            #else:
-            #self.text += self.symbol * len(text)
 
     def deselect(self, mouse, next_active_object):
         super(Confidential_Entry, self).deselect(mouse, next_active_object)
@@ -30,6 +25,7 @@ class Confidential_Entry(pride.gui.widgetlibrary.Field_Entry):
             self._confidential_text = self._confidential_text[:-1]
             if not self._confidential_text:
                 self.text = ''
+            self.write_field_method(self._confidential_text)
 
 
 class _Field_Entry(pride.gui.widgetlibrary.Field_Entry):
@@ -111,6 +107,8 @@ class Username_Password_Field(pride.gui.gui.Container):
         self.parent_application.status_display.text += text
         self.parent_application.parent_application.show_status("Attempting login...")
         pride.objects[self.sdl_window].run()
+        assert self.username == self.username_field.field_value, (self.username, self.username_field.text)
+        assert self.user_password == self.password_field.field_value, (self.user_password, self.password_field.text)
         user.username = self.username
         user.password = self.user_password
         user.auto_register = self.autoregister.state

@@ -192,14 +192,6 @@ class Parser_Metaclass(type):
         base_class = bases[0]
         modifiers = getattr(base_class, "parser_modifiers", {}).copy()
         exit_on_help = attributes.get("parser_modifiers", {}).get("exit_on_help", True)
-        parser_ignore = set()
-        new_parser_ignore = attributes.get("parser_ignore", tuple())
-        old_parser_ignore = getattr(base_class, "parser_ignore", tuple())
-        for ignore in new_parser_ignore + old_parser_ignore:
-            parser_ignore.add(ignore)
-        new_class.parser_ignore = tuple(parser_ignore)
-        for attribute in parser_ignore:
-            modifiers[attribute] = "ignore"
 
         new_modifiers = attributes.get("parser_modifiers", {})
         modifiers.update(new_modifiers)
@@ -211,7 +203,9 @@ class Parser_Metaclass(type):
     @staticmethod
     def make_parser(new_class, name, modifiers, exit_on_help):
         parser = Parser_Metaclass.command_parser.add_parser(name)
-        new_class.parser = Parser(parser, modifiers, exit_on_help, name, new_class.defaults)
+        new_class.parser = Parser(parser, modifiers, exit_on_help, name,
+                                  dict((key, new_class.defaults[key]) for key in
+                                        new_class.parser_args))
         return new_class
 
 
@@ -381,7 +375,7 @@ class Defaults(Inherited_Attributes):
                             "mutable_defaults" : dict, "required_attributes" : tuple,
                             "site_config_support" : tuple, "post_initializer" : str,
                             "allowed_values" : dict, "auto_verbosity_ignore" : tuple,
-                            "autoreferences" : tuple}
+                            "autoreferences" : tuple, "parser_args" : tuple}
 
 
 class Site_Configuration(type):

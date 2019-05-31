@@ -71,6 +71,7 @@ class User(pride.components.base.Base):
                 "password_prompt" : "{}: Please enter the password for {{}}: ",
                 "auto_register" : False, "auto_login" : True}
 
+    parser_args = ("username", )
     mutable_defaults = {"login_token" : dict}
     predefaults = {"_password" : None}
     verbosity = {"login_success" : "vv", "registering" : "vv"}

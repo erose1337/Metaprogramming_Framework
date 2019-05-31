@@ -50,13 +50,7 @@ except ImportError:
                     "verifier_indexable" : False,
 
                     "open_command_line" : True}
-
-        parser_ignore = ("mac_key", "encryption_key", "hkdf_mac_info_string",
-                        "hkdf_encryption_info_string", "hkdf_file_system_info_string",
-                        "password_prompt", "iv_size", "verifier_filetype",
-                        "salt_indexable", "kdf_iteration_count",
-                        "encryption_mode", "encryption_algorithm", "verifier_indexable",
-                        "salt_size", "salt_filetype", "salt", "file_system_key")
+        parser_args = ("username", )
 
         predefaults = {"_password_verifier_size" : 32, "_reset_encryption_key" : False,
                        "_reset_file_system_key" : False, "_reset_mac_key" : False}

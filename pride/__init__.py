@@ -31,7 +31,7 @@ def parse_site_config(alert_handler_config=_alert_handler_config):
                     alert_handler_config[attribute] = value
             for key, entry in value.items():
                 configuration[(name, key)] = entry
-    
+
 parse_site_config()
 
 import additional_builtins
@@ -139,8 +139,7 @@ class Alert_Handler(base.Base):
                 "log_is_persistent" : False, "parse_args" : True}
     defaults.update(_alert_handler_config.get("defaults", dict()))
 
-    parser_ignore = ("parse_args", "log_is_persistent", "verbosity")
-    parser_ignore += _alert_handler_config.get("parser_ignore", tuple())
+    parser_args = ("log_level", "print_level", "log_name")
 
     parser_modifiers = {"exit_on_help" : False}
     parser_modifiers.update(_alert_handler_config.get("parser_modifiers", dict()))

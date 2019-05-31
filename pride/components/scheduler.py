@@ -120,10 +120,8 @@ class Processor(Process):
         and any exception that could be raised inside the method call
         itself."""
 
-    defaults = {"running" : False, "execution_verbosity" : 'vvvv',
-                "parse_args" : True}
+    defaults = {"running" : False}
 
-    parser_ignore = ("running", )
     parser_modifiers = {"exit_on_help" : False}
 
     verbosity = {"instruction_execution" : "instruction_execution", "component_alert" : 0,

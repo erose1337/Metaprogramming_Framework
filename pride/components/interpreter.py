@@ -206,10 +206,7 @@ class Python(base.Base):
                 "rpc_server_type" : "pride.components.rpc.Rpc_Server",
                 }
 
-    parser_ignore = ("environment_setup", "startup_components",
-                     "startup_definitions", "interpreter_type",
-                     "rpc_server_type", "use_existing_server")
-
+    parser_args = ("command", )
     # make an optional "command" positional argument and allow
     # both -h and --help flags
     parser_modifiers = {"command" : {"types" : ("positional", ),

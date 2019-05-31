@@ -249,10 +249,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # exit_on_help determines whether or not to quit when the --help flag
     # is specified as a command line argument
     parser_modifiers = {"exit_on_help" : True}
-
-    # names in parser_ignore will not be available as command line arguments
-    parser_ignore = ("replace_reference_on_load", "deleted",
-                     "parse_args", "dont_save", "startup_components")
+    parser_args = tuple() # names in parser_args enables parsing that attribute from the command line
 
     site_config_support = ("defaults", "verbosity", "predefaults", "mutable_defaults")
 

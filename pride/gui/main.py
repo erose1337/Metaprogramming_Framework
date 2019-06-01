@@ -63,7 +63,7 @@ class Gui(pride.gui.gui.Application):
     def login_success(self, username):
         self.show_status("Logged in as {}".format(username))
         self.lockscreen.delete()
-        window = pride.objects[self.sdl_window]
+        window = self.sdl_window
         for program_type in self.startup_programs:
             window.create(program_type)
         self.delete()

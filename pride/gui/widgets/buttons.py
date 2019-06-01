@@ -3,11 +3,14 @@ import pride.gui.gui
 class Toggle(pride.gui.gui.Button):
 
     defaults = {"state" : False, "pack_mode" : "left",
-                "indicator_type" : "pride.gui.widgetlibrary.Status_Indicator"}
+                "indicator_type" : "pride.gui.widgetlibrary.Status_Indicator",
+                "label" : ''}
     autoreferences = ("indicator", )
 
     def __init__(self, **kwargs):
         super(Toggle, self).__init__(**kwargs)
+        self.create("pride.gui.gui.Container", text=self.label, pack_mode="top",
+                    scale_to_text=False)
         indicator = self.indicator = self.create(self.indicator_type)
         if self.state:
             indicator.enable_indicator()
@@ -28,6 +31,10 @@ class Toggle(pride.gui.gui.Button):
     def from_info(cls, **kwargs):
         return lambda: cls(**kwargs)
 
+    def turn_off(self):
+        self.state = False
+        self.indicator.disable_indicator()
+
 
 class Toggle_Bar(pride.gui.gui.Container):
 
@@ -39,3 +46,23 @@ class Toggle_Bar(pride.gui.gui.Container):
 
     def initialize_buttons(self):
         self.buttons = [self.create(self.button_type) for count in range(self.toggle_count)]
+
+    def delete(self):
+        self.buttons = None
+        super(Toggle_Bar, self).delete()
+
+
+class Mutexed_Button(Toggle):
+    # if a Mutexed_Button is turned on, then other mutex buttons will be turned off
+
+    def left_click(self, mouse):
+        super(Mutexed_Button, self).left_click(mouse)
+        if self.state:
+            for button in self.parent.buttons:
+                if button.state:
+                    button.turn_off()
+
+
+class Selection_Bar(Toggle_Bar):
+
+    defaults = {"button_type" : Mutexed_Button}

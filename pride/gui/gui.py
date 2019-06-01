@@ -217,7 +217,7 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
     defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
                 "_pack_requested" : False, "_in_pack_queue" : False}
 
-    predefaults = {"sdl_window" : ''}
+    #predefaults = {"sdl_window" : ''}
 
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
@@ -226,7 +226,7 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
         parent = self.parent
         if not parent._in_pack_queue:
             parent._in_pack_queue = self._pack_requested = True
-            pride.objects[self.sdl_window].organizer.schedule_pack(parent)
+            self.sdl_window.organizer.schedule_pack(parent)
         #if not self._pack_scheduled2:
         #    parent = self.parent
         #    pack_scheduled = False
@@ -240,9 +240,9 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
         #        parent = self.parent
         #        if not parent.deleted:
         #            #print
-        #            #print objects[objects[self.sdl_window].organizer.reference] # somehow causes KeyError
+        #            #print objects[self.sdl_window.organizer.reference] # somehow causes KeyError
         #            #print
-        #            objects[self.sdl_window].organizer.schedule_pack(parent)
+        #            self.sdl_window.organizer.schedule_pack(parent)
         #            parent._pack_scheduled = True
         #            self._pack_scheduled2 = True
 
@@ -266,7 +266,7 @@ class Window_Object(Organized_Object):
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
-                   "_text" : '', "_pack_mode" : '', "_sdl_window" : '',
+                   "_text" : '', "_pack_mode" : '',
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
                    "_always_on_top" : False, "use_custom_colors" : False,
@@ -279,16 +279,17 @@ class Window_Object(Organized_Object):
 
     hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
     inherited_attributes = {"hotkeys" : dict}
+    autoreferences = ("_sdl_window", )
 
     def _get_always_on_top(self):
         return self._always_on_top
     def _set_always_on_top(self, value):
         self._always_on_top = value
         if value:
-            pride.objects[self.sdl_window].user_input.always_on_top.append(self)
+            self.sdl_window.user_input.always_on_top.append(self)
         else:
             try:
-                pride.objects[self.sdl_window].user_input.always_on_top.remove(self)
+                self.sdl_window.user_input.always_on_top.remove(self)
             except ValueError:
                 pass
     always_on_top = property(_get_always_on_top, _set_always_on_top)
@@ -297,9 +298,9 @@ class Window_Object(Organized_Object):
         return self._texture_invalid
     def _set_texture_invalid(self, value):
         if not self._texture_invalid and value and not self.deleted and not self.hidden:
-            assert self.sdl_window
+            #assert self.sdl_window
             assert not self.hidden
-            objects[self.sdl_window].invalidate_object(self)
+            self.sdl_window.invalidate_object(self)
         self._redraw_needed = self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
 
@@ -315,8 +316,8 @@ class Window_Object(Organized_Object):
     def _set_text(self, value):
         self._text = value
         if value and self.scale_to_text:
-            assert self.sdl_window
-            w, h = objects[self.sdl_window].renderer.get_text_size(self.area, value)
+            #assert self.sdl_window
+            w, h = self.sdl_window.renderer.get_text_size(self.area, value)
             w += 20
         #    print("Scaling to text {} ({}) ({})".format(value, w, self.texture_invalid))
             if not self._backup_w_range:
@@ -406,6 +407,7 @@ class Window_Object(Organized_Object):
     def _get_sdl_window(self):
         return (self._sdl_window or getattr(self.parent, "sdl_window", self.parent_name))
     def _set_sdl_window(self, value):
+        assert not isinstance(value, str)
         self._sdl_window = value
     sdl_window = property(_get_sdl_window, _set_sdl_window)
 
@@ -417,7 +419,7 @@ class Window_Object(Organized_Object):
         self.theme = self.create(self.theme_type, wrapped_object=self)
 
         self._children.remove(self.theme)
-        window = pride.objects[self.sdl_window]
+        window = self.sdl_window
         window.user_input._update_coordinates(self, self.reference, self.area, self.z)
         #self.texture = window.create_texture(window.size)
         self.pack()
@@ -502,9 +504,9 @@ class Window_Object(Organized_Object):
         pass
 
     def hide(self, parent_call=False):
-        pride.objects[self.sdl_window].remove_window_object(self)
-        pride.objects[self.sdl_window].dirty_layers.add(self.z)
-        assert self not in pride.objects[self.sdl_window].redraw_objects
+        self.sdl_window.remove_window_object(self)
+        self.sdl_window.dirty_layers.add(self.z)
+        assert self not in self.sdl_window.redraw_objects
         #self.texture_invalid = True
         if parent_call:
             self._parent_hidden = True
@@ -521,7 +523,7 @@ class Window_Object(Organized_Object):
         else:
             self.hidden = False
         if not self.hidden:
-            window = pride.objects[self.sdl_window]
+            window = self.sdl_window
             window.user_input._update_coordinates(self, self.reference, self.area, self.z)
             window.invalidate_object(self) # needed because of `remove_window_object`
             self.texture_invalid = True
@@ -556,16 +558,16 @@ class Window_Object(Organized_Object):
 
     def pack(self):
         super(Window_Object, self).pack()
-        pride.objects[self.sdl_window]._schedule_run()
+        self.sdl_window._schedule_run()
 
     def delete(self):
         assert not self.deleted, self
-        pride.objects[self.sdl_window].dirty_layers.add(self.z)
+        self.sdl_window.dirty_layers.add(self.z)
         try:
             self._clear_tip_bar_text()
         except AttributeError:
             pass # self.tip_bar is None
-        pride.objects[self.sdl_window].remove_window_object(self)
+        self.sdl_window.remove_window_object(self)
         self.theme.delete()
         if self.parent.reference != self.sdl_window:
             #self.parent.pack()
@@ -618,10 +620,11 @@ class Window_Object(Organized_Object):
         _kwargs.update(kwargs)
 
         app = self.parent_application
+        window = self.sdl_window
         while True:
             if app.tip_bar_enabled:
                 app.set_tip_bar_text(text)
-                pride.objects[self.sdl_window].run()
+                window.run()
                 return
             try:
                 app = app.parent_application
@@ -632,7 +635,7 @@ class Window_Object(Organized_Object):
             self._status = self.create("pride.gui.widgetlibrary.Popup_Notification", text=text, **_kwargs).reference
         else:
             self._status = self.create("pride.gui.gui.Container", text=text, **_kwargs).reference
-        pride.objects[self.sdl_window].run()
+        window.run()
 
     def hide_status(self):
         if hasattr(self, "application_window"):

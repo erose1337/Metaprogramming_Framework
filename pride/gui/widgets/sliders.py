@@ -85,7 +85,7 @@ class _Slider_Bar(pride.gui.gui.Container):
     def _on_set(self, coordinate, value):
         super(_Slider_Bar, self)._on_set(coordinate, value)
         if coordinate == 'w' and self.dragger is not None:
-            window = pride.objects[self.sdl_window]
+            window = self.sdl_window
             window.schedule_predraw_operation(self.dragger.set_initial_position)
 
     def __init__(self, **kwargs):
@@ -104,16 +104,16 @@ class Slider_Bar(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Slider_Bar, self).__init__(**kwargs)
         self.left_end = self.create("pride.gui.gui.Container", text=self.label,
-                                    pack_mode="left", scale_to_text=True,
-                                    theme_type="pride.gui.themes.Text_Only_Theme")
+                                    pack_mode="left", scale_to_text=False,
+                                    w_range=(0, .05))
         middle = self.create("pride.gui.gui.Container", pack_mode="left")
         self.parent._slider_bar = middle.create(_Slider_Bar, pack_mode="bottom",
                                                 target=self.target,
                                                 bounds=self.bounds,
                                                 on_adjustment=self.on_adjustment)
         self.right_end = self.create("pride.gui.gui.Container", text=str(self.initial_value),
-                                     pack_mode="left", scale_to_text=True,
-                                     theme_type="pride.gui.themes.Text_Only_Theme")
+                                     pack_mode="left", scale_to_text=False,
+                                     w_range=(0, .05))
 
 
 class Slider_Widget(pride.gui.gui.Container):

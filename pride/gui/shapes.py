@@ -68,7 +68,7 @@ class Bounded_Shape(Shape):
     def _get_w_range(self):
         return self._w_range
     def _set_w_range(self, value):
-        screen_w, screen_h = pride.objects[self.sdl_window].size
+        screen_w, screen_h = self.sdl_window.size
         if isinstance(value[0], float):
             lower = value[0]
             if lower < 0.0 or lower > 1.0:
@@ -86,7 +86,7 @@ class Bounded_Shape(Shape):
     def _get_h_range(self):
         return self._h_range
     def _set_h_range(self, value):
-        screen_w, screen_h = pride.objects[self.sdl_window].size
+        screen_w, screen_h = self.sdl_window.size
         if isinstance(value[0], float):
             value = (int(value[0] * screen_h), value[1])
         if isinstance(value[1], float):
@@ -95,13 +95,14 @@ class Bounded_Shape(Shape):
         self.h = self._h
     h_range = property(_get_h_range, _set_h_range)
 
-    def __new__(cls, *args, **kwargs):
-        instance = super(Shape, cls).__new__(cls, *args, **kwargs)
-        kwargs["_sdl_window"] = instance._sdl_window = kwargs.pop("sdl_window", '')
-        return instance
+    #def __new__(cls, *args, **kwargs):
+    #    instance = super(Shape, cls).__new__(cls, *args, **kwargs)
+    #    kwargs["sdl_window"] = instance.sdl_window = kwargs.pop("sdl_window", '')
+    #    return instance
 
     def __init__(self, **kwargs):
-        max_width, max_height = pride.objects[self._sdl_window].size
+        assert not isinstance(kwargs["sdl_window"], str), kwargs
+        max_width, max_height = kwargs["sdl_window"].size
         self._w_range, self._h_range = (0, max_width), (0, max_height)
         super(Bounded_Shape, self).__init__(**kwargs)
 

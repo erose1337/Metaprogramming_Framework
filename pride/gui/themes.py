@@ -1,3 +1,5 @@
+import copy
+
 import pride.gui
 import pride.gui.color
 import pride.components.base
@@ -57,7 +59,7 @@ class Theme(pride.components.base.Wrapper):
 
 class Minimal_Theme(Theme):
 
-    theme_colors = Theme.theme_colors.copy()
+    theme_colors = copy.deepcopy(Theme.theme_colors)
 
     def draw_texture(self):
         assert not self.hidden
@@ -72,7 +74,7 @@ class Minimal_Theme(Theme):
             for thickness in range(shadow_thickness):
                 self.draw("rect", (x + thickness, y + thickness,
                                    w - (2 * thickness), h - (2 * thickness)),
-                        color=(r, g, b, a / (thickness + 1)))
+                          color=(r, g, b, a / (thickness + 1)))
 
         glow_thickness = self.glow_thickness
         if glow_thickness:
@@ -87,6 +89,7 @@ class Minimal_Theme(Theme):
         if self.text:
             assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
+            print self.text_color
             self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                     bg_color=self.text_background_color, color=self.text_color,
                     center_text=self.center_text, hide_excess_text=self.hide_excess_text)
@@ -94,7 +97,7 @@ class Minimal_Theme(Theme):
 
 class Perspective_Theme(Theme):
 
-    theme_colors = Theme.theme_colors.copy()
+    theme_colors = copy.deepcopy(Theme.theme_colors)
     for profile in theme_colors.values():
         profile["vanishing_point"] = (-MAX_W, MAX_H / 2)
 
@@ -112,7 +115,7 @@ class Perspective_Theme(Theme):
         if self.vanishing_point_backup is None:
             self.vanishing_point_backup = self.vanishing_point
         if not self.animating:
-            pride.objects[self.sdl_window].schedule_postdraw_operation(self.animate)
+            self.sdl_window.schedule_postdraw_operation(self.animate)
             self.animating = True
             self.frame_number = 0
             self.vanishing_point = self.vanishing_point_backup
@@ -125,7 +128,7 @@ class Perspective_Theme(Theme):
             self.animating = False
             self.vanishing_point = tuple()
         else:
-            pride.objects[self.sdl_window].schedule_postdraw_operation(self.animate)
+            self.sdl_window.schedule_postdraw_operation(self.animate)
             self.vanishing_point = (x, y)
             self.frame_number += 1
 
@@ -133,7 +136,7 @@ class Perspective_Theme(Theme):
 
     def delete(self):
         if self.animating:
-            pride.objects[self.sdl_window].postdraw_queue.remove(self.animate)
+            self.sdl_window.postdraw_queue.remove(self.animate)
         super(Perspective_Theme, self).delete()
 
     def draw_texture(self):
@@ -146,7 +149,7 @@ class Perspective_Theme(Theme):
         try:
             texture, ready = self.frame_cache[profile][size][self.frame_number]
         except KeyError:
-            _new_texture = pride.objects[self.sdl_window].create_texture
+            _new_texture = self.sdl_window.create_texture
             _cache = [(_new_texture(size, blendmode=sdl2.SDL_BLENDMODE_ADD), False) for
                       count in range(self.frame_count)]
             if profile in self.frame_cache:
@@ -201,7 +204,7 @@ class Perspective_Theme(Theme):
                                     w + (2 * thickness), h + (2 * thickness)),
                             color=(r, g, b, a - (thickness * fade_scalar)))
 
-        pride.objects[self.sdl_window].renderer.draw(texture.texture,
+        self.sdl_window.renderer.draw(texture.texture,
                                                      self._draw_operations)
         ##del self._draw_operations[:]
         ##self.draw("copy", texture.texture, srcrect=(0, 0) + self.size, dstrect=area)
@@ -218,36 +221,36 @@ class Perspective_Theme(Theme):
 class Animated_Theme(Perspective_Theme):
 
     defaults = {"frame_number" : 0, "frame_count" : 1, "frames" : None}
-    theme_colors = Perspective_Theme.theme_colors.copy()
+    theme_colors = copy.deepcopy(Perspective_Theme.theme_colors)
 
     def draw_texture(self):
         frame_number = self.frame_number
         area = self.area
         #self.wrapped_object.alert("Copying frame")
-        #texture = pride.objects[self.sdl_window].create_texture(self.size)
+        #texture = self.sdl_window.create_texture(self.size)
         #super(Animated_Theme, self).draw_texture()
-        #pride.objects[self.sdl_window].renderer.draw(texture.texture, self._draw_operations)
+        #self.sdl_window.renderer.draw(texture.texture, self._draw_operations)
         #self.draw("copy", texture, area, area)
         self.wrapped_object.alert("drawing at {}".format(self.area))
         self.draw("copy", self.frames[frame_number], area, area)
         if frame_number + 1 < self.frame_count:
             self.frame_number = frame_number + 1
-            pride.objects[self.sdl_window].schedule_postdraw_operation(self._next_frame)
+            self.sdl_window.schedule_postdraw_operation(self._next_frame)
 
     def _next_frame(self):
         self.wrapped_object.texture_invalid = True
 
     def draw_frames(self):
         self.wrapped_object.alert("caching at {}".format(self.area))
-        texture = pride.objects[self.sdl_window].create_texture(self.size)
+        texture = self.sdl_window.create_texture(self.size)
         super(Animated_Theme, self).draw_texture()
-        pride.objects[self.sdl_window].renderer.draw(texture.texture, self._draw_operations)
+        self.sdl_window.renderer.draw(texture.texture, self._draw_operations)
         self.frames = [texture]
         return
         size = self.size
         backup = self.vanishing_point
         frames = self.frames = []
-        window = pride.objects[self.sdl_window]
+        window = self.sdl_window
         create_texture = window.create_texture
         fetch_instructions = super(Animated_Theme, self).draw_texture
         draw_to_texture = window.renderer.draw
@@ -264,7 +267,7 @@ class Animated_Theme(Perspective_Theme):
         frames.append(texture)
 
     def start_animation(self):
-        pride.objects[self.sdl_window].schedule_postdraw_operation(self._enable_animation)
+        self.sdl_window.schedule_postdraw_operation(self._enable_animation)
 
     def _enable_animation(self):
         self.frame_number = 0

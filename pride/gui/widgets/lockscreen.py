@@ -55,7 +55,7 @@ class Username_Field(pride.gui.widgetlibrary.Field):
         self.parent.submit_credentials()
 
     def handle_tab(self):
-        pride.objects[self.sdl_window].user_input.select_active_item(self.parent.password_field.reference, None)
+        self.sdl_window.user_input.select_active_item(self.parent.password_field.reference, None)
 
 
 class Username_Password_Field(pride.gui.gui.Container):
@@ -68,7 +68,7 @@ class Username_Password_Field(pride.gui.gui.Container):
         super(Username_Password_Field, self).__init__(**kwargs)
         self.username_field = self.create(Username_Field,
                                           write_field_method=self._set_username)
-        window = pride.objects[self.sdl_window]#.select_active_item(self.username_field.reference, None) # change to this
+        window = self.sdl_window#.select_active_item(self.username_field.reference, None) # change to this
         window.schedule_postdraw_operation(lambda: window.user_input.select_active_item(self.username_field.reference, None))
         self.password_field = self.create("pride.gui.widgetlibrary.Field",
                                           field_entry_type=Confidential_Entry,
@@ -106,7 +106,7 @@ class Username_Password_Field(pride.gui.gui.Container):
         text = "Computing: {}\n".format(user.get_derivation_description())
         self.parent_application.status_display.text += text
         self.parent_application.parent_application.show_status("Attempting login...")
-        pride.objects[self.sdl_window].run()
+        self.sdl_window.run()
         assert self.username == self.username_field.field_value, (self.username, self.username_field.text)
         assert self.user_password == self.password_field.field_value, (self.user_password, self.password_field.text)
         user.username = self.username

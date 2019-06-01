@@ -126,7 +126,7 @@ class SDL_Window(SDL_Component):
         self.run2_instruction = Instruction(self.reference, "run2")
         self.run2_instruction.execute(priority=0)
 
-        self.sdl_window = self.reference
+        self.sdl_window = self # children may attempt to access the sdl_window attribute of their parent
         window = sdl2.ext.Window(self.name, position=self.position,
                                  size=self.size, flags=self.window_flags)
         self.wraps(window)
@@ -169,7 +169,7 @@ class SDL_Window(SDL_Component):
             self.running2 = True
 
     def create(self, *args, **kwargs):
-        kwargs.setdefault("sdl_window", self.reference)
+        kwargs.setdefault("sdl_window", self)
         instance = super(SDL_Window, self).create(*args, **kwargs)
         try:
             instance.pack()

@@ -605,7 +605,7 @@ class Field(pride.gui.gui.Container):
 
     def select(self, mouse):
         super(Field, self).select(mouse)
-        pride.objects[self.sdl_window].user_input.select_active_item(self.entry.reference, mouse)
+        self.sdl_window.user_input.select_active_item(self.entry.reference, mouse)
 
 
 class Status_Indicator(pride.gui.gui.Container):
@@ -658,11 +658,12 @@ class Popup_Notification(pride.gui.gui.Container):
                 maximum = alpha
         self.colors_setup = True
 
-        refresh_rate = pride.objects[self.sdl_window].priority
+        window = self.sdl_window
+        refresh_rate = window.priority
         updates = self.fade_duration / refresh_rate
         self.change = max(1, int(maximum / updates))
-        assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
-        pride.objects[self.sdl_window].schedule_postdraw_operation(self.fade_alpha)
+        assert self.fade_alpha not in window.postdraw_queue, window.postdraw_queue
+        window.schedule_postdraw_operation(self.fade_alpha)
 
     def fade_alpha(self):
         assert not self.deleted
@@ -678,11 +679,11 @@ class Popup_Notification(pride.gui.gui.Container):
                     finished = False
                     self.texture_invalid = True
         if not finished:
-            assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
-            pride.objects[self.sdl_window].schedule_postdraw_operation(self.fade_alpha)
+            assert self.fade_alpha not in self.sdl_window.postdraw_queue, self.sdl_window.postdraw_queue
+            self.sdl_window.schedule_postdraw_operation(self.fade_alpha)
         else:
             assert self.parent._status == self.reference, (self.parent._status, self.reference)
-            assert self.fade_alpha not in pride.objects[self.sdl_window].postdraw_queue, pride.objects[self.sdl_window].postdraw_queue
+            assert self.fade_alpha not in self.sdl_window.postdraw_queue, self.sdl_window.postdraw_queue
             self.parent._status = None
             self.delete()
 
@@ -691,7 +692,7 @@ class Popup_Notification(pride.gui.gui.Container):
     #    self.setup_colors(True)
 
     def delete(self):
-        queue = pride.objects[self.sdl_window].postdraw_queue
+        queue = self.sdl_window.postdraw_queue
         try:
             queue.remove(self.fade_alpha)
         except ValueError:

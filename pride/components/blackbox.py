@@ -84,7 +84,7 @@ class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
         super(Black_Box_Client, self).__init__(**kwargs)
         pride.objects["/User/Command_Line"].set_default_program(self.reference, (self.reference, "handle_keyboard_input"))
         if self.mouse_support:
-            pride.objects[self.sdl_window].create("pride.gui.blackbox.Client_Window", client=self.reference)
+            self.sdl_window.create("pride.gui.blackbox.Client_Window", client=self.reference)
             self.refresh_instruction = pride.Instruction(self.reference, "_refresh")
             self.refresh_instruction.execute(priority=self.refresh_interval)
         if self.audio_support:
@@ -121,7 +121,7 @@ class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
 
     def handle_response_draw(self, draw_instructions):
         if draw_instructions:
-            pride.objects[self.sdl_window].draw(draw_instructions)
+            self.sdl_window.draw(draw_instructions)
 
     def _refresh(self):
         if self._refresh_flag:

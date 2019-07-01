@@ -221,7 +221,6 @@ class Socket(base.Wrapper):
 #        assert not self.closed
         _socket = self.socket
         _data = memoryview(data)
-
         position = 0
         while position < byte_count:
             sent = _socket.send(_data[position:])

@@ -80,7 +80,7 @@ def packetize_recv(recv):
             try:
                 packet_size, data = data.split(' ', 1)
             except ValueError:
-                _old_data[self] = data
+                self._old_data = data
                 break
             packet_size = int(packet_size)
             packets.append(data[:packet_size])

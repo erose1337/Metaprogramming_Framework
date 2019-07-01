@@ -17,8 +17,6 @@ import pride.functions.decorators
 
 DEFAULT_SERIALIZER = pride.components.network.DEFAULT_SERIALIZER
 
-_old_data = {}
-
 class UnauthorizedError(Warning): pass
 
 @pride.functions.decorators.required_arguments(no_args=True)
@@ -73,10 +71,10 @@ def packetize_recv(recv):
     @functools.wraps(recv)
     def _recv(self, buffer_size=0):
         try:
-            data = _old_data[self] + recv(self, buffer_size)
+            data = self._old_data + recv(self, buffer_size)
         except KeyError:
             data = recv(self, buffer_size)
-        _old_data[self] = ''
+        self._old_data = bytearray()
         packets = []
         while data:
             try:

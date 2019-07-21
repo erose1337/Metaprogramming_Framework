@@ -50,6 +50,7 @@ except:
     CONNECTION_RESET = errno.ECONNRESET
     CONNECTION_CLOSED = errno.ENOTCONN
     ERROR_CODES[22] = "EINVAL"
+ERROR_CODES[2] = "SSL_ERROR_WANT_READ"
 
 ERROR_CODES.update({CALL_WOULD_BLOCK : "CALL_WOULD_BLOCK",
                     CONNECTION_IN_PROGRESS : "CONNECTION_IN_PROGRESS",
@@ -64,6 +65,8 @@ HOST = socket.gethostbyname(socket.gethostname())
 class Socket_Error_Handler(pride.components.base.Base):
 
     def dispatch(self, sock, error, error_name):
+        #if error_name == "ssl_error_want_read":
+        #    return
         sock.alert("socket.error: {}".format(error_name),
                    level=sock.verbosity.get(error_name, sock.verbosity["unhandled"]))
         if error_name != "connection_in_progress" or sock.timeout_count <= 0:
@@ -184,7 +187,7 @@ class Socket(base.Wrapper):
                                                    buffer_size)
                 if not byte_count:
                     if not self._byte_count:
-                        self.alert("Received EOF", level=self.verbosity["recv_eof"])
+                        self.alert("Received EOF", level=0)#self.verbosity["recv_eof"])
                         self.shutdown_on_close = False
                         error = socket.error(CONNECTION_CLOSED)
                         error.errno = CONNECTION_CLOSED

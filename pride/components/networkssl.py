@@ -142,6 +142,7 @@ class SSL_Client(pride.components.network.Tcp_Client):
                 raise
         else:
             self.ssl_authenticated = True
+            self.wraps(self.ssl_socket)
             self.on_ssl_authentication()
 
     def on_select(self):
@@ -184,6 +185,7 @@ class SSL_Socket(pride.components.network.Tcp_Socket):
                 raise
         else:
             self.ssl_authenticated = True
+            self.wraps(self.ssl_socket)
             self.on_ssl_authentication()
 
     def on_ssl_authentication(self):

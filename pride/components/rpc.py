@@ -128,20 +128,20 @@ class Session(pride.components.base.Base):
         return self._callbacks.pop(0)
 
 
-class Packet_Client(pride.components.networkssl.SSL_Client):
+class Packet_Client(pride.components.network.Tcp_Client):
     """ An SSL_Client that uses packetized send and recv (client side) """
     defaults = {"_old_data" : bytes()}
 
-    send = packetize_send(pride.components.networkssl.SSL_Client.send)
-    recv = packetize_recv(pride.components.networkssl.SSL_Client.recv)
+    send = packetize_send(pride.components.network.Tcp_Client.send)
+    recv = packetize_recv(pride.components.network.Tcp_Client.recv)
 
 
-class Packet_Socket(pride.components.networkssl.SSL_Socket):
+class Packet_Socket(pride.components.network.Tcp_Socket):
     """ An SSL_Socket that uses packetized send and recv (server side) """
     defaults = {"_old_data" : bytes()}
 
-    send = packetize_send(pride.components.networkssl.SSL_Socket.send)
-    recv = packetize_recv(pride.components.networkssl.SSL_Socket.recv)
+    send = packetize_send(pride.components.network.Tcp_Socket.send)
+    recv = packetize_recv(pride.components.network.Tcp_Socket.recv)
 
 
 class Rpc_Connection_Manager(pride.components.base.Base):
@@ -173,7 +173,7 @@ class Rpc_Connection_Manager(pride.components.base.Base):
         return attributes
 
 
-class Rpc_Server(pride.components.networkssl.SSL_Server):
+class Rpc_Server(pride.components.network.Server):
     """ Creates Rpc_Sockets for handling rpc requests. By default, this
         server runs on the localhost only, meaning it is not accessible
         from the network. """
@@ -189,7 +189,8 @@ class Rpc_Client_Socket(Packet_Client):
 
     mutable_defaults = {"_requests" : list, "_callbacks" : list}
 
-    def on_ssl_authentication(self):
+    def on_connect(self):
+        super(Rpc_Client_Socket, self).on_connect()
         count = 1
         length = len(self._requests)
         for request, callback in self._requests:
@@ -201,7 +202,7 @@ class Rpc_Client_Socket(Packet_Client):
 
     def make_request(self, request, callback_owner):
         """ Send request to remote host and queue callback_owner for callback """
-        if not self.ssl_authenticated:
+        if not self.connected:
             self.alert("Delaying request until authenticated: {}".format(request)[:128],
                        level=self.verbosity["request_delayed"])
             self._requests.append((request, callback_owner))
@@ -212,7 +213,7 @@ class Rpc_Client_Socket(Packet_Client):
 
     def recv(self, packet_count=0):
         for response in super(Rpc_Client_Socket, self).recv():
-            _response = self.deserialize(response)
+            _response = self.deserialize(bytes(response))
             callback_owner = self._callbacks.pop(0)
             try:
                 _call, callback = pride.objects[callback_owner].next_callback()
@@ -248,11 +249,11 @@ class Rpc_Socket(Packet_Socket):
         super(Rpc_Socket, self).__init__(**kwargs)
         self.rpc_workers = itertools.cycle(objects["/Python"].objects["Rpc_Worker"])
 
-    def on_ssl_authentication(self):
+    def on_connect(self):
         if self.idle_after:
             self._idle_timer = time.time()
             pride.Instruction(self.reference, "check_idle").execute(priority=self.idle_after)
-        return super(Rpc_Socket, self).on_ssl_authentication()
+        return super(Rpc_Socket, self).on_connect()
 
     def check_idle(self):
         if time.time() - self._idle_timer >= self.idle_after:
@@ -263,7 +264,7 @@ class Rpc_Socket(Packet_Socket):
     def recv(self, packet_count=0):
         peername = self.peername
         for (session_id, component_name, method,
-             serialized_arguments) in (self.deserialize(packet) for
+             serialized_arguments) in (self.deserialize(bytes(packet)) for
                                        packet in super(Rpc_Socket, self).recv()):
             try:
                 result = next(self.rpc_workers).handle_request(peername, session_id, component_name,

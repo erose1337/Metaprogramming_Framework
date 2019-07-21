@@ -83,6 +83,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
             On success, inserts (identifier, hashed_password_verifier, salt) into database and returns register_success()
             On failure, returns register_failure() """
+        assert password_verifier, type(password_verifier)
         identifier_in_use = self.database.query("Users", retrieve_fields=("identifier", ),
                                                          where={"identifier" : identifier})
         salt = os.urandom(self.salt_size)
@@ -138,14 +139,24 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
             correct_hash, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
                                                      where={"identifier" : username})
         except ValueError:
-            constant_time = self._hash_password("\x00", "\x00")
+            # note: Triggering except automaticallly means that this branch will take longer than the other would to run the same code
+            # "constant time" is going to be hard to achieve in such a situation
+            #       - unless the underlying api can re-done to not use exceptions?
+            constant_time = self._hash_password(password, "\x00" * 16) # hopefully building the string doesn't take too long
+            # only way to have the call to alert not cause timing variance would be to buffer it for a while and call it later
+            #   - this causes entries printed to stdout or to the log to be out of order
+            #       - print does not happen until well after the code is executed
+            #self.alert("Login failure; {} does not exist".format(username),
+            #           level=0)#self.verbosity["username_does_not_exist"])
             return self.login_failure(username)
         else:
             password_hash = self._hash_password(password, salt)
             if pride.functions.security.constant_time_comparison(password_hash, correct_hash):
                 return self.login_success(username)
             else:
+                #self.alert("Login failure; invalid hash:\n{}\ncorrect hash:\n{}".format(password_hash, correct_hash))
                 return self.login_failure(username)
+
 
     def login_success(self, username):
         """ usage: called inside login() when an attempt succeeds
@@ -280,7 +291,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                 "registration_success_message" : "Registered with {}@{} as '{}'",
                 "registration_failed_message" : "Failed to register with {}@{} as '{}'",
 
-                "password_source" : "user_secret", "password_length" : 32}
+                "password_source" : "user_secret", "password_length" : 32,
+                "_register_callback" : None}
 
     predefaults = {"_registering" : False, "logged_in" : False,
                    "_logging_in" : False, "_username" : '',
@@ -297,7 +309,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             method = "generate_strong_password"
         elif self.password_source == "user_password":
             method = "generate_portable_password"
-        return getattr(pride.objects["/User"], method)(self.target_service, self.username, self.password_length)
+        _password = getattr(pride.objects["/User"], method)(self.target_service, self.username, self.password_length)
+        return _password
     def _set_password(self, value):
         self._password = value
         self.password_hash = ''
@@ -350,6 +363,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
             self.register_success()
         else:
             self.register_failure()
+        if self._register_callback is not None:
+            self._register_callback(success)
 
     def register_success(self):
         self.alert(self.registration_success_message.format(self.target_service, self.ip, self.username),
@@ -421,8 +436,6 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                     self.register()
                 else:
                     self.delete() # to keep or not?
-        #    else:
-        #        self.alert("Invalid password", level=self.verbosity["invalid_password"])
 
     @pride.functions.decorators.call_if(logged_in=True)
     @pride.functions.decorators.exit(_reset_login_flags)

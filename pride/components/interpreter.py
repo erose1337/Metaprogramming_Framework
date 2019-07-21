@@ -10,6 +10,7 @@ try:
 except ImportError:
     import StringIO
 import socket # for .error
+import base64 # for standard_b64encode on machine username
 
 import pride
 import pride.components.base as base
@@ -232,23 +233,19 @@ class Python(base.Base):
                                    password=os.urandom(32), kdf_iterations=1)
         pride.objects["/Finalizer"].add_callback((self.session.reference, "delete"), -1)
 
+        machine_id, machine_password = self.get_machine_credentials()
+        User = pride.components.user.User
+        with pride.functions.contextmanagers.backup(User, "verbosity"):
+            User.verbosity["login_success"] = "vv"
+            user = User(username=machine_id, password=machine_password,
+                        auto_register=True, kdf_iterations=1)
+        assert user.reference == "/User"
         if not self.command:
             command = os.path.join((os.getcwd() if "__file__"
                                     not in globals() else
                                     pride.site_config.PRIDE_DIRECTORY),
                                     os.path.join("programs", "shell_launcher.py"))
         else:
-            try:
-                machine_id, machine_password = pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"]
-            except KeyError:
-                machine_id, machine_password = os.urandom(32), os.urandom(32)
-                pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"] = (machine_id, machine_password)
-
-            User = pride.components.user.User
-            with pride.functions.contextmanagers.backup(User, "verbosity"):
-                User.verbosity["login_success"] = "vv"
-                user = User(username=machine_id, password=machine_password,
-                            auto_register=True, kdf_iterations=1)
             command = self.command
         source = ''
         if self.startup_definitions:
@@ -260,6 +257,14 @@ class Python(base.Base):
             self.alert("Unable to locate '{}';\nCWD: {}".format(command, os.getcwd()))
             raise SystemExit()
         pride.Instruction(self.interpreter, "_exec_command", source).execute()
+
+    def get_machine_credentials(self):
+        try:
+            machine_id, machine_password = pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"]
+        except KeyError:
+            machine_id, machine_password = os.urandom(32), os.urandom(32)
+            pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"] = (machine_id, machine_password)
+        return base64.standard_b64encode(machine_id), machine_password
 
     def setup_os_environ(self):
         """ This method is called automatically in Python.__init__; os.environ can

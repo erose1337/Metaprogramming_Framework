@@ -216,9 +216,9 @@ class SDL_Window(SDL_Component):
         assert not self.redraw_objects
 
     def run(self):
-    #    if self.running2:
-    #        self.run2_instruction.unschedule()
-    #        self.run2()
+        if self.running2:
+            self.run2_instruction.unschedule()
+            self.run2()
 
         if self.running:
             self.draw(self.drawing_instructions)
@@ -809,9 +809,9 @@ class Renderer(SDL_Component):
             #print type(texture)
             _w, _h = texture.size
             if kwargs.get("center_text", False) and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
-                    destination = ((x + (w / 2)) - (_w / 2),
-                                   (y + (h / 2)) - (_h / 2),
-                                   _w - 2, _h)
+                destination = ((x + (w / 2)) - (_w / 2),
+                               (y + (h / 2)) - (_h / 2),
+                               _w - 2, _h)
             else:
                 destination = (x + 2, y + 2, _w - 2, _h)
 

@@ -1,38 +1,150 @@
-to do:
-----
-Fix gui bug(s)
-improve auto-documentation (pride.components.package)
-add api file + start using versionhelper
-    - separate gui into separate package due to different levels of stability
-change user.encrypt to use a per-cryptogram key to avoid dealing with nonces
-use a random salt in user2.User.derive_master_keys
-deal with certificates properly?
+Currently working on: Homescreen
 
-ideas
------
+To Do/Bugs
+=====
+
+Homescreen
+----------
+- set up homescreen
+- set up application launcher
+    - /usr/share/applications/
+- set up system shell
+- set up python shell
+- set up file explorer
+    - right click menu should contain open-file-explorer-here-as-root option
+
+
+text alpha slider still not working
+-----------------------------------
+- reproducible: ?(describe how, if possible)
+- screenshot: highlight the problem
+
+
+full screen toggle, resolution sliders
+--------------------------------------
+- started: windowoptions
+
+
+make proper file selector with directory viewer
+-----------------------------------------------
+- different views (details, tiles)
+- clicking on filename opens detailed information about the file
+- display current directory
+- change current directory
+    - back/forward buttons, up button
+    - address bar
+- started: fileexplorer
+
+
+optimize render
+---------------
+- cache every x layers
+- batch draw rects of the same color and depth
+- when re-drawing an object, check to see if another object with that size and profile has been drawn
+- give each window object a texture to cache the result of its drawing
+    - can share textures from objects of the same size, theme, and theme profile
+- don't draw occluded objects
+- if a window object creates a child and that child does not have limited size, then the window object is not visible
+    - only if the children are opaque
+
+
+create Animations
+-----------------
+- draw each frame and cache it ahead of time
+    - must be done after component is organized
+- copy cached frame to screen when rendering
+
+2d slider pad
+-------------
+- useful for e.g. changing position
+
+
+Tip Bar
+-------
+- set timeout on tip bar text?
+- implement colors in tip bar text?
+
+
+autoreferences
+--------------
+- finish converting autoreferences:
+    - do tabs/window
+    - do sdl_window
+
+
+indicate unusable buttons as being unusable (e.g. grey-out)
+-----------------------------------------------------------
+- fade-out effects for hide/show
+- hide/show buttons
+    - mouseover to left/right/top/bottom to see hide/show buttons
+
+
+theme designer applet
+---------------------
+- visual programming app to make designing themes easy
+
+
+improve auto-documentation (pride.components.package)
+-----------------------------------------------------
+- how?
+
+
+add api file + start using versionhelper
+----------------------------------------
+- separate gui into separate package due to different levels of stability
+
+
+change user.encrypt to use a per-cryptogram key to avoid dealing with nonces
+----------------------------------------------------------------------------
+- use a random salt in user2.User.derive_master_keys
+
+
+deal with certificates properly
+-------------------------------
+- ...
+
+
+Ideas
+=====
 
 post-initializer inheritance
-append each post-initializer into a list
-call them all in succession
-
-add_to method that adds a Base object to a list
-#self.append_to(list)
-#   keeps a handle on list
-#   on delete, removes `self` from list
+----------------------------
+- append each post-initializer into a list
+- call them all in succession
 
 
+auto remove Base objects from lists (or containers)
+---------------------------------------------------
+- add_to method that adds a Base object to a list
+- #self.append_to(list)
+- #   keeps a handle on list
+-   on delete, removes `self` from list
 
-changes
------
+
+Software install module
+-----------------------
+
+def install_packages(install_script)
+    if pride.components.shell.get_permission(prompt):
+        os.system(install_script)
 
 
-notes
-----
+Changes
+=======
+- changed audiolibrary code to perform fewer calls and return True when software is successfully installed
+    - create
+Notes
+=====
+
 RPC acted weird on first run, then worked fine?
+-----------------------------------------------
+- reproducible: ?
 
 
-known issues
------
+Known Issues
+============
+
 encryptedstorage does not have OS provided encryption on linux
-    - there is no equivalent on linux
-    - just switch providers if using linux
+--------------------------------------------------------------
+- there is no equivalent on linux
+- just switch providers if using linux

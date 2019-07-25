@@ -28,6 +28,7 @@ import pride.components.base as base
 import pride.functions.utilities
 import pride.functions.persistence
 
+import pickle
 DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.persistence.save_data),
                                                      "loads" : staticmethod(pride.functions.persistence.load_data)})
 
@@ -204,7 +205,6 @@ class Socket(base.Wrapper):
                 self.recv(buffer_size)
             elif error.errno not in (10035, 11, 2):
                 raise
-
         _byte_count = self._byte_count
         self._byte_count = 0
         return bytes(self._buffer[:_byte_count])

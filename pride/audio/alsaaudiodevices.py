@@ -6,17 +6,27 @@ import pride
 import pride.components.base as base
 import pride.audio.audiolibrary as audiolibrary
 
-# to install alsaaudio, use pride.audio.utilities.install_pyalsaaudio
-import alsaaudio
+# to install alsaaudio, use pride.audio.install_pyalsaaudio
+try:
+    import alsaaudio
+except ImportError:
+    print("alsaaudio not installed; Requesting permission to install required packages")
+    import pride.audio
+    success = pride.audio.install_pyalsaaudio()
+    del pride.audio
+    if not success:
+        print("alsaaudio installation failed")
+        raise
+    import alsaaudio
 
 class Audio_Device(audiolibrary.Audio_Reactor):
 
-    possible_options = ("rate", "channels", "format", "sample_size", 
+    possible_options = ("rate", "channels", "format", "sample_size",
                         "period", "type", "card")
-                        
+
     def _get_options(self):
         return dict((attribute, getattr(self, attribute)) for attribute in
-                     self.possible_options if 
+                     self.possible_options if
                      getattr(self, attribute, None) is not None)
     options = property(_get_options)
 
@@ -38,7 +48,7 @@ class Audio_Device(audiolibrary.Audio_Reactor):
     def __init__(self, **kwargs):
         super(Audio_Device, self).__init__(**kwargs)
         self.alert("{} {} initializing".format(self.name, self.card), level='v')
-                  
+
         self.pcm = alsaaudio.PCM(type=self.type, mode=self.mode, card=self.card)
         self.pcm.setchannels(self.channels)
         self.pcm.setrate(self.rate)
@@ -65,20 +75,20 @@ class Audio_Input(Audio_Device):
     def __init__(self, **kwargs):
         super(Audio_Input, self).__init__(**kwargs)
         if not self.data_source:
-            self.data_source = self.pcm            
+            self.data_source = self.pcm
         self.byte_scalar = self.sample_size / 8
-                
+
     def get_data(self):
         frame_count, data = self.pcm.read()
         self.handle_audio_output(data)
-        
+
         if self.playing_files:
             byte_count = frame_count * self.byte_scalar
             for _file in self.playing_files:
                 file_data = _file.read(byte_count)
                 for listener in self.playing_to[_file]:
                     objects[listener].handle_audio_input(_file.name, file_data)
-                                                 
+
     def play_file(self, _file, listeners=("Audio_Output", )):
         self.playing_files.append(_file)
         self.playing_to[_file] = listeners
@@ -87,12 +97,12 @@ class Audio_Input(Audio_Device):
 
     def stop_file(self, _file):
         self.playing_files.remove(_file)
-        
+
         for listener in self.playing_to[_file]:
             objects[listener].handle_end_of_stream()
         del self.playing_to[_file]
-        
-        
+
+
 class Audio_Output(Audio_Device):
 
     defaults = {"type" : 0, # PCM_PLAYBACK
@@ -105,7 +115,7 @@ class Audio_Output(Audio_Device):
         if self.listeners:
             super(Audio_Output, self).handle_audio_input(sender, audio_data)
         self.pcm.write(audio_data)
-                
+
     """def _new_thread(self):
         data_source = getattr(self, "data_source", self.pcm)
         read_data = self.data_source.read
@@ -118,10 +128,10 @@ class Audio_Output(Audio_Device):
             read_data = partial(self.data_source.read, full_buffer_size)
         else:
             read_data = lambda: ''.join(self.read_messages())
-        
+
         data = ''
         while True:
-            data += read_data()            
+            data += read_data()
             buffer_size = len(data)
             if buffer_size >= full_buffer_size:
                 if self.mute:

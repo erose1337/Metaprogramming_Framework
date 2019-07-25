@@ -9,7 +9,7 @@ import sdl2
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
 
 def _default_colors():
-    return {"background" : pride.gui.color.Color(180, 180, 180, 200),
+    return {"background" : pride.gui.color.Color(18, 18, 18, 200),
             "shadow" : pride.gui.color.Color(0, 0, 0, 255),
             "shadow_thickness" : 5,
             "text_background" : pride.gui.color.Color(0, 0, 85, 255),
@@ -89,7 +89,6 @@ class Minimal_Theme(Theme):
         if self.text:
             assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            print self.text_color
             self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                     bg_color=self.text_background_color, color=self.text_color,
                     center_text=self.center_text, hide_excess_text=self.hide_excess_text)

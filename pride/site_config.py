@@ -127,7 +127,11 @@ class Config_File(object):
             else:
                 raise
         _config.set(key0, key1, "'{}'".format(base64.standard_b64encode(value)))
-        with open(self.filename, 'r+') as _file:
+        if os.path.exists(self.filename):
+            mode = "r+"
+        else:
+            mode = 'w'
+        with open(self.filename, mode) as _file:
             _config.write(_file)
 
 config = Config_File(CONFIGURATION_FILE)

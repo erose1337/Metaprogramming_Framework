@@ -383,7 +383,7 @@ class Form(pride.gui.gui.Window):
 
 class Dropdown_Box(pride.gui.gui.Container):
 
-    defaults = {"entry_h_range" : (20, 40), "selection" : None, "initial_value" : '',
+    defaults = {"entry_h_range" : (.025, .05), "selection" : None, "initial_value" : '',
                 "menu_open" : False, "callback" : tuple()}
 
     def __init__(self, **kwargs):

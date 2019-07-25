@@ -1,6 +1,7 @@
 import sys
 import os
 import ssl
+import socket
 
 import pride.components.base
 import pride.components.network
@@ -133,6 +134,7 @@ class SSL_Client(pride.components.network.Tcp_Client):
         self.ssl_connect()
 
     def ssl_connect(self):
+        assert not self.ssl_authenticated
         try:
             self.ssl_socket.do_handshake()
         except ssl.SSLError as error:
@@ -152,7 +154,8 @@ class SSL_Client(pride.components.network.Tcp_Client):
             super(SSL_Client, self).on_select()
 
     def on_ssl_authentication(self):
-        self.alert("Authenticated", level=0)
+        self.alert("Authenticated", level='v')
+        assert self.ssl_authenticated
 
 
 class SSL_Socket(pride.components.network.Tcp_Socket):
@@ -177,6 +180,7 @@ class SSL_Socket(pride.components.network.Tcp_Socket):
             super(SSL_Socket, self).on_select()
 
     def ssl_connect(self):
+        assert not self.ssl_authenticated
         try:
             self.ssl_socket.do_handshake()
         except ssl.SSLError as error:
@@ -186,10 +190,17 @@ class SSL_Socket(pride.components.network.Tcp_Socket):
         else:
             self.ssl_authenticated = True
             self.wraps(self.ssl_socket)
+            #assert self.socket is self.ssl_socket
             self.on_ssl_authentication()
 
     def on_ssl_authentication(self):
         self.alert("Authenticated", level='v')
+        assert self.ssl_authenticated
+        try:
+            self.on_select()
+        except socket.error as error:
+            pride.objects["/Python/Network"].error_handler.dispatch(self, error,
+                      pride.components.network.ERROR_CODES[error.errno].lower())
 
 
 class SSL_Server(pride.components.network.Server):

@@ -5,6 +5,7 @@ import itertools
 import time
 import functools
 from os import path
+import socket
 
 import pride
 import pride.components.base
@@ -72,8 +73,9 @@ def packetize_recv(recv):
     def _recv(self, buffer_size=0):
         try:
             data = self._old_data + recv(self, buffer_size)
-        except KeyError:
-            data = recv(self, buffer_size)
+        except socket.error:
+            data = self._old_data
+
         self._old_data = bytearray()
         packets = []
         while data:
@@ -82,7 +84,12 @@ def packetize_recv(recv):
             except ValueError:
                 self._old_data = data
                 break
+
             packet_size = int(packet_size)
+            if len(data) < packet_size:
+                self._old_data = bytes(packet_size) + ' ' + data
+                break
+
             packets.append(data[:packet_size])
             data = data[packet_size:]
         return packets
@@ -128,20 +135,20 @@ class Session(pride.components.base.Base):
         return self._callbacks.pop(0)
 
 
-class Packet_Client(pride.components.network.Tcp_Client):
+class Packet_Client(pride.components.networkssl.SSL_Client):
     """ An SSL_Client that uses packetized send and recv (client side) """
     defaults = {"_old_data" : bytes()}
 
-    send = packetize_send(pride.components.network.Tcp_Client.send)
-    recv = packetize_recv(pride.components.network.Tcp_Client.recv)
+    send = packetize_send(pride.components.networkssl.SSL_Client.send)
+    recv = packetize_recv(pride.components.networkssl.SSL_Client.recv)
 
 
-class Packet_Socket(pride.components.network.Tcp_Socket):
+class Packet_Socket(pride.components.networkssl.SSL_Socket):
     """ An SSL_Socket that uses packetized send and recv (server side) """
     defaults = {"_old_data" : bytes()}
 
-    send = packetize_send(pride.components.network.Tcp_Socket.send)
-    recv = packetize_recv(pride.components.network.Tcp_Socket.recv)
+    send = packetize_send(pride.components.networkssl.SSL_Socket.send)
+    recv = packetize_recv(pride.components.networkssl.SSL_Socket.recv)
 
 
 class Rpc_Connection_Manager(pride.components.base.Base):
@@ -173,7 +180,7 @@ class Rpc_Connection_Manager(pride.components.base.Base):
         return attributes
 
 
-class Rpc_Server(pride.components.network.Server):
+class Rpc_Server(pride.components.networkssl.SSL_Server):
     """ Creates Rpc_Sockets for handling rpc requests. By default, this
         server runs on the localhost only, meaning it is not accessible
         from the network. """
@@ -189,8 +196,8 @@ class Rpc_Client_Socket(Packet_Client):
 
     mutable_defaults = {"_requests" : list, "_callbacks" : list}
 
-    def on_connect(self):
-        super(Rpc_Client_Socket, self).on_connect()
+    def on_ssl_authentication(self):
+        super(Rpc_Client_Socket, self).on_ssl_authentication()
         count = 1
         length = len(self._requests)
         for request, callback in self._requests:
@@ -249,11 +256,11 @@ class Rpc_Socket(Packet_Socket):
         super(Rpc_Socket, self).__init__(**kwargs)
         self.rpc_workers = itertools.cycle(objects["/Python"].objects["Rpc_Worker"])
 
-    def on_connect(self):
+    def on_ssl_authentication(self):
         if self.idle_after:
             self._idle_timer = time.time()
             pride.Instruction(self.reference, "check_idle").execute(priority=self.idle_after)
-        return super(Rpc_Socket, self).on_connect()
+        return super(Rpc_Socket, self).on_ssl_authentication()
 
     def check_idle(self):
         if time.time() - self._idle_timer >= self.idle_after:

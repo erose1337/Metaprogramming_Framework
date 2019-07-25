@@ -65,8 +65,8 @@ HOST = socket.gethostbyname(socket.gethostname())
 class Socket_Error_Handler(pride.components.base.Base):
 
     def dispatch(self, sock, error, error_name):
-        #if error_name == "ssl_error_want_read":
-        #    return
+        if error_name == "ssl_error_want_read":
+            return
         sock.alert("socket.error: {}".format(error_name),
                    level=sock.verbosity.get(error_name, sock.verbosity["unhandled"]))
         if error_name != "connection_in_progress" or sock.timeout_count <= 0:
@@ -202,7 +202,7 @@ class Socket(base.Wrapper):
                 old_buffer.extend(bytearray(2 * len(old_buffer)))
                 Socket._memoryview = memoryview(old_buffer)
                 self.recv(buffer_size)
-            elif error.errno not in (10035, 11):
+            elif error.errno not in (10035, 11, 2):
                 raise
 
         _byte_count = self._byte_count
@@ -586,7 +586,6 @@ class Network(scheduler.Process):
                 message = "Caught non socket.error during recv: {}".format(traceback.format_exc())
                 _socket.alert(message, level=0)
                 _socket.delete()
-              #  raise
                 read_progress += (read_counter + 1)
                 readable_count -= 1
             else:

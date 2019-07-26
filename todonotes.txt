@@ -14,6 +14,33 @@ Homescreen
     - right click menu should contain open-file-explorer-here-as-root option
 
 
+Security issues
+===============
+
+Make  `encrypt` use a per-message key
+-------------------------------------
+- Can use randomly generated nonce with effectively no concerns regarding size and collisions
+    - Current behavior uses randomly-generated nonces with GCM mode, which is risky
+
+Ensure cryptogram header is flexible to support updates to algorithms
+---------------------------------------------------------------------
+- Could be as simple as a unit test for existing code
+- Could mean re-writing existing code
+
+Properly define different data types (in transit, at rest, in-program, etc) and how encryption should be used with them
+-----------------------------------------------------------------------------------------------------------------------
+- Currently, the User component and Encryption_Service can both perform encryption
+    - Which one should be used when?
+- The File_System component supports encryption
+    - When should it be used?
+
+Set up tls properly
+-------------------
+- Self-signed certificates currently providing little security
+- Ensure that the default configuration is secure
+
+
+
 text alpha slider still not working
 -----------------------------------
 - reproducible: ?(describe how, if possible)
@@ -128,11 +155,6 @@ def install_packages(install_script)
     if pride.components.shell.get_permission(prompt):
         os.system(install_script)
 
-
-Changes
-=======
-- changed audiolibrary code to perform fewer calls and return True when software is successfully installed
-    - create
 Notes
 =====
 

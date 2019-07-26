@@ -65,10 +65,10 @@ class User(pride.components.base.Base):
                 "username" : None, "private_key" : None, "public_key" : None, "secret" : None,
                 "master_encryption_key" : None, "master_mac_key" : None,
                 "data_encryption_key" : None, "data_mac_key" : None,
-                "public_key" : None, "private_key" : None,
+                "public_key" : None, "private_key" : None, "password" : None,
 
                 "storage_reference" : "/Python/Persistent_Storage",
-                "password_prompt" : "{}: Please enter the password for {{}}: ",
+                "password_prompt" : "{}: Please enter the password for '{}': ",
                 "auto_register" : False, "auto_login" : True}
 
     parser_args = ("username", )
@@ -79,7 +79,7 @@ class User(pride.components.base.Base):
 
     def _get_password(self):
         if self._password is None:
-            self._password = getpass.getpass(self.password_prompt.format(self.username))
+            self._password = getpass.getpass(self.password_prompt.format(self.reference, self.username))
         return self._password
     def _set_password(self, value):
         self._password = value
@@ -95,7 +95,6 @@ class User(pride.components.base.Base):
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
-        self.password_prompt = self.password_prompt.format(self.reference)
         if self.auto_login:
             self.login()
 

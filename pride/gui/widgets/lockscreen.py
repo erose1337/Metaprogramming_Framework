@@ -80,12 +80,13 @@ class Username_Password_Field(pride.gui.gui.Container):
                                           orientation="stacked")
         buttons_field = self.create("pride.gui.gui.Container", pack_mode="top",
                                     h_range=(0, .10))
-        self.autoregister = buttons_field.create("pride.gui.widgets.buttons.Toggle", text="auto register",
+        self.autoregister = buttons_field.create("pride.gui.widgets.buttons.Toggle", label="auto register",
                                                  state=False, pack_mode="left", scale_to_text=True,
                                                  tip_bar_text="Toggle: Automatically register entered username if it does not exist")
         self.submit = buttons_field.create("pride.gui.widgetlibrary.Method_Button", text="Submit",
                                            method="submit_credentials", target=self.reference,
                                            scale_to_text=False, pack_mode="left",
+                                           tip_bar_text="Attempt to log in with these credentials",
                                            theme_profile="default")
 
     def _set_password(self, field_name, value):
@@ -104,7 +105,7 @@ class Username_Password_Field(pride.gui.gui.Container):
             self.show_status("Must enter a username")
             return
         text = "Computing: {}\n".format(user.get_derivation_description())
-        self.parent_application.status_display.text += text
+        self.parent_application.status_display.write_to(text)
         self.parent_application.parent_application.show_status("Attempting login...")
         self.sdl_window.run()
         assert self.username == self.username_field.field_value, (self.username, self.username_field.text)
@@ -126,6 +127,11 @@ class Username_Password_Field(pride.gui.gui.Container):
 class Status_Display(pride.gui.gui.Container):
 
     defaults = {"center_text" : False, "scale_to_text" : False}
+
+    def write_to(self, text):
+        self.text += text
+    #    self.tip_bar_text = self.text.rsplit('\n', 1)[-1]
+    #    self.alert("Set tip_bar_text to {}".format(self.tip_bar_text))
 
 
 class Login_Screen(pride.gui.gui.Application):

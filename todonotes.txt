@@ -1,7 +1,12 @@
-Currently working on: Homescreen
+Currently working on: bug:
 
 To Do/Bugs
 =====
+
+- Animation: Smoothly glow brighter/softer (apply on hover)
+    - Create "cycle" parameter that cycles over a given series of color profiles
+
+- May need to re-do the layout of toggles
 
 Homescreen
 ----------
@@ -13,6 +18,40 @@ Homescreen
 - set up file explorer
     - right click menu should contain open-file-explorer-here-as-root option
 
+        ---------- tab bar -----------------------------------------------------
+        | Menu | open applications | shortcuts | notifications | date/time|    |
+        ------------------------------------------------------------------------
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                  application area                                    |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        |                                                                      |
+        ------------------------------------------------------------------------
+
+
+- Menu:
+
+        |--------------------------------------------------------------------|
+        |            ?                                   |log out|sleep|power|
+        |--------------------------------------------------------------------|
+        | links to the      |      shortcuts to      |      shortcuts to     |
+        | most frequently   |      most frequently   |      settings         |
+        | used programs     |      used data         |                       |
+        |                   |                        |                       |
+        |                   |                        |                       |
+        |                   |                        |                       |
+        |                   |                        |                       |
+        |--------------------------------------------------------------------|
+        | Menu |   open applications | shortcuts | notifications | date/time |
+        ---------------------------------------------------------------------|
 
 Security issues
 ===============

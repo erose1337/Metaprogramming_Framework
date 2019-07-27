@@ -1,5 +1,12 @@
 import pride.gui.gui
 
+class Proxy_Button(pride.gui.gui.Button):
+
+    def left_click(self, mouse):
+        super(Proxy_Button, self).left_click(mouse)
+        self.parent.left_click(mouse)
+
+
 class Toggle(pride.gui.gui.Button):
 
     defaults = {"state" : False, "pack_mode" : "left",
@@ -9,9 +16,13 @@ class Toggle(pride.gui.gui.Button):
 
     def __init__(self, **kwargs):
         super(Toggle, self).__init__(**kwargs)
-        self.create("pride.gui.gui.Container", text=self.label, pack_mode="top",
-                    scale_to_text=False)
-        indicator = self.indicator = self.create(self.indicator_type)
+        label = self.create("pride.gui.gui.Container", text=self.label, pack_mode="top",
+                            scale_to_text=False, h_range=(0, .03),
+                            theme_profile="default")
+        button = self.create(Proxy_Button, pack_mode="left", tip_bar_text=self.tip_bar_text)
+        indicator = self.indicator = self.create(self.indicator_type, w_range=(0, .03),
+                                                 pack_mode="left")
+
         if self.state:
             indicator.enable_indicator()
         else:

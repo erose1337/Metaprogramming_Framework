@@ -62,7 +62,7 @@ class User(pride.components.base.Base):
                 "iv_size" : 12, "encryption_mode" : "GCM", "encryption_algorithm" : "AES",
                 "mac_hash_algorithm" : "sha256",
 
-                "username" : None, "private_key" : None, "public_key" : None, "secret" : None,
+                "username" : '', "private_key" : None, "public_key" : None, "secret" : None,
                 "master_encryption_key" : None, "master_mac_key" : None,
                 "data_encryption_key" : None, "data_mac_key" : None,
                 "public_key" : None, "private_key" : None, "password" : None,

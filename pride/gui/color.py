@@ -96,3 +96,15 @@ class Color(object):
 
     def __str__(self):
         return "{}({}, {}, {}, {})".format(self.__class__.__name__, self.r, self.g, self.b, self.a)
+
+    def __mul__(self, scalar):
+        for attribute in "rgba":
+            setattr(self, attribute, int(getattr(self, attribute) * scalar))
+        return self
+
+    def __add__(self, color2):
+        self.r += color2.r
+        self.g += color2.g
+        self.b += color2.b
+        self.a += color2.a
+        return self

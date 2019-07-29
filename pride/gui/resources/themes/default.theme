@@ -5,7 +5,6 @@ borderless
 ----------
 
       - background: (180, 180, 180, 200)
-      - color: (110, 110, 110, 255)
       - glow: (255, 255, 255, 235)
       - glow_thickness: 0
       - shadow: (0, 0, 0, 255)
@@ -18,7 +17,6 @@ default
 -------
 
       - background: (20, 34, 51, 12)
-      - color: (110, 110, 110, 255)
       - glow: (255, 255, 255, 235)
       - glow_thickness: 0
       - shadow: (31, 105, 172, 128)
@@ -31,7 +29,6 @@ hover
 -----
 
       - background: (59, 170, 255, 65)
-      - color: (110, 110, 110, 255)
       - glow: (24, 119, 255, 255)
       - glow_thickness: 4
       - shadow: (88, 146, 195, 255)
@@ -44,7 +41,6 @@ indicator
 ---------
 
       - background: (11, 91, 255, 132)
-      - color: (110, 110, 110, 255)
       - glow: (148, 255, 255, 79)
       - glow_thickness: 4
       - shadow: (0, 0, 0, 255)
@@ -57,7 +53,6 @@ inert
 -----
 
       - background: (85, 85, 185, 75)
-      - color: (110, 110, 110, 255)
       - glow: (255, 255, 255, 235)
       - glow_thickness: 0
       - shadow: (0, 0, 0, 255)
@@ -70,7 +65,6 @@ interactive
 -----------
 
       - background: (53, 62, 164, 30)
-      - color: (110, 110, 110, 255)
       - glow: (18, 104, 255, 255)
       - glow_thickness: 5
       - shadow: (48, 111, 186, 255)
@@ -83,7 +77,6 @@ placeholder
 -----------
 
       - background: (0, 0, 0, 0)
-      - color: (110, 110, 110, 255)
       - glow: (255, 255, 255, 235)
       - glow_thickness: 0
       - shadow: (0, 0, 0, 255)

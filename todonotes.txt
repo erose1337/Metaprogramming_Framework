@@ -1,10 +1,37 @@
-Currently working on: bug:
+Currently working on:
+
+- Animation: Smoothly glow brighter/softer (apply on hover)
+    - When changing theme_profile, transition smoothly between the two profiles
+        - a state counter
+        - a start_profile and end_profile
+
+        state = self._state_counter
+        new_profile = self._new_profile
+        if state == transition_duration:
+            self.theme_profile = new_profile
+            self._old_profile = self._new_profile = None
+            self._state_counter = 0
+        else:
+            profile = dict()
+            for key, color in self.old_profile.iteritems():
+                new_color = color_lerp(color, new_profile[key], state)
+                profile[key] = new_color
+            self.theme_profile = profile
+        self._state_counter += 1
 
 To Do/Bugs
 =====
 
-- Animation: Smoothly glow brighter/softer (apply on hover)
-    - Create "cycle" parameter that cycles over a given series of color profiles
+- submit button on lockscreen still looks greyed out when username and password are in the fields
+
+Refactor gui package
+--------------------
+- refactor pride.gui.gui.Window_Object into different objects with separate responsibilities
+    - already started in the form of the Organized_Object class
+- refactor widgetlibrary into .widgets package
+- move any programs into the .programs package
+- remove all deprecated and/or unused+untested code
+
 
 - May need to re-do the layout of toggles
 
@@ -17,6 +44,7 @@ Homescreen
 - set up python shell
 - set up file explorer
     - right click menu should contain open-file-explorer-here-as-root option
+- location of tab bar should be customizable
 
         ---------- tab bar -----------------------------------------------------
         | Menu | open applications | shortcuts | notifications | date/time|    |
@@ -56,6 +84,8 @@ Homescreen
 Security issues
 ===============
 
+- use a random salt in user2.User.derive_master_keys
+
 Make  `encrypt` use a per-message key
 -------------------------------------
 - Can use randomly generated nonce with effectively no concerns regarding size and collisions
@@ -77,6 +107,12 @@ Set up tls properly
 -------------------
 - Self-signed certificates currently providing little security
 - Ensure that the default configuration is secure
+
+deal with certificates properly
+-------------------------------
+- ...
+
+
 
 
 
@@ -160,14 +196,6 @@ add api file + start using versionhelper
 - separate gui into separate package due to different levels of stability
 
 
-change user.encrypt to use a per-cryptogram key to avoid dealing with nonces
-----------------------------------------------------------------------------
-- use a random salt in user2.User.derive_master_keys
-
-
-deal with certificates properly
--------------------------------
-- ...
 
 
 Ideas

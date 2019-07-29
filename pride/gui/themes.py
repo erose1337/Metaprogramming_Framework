@@ -15,9 +15,7 @@ def _default_colors():
             "text_background" : pride.gui.color.Color(0, 0, 85, 255),
             "text" : pride.gui.color.Color(45, 45, 45, 255),
             "glow" : pride.gui.color.Color(255, 255, 255, 235),
-            "glow_thickness" : 0,
-            "color" : pride.gui.color.Color(110, 110, 110, 255)} # to do: remove unused "color" key
-
+            "glow_thickness" : 0}
 
 class Theme(pride.components.base.Wrapper):
 
@@ -80,7 +78,7 @@ class Minimal_Theme(Theme):
         if glow_thickness:
             r, g, b, a = self.glow_color
             fade_scalar = a / glow_thickness
-            assert fade_scalar > 0
+            #assert fade_scalar > 0
             for thickness in range(glow_thickness):
                 self.draw("rect", (x - thickness, y - thickness,
                                    w + (2 * thickness), h + (2 * thickness)),

@@ -5,6 +5,7 @@ import pride.functions.utilities
 import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
+import pride.gui.color
 import pride.gui.sdllibrary
 Instruction = pride.Instruction
 
@@ -247,7 +248,7 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
         #            self._pack_scheduled2 = True
 
 
-class Window_Object(Organized_Object):
+class _Window_Object(Organized_Object):
     """ to do: write documentation!
 
         FAQ: I get the following message when exiting, why?:
@@ -309,7 +310,7 @@ class Window_Object(Organized_Object):
             self.texture_invalid = True
         #if self.scale_to_text and coordinate == 'w' and self.w_range[1] > value:
         #    self._backup_text = self.text
-        super(Window_Object, self)._on_set(coordinate, value)
+        super(_Window_Object, self)._on_set(coordinate, value)
 
     def _get_text(self):
         return self._text
@@ -413,7 +414,7 @@ class Window_Object(Organized_Object):
 
     def __init__(self, **kwargs):
         #self.colors = self.theme_type.theme_colors.copy()#DEFAULT_COLORS.copy()
-        super(Window_Object, self).__init__(**kwargs)
+        super(_Window_Object, self).__init__(**kwargs)
         self.texture_invalid = True
 
         self.theme = self.create(self.theme_type, wrapped_object=self)
@@ -427,11 +428,11 @@ class Window_Object(Organized_Object):
     def create(self, *args, **kwargs):
         kwargs.setdefault('z', self.z + 1)
         kwargs.setdefault("sdl_window", self.sdl_window)
-        return super(Window_Object, self).create(*args, **kwargs)
+        return super(_Window_Object, self).create(*args, **kwargs)
 
     def add(self, _object):
         self._children.append(_object)
-        super(Window_Object, self).add(_object)
+        super(_Window_Object, self).add(_object)
 
     def remove(self, _object):
         try:
@@ -440,7 +441,7 @@ class Window_Object(Organized_Object):
             if _object is not self.theme:
                 self.alert("Failed to remove {} from _children".format(_object))
                 raise
-        super(Window_Object, self).remove(_object)
+        super(_Window_Object, self).remove(_object)
 
     def press(self, mouse):
         self.alert("Pressing", level=self.verbosity["press"])
@@ -557,7 +558,7 @@ class Window_Object(Organized_Object):
         self.theme.draw_texture()
 
     def pack(self):
-        super(Window_Object, self).pack()
+        super(_Window_Object, self).pack()
         self.sdl_window._schedule_run()
 
     def delete(self):
@@ -572,7 +573,7 @@ class Window_Object(Organized_Object):
         if self.parent.reference != self.sdl_window:
             #self.parent.pack()
             self.pack()
-        super(Window_Object, self).delete()
+        super(_Window_Object, self).delete()
 
     def deselect(self, mouse, next_active_object):
         self._selected = False
@@ -592,7 +593,7 @@ class Window_Object(Organized_Object):
             self.text = self.text[:-1]
 
     def __getstate__(self):
-        state = super(Window_Object, self).__getstate__()
+        state = super(_Window_Object, self).__getstate__()
         state["theme"] = self.theme.save()
         del state["_draw_operations"]
         del state["_children"]
@@ -603,11 +604,11 @@ class Window_Object(Organized_Object):
         return state
 
     def on_load(self, state):
-        super(Window_Object, self).on_load(state)
+        super(_Window_Object, self).on_load(state)
         self.theme = pride.functions.utilities.resolve_string(self.theme_type).load(self.theme)
         self.theme.wraps(self)
         self._draw_operations = []
-        self._children = list(super(Window_Object, self).children)
+        self._children = list(super(_Window_Object, self).children)
         print self, "on load"
         import pprint
         pprint.pprint(self.objects)
@@ -652,6 +653,83 @@ class Window_Object(Organized_Object):
             if hasattr(self.theme, "draw_frames"):
                 raise
 
+def lerp(x, y, t):
+    return x * (1.0 - t) + y * t
+
+class Animated_Object(_Window_Object):
+
+    defaults = {"_transition_state" : 0, "frame_count" : 25}#, "animating" : False}
+    predefaults = {"animating" : False, "_old_theme" : None}
+
+    def _get_theme_profile(self):
+        return super(Animated_Object, self)._get_theme_profile()
+    def _set_theme_profile(self, value):
+        if value != self.theme_profile:
+            self._old_theme = self.theme_profile
+        super(Animated_Object, self)._set_theme_profile(value)
+
+        if self.theme_profile == self._old_theme:
+            assert not self.animating
+        if self._old_theme is not None and self._old_theme != self.theme_profile:
+            self.start_animation()
+    theme_profile = property(_get_theme_profile, _set_theme_profile)
+
+    def start_animation(self):
+        self.animating = True
+        self.texture_invalid = True
+        self._state_counter = 0
+        assert self.theme_profile != self._old_theme
+
+    def _invalidate_texture(self):
+        self.texture_invalid = True
+
+    def end_animation(self):
+        self.animating = False
+
+    def draw_texture(self):
+        animating = self.animating
+        state_counter = self._transition_state
+        if state_counter == self.frame_count:
+            try:
+                self.colors[self.theme_profile] = self._colors_backup
+            except KeyError:
+                pass
+            self.end_animation()
+        elif animating:
+            assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
+            if not state_counter:
+                # a shallow copy might cause issues because Color objects are mutable
+                self._colors_backup = self.colors.get(self.theme_profile, dict()).copy()
+            assert state_counter < self.frame_count, (state_counter, self.frame_count)
+            self.next_frame()
+            self._transition_state += 1
+            self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
+        super(Animated_Object, self).draw_texture()
+
+    def next_frame(self):
+        state_counter = self._transition_state
+        try:
+            old_colors = self.colors[self._old_theme]
+        except KeyError:
+            old_colors = self.theme.theme_colors[self._old_theme]
+
+        for key in old_colors.keys():
+            old_value = old_colors[key]
+            if key not in ("shadow_thickness", "glow_thickness"):
+                key += "_color"
+            end_value = getattr(self, key)
+            intermediate_value = lerp(old_value, end_value, 1.0 /(1 + state_counter))
+            #print("Old value: {}".format(old_value))
+            #print("Intermediate value: {}".format(intermediate_value))
+            #print("End value: {}".format(end_value))
+            #raw_input()
+            if key in ("shadow_thickness", "glow_thickness"):
+                intermediate_value = int(intermediate_value)
+            setattr(self, key, intermediate_value)
+
+
+Window_Object = Animated_Object # we can upgrade everything in-place by changing this
+
 
 class Window(Window_Object):
 
@@ -679,7 +757,8 @@ class Application(Window):
     defaults = {"startup_components" : ("pride.gui.widgetlibrary.Task_Bar", ),
                 "application_window_type" : "pride.gui.gui.Window",
                 "tip_bar_type" : "pride.gui.gui.Container",
-                "tip_bar_enabled" : True}
+                "tip_bar_enabled" : True,
+                "tip_bar_tip_bar_text" : "Tip Bar: Provides details, hints, and status information"}
     predefaults = {"transparency_enabled" : False}
     autoreferences = ("tip_bar", )
 
@@ -690,8 +769,9 @@ class Application(Window):
 
     def initialize_tip_bar(self):
         if self.tip_bar_enabled:
-            self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05),
-                                       pack_mode="bottom", text="tip bar")
+            self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05), center_text=False,
+                                       pack_mode="bottom", text="tip bar",
+                                       tip_bar_text=self.tip_bar_tip_bar_text)
         else:
             self.tip_bar = self.parent_application.tip_bar
 

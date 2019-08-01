@@ -34,6 +34,8 @@ class _Field_Entry(pride.gui.widgetlibrary.Field_Entry):
         super(_Field_Entry, self).text_entry(text)
         if self.text:
             self.parent.parent.submit.theme_profile = "interactive"
+        else:
+            assert self.parent.parent.submit.theme_profile == "default"
 
     def handle_backspace(self):
         super(_Field_Entry, self).handle_backspace()

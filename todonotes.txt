@@ -1,29 +1,9 @@
-Currently working on:
+Currently working on: Forms
 
-- Animation: Smoothly glow brighter/softer (apply on hover)
-    - When changing theme_profile, transition smoothly between the two profiles
-        - a state counter
-        - a start_profile and end_profile
-
-        state = self._state_counter
-        new_profile = self._new_profile
-        if state == transition_duration:
-            self.theme_profile = new_profile
-            self._old_profile = self._new_profile = None
-            self._state_counter = 0
-        else:
-            profile = dict()
-            for key, color in self.old_profile.iteritems():
-                new_color = color_lerp(color, new_profile[key], state)
-                profile[key] = new_color
-            self.theme_profile = profile
-        self._state_counter += 1
 
 To Do/Bugs
 =====
 
-- Lockscreen: deleting username/password does not reset state of submit button
-- submit button on lockscreen still looks greyed out when username and password are in the fields
 
 Refactor gui package
 --------------------

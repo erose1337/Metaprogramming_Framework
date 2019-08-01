@@ -28,15 +28,14 @@ class Gui(pride.gui.gui.Application):
                 "startup_components" : tuple(), "startup_programs" : tuple(),
                 "theme_file" : os.path.join(pride.site_config.GUI_DIRECTORY,
                                             "resources", "themes",
-                                            "default.theme"),
-                "user_type" : User}
+                                            "default.theme")}
+    mutable_defaults = {"user" : User}
     autoreferences = ("lockscreen", )
 
     def __init__(self, **kwargs):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
-        user = self.user = self.user_type()
-        self.lockscreen = self.application_window.create(self.lockscreen_type, user=user,
+        self.lockscreen = self.application_window.create(self.lockscreen_type, user=self.user,
                                                          service_name="User", host_info=("localhost", 40022))
 
     def set_theme_colors(self, filename):

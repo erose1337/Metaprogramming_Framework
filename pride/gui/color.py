@@ -98,9 +98,11 @@ class Color(object):
         return "{}({}, {}, {}, {})".format(self.__class__.__name__, self.r, self.g, self.b, self.a)
 
     def __mul__(self, scalar):
-        for attribute in "rgba":
-            setattr(self, attribute, int(getattr(self, attribute) * scalar))
-        return self
+        return Color(r=int(self.r * scalar), g=int(self.g * scalar),
+                     b=int(self.b * scalar), a=int(self.a * scalar))
+        #for attribute in "rgba":
+        #    setattr(self, attribute, int(getattr(self, attribute) * scalar))
+        #return self
 
     def __add__(self, color2):
         self.r += color2.r
@@ -108,3 +110,6 @@ class Color(object):
         self.b += color2.b
         self.a += color2.a
         return self
+
+    def __eq__(self, color2):
+        return all(getattr(self, _color) == getattr(color2, _color) for _color in "rgba")

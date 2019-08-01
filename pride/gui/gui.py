@@ -658,74 +658,97 @@ def lerp(x, y, t):
 
 class Animated_Object(_Window_Object):
 
-    defaults = {"_transition_state" : 0, "frame_count" : 25}#, "animating" : False}
-    predefaults = {"animating" : False, "_old_theme" : None}
+    defaults = {"frame_count" : 5}
+    predefaults = {"animating" : False, "_old_theme" : None, "_colors_backup" : None,
+                   "_start_animation_enabled" : False, "_transition_state" : 0}
 
     def _get_theme_profile(self):
         return super(Animated_Object, self)._get_theme_profile()
     def _set_theme_profile(self, value):
+        if self.animating:
+            self.end_animation()
         if value != self.theme_profile:
             self._old_theme = self.theme_profile
         super(Animated_Object, self)._set_theme_profile(value)
-
-        if self.theme_profile == self._old_theme:
-            assert not self.animating
         if self._old_theme is not None and self._old_theme != self.theme_profile:
             self.start_animation()
     theme_profile = property(_get_theme_profile, _set_theme_profile)
 
-    def start_animation(self):
-        self.animating = True
-        self.texture_invalid = True
-        self._state_counter = 0
-        assert self.theme_profile != self._old_theme
+    def __init__(self, **kwargs):
+        super(Animated_Object, self).__init__(**kwargs)
+        self._start_animation_enabled = True
 
     def _invalidate_texture(self):
         self.texture_invalid = True
 
+    def start_animation(self):
+        if not self._start_animation_enabled: # dont animate when setting initial theme_profile
+            return
+        assert self.theme_profile != self._old_theme
+        self.animating = True
+        self.texture_invalid = True
+        self._transition_state = 0
+        try:
+            self._colors_backup = self.colors[self.theme_profile]
+        except KeyError:
+            self._restore_flag = False
+            self._colors_backup = dict()
+        else:
+            self._restore_flag = True
+
     def end_animation(self):
         self.animating = False
+        if self._restore_flag:
+            try:
+                self.colors[self.theme_profile].update(self._colors_backup)
+            except KeyError:
+                pass
+        self._old_theme = None
 
     def draw_texture(self):
         animating = self.animating
         state_counter = self._transition_state
-        if state_counter == self.frame_count:
-            try:
-                self.colors[self.theme_profile] = self._colors_backup
-            except KeyError:
-                pass
-            self.end_animation()
-        elif animating:
-            assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
-            if not state_counter:
-                # a shallow copy might cause issues because Color objects are mutable
-                self._colors_backup = self.colors.get(self.theme_profile, dict()).copy()
-            assert state_counter < self.frame_count, (state_counter, self.frame_count)
-            self.next_frame()
-            self._transition_state += 1
-            self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
+        if animating:
+            if state_counter == self.frame_count:
+                self.end_animation()
+            else:
+                assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
+                assert state_counter < self.frame_count, (state_counter, self.frame_count)
+                self.next_frame()
+                self._transition_state += 1
+                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
         super(Animated_Object, self).draw_texture()
 
-    def next_frame(self):
-        state_counter = self._transition_state
-        try:
-            old_colors = self.colors[self._old_theme]
-        except KeyError:
-            old_colors = self.theme.theme_colors[self._old_theme]
-
-        for key in old_colors.keys():
-            old_value = old_colors[key]
+    def next_frame(self, _cache=dict()):
+        end_profile = self.theme_profile
+        old_profile = self._old_theme
+        unit = 1.0 / self.frame_count
+        scalar = self._transition_state
+        set_theme = super(Animated_Object, self)._set_theme_profile
+        _theme_colors = self.theme.theme_colors
+        for key in self.theme.theme_colors[end_profile].keys():
             if key not in ("shadow_thickness", "glow_thickness"):
                 key += "_color"
-            end_value = getattr(self, key)
-            intermediate_value = lerp(old_value, end_value, 1.0 /(1 + state_counter))
-            #print("Old value: {}".format(old_value))
-            #print("Intermediate value: {}".format(intermediate_value))
-            #print("End value: {}".format(end_value))
-            #raw_input()
-            if key in ("shadow_thickness", "glow_thickness"):
-                intermediate_value = int(intermediate_value)
-            setattr(self, key, intermediate_value)
+            try:
+                new_value = _cache[(scalar, old_profile, end_profile, key)]
+            except KeyError:
+                if key not in ("shadow_thickness", "glow_thickness"):
+                    end_value = _theme_colors[end_profile][key[:-6]]#getattr(self, key)
+                else:
+                    end_value = _theme_colors[end_profile][key]
+                set_theme(old_profile)
+                old_value = getattr(self, key)
+                set_theme(end_profile)
+                if old_value != end_value:
+                    new_value = lerp(old_value, end_value, scalar * unit)
+                else:
+                    new_value = end_value
+                if key in ("shadow_thickness", "glow_thickness"):
+                    new_value = int(new_value)
+                _cache[(scalar, old_profile, end_profile, key)] = new_value
+            assert not isinstance(new_value, float)
+            setattr(self, key, new_value)
+        #print("Frame number {}/{}".format(scalar, self.frame_count))
 
 
 Window_Object = Animated_Object # we can upgrade everything in-place by changing this

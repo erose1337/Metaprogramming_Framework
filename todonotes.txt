@@ -22,6 +22,7 @@ Currently working on:
 To Do/Bugs
 =====
 
+- Lockscreen: deleting username/password does not reset state of submit button
 - submit button on lockscreen still looks greyed out when username and password are in the fields
 
 Refactor gui package

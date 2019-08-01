@@ -66,6 +66,7 @@ class User(pride.components.base.Base):
                 "master_encryption_key" : None, "master_mac_key" : None,
                 "data_encryption_key" : None, "data_mac_key" : None,
                 "public_key" : None, "private_key" : None, "password" : None,
+                "logged_in" : False,
 
                 "storage_reference" : "/Python/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password for '{}': ",
@@ -124,6 +125,7 @@ class User(pride.components.base.Base):
 
         self.add(self.private_key)
         self.add(self.public_key)
+        self.logged_in = True
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
 
     def attempt_login(self):
@@ -148,6 +150,7 @@ class User(pride.components.base.Base):
 
         self.add(self.private_key)
         self.add(self.public_key)
+        self.logged_in = True
         self.alert("Logged in successfully", level=self.verbosity["login_success"])
         return True
 

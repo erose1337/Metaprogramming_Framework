@@ -35,8 +35,11 @@ class Gui(pride.gui.gui.Application):
     def __init__(self, **kwargs):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
-        self.lockscreen = self.application_window.create(self.lockscreen_type, user=self.user,
-                                                         service_name="User", host_info=("localhost", 40022))
+        if not self.user.logged_in:
+            self.lockscreen = self.application_window.create(self.lockscreen_type, user=self.user,
+                                                            service_name="User", host_info=("localhost", 40022))
+        else:
+            self.launch_programs()
 
     def set_theme_colors(self, filename):
         self.show_status("Importing color options...")
@@ -62,6 +65,9 @@ class Gui(pride.gui.gui.Application):
     def login_success(self, username):
         self.show_status("Logged in as {}".format(username))
         self.lockscreen.delete()
+        self.launch_programs()
+
+    def launch_programs(self):
         window = self.sdl_window
         for program_type in self.startup_programs:
             window.create(program_type)

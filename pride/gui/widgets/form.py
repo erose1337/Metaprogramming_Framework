@@ -243,8 +243,6 @@ class Form(pride.gui.gui.Window):
     @classmethod
     def unit_test(cls):
         import pride.gui.main
-        class Test_User(pride.gui.main.User):
-            defaults = {"kdf_iterations" : 1}
 
         window = pride.objects[pride.gui.enable()]
         form_callable = lambda *args, **kwargs: Form(*args,
@@ -253,7 +251,7 @@ class Form(pride.gui.gui.Window):
                                                         ("Test2", {"value" : 2}),
                                                         ("Test3", {"value" : True})],
                                                 **kwargs)
-        window.create(pride.gui.main.Gui, user_type=Test_User,
+        window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
 
 if __name__ == "__main__":

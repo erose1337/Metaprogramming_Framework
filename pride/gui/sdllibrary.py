@@ -794,7 +794,7 @@ class Renderer(SDL_Component):
 
     def draw_text(self, area, text, **kwargs):
         x, y, w, h = area
-        assert w
+        assert w, (area, text, kwargs)
         #kwargs.setdefault("width", w)
         ellipses = ''
         _text = text

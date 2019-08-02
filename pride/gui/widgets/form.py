@@ -114,6 +114,7 @@ class Increment_Button(pride.gui.gui.Button):
     autoreferences = ("target_entry", )
 
     def left_click(self, mouse):
+        super(Increment_Button, self).left_click(mouse)
         self.target_entry.increment_value(self.increment)
 
 
@@ -153,8 +154,16 @@ class Toggle_Entry(Entry):
 
 class Dropdown_Entry(Entry):
 
+    defaults = {"pack_mode" : "top"}
+
     def left_click(self, mouse):
-        self.parent.toggle_menu_open()
+        super(Dropdown_Entry, self).left_click(mouse)
+        self.parent.toggle_menu_open(self)
+
+    def deselect(self, mouse, next_active_object):
+        if pride.objects[next_active_object] not in self.parent.entries:
+            if self.parent.menu_open:
+                self.left_click(mouse)
 
 
 class Text_Field(Field):
@@ -175,23 +184,24 @@ class Toggle(Field):
 class Dropdown_Field(Field):
 
     defaults = {"entry_type" : Dropdown_Entry, "selections" : tuple(),
-                "menu_open" : False, "entry_h_range" : (.025, .05)}
+                "menu_open" : False, "entry_h_range" : (0, .05)}
 
     def __init__(self, **kwargs):
         super(Dropdown_Field, self).__init__(**kwargs)
         self.create_entries()
 
     def create_entries(self):
-        self.entries = [self.create(Entry, h_range=self.entry_h_range,
+        self.entries = [self.create(self.entry_type, h_range=self.entry_h_range,
                                     value=value) for value in self.value]
         self.value = self.value[0]
         self.hide_menu(self.entries[0])
 
-    def toggle_menu_open(self):
+    def toggle_menu_open(self, selected_entry):
         if not self.menu_open:
             self.show_menu()
         else:
-            self.hide_menu()
+            self.hide_menu(selected_entry)
+        self.pack()
 
     def show_menu(self):
         self.menu_open = True
@@ -205,8 +215,9 @@ class Dropdown_Field(Field):
             entry.always_on_top = False
             if entry != selected_entry:
                 entry.hide()
-            else:
+            elif entry.hidden:
                 entry.show()
+        self.value = selected_entry.value
 
 
 class Form(pride.gui.gui.Window):

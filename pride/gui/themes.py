@@ -61,6 +61,9 @@ class Minimal_Theme(Theme):
 
     def draw_texture(self):
         assert not self.hidden
+        if not self.w or not self.h:
+            #self.alert("occupies no area, not drawing")
+            return #raise Exception()
         #if self._cached:
         #    self.draw("copy", self.texture, self.area, self.area)
         #else:

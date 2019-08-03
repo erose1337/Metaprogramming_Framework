@@ -50,6 +50,7 @@ class Field(pride.gui.gui.Container):
                 "pack_mode" : "top"}
     predefaults = {"_value" : None}
     autoreferences = ("identifier", )
+    allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
         try:
@@ -152,18 +153,70 @@ class Toggle_Entry(Entry):
         self.value = not self.value
 
 
-class Dropdown_Entry(Entry):
+class _Dropdown_Entry(Entry):
 
     defaults = {"pack_mode" : "top"}
 
     def left_click(self, mouse):
+        super(_Dropdown_Entry, self).left_click(mouse)
+        self.parent.toggle_menu(self)
+
+
+class Dropdown_Entry(Entry):
+
+    defaults = {"pack_mode" : "top", "menu_open" : False,
+                "entry_type" : _Dropdown_Entry}
+
+    def _get_value(self):
+        return self._value
+    def _set_value(self, value):
+        old_value = self._value
+        self._value = value
+        self.text = ''
+        self.parent.handle_value_changed(old_value, value)
+    value = property(_get_value, _set_value)
+
+    def __init__(self, **kwargs):
+        super(Dropdown_Entry, self).__init__(**kwargs)
+        self.entries = [self.create(self.entry_type, value=value) for value in self.value]
+        self.hide_menu(self.entries[0])
+
+    def left_click(self, mouse):
         super(Dropdown_Entry, self).left_click(mouse)
-        self.parent.toggle_menu_open(self)
+        self.show_menu()
 
     def deselect(self, mouse, next_active_object):
-        if pride.objects[next_active_object] not in self.parent.entries:
-            if self.parent.menu_open:
+        if pride.objects[next_active_object] not in self.entries:
+            if self.menu_open:
                 self.left_click(mouse)
+
+    def toggle_menu(self, selected_entry):
+        if not self.menu_open:
+            self.show_menu()
+        else:
+            self.hide_menu(selected_entry)
+        self.pack()
+
+    def show_menu(self):
+        self.menu_open = True
+        for entry in self.entries:
+            entry.always_on_top = True
+            entry.show()
+        self.pack()
+
+    def hide_menu(self, selected_entry):
+        self.menu_open = False
+        for entry in self.entries:
+            entry.always_on_top = False
+            if entry != selected_entry:
+                entry.hide()
+            elif entry.hidden:
+                entry.show()
+        self.value = selected_entry.value
+        self.pack()
+
+    def handle_value_changed(self, old_value, value):
+        pass
 
 
 class Text_Field(Field):
@@ -183,41 +236,7 @@ class Toggle(Field):
 
 class Dropdown_Field(Field):
 
-    defaults = {"entry_type" : Dropdown_Entry, "selections" : tuple(),
-                "menu_open" : False, "entry_h_range" : (0, .05)}
-
-    def __init__(self, **kwargs):
-        super(Dropdown_Field, self).__init__(**kwargs)
-        self.create_entries()
-
-    def create_entries(self):
-        self.entries = [self.create(self.entry_type, h_range=self.entry_h_range,
-                                    value=value) for value in self.value]
-        self.value = self.value[0]
-        self.hide_menu(self.entries[0])
-
-    def toggle_menu_open(self, selected_entry):
-        if not self.menu_open:
-            self.show_menu()
-        else:
-            self.hide_menu(selected_entry)
-        self.pack()
-
-    def show_menu(self):
-        self.menu_open = True
-        for entry in self.entries:
-            entry.always_on_top = True
-            entry.show()
-
-    def hide_menu(self, selected_entry):
-        self.menu_open = False
-        for entry in self.entries:
-            entry.always_on_top = False
-            if entry != selected_entry:
-                entry.hide()
-            elif entry.hidden:
-                entry.show()
-        self.value = selected_entry.value
+    defaults = {"entry_type" : Dropdown_Entry}
 
 
 class Form(pride.gui.gui.Window):

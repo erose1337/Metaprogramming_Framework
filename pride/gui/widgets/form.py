@@ -273,7 +273,7 @@ class Form(pride.gui.gui.Window):
                     field_type = text_field
                 elif isinstance(value, tuple) or isinstance(value, list):
                     field_type = dropdown
-                container.create(field_type, name=name, **entries)
+                container.create(field_type, name=name, pack_mode="left", **entries)
 
     @classmethod
     def from_file(cls, filename):
@@ -287,10 +287,10 @@ class Form(pride.gui.gui.Window):
 
         window = pride.objects[pride.gui.enable()]
         form_callable = lambda *args, **kwargs: Form(*args,
-                                                fields=[[("Test1", {"value" : '1'})],
-                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
-                                                        [("Test2", {"value" : 2})],
-                                                        [("Test3", {"value" : True})]],
+                                                fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
+                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
+                                                         ("Test2", {"value" : 2}),
+                                                         ("Test3", {"value" : True})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))

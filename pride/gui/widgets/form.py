@@ -155,11 +155,14 @@ class Toggle_Entry(Entry):
 
 class _Dropdown_Entry(Entry):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"pack_mode" : "top", "h_range" : (.05, 1.0)}
 
     def left_click(self, mouse):
         super(_Dropdown_Entry, self).left_click(mouse)
         self.parent.toggle_menu(self)
+
+    def deselect(self, mouse, next_active_object):
+        self.parent.deselect(mouse, next_active_object)
 
 
 class Dropdown_Entry(Entry):
@@ -188,7 +191,14 @@ class Dropdown_Entry(Entry):
     def deselect(self, mouse, next_active_object):
         if pride.objects[next_active_object] not in self.entries:
             if self.menu_open:
-                self.left_click(mouse)
+                for entry in self.entries:
+                    entry.always_on_top = False
+                    if entry.value != self.value:
+                        entry.hide()
+                    elif type(entry.value) != type(self.value):
+                        entry.hide() # to prevent something like 1 == True from happening, where 1 and True are both entries
+                self.menu_open = False
+                self.pack()
 
     def toggle_menu(self, selected_entry):
         if not self.menu_open:
@@ -251,18 +261,19 @@ class Form(pride.gui.gui.Window):
         text_field = self.text_field_type
         toggle = self.toggle_type
         dropdown = self.dropdown_type
-
-        for name, entries in self.fields:
-            value = entries["value"]
-            if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
-                field_type = toggle
-            elif isinstance(value, int) or isinstance(value, float):
-                field_type = spinbox
-            elif isinstance(value, str):
-                field_type = text_field
-            elif isinstance(value, tuple) or isinstance(value, list):
-                field_type = dropdown
-            self.create(field_type, name=name, **entries)
+        for row in self.fields:
+            container = self.create("pride.gui.gui.Container", pack_mode="top")
+            for name, entries in row:
+                value = entries["value"]
+                if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
+                    field_type = toggle
+                elif isinstance(value, int) or isinstance(value, float):
+                    field_type = spinbox
+                elif isinstance(value, str):
+                    field_type = text_field
+                elif isinstance(value, tuple) or isinstance(value, list):
+                    field_type = dropdown
+                container.create(field_type, name=name, **entries)
 
     @classmethod
     def from_file(cls, filename):
@@ -276,10 +287,10 @@ class Form(pride.gui.gui.Window):
 
         window = pride.objects[pride.gui.enable()]
         form_callable = lambda *args, **kwargs: Form(*args,
-                                                fields=[("Test1", {"value" : '1'}),
-                                                        ("Test4", {"value" : (0, 1, 2)}),
-                                                        ("Test2", {"value" : 2}),
-                                                        ("Test3", {"value" : True})],
+                                                fields=[[("Test1", {"value" : '1'})],
+                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
+                                                        [("Test2", {"value" : 2})],
+                                                        [("Test3", {"value" : True})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))

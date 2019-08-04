@@ -96,6 +96,16 @@ class Text_Entry(Entry):
 
     defaults = {"h" : 16, "allow_text_edit" : False}
 
+    def _get_text(self):
+        return super(Text_Entry, self)._get_text()
+    def _set_text(self, value):
+        super(Text_Entry, self)._set_text(value)
+        old_value = self._value
+        self._value = value
+        self.parent.handle_value_changed(old_value, value)
+
+    text = property(_get_text, _set_text)
+
     def select(self, mouse):
         super(Text_Entry, self).select(mouse)
         self.alert("Turning text input on", level='vv')
@@ -128,10 +138,27 @@ class Decrement_Button(pride.gui.gui.Button):
         self.target_entry.decrement_value(self.increment)
 
 
-class Integer_Entry(Entry):
+class Integer_Entry(Text_Entry):
+
+    def _get_text(self):
+        return super(Integer_Entry, self)._get_text()
+    def _set_text(self, value):
+        try:
+            int(value)
+        except TypeError: # value can be None
+            pass
+        except ValueError: # have to remove any non-decimal-numeric characters
+            value = ''.join(item for item in value if item in "0123456789")
+            if not value:
+                value = '0'
+        super(Integer_Entry, self)._set_text(value)
+    text = property(_get_text, _set_text)
 
     def _get_value(self):
         return int(super(Integer_Entry, self)._get_value())
+    def _set_value(self, value):
+        super(Integer_Entry, self)._set_value(value)
+    value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
         super(Integer_Entry, self).__init__(**kwargs)

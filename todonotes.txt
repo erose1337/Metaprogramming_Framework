@@ -1,8 +1,17 @@
-Currently working on: Forms
+Currently working on: Homescreen
+
+- open new tab -> opens a l
 
 
 To Do/Bugs
 =====
+
+- fade transition "sticking" when quickly opening lots of tabs
+
+- use constants to denote different common h_range/w_range values
+
+    THIN = (0, .10)
+
 
 
 Refactor gui package

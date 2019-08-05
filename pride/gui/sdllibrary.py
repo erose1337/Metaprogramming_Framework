@@ -595,7 +595,7 @@ class SDL_User_Input(pride.components.base.Base):
         objects = pride.objects
         active_item = None
         for item in self.always_on_top:
-            if pride.gui.point_in_area(item.area, mouse_position):
+            if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
                 active_item = item.reference
                 break
         else:
@@ -603,7 +603,8 @@ class SDL_User_Input(pride.components.base.Base):
                 for item in layer:
                     #assert item in objects
                     #assert not pride.objects[item].hidden
-                    if pride.gui.point_in_area(objects[item].area, mouse_position):
+                    _item = objects[item]
+                    if _item.clickable and pride.gui.point_in_area(_item.area, mouse_position):
                         active_item = item
                         break
                 if active_item:

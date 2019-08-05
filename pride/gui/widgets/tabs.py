@@ -208,6 +208,7 @@ class Tabbed_Window(pride.gui.gui.Window):
 
     def new_tab(self, window_kwargs=None, tab_kwargs=None):
         tab_kwargs = tab_kwargs if tab_kwargs is not None else dict()
+        window_kwargs = window_kwargs if window_kwargs is not None else dict()
         window = self.initialize_window(self.window_type, **window_kwargs)
         tab_kwargs.setdefault("window", window)
         new_tab = self.tab_bar.new_tab(**tab_kwargs)

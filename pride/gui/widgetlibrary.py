@@ -617,11 +617,12 @@ class Status_Indicator(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Status_Indicator, self).__init__(**kwargs)
         self.create("pride.gui.gui.Container", pack_mode="top",
-                    theme_type="pride.gui.themes.Spacer_Theme")
+                    theme_profile="placeholder", clickable=False)
         self.status_light = self.create("pride.gui.gui.Container", pack_mode="top",
-                                        theme_profile="placeholder").reference
+                                        theme_profile="placeholder",
+                                        clickable=False).reference
         self.create("pride.gui.gui.Container", pack_mode="top",
-                    theme_type="pride.gui.themes.Spacer_Theme")
+                    theme_profile="placeholder", clickable=False)
 
     def left_click(self, mouse):
         super(Status_Indicator, self).left_click(mouse)

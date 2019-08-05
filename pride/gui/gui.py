@@ -263,7 +263,7 @@ class _Window_Object(Organized_Object):
                 "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "_selected" : False, "hide_excess_text" : True,
                 "_cached" : False, "tip_bar_text" : '',
-                "theme_profile" : "default"}
+                "theme_profile" : "default", "clickable" : True}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,

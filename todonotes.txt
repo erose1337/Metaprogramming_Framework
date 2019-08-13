@@ -6,6 +6,7 @@ To Do/Bugs
 
 - Homescreen: Closing Theme_Customizer leaves a dead empty tab open
 
+
 Make identicons
 ===============
 - use for automatically generated icons, whenever icons are necessary

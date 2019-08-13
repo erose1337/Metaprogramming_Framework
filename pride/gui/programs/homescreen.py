@@ -28,12 +28,22 @@ class Theme_Customizer_Button(pride.gui.gui.Button):
                                                         target_theme=self.theme)
 
 
+class File_Explorer_Button(pride.gui.gui.Button):
+
+    defaults = {"program_type" : "pride.gui.programs.fileexplorer.File_Explorer",
+                "text" : "File Explorer", "h_range" : (.025, .1)}
+
+    def left_click(self, mouse):
+        self.parent.parent.parent.parent.launch_program(self.program_type)
+
+
 class Programs_Listing(Listing):
 
     def __init__(self, **kwargs):
         super(Programs_Listing, self).__init__(**kwargs)
         self.create(Theme_Customizer_Button)
         self.create(Pride_Shell_Button)
+        self.create(File_Explorer_Button)
 
 
 class Pride_Shell_Button(pride.gui.gui.Button):
@@ -103,6 +113,7 @@ class Content_Launcher(pride.gui.gui.Window):
     def launch_program(self, program_type, **program_kwargs):
         self.launcher_screen.hide()
         self.program = self.create(program_type, **program_kwargs)
+        self.tab.text = self.program.__class__.__name__
 
     def end_program(self):
         assert not self.program.deleted

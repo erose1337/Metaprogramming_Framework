@@ -813,10 +813,6 @@ class Renderer(SDL_Component):
                 destination = [(x + (w / 2)) - (_w / 2),
                                (y + (h / 2)) - (_h / 2),
                                _w - 2, _h]
-                if w == _w:
-                    destination[0] = x + (w / 2)
-                if h == _h:
-                    destination[1] = y + (h / 2)
             else:
                 destination = (x + 2, y + 2, _w - 2, _h)
 

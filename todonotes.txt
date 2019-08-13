@@ -1,12 +1,52 @@
-Currently working on: Homescreen
-
-- open new tab -> opens a l
+Currently working on: File Explorer and `save as` functionality
 
 
 To Do/Bugs
 =====
 
-- fade transition "sticking" when quickly opening lots of tabs
+- Homescreen: Closing Theme_Customizer leaves a dead empty tab open
+
+Make identicons
+===============
+- use for automatically generated icons, whenever icons are necessary
+    - e.g. for programs listed in the Home_Screen
+- Color palette: white, black, orange, blue
+    - red and green are always kept at equal levels
+        - minimize accessibility issues with a common form of color blindness
+    - color information provides a maximum of 32 bits of information (for 8-bit rgba)
+        - not achieved in practice, because colors that are close to each other are indistinguishable by human eyes
+        - increments of 16 appear to be reasonably distinguishable
+            - 16 = 2^4 possible values per each rgba color value
+            - 2^4 * 2^4 * 2^4 * 2^4 = 16 bits of information are conveyed by color information
+- Divide area into NxN grid
+    - KxN grid could enable having square/"long"/"tall" icons, another feature enabling identification
+    - NxN is simple to identify as an icon, reason about, and implement
+        - knowing an icon is a square can help identify it
+    - alternative: split grid randomly by bisection
+
+- For each cell in the grid, draw a shape of a given color in the cell
+    - Shapes:
+        - filled rectangle
+        - lines?
+            - horizontal, vertical, diagonal, other diagonal
+- Try to arrange for some symmetry to be present?
+
+- Use bits of hash value to make decision on what operation to apply to icon area
+    - for each 4 bits of hash value,
+                                        # bit number
+           draw shape/color flag        # 0
+           split vertical flag          # 1
+           split horizontal flag        # 2
+    - if the 0 bit is set, then draw the shape/color to the current area
+    - if the 1 bit is set, then the area is divided into two left and right regions
+
+    Define "Symmetry"
+    -----------------
+    - if pattern a is a translation or rotation of pattern b, then pattern a and b are different representations of the same pattern
+    - generate all symmetries for an NxN grid:
+        - assume the only possible configuration of a cell is a solid fill of color1 or color2
+
+
 
 - use constants to denote different common h_range/w_range values
 

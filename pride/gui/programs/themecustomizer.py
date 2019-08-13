@@ -91,6 +91,7 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 
     defaults = {"target_theme" : None, "bar" : None, "delete_callback" : None}
     autoreferences = ("_file_selector", "bar")
+    required_attributes = ("target_theme", )
 
     def readjust_sliders(self):
         for tab in self.tab_bar.tabs:
@@ -111,20 +112,15 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                     method="import_color_options", text="Import color options",
                     pack_mode="right")
             self.bar = bar
-        try:
-            profiles = self.target_theme.colors
-        except AttributeError:
-            profiles = self.target_theme.theme_colors
+
+        profiles = self.target_theme.theme_colors
         self.tab_types = tuple(pride.gui.widgets.tabs.Tab_Button.from_info(text=text, include_delete_button=False) for
                                text in sorted(profiles.keys()))
         super(Theme_Customizer, self).initialize_tabs_and_windows()
 
     def create_windows(self):
         target_theme = self.target_theme
-        try:
-            profiles = target_theme.colors
-        except AttributeError:
-            profiles = target_theme.theme_colors
+        profiles = target_theme.theme_colors
         for index, tab in enumerate(self.tab_bar.tabs):
             key = tab.text
             profile = profiles[key]

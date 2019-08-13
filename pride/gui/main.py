@@ -37,7 +37,7 @@ class Gui(pride.gui.gui.Application):
         self.set_theme_colors(self.theme_file)
         if not self.user.logged_in:
             self.lockscreen = self.application_window.create(self.lockscreen_type, user=self.user,
-                                                            service_name="User", host_info=("localhost", 40022))
+                                                             service_name="User", host_info=("localhost", 40022))
         else:
             self.launch_programs()
 

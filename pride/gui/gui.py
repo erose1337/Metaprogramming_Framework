@@ -688,22 +688,12 @@ class Animated_Object(_Window_Object):
         self.animating = True
         self.texture_invalid = True
         self._transition_state = 0
-        try:
-            self._colors_backup = self.colors[self.theme_profile]
-        except KeyError:
-            self._restore_flag = False
-            self._colors_backup = dict()
-        else:
-            self._restore_flag = True
 
     def end_animation(self):
         self.animating = False
-        if self._restore_flag:
-            try:
-                self.colors[self.theme_profile].update(self._colors_backup)
-            except KeyError:
-                pass
+        self.colors.clear()
         self._old_theme = None
+        self._transition_state = 0
 
     def draw_texture(self):
         animating = self.animating
@@ -751,7 +741,7 @@ class Animated_Object(_Window_Object):
         #print("Frame number {}/{}".format(scalar, self.frame_count))
 
 
-Window_Object = Animated_Object # we can upgrade everything in-place by changing this
+Window_Object = Animated_Object # can upgrade everything in-place by changing this
 
 
 class Window(Window_Object):

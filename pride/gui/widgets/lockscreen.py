@@ -69,7 +69,8 @@ class Username_Password_Field(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Username_Password_Field, self).__init__(**kwargs)
         self.username_field = self.create(Username_Field,
-                                          write_field_method=self._set_username)
+                                          write_field_method=self._set_username,
+                                          initial_value=self.user._username)# Uses _username attribute to bypass descriptor, in case username has not been supplied yet
         window = self.sdl_window#.select_active_item(self.username_field.reference, None) # change to this
         window.schedule_postdraw_operation(lambda: window.user_input.select_active_item(self.username_field.reference, None))
         self.password_field = self.create("pride.gui.widgetlibrary.Field",

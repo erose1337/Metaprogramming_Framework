@@ -272,9 +272,7 @@ class Scroll_Indicator(gui.Button):
 
 class Indicator(gui.Button):
 
-    defaults = {"pack_mode" : "left",
-                "line_color" : (255, 235, 155),
-                "text" : ''}
+    defaults = {"pack_mode" : "left", "theme_profile" : "default"}
 
     def __init__(self, **kwargs):
         super(Indicator, self).__init__(**kwargs)

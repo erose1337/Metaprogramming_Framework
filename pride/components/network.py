@@ -187,7 +187,7 @@ class Socket(base.Wrapper):
                                                    buffer_size)
                 if not byte_count:
                     if not self._byte_count:
-                        self.alert("Received EOF", level=0)#self.verbosity["recv_eof"])
+                        self.alert("Received EOF", level=self.verbosity["recv_eof"])
                         self.shutdown_on_close = False
                         error = socket.error(CONNECTION_CLOSED)
                         error.errno = CONNECTION_CLOSED

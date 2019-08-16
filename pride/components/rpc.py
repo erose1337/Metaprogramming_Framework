@@ -73,7 +73,9 @@ def packetize_recv(recv):
     def _recv(self, buffer_size=0):
         try:
             data = self._old_data + recv(self, buffer_size)
-        except socket.error:
+        except socket.error as error: # which error did we really intend to catch here?
+            if error.errno == pride.components.network.CONNECTION_CLOSED:
+                raise
             data = self._old_data
 
         self._old_data = bytearray()

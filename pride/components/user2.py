@@ -70,7 +70,7 @@ class User(pride.components.base.Base):
 
                 "storage_reference" : "/Python/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password for '{}': ",
-                "auto_register" : False, "auto_login" : True}
+                "auto_register" : False, "auto_login" : True, "prompt_flag" : True}
 
     parser_args = ("username", )
     mutable_defaults = {"login_token" : dict}
@@ -186,7 +186,7 @@ class User(pride.components.base.Base):
         self.data_mac_key = keys[size1:size1 + size2]
 
     def handle_not_registered(self, identifier):
-        if self.auto_register or pride.components.shell.get_permission("{}: Register as '{}'? (y/n): ".format(self.reference, identifier)):
+        if self.auto_register or (self.prompt_flag and pride.components.shell.get_permission("{}: Register as '{}'? (y/n): ".format(self.reference, identifier))):
             if not self.auto_register:
                 self.alert("Registering user '{}'".format(identifier), level=self.verbosity["registering"])
             self.store_new_identity(identifier)

@@ -482,8 +482,9 @@ class _Window_Object(Organized_Object):
             except ValueError:
                 pass
             else:
-                window.set_tip_bar_text(self.tip_bar_text)
-                self._tip_set = True
+                if window.create_tip_bar:
+                    window.set_tip_bar_text(self.tip_bar_text)
+                    self._tip_set = True
 
     def hover_ends(self):
         if self.theme_profile == "hover":
@@ -623,13 +624,15 @@ class _Window_Object(Organized_Object):
         app = self.parent_application
         window = self.sdl_window
         while True:
-            if app.tip_bar_enabled:
+            if getattr(app, "tip_bar", None) is not None:
                 app.set_tip_bar_text(text)
                 window.run()
                 return
             try:
                 app = app.parent_application
             except AttributeError:
+                break
+            if app == app.parent_application:
                 break
 
         if fade_out:
@@ -770,7 +773,7 @@ class Application(Window):
     defaults = {"startup_components" : ("pride.gui.widgetlibrary.Task_Bar", ),
                 "application_window_type" : "pride.gui.gui.Window",
                 "tip_bar_type" : "pride.gui.gui.Container",
-                "tip_bar_enabled" : True,
+                "create_tip_bar" : True,
                 "tip_bar_tip_bar_text" : "Tip Bar: Provides details, hints, and status information"}
     predefaults = {"transparency_enabled" : False}
     autoreferences = ("tip_bar", )
@@ -781,12 +784,21 @@ class Application(Window):
         self.initialize_tip_bar()
 
     def initialize_tip_bar(self):
-        if self.tip_bar_enabled:
-            self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05), center_text=False,
-                                       pack_mode="bottom", text="tip bar",
-                                       tip_bar_text=self.tip_bar_tip_bar_text)
+        parent_app = self.parent_application
+        if parent_app is self:
+            if self.create_tip_bar:
+                self._create_tip_bar()
         else:
-            self.tip_bar = self.parent_application.tip_bar
+            if parent_app.tip_bar is not None:
+                self.tip_bar = self.parent_application.tip_bar
+            else:
+                if self.create_tip_bar:
+                    self._create_tip_bar()
+
+    def _create_tip_bar(self):
+        self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05), center_text=False,
+                                   pack_mode="bottom", text="tip bar",
+                                   tip_bar_text=self.tip_bar_tip_bar_text)
 
     def set_tip_bar_text(self, text):
         self.tip_bar.text = text
@@ -797,13 +809,13 @@ class Application(Window):
         self._current_text = ''
 
     def show_status(self, text, *args, **kwargs):
-        if self.tip_bar_enabled:
+        if self.create_tip_bar:
             self.set_tip_bar_text(text)
         else:
             super(Application, self).show_status(text, *args, **kwargs)
 
     def hide_status(self):
-        if self.tip_bar_enabled:
+        if self.create_tip_bar:
             self.clear_tip_bar_text()
         else:
             super(Application, self).hide_status()

@@ -8,14 +8,14 @@ import sdl2
 
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
 
-def _default_colors():
-    return {"background" : pride.gui.color.Color(18, 18, 18, 200),
-            "shadow" : pride.gui.color.Color(0, 0, 0, 255),
+def _default_colors(_color=pride.gui.color.Color):
+    return {"background" : _color(18, 18, 18, 200),
+            "glow" : _color(255, 255, 255, 235),
+            "glow_thickness" : 0,
+            "shadow" : _color(0, 0, 0, 255),
             "shadow_thickness" : 5,
-            "text_background" : pride.gui.color.Color(0, 0, 85, 255),
-            "text" : pride.gui.color.Color(45, 45, 45, 255),
-            "glow" : pride.gui.color.Color(255, 255, 255, 235),
-            "glow_thickness" : 0}
+            "text" : _color(45, 45, 45, 255),
+            "text_background" : _color(0, 0, 85, 255)}
 
 class Theme(pride.components.base.Wrapper):
 
@@ -81,11 +81,11 @@ class Minimal_Theme(Theme):
         if glow_thickness:
             r, g, b, a = self.glow_color
             fade_scalar = a / glow_thickness
-            #assert fade_scalar > 0
+            assert fade_scalar > 0
             for thickness in range(glow_thickness):
                 self.draw("rect", (x - thickness, y - thickness,
                                    w + (2 * thickness), h + (2 * thickness)),
-                        color=(r, g, b, a - (thickness * fade_scalar)))
+                          color=(r, g, b, a - (thickness * fade_scalar)))
 
         if self.text:
             assert self.wrap_text

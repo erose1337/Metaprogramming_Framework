@@ -1,10 +1,22 @@
-Currently working on: File Explorer and `save as` functionality
+Currently working on: - Balanced_Form
 
 
 To Do/Bugs
 =====
 
+-  rounded rectangles
+    - sdlgfx functions automatically set blendmode
+        - also fail to restore blendmode after setting it
+    - will have to use a modified version of sdl2gfx to use rounded rectangles
+        - simply remove the SDL_SetRenderDrawBlendMode calls
+
+- pulsing glow
+    - vary glow thickness over time
+    - note: Too slow. Requires re-drawing everything, every frame.
+
+- File Explorer and `save as` functionality
 - Homescreen: Closing Theme_Customizer leaves a dead empty tab open
+- Theme_Customizer export uses File_Selector from game3 instead of from pride
 
 
 Make identicons

@@ -18,6 +18,7 @@ Instruction = pride.Instruction
 import sdl2
 import sdl2.ext
 import sdl2.sdlttf
+import sdl2.sdlgfx
 sdl2.ext.init()
 sdl2.sdlttf.TTF_Init()
 font_module = sdl2.sdlttf
@@ -739,6 +740,7 @@ class Renderer(SDL_Component):
         self.instructions["copy"] = self.copy
         self.instructions["rect_perspective"] = self.draw_rect_perspective
         self.instructions["line_perspective"] = self.draw_line_perspective
+        self.instructions["rounded_rect"] = self.draw_rounded_rect
         self.clear()
 
         info = self.get_renderer_info()
@@ -746,6 +748,18 @@ class Renderer(SDL_Component):
 
     def render_copy(self, source_area, destination_area):
         raise NotImplementedError() # needs to be re-done now that there is no window texture
+
+    def draw_rounded_rect(self, rect, radius=22, **kwargs):
+        raise NotImplementedError("rounded_rect not yet supported")
+        x, y, w, h = rect
+        #print self.wrapped_object.renderer
+        #r, g, b, a = kwargs["color"]
+        #draw_mode = sdl2.SDL_BlendMode()
+        #assert not sdl2.SDL_GetRenderDrawBlendMode(self.wrapped_object.renderer, draw_mode)
+        #sdl2.sdlgfx.roundedRectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, radius, r, g, b, 255)
+        #self.draw_rect(rect, **kwargs)
+        sdl2.sdlgfx.rectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, *kwargs["color"])
+        #assert not sdl2.SDL_SetRenderDrawBlendMode(self.wrapped_object.renderer, draw_mode)
 
     def draw_line_perspective(self, point, length, vanishing_point, **kwargs):
         x, y = point

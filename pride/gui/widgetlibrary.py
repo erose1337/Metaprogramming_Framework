@@ -303,7 +303,6 @@ class Prompt(Text_Box):
             self.create("pride.gui.widgetlibrary.Done_Button", callback=(self.reference, "_done_callback"))
 
     def handle_return(self):
-        self.text = value
         callback_owner, method = self.callback
         getattr(pride.objects[callback_owner], method)(self.text)
 

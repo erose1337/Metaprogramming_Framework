@@ -193,12 +193,13 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
         theme = cefparser.parse_filename(self.color_options_file)
         theme_colors = self.theme.theme_colors
         for profile, values in theme["Theme Profiles"].iteritems():
+            bad_keys = []
             for key, value in values.iteritems():
                 values[key] = ast.literal_eval(value)
                 try:
                     r, g, b, a = values[key]
                 except (ValueError, TypeError):
-                    pass
+                    bad_keys.append(key)
                 else:
                     _color = theme_colors[profile][key]
                     _color.r = r
@@ -207,6 +208,8 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                     _color.a = a
                     values[key] = _color
             theme_colors[profile].update(values)
+            for key in bad_keys:
+                del theme_colors[profile][key]
         self.theme.update_theme_users()
         self.hide_status()
         self.readjust_sliders()

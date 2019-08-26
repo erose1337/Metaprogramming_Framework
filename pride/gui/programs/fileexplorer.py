@@ -75,7 +75,7 @@ class Ascend_Button(pride.gui.widgetlibrary.Method_Button):
 
 class Search_Bar(pride.gui.widgetlibrary.Prompt):
 
-    defaults = {"pack_mode" : "left"}
+    defaults = {"pack_mode" : "left", "use_done_button" : True}
 
 
 class Places_Bar(pride.gui.gui.Container):

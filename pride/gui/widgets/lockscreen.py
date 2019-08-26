@@ -115,8 +115,11 @@ class Username_Password_Field(pride.gui.gui.Container):
         assert self.user_password == self.password_field.field_value, (self.user_password, self.password_field.text)
         user.username = self.username
         user.password = self.user_password
-        user.auto_register = self.autoregister.state
+        user.auto_register = user.auto_register or self.autoregister.state
+        backup_flag = user.prompt_flag
+        user.prompt_flag = False
         success = user.attempt_login()
+        user.prompt_flag = backup_flag
 
         self.alert("{} attempted login (success:{})".format(self.username, success),
                    level=self.verbosity["login_attempt"])
@@ -140,7 +143,7 @@ class Status_Display(pride.gui.gui.Container):
 class Login_Screen(pride.gui.gui.Application):
 
     defaults = {"user" : None, "startup_components" : tuple(),
-                "tip_bar_enabled" : False, "service_name" : '',
+                "tip_bar_enabled" : True, "service_name" : '',
                 "host_info" : ('', 0)}
     required_attributes = ("user", "service_name", "host_info")
     autoreferences = ("field_space", "top_spacer", "bottom_spacer", "status_display")
@@ -165,7 +168,8 @@ class Login_Screen(pride.gui.gui.Application):
         self.top_spacer.delete()
         self.field_space.delete()
         self.bottom_spacer.delete()
-        self.parent_application.login_success(self.user.username)
+        if self.parent_application is not self:
+            self.parent_application.login_success(self.user.username)
 
     def login_failed(self):
         self.parent_application.show_status("Login attempt failed")
@@ -180,8 +184,11 @@ def main():
         window = pride.objects[pride.gui.enable()]
     else:
         window = pride.objects["/SDL_Window"]
-    user = pride.components.user.User(auto_login=False, auto_register=True)
-    window.create(Login_Screen, user=user)
+    #window.create("pride.gui.main.Gui")
+    user = pride.components.user.User(auto_login=False)
+    assert not user.logged_in
+    window.create(Login_Screen, user=user, service_name="Lockscreen test",
+                  host_info=("localhost", 40022))
 
 if __name__ == "__main__":
     main()

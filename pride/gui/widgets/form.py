@@ -24,6 +24,18 @@
 # - entry1: value1
 # - entry2: value2
 
+# Balanced Form
+# =============
+# A Balanced Form is a form that limits the range/selection of field values according to some cost function and an available balance.
+# For example, in an RPG game, a character may have a given number of XP points. These points can be spent to increment stats.
+# - The "balance" is the currently available XP
+# - The cost function determines how much XP it takes to increment some stat
+# - Balance is spent to increment some stat
+# - Insufficient balance prevents the player from being able to increment stats
+#
+# Balanced Forms define their own cost function and behavior when an attempt is made to change a value.
+# The default behavior is to simply dis-allow the change if the balance is insufficient, otherwise allow the change.
+
 import pride.gui.gui
 
 import sdl2
@@ -38,9 +50,11 @@ class Entry(pride.gui.gui.Button):
         return self._value
     def _set_value(self, value):
         old_value = self._value
-        self._value = value
-        self.text = str(value)
-        self.parent.handle_value_changed(old_value, value)
+        if old_value is not None:
+            self.parent.handle_value_changed(old_value, value)
+        else:
+            self._value = value
+            self.text = str(value)
     value = property(_get_value, _set_value)
 
 
@@ -89,6 +103,9 @@ class Field(pride.gui.gui.Container):
     def handle_value_changed(self, old_value, new_value):
         self.alert("Value changed from {} to {}".format(old_value, new_value),
                    level=self.verbosity["handle_value_changed"])
+        entry = self.entry
+        entry._value = new_value
+        entry.text = str(new_value)
         #raise NotImplementedError()
 
 
@@ -100,9 +117,12 @@ class Text_Entry(Entry):
         return super(Text_Entry, self)._get_text()
     def _set_text(self, value):
         super(Text_Entry, self)._set_text(value)
-        old_value = self._value
-        self._value = value
-        self.parent.handle_value_changed(old_value, value)
+    #    old_value = self._value
+    #    #self._value = value
+    #    if old_value:
+    #        self.parent.handle_value_changed(old_value, value)
+    #    else:
+    #        self._value = value
 
     text = property(_get_text, _set_text)
 
@@ -197,19 +217,20 @@ class Dropdown_Entry(Entry):
     defaults = {"pack_mode" : "top", "menu_open" : False,
                 "entry_type" : _Dropdown_Entry}
 
-    def _get_value(self):
-        return self._value
-    def _set_value(self, value):
-        old_value = self._value
-        self._value = value
-        self.text = ''
-        self.parent.handle_value_changed(old_value, value)
-    value = property(_get_value, _set_value)
+    #def _get_value(self):
+    #    return self._value
+    #def _set_value(self, value):
+    #    old_value = self._value
+    #    #self._value = value
+    #    #self.text = ''
+    #    self.parent.handle_value_changed(old_value, value)
+    #value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
         super(Dropdown_Entry, self).__init__(**kwargs)
         self.entries = [self.create(self.entry_type, value=value) for value in self.value]
-        self.hide_menu(self.entries[0])
+        self.hide_menu(self.entries[0], _initialized_already=False)
+        self.text = ''
 
     def left_click(self, mouse):
         super(Dropdown_Entry, self).left_click(mouse)
@@ -229,6 +250,7 @@ class Dropdown_Entry(Entry):
 
     def toggle_menu(self, selected_entry):
         if not self.menu_open:
+            #assert hasattr(self, "entry")
             self.show_menu()
         else:
             self.hide_menu(selected_entry)
@@ -239,9 +261,10 @@ class Dropdown_Entry(Entry):
         for entry in self.entries:
             entry.always_on_top = True
             entry.show()
-        self.pack()
+            entry.texture_invalid = True
+    #    self.pack() # Setting entry.texture_invalid seems to work better? (fixes a bug)
 
-    def hide_menu(self, selected_entry):
+    def hide_menu(self, selected_entry, _initialized_already=True):
         self.menu_open = False
         for entry in self.entries:
             entry.always_on_top = False
@@ -249,7 +272,8 @@ class Dropdown_Entry(Entry):
                 entry.hide()
             elif entry.hidden:
                 entry.show()
-        self.value = selected_entry.value
+        if _initialized_already:
+            self.value = selected_entry.value
         self.pack()
 
     def handle_value_changed(self, old_value, value):
@@ -274,6 +298,11 @@ class Toggle(Field):
 class Dropdown_Field(Field):
 
     defaults = {"entry_type" : Dropdown_Entry}
+
+    def handle_value_changed(self, old_value, new_value):
+        self.alert("Value changed from {} to {}".format(old_value, new_value),
+                   level=self.verbosity["handle_value_changed"])
+        self.entry._value = new_value
 
 
 class Form(pride.gui.gui.Window):
@@ -316,11 +345,13 @@ class Form(pride.gui.gui.Window):
         form_callable = lambda *args, **kwargs: Form(*args,
                                                 fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
                                                         [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
-                                                         ("Test2", {"value" : 2}),
+                                                         #("Test2", {"value" : 2}),
                                                          ("Test3", {"value" : True})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
+
+
 
 if __name__ == "__main__":
     Form.unit_test()

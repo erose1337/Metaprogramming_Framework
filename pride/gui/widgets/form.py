@@ -235,14 +235,17 @@ class Dropdown_Entry(Entry):
     def deselect(self, mouse, next_active_object):
         if pride.objects[next_active_object] not in self.entries:
             if self.menu_open:
-                for entry in self.entries:
-                    entry.always_on_top = False
-                    if entry.value != self.value:
-                        entry.hide()
-                    elif type(entry.value) != type(self.value):
-                        entry.hide() # to prevent something like 1 == True from happening, where 1 and True are both entries
-                self.menu_open = False
-                self.pack()
+                self.hide_menu(self.selected_entry)
+                #for entry in self.entries:
+                #    entry.always_on_top = False
+                #    if entry.value != self.value:
+                #        entry.hide()
+                #    elif type(entry.value) != type(self.value):
+                #        entry.hide() # to prevent something like 1 == True from happening, where 1 and True are both entries
+                #    else:
+                #        entry.show()
+                #self.menu_open = False
+                #self.pack()
 
     def toggle_menu(self, selected_entry):
         if not self.menu_open:
@@ -264,13 +267,15 @@ class Dropdown_Entry(Entry):
         self.menu_open = False
         for entry in self.entries:
             entry.always_on_top = False
-            if entry != selected_entry:
+            if entry != selected_entry or type(entry) != type(selected_entry):
                 entry.hide()
             elif entry.hidden:
                 entry.show()
         if _initialized_already:
             self.value = selected_entry.value
         self.pack()
+        self.selected_entry = selected_entry
+        assert not selected_entry.hidden
 
     def handle_value_changed(self, old_value, value):
         pass

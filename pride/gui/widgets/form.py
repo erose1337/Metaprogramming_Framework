@@ -45,13 +45,14 @@ class Entry(pride.gui.gui.Button):
 
     defaults = {"pack_mode" : "right"}
     predefaults = {"_value" : None}
+    autoreferences = ("update_target", )
 
     def _get_value(self):
         return self._value
     def _set_value(self, value):
         old_value = self._value
         if old_value is not None:
-            self.parent.handle_value_changed(old_value, value)
+            self.update_target.handle_value_changed(old_value, value)
         else:
             self._value = value
             self.text = str(value)
@@ -94,11 +95,19 @@ class Field(pride.gui.gui.Container):
             pack_mode = "left"
             scale_to_text = True
         assert self.identifier is None
+        self.create_id(pack_mode, scale_to_text, **id_kwargs)
+        self.create_entry(pack_mode)
+        # initialize_value is called by Form, which ensures entry.value is not set until after it exists
+
+    def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         self.identifier = self.create(pride.gui.gui.Container, text=self.name,
                                       pack_mode=pack_mode, scale_to_text=scale_to_text,
                                       **id_kwargs)
+
+    def create_entry(self, pack_mode):
         self.entry = self.create(self.entry_type,
-                                 pack_mode=pack_mode, tip_bar_text=self.tip_bar_text)
+                                 pack_mode=pack_mode, tip_bar_text=self.tip_bar_text,
+                                 update_target=self)
 
     def initialize_value(self):
         assert self.value is not None, self
@@ -124,7 +133,7 @@ class Text_Entry(Entry):
         old_value = self._value
         #self._value = value
         if old_value and old_value != value:
-            self.parent.handle_value_changed(old_value, value)
+            self.update_target.handle_value_changed(old_value, value)
         else:
             self._value = value
 
@@ -184,12 +193,12 @@ class Integer_Entry(Text_Entry):
         super(Integer_Entry, self)._set_value(value)
     value = property(_get_value, _set_value)
 
-    def __init__(self, **kwargs):
-        super(Integer_Entry, self).__init__(**kwargs)
-        container = self.create(pride.gui.gui.Container, pack_mode="right",
-                                w_range=(0, .10))
-        container.create(Increment_Button, target_entry=self, pack_mode="top")
-        container.create(Decrement_Button, target_entry=self, pack_mode="top")
+    #def __init__(self, **kwargs):
+    #    super(Integer_Entry, self).__init__(**kwargs)
+    #    container = self.create(pride.gui.gui.Container, pack_mode="right",
+    #                            w_range=(0, .10))
+    #    container.create(Increment_Button, target_entry=self, pack_mode="top")
+    #    container.create(Decrement_Button, target_entry=self, pack_mode="top")
 
     def increment_value(self, amount):
         self.value += amount
@@ -290,6 +299,16 @@ class Spinbox(Field):
 
     defaults = {"entry_type" : Integer_Entry}
 
+    def create_entry(self, pack_mode):
+        container = self.create(pride.gui.gui.Container, pack_mode=pack_mode)
+        subcontainer = container.create(pride.gui.gui.Container, pack_mode="right",
+                                        w_range=(0, .05))
+        entry = self.entry = container.create(self.entry_type,
+                                              tip_bar_text=self.tip_bar_text,
+                                              update_target=self)
+        subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
+        subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
+
 
 class Toggle(Field):
 
@@ -351,7 +370,7 @@ class Form(pride.gui.gui.Window):
         form_callable = lambda *args, **kwargs: Form(*args,
                                                 fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
                                                         [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
-                                                         #("Test2", {"value" : 2}),
+                                                         ("Test2", {"value" : 2}),
                                                          ("Test3", {"value" : True})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],

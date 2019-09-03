@@ -140,7 +140,7 @@ class Field(pride.gui.gui.Container):
         cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
         balancer = self.balancer
         if balancer is None or cost <= balancer.get_balance():
-            self.alert("Value changing from {} to {}".format(old_value, new_value),
+            self.alert("Value changing from {} to {} (initialized: {})".format(old_value, new_value, self._value_initialized),
                         level=self.verbosity["handle_value_changed"])
             if balancer is not None and self._value_initialized:
                 balancer.spend(cost)
@@ -148,9 +148,11 @@ class Field(pride.gui.gui.Container):
             entry = self.entry
             entry._value = new_value
             entry.text = str(new_value)
+            return True
         else:
             arguments = (self.balancer.get_balance(), old_value, new_value, cost)
             self.alert("Insufficient balance ({}) to change value from {} to {} (cost: {})".format(*arguments))
+            return False
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
@@ -173,7 +175,8 @@ class Text_Entry(Entry):
             return
         super(Text_Entry, self)._set_text(value)
         if old_value:
-            self.update_target.handle_value_changed(old_value, value)
+            if not self.update_target.handle_value_changed(old_value, value):
+                super(Text_Entry, self)._set_text(old_value)
         else:
             self._value = value
     text = property(_get_text, _set_text)
@@ -402,7 +405,7 @@ class Form(pride.gui.gui.Window):
         window = pride.objects[pride.gui.enable()]
         xp_points = Balance(10)
         form_callable = lambda *args, **kwargs: Form(*args,
-                                                fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
+                                                fields=[[("Test1", {"value" : '1', "balancer" : xp_points}), ("Test1-b", {"value" : "Excellent"})],
                                                         [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
                                                          ("Test2", {"value" : 2, "balancer" : xp_points}),
                                                          ("Test3", {"value" : True})]],

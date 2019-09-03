@@ -50,8 +50,9 @@ class Entry(pride.gui.gui.Button):
     def _get_value(self):
         return self._value
     def _set_value(self, value):
-        old_value = self._value
+        old_value = self.value
         if old_value is not None:
+            #assert type(old_value) == type(value), (type(old_value), type(value), old_value, value)
             self.update_target.handle_value_changed(old_value, value)
         else:
             self._value = value
@@ -59,10 +60,27 @@ class Entry(pride.gui.gui.Button):
     value = property(_get_value, _set_value)
 
 
+class Balance(object):
+
+    def __init__(self, balance):
+        self.balance = balance
+
+    def get_balance(self):
+        return self.balance
+
+    def spend(self, amount):
+        assert amount <= self.balance
+        self.balance -= amount
+
+    def earn(self, amount):
+        assert amount >= 0
+        self.balance += amount
+
+
 class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
-                "pack_mode" : "top"}
+                "pack_mode" : "top", "balancer" : None, "_value_initialized" : False}
     predefaults = {"_value" : None}
     autoreferences = ("identifier", )
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -71,6 +89,7 @@ class Field(pride.gui.gui.Container):
         if self._value is not None:
             value = self._value
             self._value = None
+            #self.alert("Setting value to {}".format(value))
             self.entry.value = value
         return self.entry.value
     def _set_value(self, value):
@@ -112,14 +131,34 @@ class Field(pride.gui.gui.Container):
     def initialize_value(self):
         assert self.value is not None, self
         self.entry.value = self.value
+        self._value_initialized = True
 
     def handle_value_changed(self, old_value, new_value):
-        self.alert("Value changed from {} to {}".format(old_value, new_value),
-                   level=self.verbosity["handle_value_changed"])
-        entry = self.entry
-        entry._value = new_value
-        entry.text = str(new_value)
-        #raise NotImplementedError()
+        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        if old_value == new_value:
+            return
+        cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
+        balancer = self.balancer
+        if balancer is None or cost <= balancer.get_balance():
+            self.alert("Value changing from {} to {}".format(old_value, new_value),
+                        level=self.verbosity["handle_value_changed"])
+            if balancer is not None and self._value_initialized:
+                balancer.spend(cost)
+                self.alert("Cost: {}; Remaining Balance: {}".format(cost, balancer.get_balance()))
+            entry = self.entry
+            entry._value = new_value
+            entry.text = str(new_value)
+        else:
+            arguments = (self.balancer.get_balance(), old_value, new_value, cost)
+            self.alert("Insufficient balance ({}) to change value from {} to {} (cost: {})".format(*arguments))
+
+    def compute_cost(self, old_value, new_value):
+        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        if isinstance(new_value, str) or isinstance(old_value, str):
+            self.alert("Warning: Cost comparison of strings not well-defined")
+            old_value = len(old_value)
+            new_value = len(new_value)
+        return abs(old_value - new_value)
 
 
 class Text_Entry(Entry):
@@ -129,14 +168,14 @@ class Text_Entry(Entry):
     def _get_text(self):
         return super(Text_Entry, self)._get_text()
     def _set_text(self, value):
+        old_value = self.text
+        if old_value == value:
+            return
         super(Text_Entry, self)._set_text(value)
-        old_value = self._value
-        #self._value = value
-        if old_value and old_value != value:
+        if old_value:
             self.update_target.handle_value_changed(old_value, value)
         else:
             self._value = value
-
     text = property(_get_text, _set_text)
 
     def select(self, mouse):
@@ -181,6 +220,7 @@ class Integer_Entry(Text_Entry):
         except TypeError: # value can be None
             pass
         except ValueError: # have to remove any non-decimal-numeric characters
+            _value = value
             value = ''.join(item for item in value if item in "0123456789")
             if not value:
                 value = '0'
@@ -190,15 +230,8 @@ class Integer_Entry(Text_Entry):
     def _get_value(self):
         return int(super(Integer_Entry, self)._get_value())
     def _set_value(self, value):
-        super(Integer_Entry, self)._set_value(value)
+        super(Integer_Entry, self)._set_value(int(value))
     value = property(_get_value, _set_value)
-
-    #def __init__(self, **kwargs):
-    #    super(Integer_Entry, self).__init__(**kwargs)
-    #    container = self.create(pride.gui.gui.Container, pack_mode="right",
-    #                            w_range=(0, .10))
-    #    container.create(Increment_Button, target_entry=self, pack_mode="top")
-    #    container.create(Decrement_Button, target_entry=self, pack_mode="top")
 
     def increment_value(self, amount):
         self.value += amount
@@ -367,10 +400,11 @@ class Form(pride.gui.gui.Window):
         import pride.gui.main
 
         window = pride.objects[pride.gui.enable()]
+        xp_points = Balance(10)
         form_callable = lambda *args, **kwargs: Form(*args,
                                                 fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
                                                         [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
-                                                         ("Test2", {"value" : 2}),
+                                                         ("Test2", {"value" : 2, "balancer" : xp_points}),
                                                          ("Test3", {"value" : True})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],

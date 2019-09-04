@@ -51,6 +51,8 @@ class Entry(pride.gui.gui.Button):
         return self._value
     def _set_value(self, value):
         old_value = self.value
+        if old_value == value and type(old_value) == type(value): # type check because 0 == False
+            return
         if old_value is not None:
             #assert type(old_value) == type(value), (type(old_value), type(value), old_value, value)
             self.update_target.handle_value_changed(old_value, value)
@@ -135,8 +137,7 @@ class Field(pride.gui.gui.Container):
 
     def handle_value_changed(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
-        if old_value == new_value:
-            return
+        assert old_value != new_value
         cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
         balancer = self.balancer
         if balancer is None or cost <= balancer.get_balance():
@@ -145,14 +146,17 @@ class Field(pride.gui.gui.Container):
             if balancer is not None and self._value_initialized:
                 balancer.spend(cost)
                 self.alert("Cost: {}; Remaining Balance: {}".format(cost, balancer.get_balance()))
-            entry = self.entry
-            entry._value = new_value
-            entry.text = str(new_value)
+            self.assign_entry_value(new_value)
             return True
         else:
             arguments = (self.balancer.get_balance(), old_value, new_value, cost)
             self.alert("Insufficient balance ({}) to change value from {} to {} (cost: {})".format(*arguments))
             return False
+
+    def assign_entry_value(self, new_value):
+        entry = self.entry
+        entry._value = new_value
+        entry.text = str(new_value)
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
@@ -160,12 +164,14 @@ class Field(pride.gui.gui.Container):
             self.alert("Warning: Cost comparison of strings not well-defined")
             old_value = len(old_value)
             new_value = len(new_value)
+        # True - False == 1; False - True == -1;
         return abs(old_value - new_value)
 
 
 class Text_Entry(Entry):
 
     defaults = {"h" : 16, "allow_text_edit" : False}
+    predefaults = {"_already_changed" : False}
 
     def _get_text(self):
         return super(Text_Entry, self)._get_text()
@@ -174,6 +180,8 @@ class Text_Entry(Entry):
         if old_value == value:
             return
         super(Text_Entry, self)._set_text(value)
+        if self._already_changed:
+            return
         if old_value:
             if not self.update_target.handle_value_changed(old_value, value):
                 super(Text_Entry, self)._set_text(old_value)
@@ -312,18 +320,16 @@ class Dropdown_Entry(Entry):
         self.menu_open = False
         for entry in self.entries:
             entry.always_on_top = False
-            if entry != selected_entry or type(entry) != type(selected_entry):
+            if entry is not selected_entry:
                 entry.hide()
             elif entry.hidden:
                 entry.show()
-        if _initialized_already:
-            self.value = selected_entry.value
+
+        #if _initialized_already:
+        self.value = selected_entry.value
         self.pack()
         self.selected_entry = selected_entry
         assert not selected_entry.hidden
-
-    def handle_value_changed(self, old_value, value):
-        pass
 
 
 class Text_Field(Field):
@@ -345,6 +351,13 @@ class Spinbox(Field):
         subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
         subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
 
+    def assign_entry_value(self, new_value):
+        entry = self.entry
+        entry._value = new_value
+        entry._already_changed = True
+        entry.text = str(new_value) # potential issue: if this crashes, entry._already_changed won't get reset
+        entry._already_changed = False
+
 
 class Toggle(Field):
 
@@ -358,6 +371,7 @@ class Dropdown_Field(Field):
     def handle_value_changed(self, old_value, new_value):
         self.alert("Value changed from {} to {}".format(old_value, new_value),
                    level=self.verbosity["handle_value_changed"])
+        self.alert("Cost to change from {} to {} not defined".format(old_value, new_value))
         self.entry._value = new_value
 
     def initialize_value(self):
@@ -406,9 +420,9 @@ class Form(pride.gui.gui.Window):
         xp_points = Balance(10)
         form_callable = lambda *args, **kwargs: Form(*args,
                                                 fields=[[("Test1", {"value" : '1', "balancer" : xp_points}), ("Test1-b", {"value" : "Excellent"})],
-                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
+                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3]), "balancer" : xp_points}),
                                                          ("Test2", {"value" : 2, "balancer" : xp_points}),
-                                                         ("Test3", {"value" : True})]],
+                                                         ("Test3", {"value" : True, "balancer" : xp_points})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))

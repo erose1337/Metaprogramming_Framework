@@ -137,12 +137,9 @@ class Field(pride.gui.gui.Container):
                         level=self.verbosity["handle_value_changed"])
             if balancer is not None and balance is not None and self._value_initialized:
                 balancer.spend(cost)
-                self.alert("Cost: {}; Remaining Balance: {}".format(cost, balancer.get_balance()))
             self.assign_entry_value(new_value)
             return True
         else:
-            arguments = (self.balancer.get_balance(), old_value, new_value, cost)
-            self.alert("Insufficient balance ({}) to change value from {} to {} (cost: {})".format(*arguments))
             return False
 
     def assign_entry_value(self, new_value):
@@ -152,12 +149,7 @@ class Field(pride.gui.gui.Container):
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
-        if isinstance(new_value, str) or isinstance(old_value, str):
-            self.alert("Warning: Cost comparison of strings not well-defined")
-            old_value = len(old_value)
-            new_value = len(new_value)
-        # True - False == 1; False - True == -1;
-        return abs(old_value - new_value)
+        raise NotImplementedError()
 
 
 class Text_Entry(Entry):
@@ -251,7 +243,19 @@ class Toggle_Entry(Entry):
 
 class _Dropdown_Entry(Entry):
 
-    defaults = {"pack_mode" : "top", "h_range" : (.05, 1.0)}
+    defaults = {"pack_mode" : "bottom", "h_range" : (.05, 1.0)}
+    predefaults = {"use_auto_direction" : True, "_pack_mode" : "top"}
+
+    def _get_pack_mode(self):
+        return self._pack_mode
+    def _set_pack_mode(self, value):
+        if self.use_auto_direction:
+            if (self.y + self.h) < self.sdl_window.h / 2:
+                value = "bottom"
+            else:
+                value = "top"
+        self._pack_mode = value
+    pack_mode = property(_get_pack_mode, _set_pack_mode)
 
     def left_click(self, mouse):
         super(_Dropdown_Entry, self).left_click(mouse)
@@ -328,6 +332,12 @@ class Text_Field(Field):
 
     defaults = {"entry_type" : Text_Entry}
 
+    def compute_cost(self, old_value, new_value):
+        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        old_value = len(old_value)
+        new_value = len(new_value)
+        return new_value - old_value
+
 
 class Spinbox(Field):
 
@@ -350,21 +360,43 @@ class Spinbox(Field):
         entry.text = str(new_value) # potential issue: if this crashes, entry._already_changed won't get reset
         entry._already_changed = False
 
+    def compute_cost(self, old_value, new_value):
+        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        return new_value - old_value
+
 
 class Toggle(Field):
 
     defaults = {"entry_type" : Toggle_Entry}
 
+    def compute_cost(self, old_value, new_value):
+        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        # True - False == 1; False - True == -1;
+        return new_value - old_value
+
 
 class Dropdown_Field(Field):
 
-    defaults = {"entry_type" : Dropdown_Entry}
+    defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side"}
 
     def handle_value_changed(self, old_value, new_value):
         self.alert("Value changed from {} to {}".format(old_value, new_value),
                    level=self.verbosity["handle_value_changed"])
-        self.alert("Cost to change from {} to {} not defined".format(old_value, new_value))
+        do_change = False
+        if self.balancer is not None:
+            balance = self.balancer.get_balance()
+            if balance is not None:
+                cost = self.compute_cost(old_value, new_value)
+                if cost <= balance:
+                    do_change = True
+            else:
+                do_change = True
+        else:
+            do_change = True
         self.entry._value = new_value
+
+    def compute_cost(self, old_value, new_value):
+        return 0
 
     def initialize_value(self):
         super(Dropdown_Field, self).initialize_value()
@@ -445,8 +477,8 @@ class Form(pride.gui.gui.Window):
         window = pride.objects[pride.gui.enable()]
         form_callable = lambda *args, **kwargs: Form(*args,
                                                 balance=10, balance_name="Remaining Balance",
-                                                fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
-                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
+                                                fields=[[("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
+                                                        [("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"}),
                                                          ("Test2", {"value" : 2}),
                                                          ("Test3", {"value" : True})]],
                                                 **kwargs)

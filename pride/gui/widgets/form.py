@@ -415,7 +415,8 @@ class Form(pride.gui.gui.Window):
         super(Form, self).__init__(**kwargs)
         if self.balance is not None:
             displayer = self.create(Text_Field, name=self.balance_name,
-                                    value=self.balance, pack_mode="top")
+                                    value=self.balance, pack_mode="top",
+                                    h_range=(.05, .1), orientation="side by side")
             displayer.initialize_value()
             displayer.editable = False
             self.displayer = displayer
@@ -435,8 +436,9 @@ class Form(pride.gui.gui.Window):
                     field_type = text_field
                 elif isinstance(value, tuple) or isinstance(value, list):
                     field_type = dropdown
+                entries.setdefault("balancer", self)
                 field = container.create(field_type, name=name, pack_mode="left",
-                                         balancer=self, **entries)
+                                         **entries)
                 field.initialize_value()
 
     def get_balance(self):
@@ -475,13 +477,14 @@ class Form(pride.gui.gui.Window):
         import pride.gui.main
 
         window = pride.objects[pride.gui.enable()]
-        form_callable = lambda *args, **kwargs: Form(*args,
-                                                balance=10, balance_name="Remaining Balance",
-                                                fields=[[("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
-                                                        [("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"}),
-                                                         ("Test2", {"value" : 2}),
-                                                         ("Test3", {"value" : True})]],
-                                                **kwargs)
+        form_callable = lambda *args, **kwargs:\
+            Form(*args,
+                 balance=10, balance_name="Remaining Balance",
+                 fields=[[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
+                         [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent"}),
+                          ("Spinbox", {"value" : 2}),
+                          ("Toggle", {"value" : True})]],
+                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
 

@@ -62,27 +62,11 @@ class Entry(pride.gui.gui.Button):
     value = property(_get_value, _set_value)
 
 
-class Balance(object):
-
-    def __init__(self, balance):
-        self.balance = balance
-
-    def get_balance(self):
-        return self.balance
-
-    def spend(self, amount):
-        assert amount <= self.balance
-        self.balance -= amount
-
-    def earn(self, amount):
-        assert amount >= 0
-        self.balance += amount
-
-
 class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
-                "pack_mode" : "top", "balancer" : None, "_value_initialized" : False}
+                "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
+                "editable" : True}
     predefaults = {"_value" : None}
     autoreferences = ("identifier", )
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -96,10 +80,13 @@ class Field(pride.gui.gui.Container):
         return self.entry.value
     def _set_value(self, value):
         try:
-            self.entry.value = value
+            entry = self.entry
         except AttributeError:
             assert not hasattr(self, "entry")
             self._value = value
+        else:
+            if self.editable:
+                entry.value = value
     value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
@@ -138,12 +125,17 @@ class Field(pride.gui.gui.Container):
     def handle_value_changed(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
         assert old_value != new_value
-        cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
         balancer = self.balancer
-        if balancer is None or cost <= balancer.get_balance():
+        if balancer is not None:
+            balance = self.balancer.get_balance()
+            cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
+        else:
+            balance = None
+            cost = 0
+        if balancer is None or balance is None or cost <= balancer.get_balance():
             self.alert("Value changing from {} to {} (initialized: {})".format(old_value, new_value, self._value_initialized),
                         level=self.verbosity["handle_value_changed"])
-            if balancer is not None and self._value_initialized:
+            if balancer is not None and balance is not None and self._value_initialized:
                 balancer.spend(cost)
                 self.alert("Cost: {}; Remaining Balance: {}".format(cost, balancer.get_balance()))
             self.assign_entry_value(new_value)
@@ -383,10 +375,18 @@ class Form(pride.gui.gui.Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
-                "dropdown_type" : Dropdown_Field}
+                "dropdown_type" : Dropdown_Field,
+                "balance" : None, "balance_name" : "balance"}
+    autoreferences = ("displayer", )
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
+        if self.balance is not None:
+            displayer = self.create(Text_Field, name=self.balance_name,
+                                    value=self.balance, pack_mode="top")
+            displayer.initialize_value()
+            displayer.editable = False
+            self.displayer = displayer
         spinbox = self.spinbox_type
         text_field = self.text_field_type
         toggle = self.toggle_type
@@ -403,8 +403,34 @@ class Form(pride.gui.gui.Window):
                     field_type = text_field
                 elif isinstance(value, tuple) or isinstance(value, list):
                     field_type = dropdown
-                field = container.create(field_type, name=name, pack_mode="left", **entries)
+                field = container.create(field_type, name=name, pack_mode="left",
+                                         balancer=self, **entries)
                 field.initialize_value()
+
+    def get_balance(self):
+        return self.balance
+
+    def spend(self, amount):
+        assert amount <= self.balance
+        self.balance -= amount
+        displayer = self.displayer
+        if displayer is not None:
+            backup = displayer.editable
+            displayer.editable = True
+            displayer.value = (str(self.balance))
+            displayer.editable = backup
+
+    def earn(self, amount):
+        assert amount >= 0
+        self.balance += amount
+
+    def display_balance(self, amount):
+        displayer = self.displayer
+        if displayer is not None:
+            backup = displayer.editable
+            displayer.editable = True
+            displayer.value = (str(self.balance))
+            displayer.editable = backup
 
     @classmethod
     def from_file(cls, filename):
@@ -417,12 +443,12 @@ class Form(pride.gui.gui.Window):
         import pride.gui.main
 
         window = pride.objects[pride.gui.enable()]
-        xp_points = Balance(10)
         form_callable = lambda *args, **kwargs: Form(*args,
-                                                fields=[[("Test1", {"value" : '1', "balancer" : xp_points}), ("Test1-b", {"value" : "Excellent"})],
-                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3]), "balancer" : xp_points}),
-                                                         ("Test2", {"value" : 2, "balancer" : xp_points}),
-                                                         ("Test3", {"value" : True, "balancer" : xp_points})]],
+                                                balance=10, balance_name="Remaining Balance",
+                                                fields=[[("Test1", {"value" : '1'}), ("Test1-b", {"value" : "Excellent"})],
+                                                        [("Test4", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])}),
+                                                         ("Test2", {"value" : 2}),
+                                                         ("Test3", {"value" : True})]],
                                                 **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))

@@ -433,15 +433,19 @@ class Form(pride.gui.gui.Window):
             container = self.create("pride.gui.gui.Container", pack_mode="top")
             for name, entries in row:
                 value = entries["value"]
-                if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
-                    field_type = toggle
-                elif isinstance(value, int) or isinstance(value, float):
-                    field_type = spinbox
-                elif isinstance(value, str):
-                    field_type = text_field
-                elif isinstance(value, tuple) or isinstance(value, list):
-                    field_type = dropdown
+                field_type = entries.pop("field_type", None)
+                if field_type is None:
+                    if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
+                        field_type = toggle
+                    elif isinstance(value, int) or isinstance(value, float):
+                        field_type = spinbox
+                    elif isinstance(value, str):
+                        field_type = text_field
+                    elif isinstance(value, tuple) or isinstance(value, list):
+                        field_type = dropdown
                 entries.setdefault("balancer", self)
+                assert field_type is not None
+                assert "field_type" not in entries
                 field = container.create(field_type, name=name,
                                          target_object=target_object,
                                          **entries)
@@ -490,13 +494,13 @@ class Form(pride.gui.gui.Window):
                  balance=10, balance_name="Remaining Balance",
                  fields=[[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
                          [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent"}),
-                          ("Spinbox", {"value" : 2}),
+                          ("Spinbox", {"value" : 2, "field_type" : "pride.gui.widgets.form.Text_Field"}),
                           ("Toggle", {"value" : True})]],
                  target_object=_object,
                  **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
-        assert _object.Spinbox == 2
+        #assert _object.Spinbox == 2
 
 if __name__ == "__main__":
     Form.unit_test()

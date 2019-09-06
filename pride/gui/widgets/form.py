@@ -66,7 +66,7 @@ class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
-                "editable" : True}
+                "editable" : True, "pack_mode" : "left", "target_object" : None}
     predefaults = {"_value" : None}
     autoreferences = ("identifier", )
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -146,6 +146,8 @@ class Field(pride.gui.gui.Container):
         entry = self.entry
         entry._value = new_value
         entry.text = str(new_value)
+        if self.target_object is not None:
+            setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
@@ -359,6 +361,8 @@ class Spinbox(Field):
         entry._already_changed = True
         entry.text = str(new_value) # potential issue: if this crashes, entry._already_changed won't get reset
         entry._already_changed = False
+        if self.target_object is not None:
+            setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
@@ -407,7 +411,7 @@ class Form(pride.gui.gui.Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
-                "dropdown_type" : Dropdown_Field,
+                "dropdown_type" : Dropdown_Field, "target_object" : None,
                 "balance" : None, "balance_name" : "balance"}
     autoreferences = ("displayer", )
 
@@ -424,6 +428,7 @@ class Form(pride.gui.gui.Window):
         text_field = self.text_field_type
         toggle = self.toggle_type
         dropdown = self.dropdown_type
+        target_object = self.target_object
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top")
             for name, entries in row:
@@ -437,7 +442,8 @@ class Form(pride.gui.gui.Window):
                 elif isinstance(value, tuple) or isinstance(value, list):
                     field_type = dropdown
                 entries.setdefault("balancer", self)
-                field = container.create(field_type, name=name, pack_mode="left",
+                field = container.create(field_type, name=name,
+                                         target_object=target_object,
                                          **entries)
                 field.initialize_value()
 
@@ -475,7 +481,9 @@ class Form(pride.gui.gui.Window):
     @classmethod
     def unit_test(cls):
         import pride.gui.main
+        import pride.components.base
 
+        _object = pride.components.base.Base()
         window = pride.objects[pride.gui.enable()]
         form_callable = lambda *args, **kwargs:\
             Form(*args,
@@ -484,11 +492,11 @@ class Form(pride.gui.gui.Window):
                          [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent"}),
                           ("Spinbox", {"value" : 2}),
                           ("Toggle", {"value" : True})]],
+                 target_object=_object,
                  **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
-
-
+        assert _object.Spinbox == 2
 
 if __name__ == "__main__":
     Form.unit_test()

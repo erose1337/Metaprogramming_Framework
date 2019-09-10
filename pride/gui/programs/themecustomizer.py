@@ -222,5 +222,6 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 
 if __name__ == "__main__":
     import pride.gui
+    import pride.gui.themes
     window = pride.gui.enable()
-    pride.objects[window].create(Theme_Customizer, target_theme=pride.gui.gui.Minimal_Theme)
+    pride.objects[window].create(Theme_Customizer, target_theme=pride.gui.themes.Minimal_Theme)

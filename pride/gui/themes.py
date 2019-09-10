@@ -58,6 +58,13 @@ class Theme(pride.components.base.Wrapper):
 class Minimal_Theme(Theme):
 
     theme_colors = copy.deepcopy(Theme.theme_colors)
+    _cache = dict() # for conspiring with gui.Animated_Object. update_theme_users should flush the cache
+
+    @classmethod
+    def update_theme_users(cls):
+        cls._cache.clear()
+        print("Clearing cache ({} keys)".format(len(cls._cache)))
+        super(Minimal_Theme, cls).update_theme_users()
 
     def draw_texture(self):
         assert not self.hidden

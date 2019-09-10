@@ -712,14 +712,16 @@ class Animated_Object(_Window_Object):
                 self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
         super(Animated_Object, self).draw_texture()
 
-    def next_frame(self, _cache=dict()):
+    def next_frame(self):
         end_profile = self.theme_profile
         old_profile = self._old_theme
         unit = 1.0 / self.frame_count
         scalar = self._transition_state
         set_theme = super(Animated_Object, self)._set_theme_profile
-        _theme_colors = self.theme.theme_colors
-        for key in self.theme.theme_colors[end_profile].keys():
+        theme = self.theme
+        _theme_colors = theme.theme_colors
+        _cache = theme._cache # conspires with Minimal_Theme class to keep the cache fresh when theme colors are edited
+        for key in theme.theme_colors[end_profile].keys():
             if key not in ("shadow_thickness", "glow_thickness"):
                 key += "_color"
             try:

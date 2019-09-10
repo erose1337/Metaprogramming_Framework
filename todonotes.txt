@@ -7,6 +7,12 @@ To Do/Bugs
 
 form.py
 -------------
+- theme_profile ideas/guidelines
+    - make interactive components light and non-interactive components dark (or vice versa)
+    - make text colors on interactive components different than text colors on non-interactive components
+
+
+
 - add support for slider bars
     - re-write theme customizer in term of Forms
 
@@ -25,7 +31,11 @@ form.py
 
 - File Explorer and `save as` functionality
 - Homescreen: Closing Theme_Customizer leaves a dead empty tab open
-- Theme_Customizer export uses File_Selector from game3 instead of from pride
+
+
+Theme_Customizer
+================
+- export uses File_Selector from game3 instead of from pride
 
 
 Make identicons

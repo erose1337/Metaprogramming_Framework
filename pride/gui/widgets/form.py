@@ -57,8 +57,11 @@ class Entry(pride.gui.gui.Button):
             #assert type(old_value) == type(value), (type(old_value), type(value), old_value, value)
             self.update_target.handle_value_changed(old_value, value)
         else:
-            self._value = value
-            self.text = str(value)
+            if self.update_target is not None:
+                self.update_target.assign_entry_value(value)
+            else:
+                self._value = value
+                self.text = str(value)
     value = property(_get_value, _set_value)
 
 
@@ -173,6 +176,15 @@ class Text_Entry(Entry):
                 super(Text_Entry, self)._set_text(old_value)
         else:
             self._value = value
+            update_target = self.update_target
+            if update_target is not None and update_target.target_object is not None:
+                setattr(update_target.target_object, update_target.name, value)
+            #except AttributeError:
+            #    if hasattr(self.parent, "target_object"):
+            #        raise
+            #    print self, update_target, self.parent
+            #    if update_target.target_object is not None:
+            #        setattr(update_target.target_object, update_target.name, value)
     text = property(_get_text, _set_text)
 
     def select(self, mouse):
@@ -355,7 +367,11 @@ class Spinbox(Field):
         subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
         subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
 
+    def handle_value_changed(self, old_value, new_value):
+        return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
+
     def assign_entry_value(self, new_value):
+        assert isinstance(new_value, int), (new_value, type(new_value))
         entry = self.entry
         entry._value = new_value
         entry._already_changed = True
@@ -397,7 +413,14 @@ class Dropdown_Field(Field):
                 do_change = True
         else:
             do_change = True
+        if do_change:
+            self.assign_entry_value(new_value)
+
+    def assign_entry_value(self, new_value):
+        self.alert("assigning {} to {}".format(new_value, self.name))
         self.entry._value = new_value
+        if self.target_object is not None:
+            setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         return 0
@@ -494,13 +517,19 @@ class Form(pride.gui.gui.Window):
                  balance=10, balance_name="Remaining Balance",
                  fields=[[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
                          [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent"}),
-                          ("Spinbox", {"value" : 2, "field_type" : "pride.gui.widgets.form.Text_Field"}),
+                          ("NotASpinbox", {"value" : '2', "field_type" : "pride.gui.widgets.form.Text_Field"}),
+                          ("Spinbox", {"value" : 2}),
                           ("Toggle", {"value" : True})]],
                  target_object=_object,
                  **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
-        #assert _object.Spinbox == 2
+        assert _object.Dropdown == 0
+        assert _object.Text == '1'
+        assert getattr(_object, "Text 2") == "Excellent"
+        assert _object.NotASpinbox == '2', (_object.NotASpinbox, type(_object.NotASpinbox))
+        assert _object.Spinbox == 2
+        assert _object.Toggle == True
 
 if __name__ == "__main__":
     Form.unit_test()

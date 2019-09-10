@@ -417,7 +417,6 @@ class Dropdown_Field(Field):
             self.assign_entry_value(new_value)
 
     def assign_entry_value(self, new_value):
-        self.alert("assigning {} to {}".format(new_value, self.name))
         self.entry._value = new_value
         if self.target_object is not None:
             setattr(self.target_object, self.name, new_value)

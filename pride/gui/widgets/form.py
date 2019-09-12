@@ -51,7 +51,7 @@ class Entry(pride.gui.gui.Button):
         return self._value
     def _set_value(self, value):
         old_value = self.value
-        if old_value == value and type(old_value) == type(value): # type check because 0 == False
+        if old_value == value and type(old_value) == type(value): # type check because 0 == False):
             return
         if old_value is not None:
             #assert type(old_value) == type(value), (type(old_value), type(value), old_value, value)
@@ -69,7 +69,8 @@ class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
-                "editable" : True, "pack_mode" : "left", "target_object" : None}
+                "editable" : True, "pack_mode" : "left", "target_object" : None,
+                "auto_create_id" : True}
     predefaults = {"_value" : None}
     autoreferences = ("identifier", )
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -106,7 +107,8 @@ class Field(pride.gui.gui.Container):
             pack_mode = "left"
             scale_to_text = True
         assert self.identifier is None
-        self.create_id(pack_mode, scale_to_text, **id_kwargs)
+        if self.auto_create_id:
+            self.create_id(pack_mode, scale_to_text, **id_kwargs)
         self.create_entry(pack_mode)
         # initialize_value is called by Form, which ensures entry.value is not set until after it exists
 
@@ -126,7 +128,7 @@ class Field(pride.gui.gui.Container):
         self._value_initialized = True
 
     def handle_value_changed(self, old_value, new_value):
-        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int changing to long would trigger this
         assert old_value != new_value
         balancer = self.balancer
         if balancer is not None:
@@ -167,6 +169,8 @@ class Text_Entry(Entry):
     def _set_text(self, value):
         old_value = self.text
         if old_value == value:
+            return
+        if old_value and self.update_target is not None and not self.update_target.editable:
             return
         super(Text_Entry, self)._set_text(value)
         if self._already_changed:
@@ -353,6 +357,11 @@ class Text_Field(Field):
         return new_value - old_value
 
 
+class Text_Display(Text_Field):
+
+    defaults = {"editable" : False, "auto_create_id" : True}
+
+
 class Spinbox(Field):
 
     defaults = {"entry_type" : Integer_Entry}
@@ -371,7 +380,7 @@ class Spinbox(Field):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
 
     def assign_entry_value(self, new_value):
-        assert isinstance(new_value, int), (new_value, type(new_value))
+        assert isinstance(new_value, int) or isinstance(new_value, long), (new_value, type(new_value))
         entry = self.entry
         entry._value = new_value
         entry._already_changed = True
@@ -381,7 +390,7 @@ class Spinbox(Field):
             setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
-        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
+        #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int/long strike again
         return new_value - old_value
 
 
@@ -454,7 +463,13 @@ class Form(pride.gui.gui.Window):
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top")
             for name, entries in row:
-                value = entries["value"]
+                try:
+                    value = entries["value"]
+                except KeyError:
+                    if "text" not in entries:
+                        raise
+                    else:
+                        value = entries["value"] = entries["text"]
                 field_type = entries.pop("field_type", None)
                 if field_type is None:
                     if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
@@ -465,6 +480,7 @@ class Form(pride.gui.gui.Window):
                         field_type = text_field
                     elif isinstance(value, tuple) or isinstance(value, list):
                         field_type = dropdown
+
                 entries.setdefault("balancer", self)
                 assert field_type is not None
                 assert "field_type" not in entries
@@ -515,7 +531,7 @@ class Form(pride.gui.gui.Window):
             Form(*args,
                  balance=10, balance_name="Remaining Balance",
                  fields=[[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
-                         [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent"}),
+                         [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent", "field_type" : Text_Display}),
                           ("NotASpinbox", {"value" : '2', "field_type" : "pride.gui.widgets.form.Text_Field"}),
                           ("Spinbox", {"value" : 2}),
                           ("Toggle", {"value" : True})]],

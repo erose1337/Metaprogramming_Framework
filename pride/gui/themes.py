@@ -63,7 +63,6 @@ class Minimal_Theme(Theme):
     @classmethod
     def update_theme_users(cls):
         cls._cache.clear()
-        print("Clearing cache ({} keys)".format(len(cls._cache)))
         super(Minimal_Theme, cls).update_theme_users()
 
     def draw_texture(self):

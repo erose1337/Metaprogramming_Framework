@@ -44,53 +44,35 @@ import sdl2
 class Entry(pride.gui.gui.Button):
 
     defaults = {"pack_mode" : "right"}
-    predefaults = {"_value" : None}
-    autoreferences = ("update_target", )
+    predefaults = {"parent_field" : None, "text_initialized" : False}
+    autoreferences = ("parent_field", )
 
-    def _get_value(self):
-        return self._value
-    def _set_value(self, value):
-        old_value = self.value
-        if old_value == value and type(old_value) == type(value): # type check because 0 == False):
-            return
-        if old_value is not None:
-            #assert type(old_value) == type(value), (type(old_value), type(value), old_value, value)
-            self.update_target.handle_value_changed(old_value, value)
+    def _get_text(self):
+        return super(Entry, self)._get_text()#str(getattr(self.target_object, self.name))
+    def _set_text(self, value):
+        if self.text_initialized:
+            parent_field = self.parent_field
+            super(Entry, self)._set_text(str(getattr(parent_field.target_object, parent_field.name)))
         else:
-            if self.update_target is not None:
-                self.update_target.assign_entry_value(value)
-            else:
-                self._value = value
-                self.text = str(value)
-    value = property(_get_value, _set_value)
+            super(Entry, self)._set_text(value)
+            self.text_initialized = True
+    text = property(_get_text, _set_text)
 
 
 class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
-                "editable" : True, "pack_mode" : "left", "target_object" : None,
-                "auto_create_id" : True}
-    predefaults = {"_value" : None}
+                "editable" : True, "pack_mode" : "left", "auto_create_id" : True}
+    predefaults = {"target_object" : None}
+    required_attributes = ("target_object", )
     autoreferences = ("identifier", )
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
-        if self._value is not None:
-            value = self._value
-            self._value = None
-            #self.alert("Setting value to {}".format(value))
-            self.entry.value = value
-        return self.entry.value
+        return getattr(self.target_object, self.name)
     def _set_value(self, value):
-        try:
-            entry = self.entry
-        except AttributeError:
-            assert not hasattr(self, "entry")
-            self._value = value
-        else:
-            if self.editable:
-                entry.value = value
+        setattr(self.target_object, self.name, value)
     value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
@@ -110,7 +92,6 @@ class Field(pride.gui.gui.Container):
         if self.auto_create_id:
             self.create_id(pack_mode, scale_to_text, **id_kwargs)
         self.create_entry(pack_mode)
-        # initialize_value is called by Form, which ensures entry.value is not set until after it exists
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         self.identifier = self.create(pride.gui.gui.Container, text=self.name,
@@ -120,12 +101,7 @@ class Field(pride.gui.gui.Container):
     def create_entry(self, pack_mode):
         self.entry = self.create(self.entry_type,
                                  pack_mode=pack_mode, tip_bar_text=self.tip_bar_text,
-                                 update_target=self)
-
-    def initialize_value(self):
-        assert self.value is not None, self
-        self.entry.value = self.value
-        self._value_initialized = True
+                                 parent_field=self)
 
     def handle_value_changed(self, old_value, new_value):
         #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int changing to long would trigger this
@@ -142,17 +118,14 @@ class Field(pride.gui.gui.Container):
                         level=self.verbosity["handle_value_changed"])
             if balancer is not None and balance is not None and self._value_initialized:
                 balancer.spend(cost)
-            self.assign_entry_value(new_value)
+            self.assign_value(new_value)
             return True
         else:
             return False
 
-    def assign_entry_value(self, new_value):
-        entry = self.entry
-        entry._value = new_value
-        entry.text = str(new_value)
-        if self.target_object is not None:
-            setattr(self.target_object, self.name, new_value)
+    def assign_value(self, new_value):
+        assert self.target_object is not None
+        setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
@@ -162,34 +135,17 @@ class Field(pride.gui.gui.Container):
 class Text_Entry(Entry):
 
     defaults = {"h" : 16, "allow_text_edit" : False}
-    predefaults = {"_already_changed" : False}
 
-    def _get_text(self):
-        return super(Text_Entry, self)._get_text()
-    def _set_text(self, value):
-        old_value = self.text
-        if old_value == value:
-            return
-        if old_value and self.update_target is not None and not self.update_target.editable:
-            return
-        super(Text_Entry, self)._set_text(value)
-        if self._already_changed:
-            return
-        if old_value:
-            if not self.update_target.handle_value_changed(old_value, value):
-                super(Text_Entry, self)._set_text(old_value)
-        else:
-            self._value = value
-            update_target = self.update_target
-            if update_target is not None and update_target.target_object is not None:
-                setattr(update_target.target_object, update_target.name, value)
-            #except AttributeError:
-            #    if hasattr(self.parent, "target_object"):
-            #        raise
-            #    print self, update_target, self.parent
-            #    if update_target.target_object is not None:
-            #        setattr(update_target.target_object, update_target.name, value)
-    text = property(_get_text, _set_text)
+    #def _get_text(self):
+    #    return super(Text_Entry, self)._get_text()
+    #def _set_text(self, value):
+    #    if self.text_initialized:
+    #        parent_field = self.parent_field
+    #        setattr(parent_field.target_object, parent_field.name, value)
+    #    else:
+    #        self.first_set = True
+    #    super(Text_Entry, self)._set_text(value)
+    #text = property(_get_text, _set_text)
 
     def select(self, mouse):
         super(Text_Entry, self).select(mouse)
@@ -233,30 +189,33 @@ class Integer_Entry(Text_Entry):
         except TypeError: # value can be None
             pass
         except ValueError: # have to remove any non-decimal-numeric characters
-            _value = value
             value = ''.join(item for item in value if item in "0123456789")
             if not value:
                 value = '0'
         super(Integer_Entry, self)._set_text(value)
     text = property(_get_text, _set_text)
 
-    def _get_value(self):
-        return int(super(Integer_Entry, self)._get_value())
-    def _set_value(self, value):
-        super(Integer_Entry, self)._set_value(int(value))
-    value = property(_get_value, _set_value)
-
     def increment_value(self, amount):
-        self.value += amount
+        parent_field = self.parent_field
+        target_object = parent_field.target_object
+        attribute = parent_field.name
+        value = getattr(target_object, attribute)
+        setattr(target_object, attribute, value + amount)
 
     def decrement_value(self, amount):
-        self.value -= amount
+        parent_field = self.parent_field
+        target_object = parent_field.target_object
+        attribute = parent_field.name
+        value = getattr(target_object, attribute)
+        setattr(target_object, attribute, value - amount)
 
 
 class Toggle_Entry(Entry):
 
     def left_click(self, mouse):
-        self.value = not self.value
+        parent_field = self.parent_field
+        name = parent_field.name
+        setattr(parent_field, name, not parent_field.value)
 
 
 class _Dropdown_Entry(Entry):
@@ -287,6 +246,10 @@ class Dropdown_Entry(Entry):
 
     defaults = {"pack_mode" : "top", "menu_open" : False,
                 "entry_type" : _Dropdown_Entry, "_initialized_already" : False}
+
+    def __init__(self, **kwargs):
+        super(Dropdown_Entry, self).__init__(**kwargs)
+        self.initialize_entries()
 
     def initialize_entries(self):
         assert not self._initialized_already
@@ -339,8 +302,8 @@ class Dropdown_Entry(Entry):
             elif entry.hidden:
                 entry.show()
 
-        #if _initialized_already:
-        self.value = selected_entry.value
+        parent_field = self.parent_field
+        setattr(parent_field.target_object, parent_field.name, selected_entry.value)
         self.pack()
         self.selected_entry = selected_entry
         assert not selected_entry.hidden
@@ -372,22 +335,17 @@ class Spinbox(Field):
                                         w_range=(0, .05))
         entry = self.entry = container.create(self.entry_type,
                                               tip_bar_text=self.tip_bar_text,
-                                              update_target=self)
+                                              parent_field=self)
         subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
         subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
 
     def handle_value_changed(self, old_value, new_value):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
 
-    def assign_entry_value(self, new_value):
+    def assign_value(self, new_value):
         assert isinstance(new_value, int) or isinstance(new_value, long), (new_value, type(new_value))
-        entry = self.entry
-        entry._value = new_value
-        entry._already_changed = True
-        entry.text = str(new_value) # potential issue: if this crashes, entry._already_changed won't get reset
-        entry._already_changed = False
-        if self.target_object is not None:
-            setattr(self.target_object, self.name, new_value)
+        assert self.target_object is not None
+        setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int/long strike again
@@ -423,19 +381,14 @@ class Dropdown_Field(Field):
         else:
             do_change = True
         if do_change:
-            self.assign_entry_value(new_value)
+            self.assign_value(new_value)
 
-    def assign_entry_value(self, new_value):
-        self.entry._value = new_value
-        if self.target_object is not None:
-            setattr(self.target_object, self.name, new_value)
+    def assign_value(self, new_value):
+        assert self.target_object is not None
+        setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         return 0
-
-    def initialize_value(self):
-        super(Dropdown_Field, self).initialize_value()
-        self.entry.initialize_entries()
 
 
 class Form(pride.gui.gui.Window):
@@ -450,9 +403,8 @@ class Form(pride.gui.gui.Window):
         super(Form, self).__init__(**kwargs)
         if self.balance is not None:
             displayer = self.create(Text_Field, name=self.balance_name,
-                                    value=self.balance, pack_mode="top",
+                                    target_object=self.balance, pack_mode="top",
                                     h_range=(.05, .1), orientation="side by side")
-            displayer.initialize_value()
             displayer.editable = False
             self.displayer = displayer
         spinbox = self.spinbox_type
@@ -463,14 +415,8 @@ class Form(pride.gui.gui.Window):
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top")
             for name, entries in row:
-                try:
-                    value = entries["value"]
-                except KeyError:
-                    if "text" not in entries:
-                        raise
-                    else:
-                        value = entries["value"] = entries["text"]
                 field_type = entries.pop("field_type", None)
+                value = getattr(target_object, name)
                 if field_type is None:
                     if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
                         field_type = toggle
@@ -487,7 +433,6 @@ class Form(pride.gui.gui.Window):
                 field = container.create(field_type, name=name,
                                          target_object=target_object,
                                          **entries)
-                field.initialize_value()
 
     def get_balance(self):
         return self.balance
@@ -525,26 +470,28 @@ class Form(pride.gui.gui.Window):
         import pride.gui.main
         import pride.components.base
 
-        _object = pride.components.base.Base()
+        _object = pride.components.base.Base(text='1', text2='Excellent', spinbox=2,
+                                             toggle=True)
+        balance = pride.components.base.Base(balance=10, name="Remaining Balance")
         window = pride.objects[pride.gui.enable()]
         form_callable = lambda *args, **kwargs:\
             Form(*args,
-                 balance=10, balance_name="Remaining Balance",
-                 fields=[[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
-                         [("Text", {"value" : '1'}), ("Text 2", {"value" : "Excellent", "field_type" : Text_Display}),
-                          ("NotASpinbox", {"value" : '2', "field_type" : "pride.gui.widgets.form.Text_Field"}),
-                          ("Spinbox", {"value" : 2}),
-                          ("Toggle", {"value" : True})]],
+                 balance=balance,
+                 fields=[#[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
+                         [("text", dict()), ("text2", dict()),
+                        #  ("NotASpinbox", {"field_type" : "pride.gui.widgets.form.Text_Field"}),
+                          ("spinbox", dict()),
+                          ("toggle", dict())]],
                  target_object=_object,
                  **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
-        assert _object.Dropdown == 0
-        assert _object.Text == '1'
-        assert getattr(_object, "Text 2") == "Excellent"
-        assert _object.NotASpinbox == '2', (_object.NotASpinbox, type(_object.NotASpinbox))
-        assert _object.Spinbox == 2
-        assert _object.Toggle == True
+        #assert _object.dropdown == 0
+        assert _object.text == '1'
+        assert getattr(_object, "text2") == "Excellent"
+        #assert _object.notaspinbox == '2', (_object.notaspinbox, type(_object.notaspinbox))
+        assert _object.spinbox == 2
+        assert _object.toggle == True
 
 if __name__ == "__main__":
     Form.unit_test()

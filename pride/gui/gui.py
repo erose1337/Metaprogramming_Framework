@@ -11,6 +11,8 @@ Instruction = pride.Instruction
 
 import sdl2
 
+lerp = pride.gui.lerp
+
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Python/SDL_Window/Renderer/SpriteFactory",
                    renderer="/Python/SDL_Window/Renderer"):
@@ -91,11 +93,12 @@ class Organizer(base.Base):
         for child in children:
             if child.hidden or child._parent_hidden:
                 continue
-            if parent._in_pack_queue or child.area != old_area[index]:
+            _old_area = old_area[index]
+            if parent._in_pack_queue or child.area != _old_area:
                 index += 1
                 self.pack_children(child, list(child.children))
                 child._pack_requested = False
-                child.handle_area_change()
+                child.handle_area_change(_old_area)
 
     def pack_horizontals(self, area, z, left, main, right, top_height, bottom_height):
         x, y, w, h = area
@@ -260,7 +263,7 @@ class _Window_Object(Organized_Object):
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
-                "theme_type" : "pride.gui.themes.Minimal_Theme",
+                "theme_type" : "pride.gui.themes.Animated_Theme2",
                 "_selected" : False, "hide_excess_text" : True,
                 "_cached" : False, "tip_bar_text" : '',
                 "theme_profile" : "default", "clickable" : True}
@@ -649,15 +652,13 @@ class _Window_Object(Organized_Object):
             pride.objects[self._status].delete()
             self._status = None
 
-    def handle_area_change(self):
+    def handle_area_change(self, old_area):
         try:
-            self.theme.draw_frames()
+            self.theme.draw_frames(old_area)
         except AttributeError:
             if hasattr(self.theme, "draw_frames"):
                 raise
 
-def lerp(x, y, t):
-    return x * (1.0 - t) + y * t
 
 class Animated_Object(_Window_Object):
 

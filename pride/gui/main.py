@@ -78,7 +78,7 @@ class Gui(pride.gui.gui.Application):
 
 
 def main(**kwargs):
-    window = pride.objects[pride.gui.enable()]
+    window = pride.objects[pride.gui.enable(position=(100, 100))]
     kwargs["startup_programs"] = kwargs.get("startup_programs", tuple()) + ("pride.gui.programs.fileexplorer.File_Explorer", )
     gui = window.create(Gui, **kwargs)
 

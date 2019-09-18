@@ -136,7 +136,7 @@ class Homescreen(pride.gui.gui.Application):
 
 def test_Homecreen():
     import pride.gui.main
-    window = pride.objects[pride.gui.enable()]
+    window = pride.objects[pride.gui.enable(position=(100, 100))]
     window.create(pride.gui.main.Gui, startup_programs=(Homescreen, ),
                   user=pride.objects["/User"])
 

@@ -130,6 +130,7 @@ class SDL_Window(SDL_Component):
         self.sdl_window = self # children may attempt to access the sdl_window attribute of their parent
         window = sdl2.ext.Window(self.name, position=self.position,
                                  size=self.size, flags=self.window_flags)
+        self.position = (0, 0) # position is used above to set initial window position; it is zero'd here because it would confuse the Organizer otherwise
         self.wraps(window)
         self.window_handler = self.create(Window_Handler)
 

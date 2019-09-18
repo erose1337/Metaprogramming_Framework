@@ -1,4 +1,5 @@
 import copy
+from math import ceil
 
 import pride.gui
 import pride.gui.color
@@ -7,6 +8,8 @@ import pride.components.base
 import sdl2
 
 MAX_W, MAX_H = pride.gui.SCREEN_SIZE
+
+lerp = pride.gui.lerp
 
 def _default_colors(_color=pride.gui.color.Color):
     return {"background" : _color(18, 18, 18, 200),
@@ -67,13 +70,13 @@ class Minimal_Theme(Theme):
 
     def draw_texture(self):
         assert not self.hidden
-        if not self.w or not self.h:
+        x, y, w, h = area = self.x, self.y, self.w, self.h
+        if not w or not h:
             #self.alert("occupies no area, not drawing")
             return #raise Exception()
         #if self._cached:
         #    self.draw("copy", self.texture, self.area, self.area)
         #else:
-        x, y, w, h = area = self.area
         self.draw("fill", area, color=self.background_color)
         shadow_thickness = self.shadow_thickness
         if shadow_thickness:
@@ -96,7 +99,7 @@ class Minimal_Theme(Theme):
         if self.text:
             assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
+            self.draw("text", area, self.text, width=w if self.wrap_text else None,
                     bg_color=self.text_background_color, color=self.text_color,
                     center_text=self.center_text, hide_excess_text=self.hide_excess_text)
 
@@ -278,6 +281,51 @@ class Animated_Theme(Perspective_Theme):
     def _enable_animation(self):
         self.frame_number = 0
         self.texture_invalid = True
+
+
+class Animated_Theme2(Minimal_Theme):
+
+    defaults = {"_animating_movement" : False, "frame_count" : 7,
+                "_old_area" : None, "_end_area" : None}
+
+    def draw_frames(self, old_area):
+        if old_area != self.area:
+            #assert not self._animating_movement
+            self.start_animation(old_area)
+
+    def start_animation(self, old_area):
+        self._animating_movement = True
+        self.frame_number = 0
+        self._old_area = old_area
+        self._end_area = self.area
+        assert self._old_area != self._end_area
+
+    def end_animation(self):
+        self._animating_movement = False
+        self._old_area = self._end_area = None
+        self.x, self.y, self.w, self.h = self.wrapped_object.area
+
+    def _invalidate_texture(self):
+        self.wrapped_object.texture_invalid = True
+
+    def draw_texture(self):
+        if self._animating_movement:
+            midpoint = float(self.frame_number) / self.frame_count
+            old_area = self._old_area
+            end_area = self._end_area
+            assert old_area is not None
+            assert end_area is not None
+            assert 0.0 <= midpoint <= 1.0
+            (self.x, self.y,
+             self.w, self.h) = [int(ceil(lerp(old_value, end_value, midpoint))) for
+                                old_value, end_value in zip(old_area, end_area)]
+            super(Animated_Theme2, self).draw_texture()
+            self.frame_number += 1
+            if self.frame_number > self.frame_count:
+                self.end_animation()
+            self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
+        else:
+            super(Animated_Theme2, self).draw_texture()
 
 
 class Blank_Theme(Theme):

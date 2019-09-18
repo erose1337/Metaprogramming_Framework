@@ -38,13 +38,17 @@ def point_in_area(area, position):
         if point_y >= y and point_y <= y + h:
             return True
 
-def enable():
+def enable(**kwargs):
     import pride
     #import pride.components.blackbox
     if "/Python/SDL_Window" not in pride.objects:
-        window = pride.objects["/Python"].create("pride.gui.sdllibrary.SDL_Window").reference
+        window = pride.objects["/Python"].create("pride.gui.sdllibrary.SDL_Window",
+                                                 **kwargs).reference
         #service = pride.objects["/Python"].create(pride.components.blackbox.Black_Box_Service)
         #client = pride.components.blackbox.Black_Box_Client(sdl_window=window, mouse_support=True)
         return window
     else:
         return "/Python/SDL_Window"
+
+def lerp(x, y, t):
+    return x * (1.0 - t) + y * t

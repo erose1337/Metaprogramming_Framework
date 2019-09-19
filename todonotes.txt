@@ -7,10 +7,6 @@ To Do/Bugs
 
 - Text-to-Speech for tip_bar_text?
 
-- add set_position method and animate position/size changes
-    - Rapidly opening new tabs can lead to windows not opening to full size
-        - selecting the tab apparently does not organize the window
-
 - add "extra_depth" or "extra_z" attribute:
     - creates object on top of extra do-nothing Containers
     - makes object appear as if it was stacked on top of more windows

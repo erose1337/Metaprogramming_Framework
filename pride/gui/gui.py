@@ -303,7 +303,7 @@ class _Window_Object(Organized_Object):
     def _set_texture_invalid(self, value):
         if not self._texture_invalid and value and not self.deleted and not self.hidden:
             #assert self.sdl_window
-            assert not self.hidden
+            assert (not self.hidden) or getattr(self, "_fading_out", False)
             self.sdl_window.invalidate_object(self)
         self._redraw_needed = self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
@@ -547,7 +547,7 @@ class _Window_Object(Organized_Object):
         self._draw_operations.append((figure, args, kwargs))
 
     def _redraw(self):
-        if self.hidden:
+        if self.hidden and not getattr(self, "_fading_out", False):
             self._draw_operations = []
             self.texture_invalid = False
             return
@@ -558,7 +558,8 @@ class _Window_Object(Organized_Object):
         self.texture_invalid = False
 
     def draw_texture(self):
-        assert not self.hidden or self._parent_hidden
+        assert (not self.hidden) or getattr(self, "_fading_out", False)
+        assert not self._parent_hidden
         self.theme.draw_texture()
 
     def pack(self):
@@ -662,9 +663,11 @@ class _Window_Object(Organized_Object):
 
 class Animated_Object(_Window_Object):
 
-    defaults = {"frame_count" : 5}
-    predefaults = {"animating" : False, "_old_theme" : None, "_colors_backup" : None,
-                   "_start_animation_enabled" : False, "_transition_state" : 0}
+    defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
+                "_fading_out" : False}
+    predefaults = {"animating" : False, "_old_theme" : None,
+                   "_colors_backup" : None, "_start_animation_enabled" : False,
+                   "_transition_state" : 0}
 
     def _get_theme_profile(self):
         return super(Animated_Object, self)._get_theme_profile()
@@ -681,6 +684,20 @@ class Animated_Object(_Window_Object):
     def __init__(self, **kwargs):
         super(Animated_Object, self).__init__(**kwargs)
         self._start_animation_enabled = True
+
+    def hide(self, parent_call=False):
+        super(Animated_Object, self).hide(parent_call)
+        if self.theme_profile != "blank" or self._backup_theme_profile is None:
+            self._backup_theme_profile = self.theme_profile
+        self.theme_profile = "blank"
+        self._fading_out = True
+
+    def show(self, parent_call=False):
+        super(Animated_Object, self).show(parent_call)
+        assert self._backup_theme_profile is not None
+        self.theme_profile = self._backup_theme_profile
+        self._backup_theme_profile = None
+        self._fading_out = False
 
     def _invalidate_texture(self):
         self.texture_invalid = True

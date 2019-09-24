@@ -58,10 +58,12 @@ class alert_on_call(object):
             "debug" in alert_handler.print_level or
             "debug" in alert_handler.log_level):
             component = args[0]
-            message = "{}{}{}".format(method_name,
-                                    "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
-                                    " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
-            component.alert(message, level=component.verbosity[method_name])
+            # if verbosity is something other than "debug" it is presumably already being used for some other alert
+            if component.verbosity[method_name] == "debug":
+                message = "{}{}{}".format(method_name,
+                                        "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
+                                        " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
+                component.alert(message, level=component.verbosity[method_name])
         return method(*args, **kwargs)
 
 

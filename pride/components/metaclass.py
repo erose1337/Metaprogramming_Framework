@@ -53,12 +53,14 @@ class alert_on_call(object):
     def __call__(self, *args, **kwargs):
         method_name = self.method_name
         method = self.method
-        if method_name != "on_load": # can cause problems otherwise
+        alert_handler = pride.objects["/Alert_Handler"]
+        if (method_name != "on_load" and # can cause problems otherwise
+            "debug" in alert_handler.print_level or
+            "debug" in alert_handler.log_level):
             component = args[0]
             message = "{}{}{}".format(method_name,
                                     "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
                                     " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
-
             component.alert(message, level=component.verbosity[method_name])
         return method(*args, **kwargs)
 
@@ -80,8 +82,8 @@ class Method_Hook(type):
     @classmethod
     def decorate(cls, new_class):
         """ Wraps all non private/magic methods with Method_Hook.decorator, which is
-            set to the alert_on_call decorator. Private methods are whose names begin
-            with an '_'."""
+            set to the alert_on_call decorator. Private methods have names that begin
+            with '_'."""
         decorator = cls.decorator
         default_verbosity = cls.default_verbosity
         for key, value in new_class.__dict__.items():
@@ -94,18 +96,18 @@ class Method_Hook(type):
                     if issubclass(type(value), BaseException):
                         continue
 
-                if key not in new_class.verbosity:
-                    try:
-                        decorated_function = decorator(value)
-                    except AttributeError: # value could be a nested class and not a function or method
-                        assert not hasattr(value, "im_func") and not hasattr(value, "func_name")
-                        continue
+                try:
+                    decorated_function = decorator(value)
+                except AttributeError: # value could be a nested class and not a function or method
+                    assert not hasattr(value, "im_func") and not hasattr(value, "func_name")
+                    continue
 
-                    functools.update_wrapper(decorated_function, value)
-                    bound_method = types.MethodType(decorated_function,
-                                                    None,
-                                                    new_class)
-                    setattr(new_class, key, bound_method)
+                functools.update_wrapper(decorated_function, value)
+                bound_method = types.MethodType(decorated_function,
+                                                None,
+                                                new_class)
+                setattr(new_class, key, bound_method)
+                if key not in new_class.verbosity:
                     new_class.verbosity.setdefault(key, default_verbosity)
         return new_class
 

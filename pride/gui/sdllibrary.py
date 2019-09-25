@@ -198,6 +198,8 @@ class SDL_Window(SDL_Component):
             self.drawing_instructions[window_object.z].remove(window_object)
         except (KeyError, ValueError):
             pass
+        if not self.redraw_objects:
+            self.running = True # trigger run to wipe out the screen
 
     def run2(self):
         self.running2 = False
@@ -747,8 +749,10 @@ class Renderer(SDL_Component):
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
 
-    def render_copy(self, source_area, destination_area):
-        raise NotImplementedError() # needs to be re-done now that there is no window texture
+    def render_copy(self, source_area=None, destination_area=None, angle=0,
+                    center=None, flip=sdl2.SDL_FLIP_NONE):
+        self.copy(sdl2.SDL2_GetRenderTarget, source_area, destination_area,
+                  angle, center, flip)
 
     def draw_rounded_rect(self, rect, radius=22, **kwargs):
         raise NotImplementedError("rounded_rect not yet supported")

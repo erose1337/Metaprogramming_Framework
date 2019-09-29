@@ -14,7 +14,6 @@ import pride.components.networkssl
 import pride.components.network
 import pride.functions.persistence
 import pride.functions.decorators
-#objects = pride.objects
 
 DEFAULT_SERIALIZER = pride.components.network.DEFAULT_SERIALIZER
 
@@ -38,64 +37,9 @@ def remote_procedure_call(callback_name='', callback=None):
             else:
                 self.alert("Making request '{}.{}'".format(self.target_service, call_name),
                            level=self.verbosity[call_name])
-                if False: #self.bypass_network_stack and self.ip in ("localhost", "127.0.0.1"):
-                    local_service = pride.objects[self.target_service]
-                    session_id = self.session.id
-                    if local_service.validate(session_id, self.ip, call_name) or call_name == "register":
-                        output = local_service.execute_remote_procedure_call(session_id, self.ip, call_name, args, kwargs)
-                        if _callback:
-                            _callback(output)
-                    else:
-                        raise UnauthorizedError()
-                else:
-                    self.session.execute(instruction, _callback)
+                self.session.execute(instruction, _callback)
         return _make_rpc
     return decorate
-
-def packetize_send(send):
-    """ Decorator that transforms a tcp stream into packets. Requires the use
-        of the packetize_recv decorator on the recv end. """
-    @functools.wraps(send)
-    def _send(self, data):
-        return send(self, str(len(data)) + ' ' + data)
-    return _send
-
-def packetize_recv(recv):
-    """ Decorator that breaks a tcp stream into packets based on packet sizes,
-        as supplied by the corresponding packetize_send decorator. In the event
-        less then an entire packet is received, the received data is stored
-        until the remainder is received.
-
-        The recv method decorated by this function will return a list of
-        packets received or an empty list if no complete packets have been
-        received. """
-    @functools.wraps(recv)
-    def _recv(self, buffer_size=0):
-        try:
-            data = self._old_data + recv(self, buffer_size)
-        except socket.error as error: # which error did we really intend to catch here?
-            if error.errno == pride.components.network.CONNECTION_CLOSED:
-                raise
-            data = self._old_data
-
-        self._old_data = bytearray()
-        packets = []
-        while data:
-            try:
-                packet_size, data = data.split(' ', 1)
-            except ValueError:
-                self._old_data = data
-                break
-
-            packet_size = int(packet_size)
-            if len(data) < packet_size:
-                self._old_data = bytes(packet_size) + ' ' + data
-                break
-
-            packets.append(data[:packet_size])
-            data = data[packet_size:]
-        return packets
-    return _recv
 
 
 class Session(pride.components.base.Base):
@@ -141,16 +85,68 @@ class Packet_Client(pride.components.networkssl.SSL_Client):
     """ An SSL_Client that uses packetized send and recv (client side) """
     defaults = {"_old_data" : bytes()}
 
-    send = packetize_send(pride.components.networkssl.SSL_Client.send)
-    recv = packetize_recv(pride.components.networkssl.SSL_Client.recv)
+    def send(self, data):
+        return super(Packet_Client, self).send(str(len(data)) + ' ' + data)
+
+    def recv(self, buffer_size=0):
+        try:
+            data = self._old_data + super(Packet_Client, self).recv(buffer_size)
+        except socket.error as error: # which error did we really intend to catch here?
+            if error.errno == pride.components.network.CONNECTION_CLOSED:
+                raise
+            data = self._old_data
+
+        self._old_data = bytearray()
+        packets = []
+        while data:
+            try:
+                packet_size, data = data.split(' ', 1)
+            except ValueError:
+                self._old_data = data
+                break
+
+            packet_size = int(packet_size)
+            if len(data) < packet_size:
+                self._old_data = bytes(packet_size) + ' ' + data
+                break
+
+            packets.append(data[:packet_size])
+            data = data[packet_size:]
+        return packets
 
 
 class Packet_Socket(pride.components.networkssl.SSL_Socket):
     """ An SSL_Socket that uses packetized send and recv (server side) """
     defaults = {"_old_data" : bytes()}
 
-    send = packetize_send(pride.components.networkssl.SSL_Socket.send)
-    recv = packetize_recv(pride.components.networkssl.SSL_Socket.recv)
+    def send(self, data):
+        return super(Packet_Socket, self).send(str(len(data)) + ' ' + data)
+
+    def recv(self, buffer_size=0):
+        try:
+            data = self._old_data + super(Packet_Socket, self).recv(buffer_size)
+        except socket.error as error: # which error did we really intend to catch here?
+            if error.errno == pride.components.network.CONNECTION_CLOSED:
+                raise
+            data = self._old_data
+
+        self._old_data = bytearray()
+        packets = []
+        while data:
+            try:
+                packet_size, data = data.split(' ', 1)
+            except ValueError:
+                self._old_data = data
+                break
+
+            packet_size = int(packet_size)
+            if len(data) < packet_size:
+                self._old_data = bytes(packet_size) + ' ' + data
+                break
+
+            packets.append(data[:packet_size])
+            data = data[packet_size:]
+        return packets
 
 
 class Rpc_Connection_Manager(pride.components.base.Base):
@@ -234,7 +230,6 @@ class Rpc_Client_Socket(Packet_Client):
             else:
                 if isinstance(_response, BaseException):
                     self.handle_exception(_call, callback, _response)
-                #print("Calling {}".format(callback))
                 if callback is not None:
                     callback(_response)
 
@@ -272,6 +267,7 @@ class Rpc_Socket(Packet_Socket):
 
     def recv(self, packet_count=0):
         peername = self.peername
+        assert self.ssl_authenticated
         for (session_id, component_name, method,
              serialized_arguments) in (self.deserialize(bytes(packet)) for
                                        packet in super(Rpc_Socket, self).recv()):
@@ -308,7 +304,6 @@ class Rpc_Worker(pride.components.base.Base):
     def handle_request(self, peername, session_id, component_name, method,
                        serialized_arguments):
         instance = pride.objects[component_name]
-    #    print "\n\n", instance.session_id, method
         if not instance.validate(session_id, peername, method):
             raise UnauthorizedError()
         else:

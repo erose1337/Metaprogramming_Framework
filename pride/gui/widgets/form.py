@@ -51,9 +51,12 @@ class Entry(pride.gui.gui.Button):
         return str(self.parent_field.value)
     def _set_text(self, value):
         if self.text_initialized:
-            print("Trying to set text to {}; Changing to {}".format(value, getattr(parent_field.target_object, parent_field.name)))
-            parent_field = self.parent_field
-            super(Entry, self)._set_text(str(getattr(parent_field.target_object, parent_field.name)))
+            if self.allow_text_edit:
+                # apparently there's no need to set actual .text attribute on the entry
+                self.parent_field.value = value
+            else:
+                parent_field = self.parent_field
+                super(Entry, self)._set_text(str(getattr(parent_field.target_object, parent_field.name)))
         else:
             super(Entry, self)._set_text(value)
             self.text_initialized = True

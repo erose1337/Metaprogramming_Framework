@@ -5,6 +5,19 @@ Currently working on:
 To Do/Bugs
 =====
 
+- slider notch does not move when dragged
+
+- hide/delete animations?
+    - complicated because hidden/deleted objects change the state to where they are not supposed to be drawn anymore
+    - hooking hide and animating for a few frames, then calling super(class, self).hide() doesn't work nicely
+        - code expects that after hide has been called that the object will be hidden
+
+
+- Application level textures
+    - draw all of the components of an Application onto a texture that can be copied later
+    - Very low-cost transition animations - translate, scale, and rotate with a single copy operation
+    - Potentially saves work
+
 - Text-to-Speech for tip_bar_text?
 
 - add "extra_depth" or "extra_z" attribute:

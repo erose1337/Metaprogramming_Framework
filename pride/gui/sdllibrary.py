@@ -84,7 +84,7 @@ class SDL_Component(base.Proxy): pass
 class SDL_Window(SDL_Component):
 
     defaults = {"showing" : True,
-                'x' : 0, 'y' : 0, 'z' : 0, 'w' : 1024, 'h' : 768,#pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
+                'x' : 0, 'y' : 50, 'z' : 0, 'w' : 1024, 'h' : 768,#pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
                  "priority" : .038, "name" : "/Python",
                 "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
@@ -646,7 +646,6 @@ class SDL_User_Input(pride.components.base.Base):
                 if under_mouse is not None:
                     raise
         else:
-
             under_mouse = pride.objects[self.under_mouse]
             if under_mouse.children:
                 new_under_mouse = self._get_object_under_mouse(position)
@@ -660,6 +659,16 @@ class SDL_User_Input(pride.components.base.Base):
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse
                     pride.objects[new_under_mouse].on_hover()
+                elif self.always_on_top:
+                    for item in self.always_on_top:
+                        if item is under_mouse:
+                            break
+                        if item.clickable and pride.gui.point_in_area(item.area, position):
+                            new_under_mouse = item
+                            under_mouse.hover_ends()
+                            self.under_mouse = new_under_mouse.reference
+                            new_under_mouse.on_hover()
+                            break
 
     def handle_keydown(self, event):
         try:

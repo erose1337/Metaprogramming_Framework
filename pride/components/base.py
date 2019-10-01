@@ -686,7 +686,7 @@ class Wrapper(Base):
         try:
             return getattr(self.wrapped_object, attribute)
         except AttributeError:
-            raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, attribute))
+            raise AttributeError("'{}' object has no attribute '{}'".format(type(self.wrapped_object).__name__, attribute))
 
     def wraps(self, _object):
         """ Sets the specified object as the object wrapped by this object. """

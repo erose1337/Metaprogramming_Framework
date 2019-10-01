@@ -132,7 +132,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 - mutable_defaults
                 - predefaults
                 - verbosity
-                - parser_ignore
+                - parser_args
                 - required_attributes
                 - site_config_support
             - Supported attributes are extensible when defining new classes.
@@ -196,7 +196,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
 
     # certain container type class attributes are "inherited" from base classes
     # these include defaults, required_attributes, mutable_defaults, verbosity
-    # parser_ignore, and predefaults (all of which are explained below and above)
+    # parser_args, and predefaults (all of which are explained below and above)
     # when subclassing, creating new class defaults will automatically merge the
     # newly specified defaults with the base class defaults, and similarly so for each
     # attribute inherited this way.
@@ -235,8 +235,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # A command line argument parser is generated automatically for
     # every Base class based upon the attributes contained in the
     # class defaults dictionary. Specific attributes can be modified
-    # or ignored by specifying them in class.parser_modifiers and
-    # class.parser_ignore.
+    # or added by specifying them in class.parser_modifiers and
+    # class.parser_args.
 
     # parser modifiers are attribute : options pairs, where options
     # is a dictionary. The keys may include any keyword arguments
@@ -673,7 +673,6 @@ class Wrapper(Base):
 
     wrapped_object_name = ''
 
-    parser_ignore = ("wrapped_object", )
     auto_verbosity_ignore = ("wraps", )
 
     def __init__(self, **kwargs):

@@ -45,8 +45,6 @@ class Process(pride.components.base.Base):
                 "run_callback" : None, "run_condition" : '', "_run_queued" : False,
                 "reschedule_run_after_exception" : True}
 
-    parser_ignore = ("priority", "run_callback", "context_managed", "_run_queued", "run_condition")
-
     verbosity = {"run_condition_false" : "vvv"}
 
     def __init__(self, **kwargs):

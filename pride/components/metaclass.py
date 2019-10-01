@@ -375,10 +375,11 @@ class Inherited_Attributes(type):
 class Defaults(Inherited_Attributes):
 
     inherited_attributes = {"defaults" : dict, "verbosity" : dict,
-                            "parser_ignore" : tuple, "predefaults" : dict,
-                            "mutable_defaults" : dict, "required_attributes" : tuple,
-                            "site_config_support" : tuple, "post_initializer" : str,
-                            "allowed_values" : dict, "auto_verbosity_ignore" : tuple,
+                            "predefaults" : dict, "mutable_defaults" : dict,
+                            "required_attributes" : tuple,
+                            "site_config_support" : tuple,
+                            "post_initializer" : str, "allowed_values" : dict,
+                            "auto_verbosity_ignore" : tuple,
                             "autoreferences" : tuple, "parser_args" : tuple}
 
 

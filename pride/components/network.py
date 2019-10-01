@@ -98,11 +98,6 @@ class Socket(base.Wrapper):
 
                 "shutdown_on_close" : True, "shutdown_flag" : 2}
 
-    additional_parser_ignores = defaults.keys()
-    additional_parser_ignores.remove("interface")
-    additional_parser_ignores.remove("port")
-    parser_ignore = tuple(additional_parser_ignores)
-
     predefaults = {"_byte_count" : 0, "_connecting" : False,
                    "_endpoint_reference" : '', "connected" : False,
                    "closed" : False, "_saved_in_attribute" : '',
@@ -326,8 +321,6 @@ class Packet_Sniffer(Raw_Socket):
 
     defaults = {"IP_HDRINCL" : 1}
 
-    parser_ignore = Raw_Socket.parser_ignore + ("IP_HDRINCL", )
-
     def __init__(self, **kwargs):
         super(Packet_Sniffer, self).__init__(**kwargs)
         self.bind((self.interface, self.port))
@@ -376,10 +369,6 @@ class Server(Tcp_Socket):
                 "replace_reference_on_load" : True,
                 "shutdown_on_close" : False}
 
-    parser_ignore = Tcp_Socket.parser_ignore + ("backlog", "reuse_port",
-                                                "Tcp_Socket_type",
-                                                "allow_port_zero")
-
     def __init__(self, **kwargs):
         super(Server, self).__init__(**kwargs)
         self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, self.reuse_port)
@@ -423,8 +412,6 @@ class Tcp_Client(Tcp_Socket):
                 "auto_connect" : True,
                 "as_port" : 0}
 
-    parser_ignore = Tcp_Socket.parser_ignore + ("host_info", "auto_connect", "as_port")
-
     def __init__(self, **kwargs):
         super(Tcp_Client, self).__init__(**kwargs)
         if self.as_port:
@@ -462,8 +449,6 @@ class Multicast_Beacon(Udp_Socket):
     defaults = {"packet_ttl" : 1, "multicast_group" : "224.0.0.0",
                 "multicast_port" : 1929, "loopback_enabled" : 1,
                 "outgoing_interface" : socket.INADDR_ANY}
-
-    parser_ignore = Udp_Socket.parser_ignore + ("packet_ttl", )
 
     # A list of TTL thresholds and their associated scope follows:
     # TTL     Scope

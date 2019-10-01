@@ -229,6 +229,12 @@ class _Dropdown_Entry(Entry):
     defaults = {"pack_mode" : "bottom", "h_range" : (.05, 1.0)}
     predefaults = {"use_auto_direction" : True, "_pack_mode" : "top"}
 
+    def _get_text(self):
+        return str(self.value)
+    def _set_text(self, value):
+        super(_Dropdown_Entry, self)._set_text(value)
+    text = property(_get_text, _set_text)
+
     def _get_pack_mode(self):
         return self._pack_mode
     def _set_pack_mode(self, value):
@@ -253,15 +259,20 @@ class Dropdown_Entry(Entry):
     defaults = {"pack_mode" : "top", "menu_open" : False,
                 "entry_type" : _Dropdown_Entry, "_initialized_already" : False}
 
+    def _get_text(self):
+        return ''
+    def _set_text(self, value):
+        super(Dropdown_Entry, self)._set_text(value)
+    text = property(_get_text, _set_text)
+
     def __init__(self, **kwargs):
         super(Dropdown_Entry, self).__init__(**kwargs)
         self.initialize_entries()
 
     def initialize_entries(self):
         assert not self._initialized_already
-        self.entries = [self.create(self.entry_type, value=value) for value in self.value]
+        self.entries = [self.create(self.entry_type, value=value) for value in self.parent_field.values]
         self.hide_menu(self.entries[0], _initialized_already=False)
-        self.text = ''
         self._initialized_already = True
 
     def left_click(self, mouse):
@@ -420,7 +431,13 @@ class Form(pride.gui.gui.Window):
         target_object = self.target_object
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top")
-            for name, entries in row:
+            for item in row:
+                if len(item) == 1:
+                    name = item[0]
+                    entries = dict()
+                else:
+                    name, entries = item
+
                 field_type = entries.pop("field_type", None)
                 value = getattr(target_object, name)
                 if field_type is None:
@@ -430,7 +447,7 @@ class Form(pride.gui.gui.Window):
                         field_type = spinbox
                     elif isinstance(value, str):
                         field_type = text_field
-                    elif isinstance(value, tuple) or isinstance(value, list):
+                    elif "values" in entries:
                         field_type = dropdown
 
                 entries.setdefault("balancer", self)
@@ -476,14 +493,17 @@ class Form(pride.gui.gui.Window):
         import pride.gui.main
         import pride.components.base
 
-        _object = pride.components.base.Base(text='1', text2='Excellent', spinbox=2,
-                                             toggle=True)
-        setattr(_object, "text box1", 'texcellent!'); setattr(_object, "text box2", '')
+        _object = pride.components.base.Base(text='1', spinbox=2, toggle=True,
+                                             dropdown=None)
+        setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
         balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
         window = pride.objects[pride.gui.enable()]
-        fields = [[("toggle", dict())],
-                  [("text box1", dict()), ("text box2", dict())],
-                  [("spinbox", dict())]]
+        fields = [[                     ("toggle", )                          ],
+                  [   ("text", ),                      ("my text field", )    ],
+                  [                     ("spinbox", )                         ],
+                  [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #]
+                                             {"key" : "value pairs"})})       ]
+                 ]
 #        [#[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
 #        [("text", dict()), ("text2", dict()),
 #       #  ("NotASpinbox", {"field_type" : "pride.gui.widgets.form.Text_Field"}),
@@ -500,7 +520,7 @@ class Form(pride.gui.gui.Window):
                       startup_programs=(form_callable, ))
         #assert _object.dropdown == 0
         assert _object.text == '1'
-        assert getattr(_object, "text2") == "Excellent"
+        assert getattr(_object, "my text field") == "texcellent!"
         #assert _object.notaspinbox == '2', (_object.notaspinbox, type(_object.notaspinbox))
         assert _object.spinbox == 2
         assert _object.toggle == True

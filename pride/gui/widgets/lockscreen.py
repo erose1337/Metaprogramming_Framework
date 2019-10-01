@@ -165,9 +165,6 @@ class Login_Screen(pride.gui.gui.Application):
         self.parent_application.show_status("Login Screen")
 
     def login_success(self):
-        self.top_spacer.delete()
-        self.field_space.delete()
-        self.bottom_spacer.delete()
         if self.parent_application is not self:
             self.parent_application.login_success(self.user.username)
 

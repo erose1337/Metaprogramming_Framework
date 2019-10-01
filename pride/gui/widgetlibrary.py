@@ -55,7 +55,7 @@ class Method_Button(gui.Button):
 
 class Delete_Button(Method_Button):
 
-    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete",
+    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete", 
                 "scale_to_text" : True}
 
 
@@ -608,7 +608,7 @@ class Field(pride.gui.gui.Container):
 class Status_Indicator(pride.gui.gui.Container):
 
     defaults = {"w_range" : (0, .03), "pack_mode" : "left",
-                "theme_type" : "pride.gui.themes.Spacer_Theme"}
+                "theme_profile" : "blank"}
     #mutable_defaults = {"meaning" : lambda: {True: '', False : ''}}
 
     def __init__(self, **kwargs):

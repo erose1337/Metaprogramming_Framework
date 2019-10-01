@@ -48,9 +48,10 @@ class Entry(pride.gui.gui.Button):
     autoreferences = ("parent_field", )
 
     def _get_text(self):
-        return super(Entry, self)._get_text()#str(getattr(self.target_object, self.name))
+        return str(self.parent_field.value)
     def _set_text(self, value):
         if self.text_initialized:
+            print("Trying to set text to {}; Changing to {}".format(value, getattr(parent_field.target_object, parent_field.name)))
             parent_field = self.parent_field
             super(Entry, self)._set_text(str(getattr(parent_field.target_object, parent_field.name)))
         else:
@@ -73,6 +74,7 @@ class Field(pride.gui.gui.Container):
         return getattr(self.target_object, self.name)
     def _set_value(self, value):
         setattr(self.target_object, self.name, value)
+        self.entry.texture_invalid = True # updates text later
     value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
@@ -214,8 +216,7 @@ class Toggle_Entry(Entry):
 
     def left_click(self, mouse):
         parent_field = self.parent_field
-        name = parent_field.name
-        setattr(parent_field, name, not parent_field.value)
+        parent_field.value = not parent_field.value
 
 
 class _Dropdown_Entry(Entry):
@@ -444,7 +445,7 @@ class Form(pride.gui.gui.Window):
         if displayer is not None:
             backup = displayer.editable
             displayer.editable = True
-            displayer.value = (str(self.balance))
+            displayer.text = str(self.balance)
             displayer.editable = backup
 
     def earn(self, amount):
@@ -456,7 +457,7 @@ class Form(pride.gui.gui.Window):
         if displayer is not None:
             backup = displayer.editable
             displayer.editable = True
-            displayer.value = (str(self.balance))
+            displayer.text = str(self.balance)
             displayer.editable = backup
 
     @classmethod
@@ -472,16 +473,21 @@ class Form(pride.gui.gui.Window):
 
         _object = pride.components.base.Base(text='1', text2='Excellent', spinbox=2,
                                              toggle=True)
-        balance = pride.components.base.Base(balance=10, name="Remaining Balance")
+        setattr(_object, "text box1", 'texcellent!'); setattr(_object, "text box2", '')
+        balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
         window = pride.objects[pride.gui.enable()]
+        fields = [[("toggle", dict())],
+                  [("text box1", dict()), ("text box2", dict())]]
+#        [#[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
+#        [("text", dict()), ("text2", dict()),
+#       #  ("NotASpinbox", {"field_type" : "pride.gui.widgets.form.Text_Field"}),
+#         ("spinbox", dict()),
+#         ("toggle", dict())]]
+
         form_callable = lambda *args, **kwargs:\
             Form(*args,
                  balance=balance,
-                 fields=[#[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
-                         [("text", dict()), ("text2", dict()),
-                        #  ("NotASpinbox", {"field_type" : "pride.gui.widgets.form.Text_Field"}),
-                          ("spinbox", dict()),
-                          ("toggle", dict())]],
+                 fields=fields,
                  target_object=_object,
                  **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],

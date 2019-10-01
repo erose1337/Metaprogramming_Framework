@@ -141,17 +141,6 @@ class Text_Entry(Entry):
 
     defaults = {"h" : 16, "allow_text_edit" : False}
 
-    #def _get_text(self):
-    #    return super(Text_Entry, self)._get_text()
-    #def _set_text(self, value):
-    #    if self.text_initialized:
-    #        parent_field = self.parent_field
-    #        setattr(parent_field.target_object, parent_field.name, value)
-    #    else:
-    #        self.first_set = True
-    #    super(Text_Entry, self)._set_text(value)
-    #text = property(_get_text, _set_text)
-
     def select(self, mouse):
         super(Text_Entry, self).select(mouse)
         self.alert("Turning text input on", level='vv')
@@ -194,25 +183,38 @@ class Integer_Entry(Text_Entry):
         except TypeError: # value can be None
             pass
         except ValueError: # have to remove any non-decimal-numeric characters
+            if value == "0-":
+                value = '-'
+            if value and value[0] == '-':
+                sign = '-'
+            else:
+                sign = ''
+
             value = ''.join(item for item in value if item in "0123456789")
             if not value:
                 value = '0'
+        else:
+            if value and value[0] == '-':
+                sign = '-'
+            else:
+                sign = ''
+
+        value = value.lstrip('0')
+        if not value: # remove leading zeros
+            value = '0'
+        if sign:
+            value = sign + value[1:].lstrip('0')
+        assert value
         super(Integer_Entry, self)._set_text(value)
     text = property(_get_text, _set_text)
 
     def increment_value(self, amount):
         parent_field = self.parent_field
-        target_object = parent_field.target_object
-        attribute = parent_field.name
-        value = getattr(target_object, attribute)
-        setattr(target_object, attribute, value + amount)
+        parent_field.value = int(parent_field.value or '0') + amount
 
     def decrement_value(self, amount):
         parent_field = self.parent_field
-        target_object = parent_field.target_object
-        attribute = parent_field.name
-        value = getattr(target_object, attribute)
-        setattr(target_object, attribute, value - amount)
+        parent_field.value = int(parent_field.value or '0') - amount
 
 
 class Toggle_Entry(Entry):
@@ -480,7 +482,8 @@ class Form(pride.gui.gui.Window):
         balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
         window = pride.objects[pride.gui.enable()]
         fields = [[("toggle", dict())],
-                  [("text box1", dict()), ("text box2", dict())]]
+                  [("text box1", dict()), ("text box2", dict())],
+                  [("spinbox", dict())]]
 #        [#[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
 #        [("text", dict()), ("text2", dict()),
 #       #  ("NotASpinbox", {"field_type" : "pride.gui.widgets.form.Text_Field"}),

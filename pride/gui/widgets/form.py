@@ -99,17 +99,15 @@ class Field(pride.gui.gui.Container):
         self.create_entry(pack_mode)
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
+        id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
         self.identifier = self.create(pride.gui.gui.Container, text=self.name,
                                       pack_mode=pack_mode, scale_to_text=scale_to_text,
                                       **id_kwargs)
 
     def create_entry(self, pack_mode):
-        self.entry = self.create(self.entry_type,
-                                 pack_mode=pack_mode, tip_bar_text=self.tip_bar_text,
-                                 parent_field=self)
+        self.entry = self.create(self.entry_type, pack_mode=pack_mode, parent_field=self)
 
     def handle_value_changed(self, old_value, new_value):
-        #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int changing to long would trigger this
         assert old_value != new_value
         balancer = self.balancer
         if balancer is not None:
@@ -308,7 +306,6 @@ class Dropdown_Entry(Entry):
             entry.always_on_top = True
             entry.show()
             entry.texture_invalid = True
-    #    self.pack() # Setting entry.texture_invalid seems to work better? (fixes a bug)
 
     def hide_menu(self, selected_entry, _initialized_already=True):
         self.menu_open = False
@@ -413,12 +410,16 @@ class Form(pride.gui.gui.Window):
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
                 "dropdown_type" : Dropdown_Field, "target_object" : None,
-                "balance" : None, "balance_name" : "balance"}
+                "balance" : None, "balance_name" : "balance",
+                "include_balance_display" : True}
     autoreferences = ("displayer", )
+    required_attributes = ("target_object", )
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
-        if self.balance is not None:
+        if self.balance is not None and self.include_balance_display:
+            if not hasattr(self.balance, self.balance_name):
+                raise ValueError("balance object {} has no attribute '{}'".format(self.balance, self.balance_name))
             displayer = self.create(Text_Field, name=self.balance_name,
                                     target_object=self.balance, pack_mode="top",
                                     h_range=(.05, .1), orientation="side by side")
@@ -429,12 +430,17 @@ class Form(pride.gui.gui.Window):
         toggle = self.toggle_type
         dropdown = self.dropdown_type
         target_object = self.target_object
+        empty_entries = {"balancer" : self}
+        _tester = {"balancer" : self}
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top")
             for item in row:
-                if len(item) == 1:
+                if isinstance(item, str):
+                    name = item
+                    entries = empty_entries
+                elif len(item) == 1:
                     name = item[0]
-                    entries = dict()
+                    entries = empty_entries
                 else:
                     name, entries = item
 
@@ -449,10 +455,9 @@ class Form(pride.gui.gui.Window):
                         field_type = text_field
                     elif "values" in entries:
                         field_type = dropdown
-
-                entries.setdefault("balancer", self)
                 assert field_type is not None
                 assert "field_type" not in entries
+                assert empty_entries == _tester
                 field = container.create(field_type, name=name,
                                          target_object=target_object,
                                          **entries)
@@ -498,17 +503,12 @@ class Form(pride.gui.gui.Window):
         setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
         balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
         window = pride.objects[pride.gui.enable()]
-        fields = [[                     ("toggle", )                          ],
-                  [   ("text", ),                      ("my text field", )    ],
-                  [                     ("spinbox", )                         ],
+        fields = [[                     "toggle"                              ],
+                  [     "text",                       "my text field"         ],
+                  [                     "spinbox"                             ],
                   [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #]
                                              {"key" : "value pairs"})})       ]
                  ]
-#        [#[("Dropdown", {"value" : (0, 1, 2, False, 1.0, [1, 2, 3])})],
-#        [("text", dict()), ("text2", dict()),
-#       #  ("NotASpinbox", {"field_type" : "pride.gui.widgets.form.Text_Field"}),
-#         ("spinbox", dict()),
-#         ("toggle", dict())]]
 
         form_callable = lambda *args, **kwargs:\
             Form(*args,

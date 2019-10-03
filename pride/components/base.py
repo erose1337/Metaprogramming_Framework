@@ -15,7 +15,6 @@ import pride.functions.utilities as utilities
 import pride.functions.contextmanagers
 import pride.functions.module_utilities
 from pride.errors import *
-#objects = pride.objects
 
 __all__ = ["DeleteError", "AddError", "load", "Base", "Reactor", "Wrapper", "Proxy"]
 
@@ -679,8 +678,6 @@ class Wrapper(Base):
         super(Wrapper, self).__init__(**kwargs)
         if self.wrapped_object is not None:
             self.wraps(self.wrapped_object)
-        #if self.wrapped_object_name:
-        #    setattr(self, self.wrapped_object_name, self.wrapped_object)
 
     def __getattr__(self, attribute):
         try:
@@ -695,11 +692,6 @@ class Wrapper(Base):
         self.wrapped_object = _object
         if self.wrapped_object_name:
             setattr(self, self.wrapped_object_name, _object)
-
-#    def __getstate__(self):
-#        state = super(Wrapper, self).__getstate__()
-#        del state["wrapped_object"]
-#        return state
 
 
 class Proxy(Base):

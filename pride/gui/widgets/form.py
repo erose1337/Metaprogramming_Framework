@@ -405,6 +405,68 @@ class Dropdown_Field(Field):
         return 0
 
 
+class Slider_Notch(pride.gui.gui.Button):
+
+    defaults = {"clickable" : False}
+
+
+class Slider_Entry(Entry):
+
+    autoreferences = ("left", "notch", "right")
+
+    def __init__(self, **kwargs):
+        super(Slider_Entry, self).__init__(**kwargs)
+        self.create_subcomponents()
+
+    def create_subcomponents(self):
+        parent_field = self.parent_field
+        assert parent_field.minimum is not None and parent_field.maximum is not None
+        self.left = self.create(Text_Display, auto_create_id=False, pack_mode="left",
+                                target_object=parent_field, name="minimum",
+                                w_range=(0, .05))
+        self.notch = self.create(Slider_Notch, pack_mode="left")
+        self.right = self.create(Text_Display, auto_create_id=False, pack_mode="right",
+                                 target_object=parent_field, name="maximum",
+                                 w_range=(0, .05))
+        self.sdl_window.schedule_postdraw_operation(self.update_position_from_value)
+
+    def update_position_from_value(self):
+        parent_field = self.parent_field
+        left = self.left
+
+        percent = float(parent_field.value) / parent_field.maximum
+        width = (self.w - left.w) - self.right.w
+        offset = int(width * percent)
+
+        self.notch.w_range = (offset, offset)
+
+    def left_click(self, mouse):
+        # unpack data
+        # evaluate contextual meaning of data (build more data from relations between present data)
+        # compute value based on data
+        # ensure value fits the expected constraints
+        # respond to computed value
+        parent_field = self.parent_field
+        left = self.left
+        width = (self.w - left.w) - self.right.w
+
+        offset = mouse.x - self.x - left.w; offset = min(max(0, offset), width);
+        percent = float(offset) / width; percent = max(0, min(1, percent));
+
+        value = int(parent_field.maximum * percent)
+        assert value <= parent_field.maximum
+        assert value >= parent_field.minimum
+        parent_field.value = value
+
+        self.notch.w_range = (int(percent * width), int(percent * width))
+        self.pack() # why doesn't self.notch.pack() work here?
+
+
+class Slider_Field(Field):
+
+    defaults = {"entry_type" : Slider_Entry}
+
+
 class Form(pride.gui.gui.Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
@@ -447,7 +509,10 @@ class Form(pride.gui.gui.Window):
                 field_type = entries.pop("field_type", None)
                 value = getattr(target_object, name)
                 if field_type is None:
-                    if isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
+                    if "minimum" in entries and "maximum" in entries: # check here before checking for int/float
+                        field_type = Slider_Field
+                        print("Making slider field")
+                    elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
                         field_type = toggle
                     elif isinstance(value, int) or isinstance(value, float):
                         field_type = spinbox
@@ -497,19 +562,19 @@ class Form(pride.gui.gui.Window):
     def unit_test(cls):
         import pride.gui.main
         import pride.components.base
+        window = pride.objects[pride.gui.enable()]
 
         _object = pride.components.base.Base(text='1', spinbox=2, toggle=True,
-                                             dropdown=None)
+                                             slider=128,  dropdown=None)
         setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
-        balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
-        window = pride.objects[pride.gui.enable()]
         fields = [[                     "toggle"                              ],
                   [     "text",                       "my text field"         ],
-                  [                     "spinbox"                             ],
-                  [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #]
+                  [ "spinbox",    ("slider", {"minimum" : 0, "maximum" : 255})],
+                  [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #|   #| is just for appearance
                                              {"key" : "value pairs"})})       ]
                  ]
 
+        balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
         form_callable = lambda *args, **kwargs:\
             Form(*args,
                  balance=balance,

@@ -1,5 +1,6 @@
 Currently working on:
 
+- add dec/inc buttons to slider end caps
 
 
 To Do/Bugs
@@ -26,17 +27,6 @@ To Do/Bugs
         - make a "minimal_z" instead?
 
 
-form.py
--------------
-- rewrite explicitly as a view of an object
-    - fields do not have values, only the object does
-    - fields simply display the objects value, and provide an interface to manipulate it
-    - forms consist of fields, which consist of a label and a view
-    - is there any reason to use Forms without wrapping an object?
-
-- add category separators
-
-
 
 - theme_profile ideas/guidelines
     - make interactive components light and non-interactive components dark (or vice versa)
@@ -44,8 +34,7 @@ form.py
 
 
 
-- add support for slider bars
-    - re-write theme customizer in term of Forms
+
 
 -  rounded rectangles
     - sdlgfx functions automatically set blendmode

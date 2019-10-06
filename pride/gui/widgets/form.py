@@ -189,32 +189,25 @@ class Integer_Entry(Text_Entry):
     def _get_text(self):
         return super(Integer_Entry, self)._get_text()
     def _set_text(self, value):
+        if value and value[-1] == '-':
+            value = value[:-1]
+            sign = -1
+        else:
+            sign = 1
         try:
             int(value)
         except TypeError: # value can be None
             pass
         except ValueError: # have to remove any non-decimal-numeric characters
-            if value == "0-":
-                value = '-'
-            if value and value[0] == '-':
-                sign = '-'
-            else:
-                sign = ''
-
             value = ''.join(item for item in value if item in "0123456789")
             if not value:
                 value = '0'
-        else:
-            if value and value[0] == '-':
-                sign = '-'
-            else:
-                sign = ''
 
         value = value.lstrip('0')
         if not value: # remove leading zeros
             value = '0'
         if sign:
-            value = sign + value[1:].lstrip('0')
+            value = str(sign * int(value))
         assert value
         super(Integer_Entry, self)._set_text(value)
     text = property(_get_text, _set_text)
@@ -412,6 +405,30 @@ class Slider_Notch(pride.gui.gui.Button):
 
     defaults = {"clickable" : False}
 
+    #def __init__(self, **kwargs):
+    #    super(Slider_Notch, self).__init__(**kwargs)
+    #    self.create(pride.gui.gui.Container, pack_mode="right",
+    #                w_range=(0, .025), clickable=False)
+
+
+class Endcap_Entry(Text_Entry):
+
+    def left_click(self, mouse):
+        super(Endcap_Entry, self).left_click(mouse)
+        parent_field = self.parent_field
+        slider_field = parent_field.target_object
+        assert parent_field.name in ("minimum", "maximum")
+        value = getattr(slider_field, parent_field.name)
+        slider_field.value = value
+        slider_field.entry.update_position_from_value()
+        slider_field.entry.pack()
+
+
+class Endcap(Text_Display):
+
+    defaults = {"auto_create_id" : False, "w_range" : (0, .05),
+                "entry_type" : Endcap_Entry}
+
 
 class Slider_Entry(Entry):
 
@@ -424,13 +441,11 @@ class Slider_Entry(Entry):
     def create_subcomponents(self):
         parent_field = self.parent_field
         assert parent_field.minimum is not None and parent_field.maximum is not None
-        self.left = self.create(Text_Display, auto_create_id=False, pack_mode="left",
-                                target_object=parent_field, name="minimum",
-                                w_range=(0, .05))
+        self.left = self.create(Endcap, pack_mode="left", target_object=parent_field,
+                                name="minimum")
         self.notch = self.create(Slider_Notch, pack_mode="left")
-        self.right = self.create(Text_Display, auto_create_id=False, pack_mode="right",
-                                 target_object=parent_field, name="maximum",
-                                 w_range=(0, .05))
+        self.right = self.create(Endcap, pack_mode="right", target_object=parent_field,
+                                 name="maximum")
         self.sdl_window.schedule_postdraw_operation(self.update_position_from_value)
 
     def update_position_from_value(self):
@@ -442,6 +457,7 @@ class Slider_Entry(Entry):
         offset = int(width * percent)
 
         self.notch.w_range = (offset, offset)
+        print("Set notch to {}% ({}) (update)".format(percent, offset))
 
     def left_click(self, mouse):
         # unpack data
@@ -459,10 +475,12 @@ class Slider_Entry(Entry):
         value = int(parent_field.maximum * percent)
         assert value <= parent_field.maximum
         assert value >= parent_field.minimum
+        before = parent_field.value
         parent_field.value = value
-
-        self.notch.w_range = (int(percent * width), int(percent * width))
-        self.pack() # why doesn't self.notch.pack() work here?
+        if parent_field.value != before: # insufficient balance can cause setting.value to fail
+            self.notch.w_range = (int(percent * width), int(percent * width))
+            print("Set notch to {}% ({}) (click)".format(percent, self.notch.w_range[0]))
+            self.pack() # why doesn't self.notch.pack() work here?
 
 
 class Slider_Field(Field):

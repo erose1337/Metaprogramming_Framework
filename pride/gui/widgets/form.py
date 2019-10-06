@@ -40,6 +40,22 @@ import pride.gui.gui
 
 import sdl2
 
+class Balancer(object):
+
+    def __init__(self, balance, name):
+        self.balance = balance
+        self.name = name
+
+    def get_balance(self):
+        return self.balance
+
+    def spend(self, amount):
+        print("Spent {}".format(amount))
+        self.balance -= amount
+
+    def earn(self, amount):
+        self.balance += amount
+
 
 class Entry(pride.gui.gui.Button):
 
@@ -70,14 +86,16 @@ class Field(pride.gui.gui.Container):
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True}
     predefaults = {"target_object" : None}
     required_attributes = ("target_object", )
-    autoreferences = ("identifier", )
+    autoreferences = ("identifier", "displayer")
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
         return getattr(self.target_object, self.name)
     def _set_value(self, value):
-        setattr(self.target_object, self.name, value)
-        self.entry.texture_invalid = True # updates text later
+        if self.editable:
+            if self.handle_value_changed(self.value, value):
+                setattr(self.target_object, self.name, value)
+                self.entry.texture_invalid = True # updates text later
     value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
@@ -108,27 +126,22 @@ class Field(pride.gui.gui.Container):
         self.entry = self.create(self.entry_type, pack_mode=pack_mode, parent_field=self)
 
     def handle_value_changed(self, old_value, new_value):
-        assert old_value != new_value
+        if old_value == new_value:
+            return False
         balancer = self.balancer
         if balancer is not None:
             balance = self.balancer.get_balance()
             cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
-        else:
-            balance = None
-            cost = 0
-        if balancer is None or balance is None or cost <= balancer.get_balance():
-            self.alert("Value changing from {} to {} (initialized: {})".format(old_value, new_value, self._value_initialized),
+
+        if balancer is None or cost <= balance:
+            self.alert("Value changing from {} to {}".format(old_value, new_value),
                         level=self.verbosity["handle_value_changed"])
-            if balancer is not None and balance is not None and self._value_initialized:
+            if balancer is not None:
                 balancer.spend(cost)
-            self.assign_value(new_value)
+                self.displayer.entry.texture_invalid = True
             return True
         else:
             return False
-
-    def assign_value(self, new_value):
-        assert self.target_object is not None
-        setattr(self.target_object, self.name, new_value)
 
     def compute_cost(self, old_value, new_value):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
@@ -356,11 +369,6 @@ class Spinbox(Field):
     def handle_value_changed(self, old_value, new_value):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
 
-    def assign_value(self, new_value):
-        assert isinstance(new_value, int) or isinstance(new_value, long), (new_value, type(new_value))
-        assert self.target_object is not None
-        setattr(self.target_object, self.name, new_value)
-
     def compute_cost(self, old_value, new_value):
         #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int/long strike again
         return new_value - old_value
@@ -380,29 +388,24 @@ class Dropdown_Field(Field):
 
     defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side"}
 
-    def handle_value_changed(self, old_value, new_value):
-        self.alert("Value changed from {} to {}".format(old_value, new_value),
-                   level=self.verbosity["handle_value_changed"])
-        do_change = False
-        if self.balancer is not None:
-            balance = self.balancer.get_balance()
-            if balance is not None:
-                cost = self.compute_cost(old_value, new_value)
-                if cost <= balance:
-                    do_change = True
-            else:
-                do_change = True
-        else:
-            do_change = True
-        if do_change:
-            self.assign_value(new_value)
-
-    def assign_value(self, new_value):
-        assert self.target_object is not None
-        setattr(self.target_object, self.name, new_value)
+    #def handle_value_changed(self, old_value, new_value):
+    #    self.alert("Value changed from {} to {}".format(old_value, new_value),
+    #               level=self.verbosity["handle_value_changed"])
+    #    do_change = False
+    #    if self.balancer is not None:
+    #        balance = self.balancer.get_balance()
+    #        if balance is not None:
+    #            cost = self.compute_cost(old_value, new_value)
+    #            if cost <= balance:
+    #                do_change = True
+    #        else:
+    #            do_change = True
+    #    else:
+    #        do_change = True
+    #    return do_change
 
     def compute_cost(self, old_value, new_value):
-        return 0
+        return 1
 
 
 class Slider_Notch(pride.gui.gui.Button):
@@ -466,34 +469,36 @@ class Slider_Field(Field):
 
     defaults = {"entry_type" : Slider_Entry}
 
+    def compute_cost(self, old_value, new_value):
+        return new_value - old_value
+
 
 class Form(pride.gui.gui.Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
                 "dropdown_type" : Dropdown_Field, "target_object" : None,
-                "balance" : None, "balance_name" : "balance",
-                "include_balance_display" : True}
+                "balancer" : None, "include_balance_display" : True}
     autoreferences = ("displayer", )
     required_attributes = ("target_object", )
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
-        if self.balance is not None and self.include_balance_display:
-            if not hasattr(self.balance, self.balance_name):
-                raise ValueError("balance object {} has no attribute '{}'".format(self.balance, self.balance_name))
-            displayer = self.create(Text_Field, name=self.balance_name,
-                                    target_object=self.balance, pack_mode="top",
+        balancer = self.balancer
+        if balancer is not None and self.include_balance_display:
+            displayer = self.create(Text_Display, name="balance",
+                                    target_object=balancer, pack_mode="top",
                                     h_range=(.05, .1), orientation="side by side")
             displayer.editable = False
             self.displayer = displayer
+        else:
+            displayer = None
         spinbox = self.spinbox_type
         text_field = self.text_field_type
         toggle = self.toggle_type
         dropdown = self.dropdown_type
+        empty_entries = {"balancer" : balancer, "displayer" : displayer}
         target_object = self.target_object
-        empty_entries = {"balancer" : self}
-        _tester = {"balancer" : self}
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top")
             for item in row:
@@ -505,13 +510,14 @@ class Form(pride.gui.gui.Window):
                     entries = empty_entries
                 else:
                     name, entries = item
+                    entries.setdefault("balancer", balancer)
+                    entries.setdefault("displayer", displayer)
 
                 field_type = entries.pop("field_type", None)
-                value = getattr(target_object, name)
                 if field_type is None:
+                    value = getattr(target_object, name)
                     if "minimum" in entries and "maximum" in entries: # check here before checking for int/float
                         field_type = Slider_Field
-                        print("Making slider field")
                     elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
                         field_type = toggle
                     elif isinstance(value, int) or isinstance(value, float):
@@ -522,35 +528,9 @@ class Form(pride.gui.gui.Window):
                         field_type = dropdown
                 assert field_type is not None
                 assert "field_type" not in entries
-                assert empty_entries == _tester
                 field = container.create(field_type, name=name,
                                          target_object=target_object,
                                          **entries)
-
-    def get_balance(self):
-        return self.balance
-
-    def spend(self, amount):
-        assert amount <= self.balance
-        self.balance -= amount
-        displayer = self.displayer
-        if displayer is not None:
-            backup = displayer.editable
-            displayer.editable = True
-            displayer.text = str(self.balance)
-            displayer.editable = backup
-
-    def earn(self, amount):
-        assert amount >= 0
-        self.balance += amount
-
-    def display_balance(self, amount):
-        displayer = self.displayer
-        if displayer is not None:
-            backup = displayer.editable
-            displayer.editable = True
-            displayer.text = str(self.balance)
-            displayer.editable = backup
 
     @classmethod
     def from_file(cls, filename):
@@ -574,10 +554,10 @@ class Form(pride.gui.gui.Window):
                                              {"key" : "value pairs"})})       ]
                  ]
 
-        balance = None#pride.components.base.Base(balance=10, name="Remaining Balance")
+        balancer = Balancer(10, "Remaining Balance")
         form_callable = lambda *args, **kwargs:\
             Form(*args,
-                 balance=balance,
+                 balancer=balancer,
                  fields=fields,
                  target_object=_object,
                  **kwargs)

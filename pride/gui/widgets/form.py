@@ -35,6 +35,7 @@
 #
 # Balanced Forms define their own cost function and behavior when an attempt is made to change a value.
 # The default behavior is to simply dis-allow the change if the balance is insufficient, otherwise allow the change.
+import collections
 
 import pride.gui.gui
 
@@ -50,7 +51,6 @@ class Balancer(object):
         return self.balance
 
     def spend(self, amount):
-        print("Spent {}".format(amount))
         self.balance -= amount
 
     def earn(self, amount):
@@ -287,20 +287,9 @@ class Dropdown_Entry(Entry):
         if pride.objects[next_active_object] not in self.entries:
             if self.menu_open:
                 self.hide_menu(self.selected_entry)
-                #for entry in self.entries:
-                #    entry.always_on_top = False
-                #    if entry.value != self.value:
-                #        entry.hide()
-                #    elif type(entry.value) != type(self.value):
-                #        entry.hide() # to prevent something like 1 == True from happening, where 1 and True are both entries
-                #    else:
-                #        entry.show()
-                #self.menu_open = False
-                #self.pack()
 
     def toggle_menu(self, selected_entry):
         if not self.menu_open:
-            #assert hasattr(self, "entry")
             self.show_menu()
         else:
             self.hide_menu(selected_entry)
@@ -401,14 +390,63 @@ class Dropdown_Field(Field):
         return 1
 
 
-class Slider_Notch(pride.gui.gui.Button):
+class Continuum(pride.gui.gui.Button):
 
-    defaults = {"clickable" : False}
+    autoreferences = ("notch", "bar", "parent_field", "parent_entry")
 
-    #def __init__(self, **kwargs):
-    #    super(Slider_Notch, self).__init__(**kwargs)
-    #    self.create(pride.gui.gui.Container, pack_mode="right",
-    #                w_range=(0, .025), clickable=False)
+    def __init__(self, **kwargs):
+        super(Continuum, self).__init__(**kwargs)
+        self.bar = bar = self.create(pride.gui.gui.Container, pack_mode="left",
+                                     clickable=False)
+        self.notch = bar.create(pride.gui.gui.Container, pack_mode="right",
+                                w_range=(0, .025), clickable=False,
+                                theme_profile="interactive")
+
+    def handle_area_change(self, old_area):
+        super(Continuum, self).handle_area_change(old_area)
+        self.update_position_from_value()
+
+    def update_position_from_value(self):
+        parent_field = self.parent_field
+        entry = parent_field.entry
+        left = entry.left
+
+        percent = float(parent_field.value) / parent_field.maximum
+        width = (entry.w - left.w) - entry.right.w
+        offset = int(width * percent)
+
+        self.bar.w_range = (offset, offset)
+        self.bar.pack()
+
+    def left_click(self, mouse):
+        # unpack data
+        # evaluate contextual meaning of data (build more data from relations between present data)
+        # compute value based on data
+        # ensure value fits the expected constraints
+        # respond to computed value
+        parent_field = self.parent_field
+        entry = parent_field.entry
+        left = entry.left
+        width = (entry.w - left.w) - entry.right.w
+
+        offset = mouse.x - entry.x - left.w; offset = min(max(0, offset), width);
+        percent = float(offset) / width; percent = max(0, min(1, percent));
+
+        value = int(parent_field.maximum * percent)
+        assert value <= parent_field.maximum
+        assert value >= parent_field.minimum
+        before = parent_field.value
+        parent_field.value = value
+        if parent_field.value != before: # insufficient balance can cause setting.value to fail
+            self.bar.w_range = (int(percent * width), int(percent * width))
+            self.bar.pack()
+
+    def mousemotion(self, x, y, x_change, y_change):
+        if self.held:
+            self.left_click(self._mousetuple(x))
+
+    def _mousetuple(self, x, f=collections.namedtuple("mouse", 'x')):
+        return f(x)
 
 
 class Endcap_Entry(Text_Entry):
@@ -420,8 +458,7 @@ class Endcap_Entry(Text_Entry):
         assert parent_field.name in ("minimum", "maximum")
         value = getattr(slider_field, parent_field.name)
         slider_field.value = value
-        slider_field.entry.update_position_from_value()
-        slider_field.entry.pack()
+        slider_field.update_position_from_value()
 
 
 class Endcap(Text_Display):
@@ -432,7 +469,7 @@ class Endcap(Text_Display):
 
 class Slider_Entry(Entry):
 
-    autoreferences = ("left", "notch", "right")
+    autoreferences = ("left", "continuum", "right")
 
     def __init__(self, **kwargs):
         super(Slider_Entry, self).__init__(**kwargs)
@@ -443,44 +480,10 @@ class Slider_Entry(Entry):
         assert parent_field.minimum is not None and parent_field.maximum is not None
         self.left = self.create(Endcap, pack_mode="left", target_object=parent_field,
                                 name="minimum")
-        self.notch = self.create(Slider_Notch, pack_mode="left")
+        self.continuum = self.create(Continuum, pack_mode="left",
+                                     parent_field=parent_field, parent_entry=self)
         self.right = self.create(Endcap, pack_mode="right", target_object=parent_field,
                                  name="maximum")
-        self.sdl_window.schedule_postdraw_operation(self.update_position_from_value)
-
-    def update_position_from_value(self):
-        parent_field = self.parent_field
-        left = self.left
-
-        percent = float(parent_field.value) / parent_field.maximum
-        width = (self.w - left.w) - self.right.w
-        offset = int(width * percent)
-
-        self.notch.w_range = (offset, offset)
-        print("Set notch to {}% ({}) (update)".format(percent, offset))
-
-    def left_click(self, mouse):
-        # unpack data
-        # evaluate contextual meaning of data (build more data from relations between present data)
-        # compute value based on data
-        # ensure value fits the expected constraints
-        # respond to computed value
-        parent_field = self.parent_field
-        left = self.left
-        width = (self.w - left.w) - self.right.w
-
-        offset = mouse.x - self.x - left.w; offset = min(max(0, offset), width);
-        percent = float(offset) / width; percent = max(0, min(1, percent));
-
-        value = int(parent_field.maximum * percent)
-        assert value <= parent_field.maximum
-        assert value >= parent_field.minimum
-        before = parent_field.value
-        parent_field.value = value
-        if parent_field.value != before: # insufficient balance can cause setting.value to fail
-            self.notch.w_range = (int(percent * width), int(percent * width))
-            print("Set notch to {}% ({}) (click)".format(percent, self.notch.w_range[0]))
-            self.pack() # why doesn't self.notch.pack() work here?
 
 
 class Slider_Field(Field):
@@ -489,6 +492,9 @@ class Slider_Field(Field):
 
     def compute_cost(self, old_value, new_value):
         return new_value - old_value
+
+    def update_position_from_value(self):
+        self.entry.continuum.update_position_from_value()
 
 
 class Form(pride.gui.gui.Window):
@@ -572,7 +578,7 @@ class Form(pride.gui.gui.Window):
                                              {"key" : "value pairs"})})       ]
                  ]
 
-        balancer = Balancer(10, "Remaining Balance")
+        balancer = Balancer(255, "Remaining Balance")
         form_callable = lambda *args, **kwargs:\
             Form(*args,
                  balancer=balancer,

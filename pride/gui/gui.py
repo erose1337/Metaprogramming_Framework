@@ -60,7 +60,7 @@ class Organizer(base.Base):
             return
 
         _lists = {"top" : [], "main" : [], "bottom" : [], "left" : [], "right" : []}
-        old_area = []
+        old_area = dict()
         for child in children:
             pack_mode = child.pack_mode
             if pack_mode is None:
@@ -72,7 +72,7 @@ class Organizer(base.Base):
                     _lists[pack_mode].append(child)
                 except KeyError:
                     raise NotImplementedError("Unsupported pack mode '{}' on {}".format(pack_mode, child))
-                old_area.append(child.area)
+                old_area[child] = child.area
 
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
         assert len(main) in (0, 1), main
@@ -89,16 +89,17 @@ class Organizer(base.Base):
         if left or main or right:
             self.pack_horizontals(area, z, left, main, right,
                                   top_height, bottom_height)
-        index = 0
+
         for child in children:
             if child.hidden or child._parent_hidden:
                 continue
-            _old_area = old_area[index]
-            if parent._in_pack_queue or child.area != _old_area:
-                index += 1
+            _old_area = old_area[child]
+            area = child.area
+            if parent._in_pack_queue or area != _old_area:
                 self.pack_children(child, list(child.children))
                 child._pack_requested = False
-                child.handle_area_change(_old_area)
+                if area != _old_area:
+                    child.handle_area_change(_old_area)
 
     def pack_horizontals(self, area, z, left, main, right, top_height, bottom_height):
         x, y, w, h = area
@@ -650,6 +651,7 @@ class _Window_Object(Organized_Object):
             self._status = None
 
     def handle_area_change(self, old_area):
+        assert old_area != self.area
         try:
             self.theme.draw_frames(old_area)
         except AttributeError:

@@ -474,6 +474,9 @@ class _Window_Object(Organized_Object):
     def mousewheel(self, x_amount, y_amount):
         pass
 
+    def mousemotion(self, x, y, x_change, y_change):
+        pass
+
     def on_hover(self):
         #self.alert("Mouse hovering")
         if self.theme_profile == "interactive":
@@ -506,8 +509,6 @@ class _Window_Object(Organized_Object):
             window.clear_tip_bar_text()
             self._tip_set = False
 
-    def mousemotion(self, x, y, x_change, y_change):
-        pass
 
     def hide(self, parent_call=False):
         self.sdl_window.remove_window_object(self)

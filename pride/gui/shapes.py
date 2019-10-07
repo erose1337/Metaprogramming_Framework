@@ -80,7 +80,6 @@ class Bounded_Shape(Shape):
                 raise ValueError("float h_range must be between 0.0 and 1.0; got {}".format(upper))
             value = (value[0], int(upper * screen_w))
         self._w_range = value
-#        self.w = self._w
     w_range = property(_get_w_range, _set_w_range)
 
     def _get_h_range(self):
@@ -92,13 +91,7 @@ class Bounded_Shape(Shape):
         if isinstance(value[1], float):
             value = (value[0], int(value[1] * screen_h))
         self._h_range = value
-#        self.h = self._h
     h_range = property(_get_h_range, _set_h_range)
-
-    #def __new__(cls, *args, **kwargs):
-    #    instance = super(Shape, cls).__new__(cls, *args, **kwargs)
-    #    kwargs["sdl_window"] = instance.sdl_window = kwargs.pop("sdl_window", '')
-    #    return instance
 
     def __init__(self, **kwargs):
         assert not isinstance(kwargs["sdl_window"], str), kwargs

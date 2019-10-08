@@ -1,40 +1,3 @@
-# Forms
-# =====
-#
-# A *Form* has
-# ------
-# - a name
-# - a sequence of *Fields*
-#
-# A Field has
-# -------
-# - a name
-# - an initial value
-# - optional extra entries as needed
-#
-#
-# A template form:
-#
-# Form Name
-# ====
-#
-# Field Name
-# -----------
-# - initial_value: None
-# - entry1: value1
-# - entry2: value2
-
-# Balanced Form
-# =============
-# A Balanced Form is a form that limits the range/selection of field values according to some cost function and an available balance.
-# For example, in an RPG game, a character may have a given number of XP points. These points can be spent to increment stats.
-# - The "balance" is the currently available XP
-# - The cost function determines how much XP it takes to increment some stat
-# - Balance is spent to increment some stat
-# - Insufficient balance prevents the player from being able to increment stats
-#
-# Balanced Forms define their own cost function and behavior when an attempt is made to change a value.
-# The default behavior is to simply dis-allow the change if the balance is insufficient, otherwise allow the change.
 import collections
 
 import pride.gui.gui
@@ -369,22 +332,6 @@ class Toggle(Field):
 class Dropdown_Field(Field):
 
     defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side"}
-
-    #def handle_value_changed(self, old_value, new_value):
-    #    self.alert("Value changed from {} to {}".format(old_value, new_value),
-    #               level=self.verbosity["handle_value_changed"])
-    #    do_change = False
-    #    if self.balancer is not None:
-    #        balance = self.balancer.get_balance()
-    #        if balance is not None:
-    #            cost = self.compute_cost(old_value, new_value)
-    #            if cost <= balance:
-    #                do_change = True
-    #        else:
-    #            do_change = True
-    #    else:
-    #        do_change = True
-    #    return do_change
 
     def compute_cost(self, old_value, new_value):
         return 1

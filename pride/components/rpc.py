@@ -36,7 +36,7 @@ def remote_procedure_call(callback_name='', callback=None):
                 self.handle_not_logged_in(instruction, _callback)
             else:
                 self.alert("Making request '{}.{}'".format(self.target_service, call_name),
-                           level=self.verbosity[call_name])
+                           level=self.verbosity.get(call_name, 'v'))
                 self.session.execute(instruction, _callback)
         return _make_rpc
     return decorate

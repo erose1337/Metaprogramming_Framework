@@ -52,7 +52,6 @@ class alert_on_call(object):
 
     def __call__(self, *args, **kwargs):
         method_name = self.method_name
-        method = self.method
         alert_handler = pride.objects["/Alert_Handler"]
         if (method_name != "on_load" and # can cause problems otherwise
             "debug" in alert_handler.print_level or
@@ -64,7 +63,7 @@ class alert_on_call(object):
                                         "({},".format(pprint.pformat(args[1:])) if args[1:] else '(',
                                         " {})".format(pprint.pformat(kwargs)) if kwargs else ')')
                 component.alert(message, level=component.verbosity[method_name])
-        return method(*args, **kwargs)
+        return self.method(*args, **kwargs)
 
 
 

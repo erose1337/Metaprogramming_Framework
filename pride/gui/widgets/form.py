@@ -184,11 +184,54 @@ class Integer_Entry(Text_Entry):
         parent_field.value = int(parent_field.value or '0') - amount
 
 
+class Status_Light(pride.gui.gui.Container):
+
+    defaults = {"pack_mode" : "right", "w_range" : (0, .03),
+                "theme_profile" : "blank", "clickable" : False}
+    autoreferences = ("light", )
+
+    def __init__(self, **kwargs):
+        super(Status_Light, self).__init__(**kwargs)
+        self.create_subcomponents()
+
+    def create_subcomponents(self):
+        top_spacer = self.create("pride.gui.gui.Container", pack_mode="top",
+                                 clickable=False, theme_profile="placeholder")
+        self.light = self.create("pride.gui.gui.Container", clickable=False,
+                                 theme_profile="placeholder", pack_mode="top")
+        bottom_spacer = self.create("pride.gui.gui.Container", clickable=False,
+                                    theme_profile="placeholder", pack_mode="top")
+
+    def enable_indicator(self):
+        self.light.theme_profile = "hover"
+
+    def disable_indicator(self):
+        self.light.theme_profile = "placeholder"
+
+
 class Toggle_Entry(Entry):
+
+    defaults = {"status_light_type" : Status_Light}
+    autoreferences = ("status_display", )
+
+    def __init__(self, **kwargs):
+        super(Toggle_Entry, self).__init__(**kwargs)
+        self.create_subcomponents()
+
+    def create_subcomponents(self):
+        self.status_display = self.create(self.status_light_type)
+        if self.parent_field.value:
+            self.status_display.enable_indicator()
+        else:
+            self.status_display.disable_indicator()
 
     def left_click(self, mouse):
         parent_field = self.parent_field
         parent_field.value = not parent_field.value
+        if parent_field.value:
+            self.status_display.enable_indicator()
+        else:
+            self.status_display.disable_indicator()
 
 
 class _Dropdown_Entry(Entry):
@@ -517,9 +560,10 @@ class Form(pride.gui.gui.Window):
         window = pride.objects[pride.gui.enable()]
 
         _object = pride.components.base.Base(text='1', spinbox=2, toggle=True,
+                                             toggle2=False, toggle3=True, toggle4=False,
                                              slider=32,  dropdown=None)
         setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
-        fields = [[                     "toggle"                              ],
+        fields = [[   "toggle",    "toggle2",    "toggle3",    "toggle4"      ],
                   [     "text",                       "my text field"         ],
                   [ "spinbox",    ("slider", {"minimum" : 0, "maximum" : 255})],
                   [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #|   #| is just for appearance

@@ -264,7 +264,7 @@ class _Window_Object(Organized_Object):
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
-                "theme_type" : "pride.gui.themes.Animated_Theme2",
+                "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "_selected" : False, "hide_excess_text" : True,
                 "_cached" : False, "tip_bar_text" : '',
                 "theme_profile" : "default", "clickable" : True}
@@ -653,16 +653,13 @@ class _Window_Object(Organized_Object):
 
     def handle_area_change(self, old_area):
         assert old_area != self.area
-        try:
-            self.theme.draw_frames(old_area)
-        except AttributeError:
-            if hasattr(self.theme, "draw_frames"):
-                raise
 
 
 class Animated_Object(_Window_Object):
 
-    defaults = {"frame_count" : 5, "_backup_theme_profile" : None}
+    defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
+                "theme_type" : "pride.gui.themes.Animated_Theme2",
+                "animation_enabled" : True}
     predefaults = {"animating" : False, "_old_theme" : None,
                    "_colors_backup" : None, "_start_animation_enabled" : False,
                    "_transition_state" : 0}
@@ -675,7 +672,9 @@ class Animated_Object(_Window_Object):
         if value != self.theme_profile:
             self._old_theme = self.theme_profile
         super(Animated_Object, self)._set_theme_profile(value)
-        if self._old_theme is not None and self._old_theme != self.theme_profile:
+        if (self.animation_enabled and
+            self._old_theme is not None and
+            self._old_theme != self.theme_profile):
             self.start_animation()
     theme_profile = property(_get_theme_profile, _set_theme_profile)
 
@@ -753,6 +752,15 @@ class Animated_Object(_Window_Object):
                 _cache[(scalar, old_profile, end_profile, key)] = new_value
             assert not isinstance(new_value, float)
             setattr(self, key, new_value)
+
+    def handle_area_change(self, old_area):
+        assert self.area != old_area
+        if self.animation_enabled:
+            try:
+                self.theme.draw_frames(old_area)
+            except AttributeError:
+                if hasattr(self.theme, "draw_frames"):
+                    raise
 
 
 Window_Object = Animated_Object # can upgrade everything in-place by changing this

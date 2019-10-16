@@ -707,6 +707,10 @@ class Animated_Object(_Window_Object):
         self._old_theme = None
         self._transition_state = 0
 
+    def handle_transition_animation_end(self):
+        # this is used by the Animated_Theme end animation, NOT the color animation performed by this class
+        pass
+
     def draw_texture(self):
         animating = self.animating
         state_counter = self._transition_state

@@ -14,6 +14,7 @@ import pride.functions.utilities as utilities
 import pride.gui
 resolve_string = utilities.resolve_string
 Instruction = pride.Instruction
+timestamp = utilities.timestamp
 
 import sdl2
 import sdl2.ext
@@ -90,13 +91,11 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
-    mutable_defaults = {"redraw_objects" : list, "predraw_queue" : list,
-                        "postdraw_queue" : list, "layer_cache" : list,
-                        "drawing_instructions" : collections.OrderedDict,
-                        "dirty_layers" : set}
+    mutable_defaults = {"redraw_objects" : list, "postdraw_queue" : list,
+                        "layer_cache" : list, "dirty_layers" : set,
+                        "drawing_instructions" : collections.OrderedDictt}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
-                   "running2" : False,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
 
     def _get_size(self):
@@ -124,8 +123,6 @@ class SDL_Window(SDL_Component):
     def __init__(self, **kwargs):
         super(SDL_Window, self).__init__(**kwargs)
         self.run_instruction = Instruction(self.reference, "run")
-        self.run2_instruction = Instruction(self.reference, "run2")
-        self.run2_instruction.execute(priority=0)
 
         self.sdl_window = self # children may attempt to access the sdl_window attribute of their parent
         window = sdl2.ext.Window(self.name, position=self.position,
@@ -167,8 +164,6 @@ class SDL_Window(SDL_Component):
     def _schedule_run(self):
         if not self.running:
             self.running = True
-        if not self.running2:
-            self.running2 = True
 
     def create(self, *args, **kwargs):
         kwargs.setdefault("sdl_window", self)
@@ -201,46 +196,28 @@ class SDL_Window(SDL_Component):
         if not self.redraw_objects:
             self.running = True # trigger run to wipe out the screen
 
-    def run2(self):
-        self.running2 = False
-
-        if self.predraw_queue:
-            queue = self.predraw_queue
-            self.predraw_queue = []
-            for callable in queue:
-                callable()
-
-        organizer = self.organizer
-        if organizer.pack_queue or organizer.window_queue:
-            self.organizer.pack_items()
-
-        #assert self.redraw_objects
-        if self.redraw_objects:
-            self.update_drawing_instructions()
-        assert not self.redraw_objects
-
     def run(self):
-        if self.running2:
-            self.run2_instruction.unschedule()
-            self.run2()
+        self.run_instruction.execute(priority=self.priority)
+        self.user_input.run()
 
         if self.running:
-            self.draw(self.drawing_instructions)
-            self.running = False
+            organizer = self.organizer
+            if organizer.pack_queue or organizer.window_queue:
+                organizer.pack_items()
 
-        self.run_instruction.execute(priority=self.priority)
+            if self.redraw_objects:
+                self.update_drawing_instructions()
+            assert not self.redraw_objects
+
+            self.draw(self.drawing_instructions)
+            assert not self.redraw_objects
+            self.running = False
 
         if self.postdraw_queue:
             queue = self.postdraw_queue
             self.postdraw_queue = []
             for callable in queue:
                 callable()
-
-        self.user_input.run()
-        if self.running2:
-            self.run2()
-            assert not self.redraw_objects
-        assert not self.redraw_objects
 
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions
@@ -315,9 +292,6 @@ class SDL_Window(SDL_Component):
         self.dirty_layers.clear()
         renderer.present()
 
-    def schedule_predraw_operation(self, callable):
-        self.predraw_queue.append(callable)
-
     def schedule_postdraw_operation(self, callable):
         self.postdraw_queue.append(callable)
 
@@ -339,9 +313,7 @@ class SDL_Window(SDL_Component):
         for child in self.children:
             if hasattr(child, "pack"):
                 child.delete()
-        del self.predraw_queue[:]
         self.run_instruction.unschedule()
-        self.run2_instruction.unschedule()
         super(SDL_Window, self).delete()
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)

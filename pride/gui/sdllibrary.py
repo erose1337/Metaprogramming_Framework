@@ -93,7 +93,8 @@ class SDL_Window(SDL_Component):
 
     mutable_defaults = {"redraw_objects" : list, "postdraw_queue" : list,
                         "layer_cache" : list, "dirty_layers" : set,
-                        "drawing_instructions" : collections.OrderedDictt}
+                        "predraw_queue" : list,
+                        "drawing_instructions" : collections.OrderedDict}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
@@ -200,6 +201,12 @@ class SDL_Window(SDL_Component):
         self.run_instruction.execute(priority=self.priority)
         self.user_input.run()
 
+        if self.predraw_queue:
+            queue = self.predraw_queue
+            self.predraw_queue = []
+            for callable in queue:
+                callable()
+
         if self.running:
             organizer = self.organizer
             if organizer.pack_queue or organizer.window_queue:
@@ -294,6 +301,9 @@ class SDL_Window(SDL_Component):
 
     def schedule_postdraw_operation(self, callable):
         self.postdraw_queue.append(callable)
+
+    def schedule_predraw_operation(self, callable):
+        self.predraw_queue.append(callable)
 
     def get_mouse_state(self):
         mouse = sdl2.mouse

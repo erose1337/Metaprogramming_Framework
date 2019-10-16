@@ -315,7 +315,6 @@ class Spinbox(Field):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
 
     def compute_cost(self, old_value, new_value):
-        #assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value) # int/long strike again
         return new_value - old_value
 
 
@@ -349,10 +348,6 @@ class Continuum(pride.gui.gui.Button):
                                 w_range=(0, .025), clickable=False,
                                 theme_profile="interactive")
 
-    def handle_area_change(self, old_area):
-        super(Continuum, self).handle_area_change(old_area)
-        self.update_position_from_value()
-
     def update_position_from_value(self):
         parent_field = self.parent_field
         entry = parent_field.entry
@@ -385,8 +380,10 @@ class Continuum(pride.gui.gui.Button):
         before = parent_field.value
         parent_field.value = value
         if parent_field.value != before: # insufficient balance can cause setting.value to fail
-            self.bar.w_range = (int(percent * width), int(percent * width))
-            self.bar.pack()
+            new_size = int(percent * width)
+            bar = self.bar
+            bar.w_range = (new_size, new_size)
+            bar.pack()
 
     def mousemotion(self, x, y, x_change, y_change):
         if self.held:
@@ -439,6 +436,10 @@ class Slider_Field(Field):
 
     def compute_cost(self, old_value, new_value):
         return new_value - old_value
+
+    def handle_transition_animation_end(self):
+        super(Slider_Field, self).handle_transition_animation_end()
+        self.update_position_from_value()
 
     def update_position_from_value(self):
         self.entry.continuum.update_position_from_value()
@@ -516,7 +517,7 @@ class Form(pride.gui.gui.Window):
         window = pride.objects[pride.gui.enable()]
 
         _object = pride.components.base.Base(text='1', spinbox=2, toggle=True,
-                                             slider=128,  dropdown=None)
+                                             slider=32,  dropdown=None)
         setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
         fields = [[                     "toggle"                              ],
                   [     "text",                       "my text field"         ],

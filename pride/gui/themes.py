@@ -292,38 +292,40 @@ class Animated_Theme2(Minimal_Theme):
 
     def draw_frames(self, old_area):
         if old_area != self.area:
-            #assert not self._animating_movement
             self.start_animation(old_area)
 
     def start_animation(self, old_area):
+        assert old_area != self.area
         self._animating_movement = True
         self.frame_number = 0
         self._old_area = old_area
         self._end_area = self.area
-        assert self._old_area != self._end_area
 
     def end_animation(self):
         self._animating_movement = False
         self._old_area = self._end_area = None
-        self.x, self.y, self.w, self.h = self.wrapped_object.area
+        del self.x, self.y, self.w, self.h # removes lerp'd values from Wrapper; future attribute accesses will go through to wrapped object
+        self.wrapped_object.handle_transition_animation_end()
 
     def _invalidate_texture(self):
         self.wrapped_object.texture_invalid = True
 
     def draw_texture(self):
         if self._animating_movement:
+            assert self.frame_number <= self.frame_count, (self.frame_number, self.frame_count)
             midpoint = float(self.frame_number) / self.frame_count
             old_area = self._old_area
             end_area = self._end_area
             assert old_area is not None
             assert end_area is not None
-            assert 0.0 <= midpoint <= 1.0
+            assert 0.0 <= midpoint <= 1.0, (midpoint, self.frame_number, self.frame_count)
             (self.x, self.y,
              self.w, self.h) = [int(ceil(lerp(old_value, end_value, midpoint))) for
                                 old_value, end_value in zip(old_area, end_area)]
             super(Animated_Theme2, self).draw_texture()
             self.frame_number += 1
-            if self.frame_number > self.frame_count:
+            if self.frame_number > self.frame_count or (self.x, self.y, self.w, self.h) == self.wrapped_object.area:
+                assert (self.x, self.y, self.w, self.h) == self.wrapped_object.area
                 self.end_animation()
             self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
         else:

@@ -98,10 +98,13 @@ class Minimal_Theme(Theme):
                                    w + (2 * thickness), h + (2 * thickness)),
                           color=(r, g, b, a - (thickness * fade_scalar)))
 
-        if self.text:
+        if self.text or self.draw_cursor:
             assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", area, self.text, width=w if self.wrap_text else None,
+            text = self.text
+            if self.draw_cursor:
+                text += self.cursor_symbol
+            self.draw("text", area, text, width=w if self.wrap_text else None,
                     bg_color=self.text_background_color, color=self.text_color,
                     center_text=self.center_text, hide_excess_text=self.hide_excess_text)
 

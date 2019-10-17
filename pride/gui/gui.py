@@ -271,7 +271,7 @@ class _Window_Object(Organized_Object):
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
-                   "_text" : '',
+                   "_text" : '', "draw_cursor" : False, 
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
                    "_always_on_top" : False, "use_custom_colors" : False,

@@ -113,13 +113,33 @@ class Field(pride.gui.gui.Container):
 
 class Text_Entry(Entry):
 
-    defaults = {"h" : 16, "allow_text_edit" : False}
+    defaults = {"h" : 16, "allow_text_edit" : False, "cursor_blink_rate" : .5,
+                "cursor_symbol" : '_'}
+
+    def __init__(self, **kwargs):
+        super(Text_Entry, self).__init__(**kwargs)
+        self.enable_cursor_instruction = pride.Instruction(self.reference, "enable_cursor")
+        self.disable_cursor_instruction = pride.Instruction(self.reference, "disable_cursor")
 
     def select(self, mouse):
         super(Text_Entry, self).select(mouse)
         self.alert("Turning text input on", level='vv')
         self.allow_text_edit = True
         sdl2.SDL_StartTextInput()
+        self.enable_cursor()
+
+    def enable_cursor(self):
+        if not self.draw_cursor:
+            self.disable_cursor_instruction.execute(priority=self.cursor_blink_rate)
+            self.texture_invalid = self.draw_cursor = True
+
+    def disable_cursor(self):
+        self.draw_cursor = False
+        self.texture_invalid = True
+        if self.allow_text_edit:
+            self.enable_cursor_instruction.execute(priority=self.cursor_blink_rate)
+        else:
+            self.enable_cursor_instruction.unschedule()
 
     def deselect(self, mouse, next_active_object):
         super(Text_Entry, self).deselect(mouse, next_active_object)
@@ -186,52 +206,39 @@ class Integer_Entry(Text_Entry):
 
 class Status_Light(pride.gui.gui.Container):
 
-    defaults = {"pack_mode" : "right", "w_range" : (0, .03),
-                "theme_profile" : "blank", "clickable" : False}
-    autoreferences = ("light", )
-
-    def __init__(self, **kwargs):
-        super(Status_Light, self).__init__(**kwargs)
-        self.create_subcomponents()
-
-    def create_subcomponents(self):
-        top_spacer = self.create("pride.gui.gui.Container", pack_mode="top",
-                                 clickable=False, theme_profile="placeholder")
-        self.light = self.create("pride.gui.gui.Container", clickable=False,
-                                 theme_profile="placeholder", pack_mode="top")
-        bottom_spacer = self.create("pride.gui.gui.Container", clickable=False,
-                                    theme_profile="placeholder", pack_mode="top")
+    defaults = {"pack_mode" : "top", "h_range" : (0, .03),
+                "theme_profile" : "placeholder", "clickable" : False}
 
     def enable_indicator(self):
-        self.light.theme_profile = "hover"
+        self.theme_profile = "hover"
 
     def disable_indicator(self):
-        self.light.theme_profile = "placeholder"
+        self.theme_profile = "placeholder"
 
 
 class Toggle_Entry(Entry):
 
     defaults = {"status_light_type" : Status_Light}
-    autoreferences = ("status_display", )
+    autoreferences = ("status_light", )
 
     def __init__(self, **kwargs):
         super(Toggle_Entry, self).__init__(**kwargs)
         self.create_subcomponents()
 
     def create_subcomponents(self):
-        self.status_display = self.create(self.status_light_type)
+        self.status_light = self.create(self.status_light_type)
         if self.parent_field.value:
-            self.status_display.enable_indicator()
+            self.status_light.enable_indicator()
         else:
-            self.status_display.disable_indicator()
+            self.status_light.disable_indicator()
 
     def left_click(self, mouse):
         parent_field = self.parent_field
         parent_field.value = not parent_field.value
         if parent_field.value:
-            self.status_display.enable_indicator()
+            self.status_light.enable_indicator()
         else:
-            self.status_display.disable_indicator()
+            self.status_light.disable_indicator()
 
 
 class _Dropdown_Entry(Entry):

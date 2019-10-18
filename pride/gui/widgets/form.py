@@ -123,10 +123,11 @@ class Text_Entry(Entry):
 
     def select(self, mouse):
         super(Text_Entry, self).select(mouse)
-        self.alert("Turning text input on", level='vv')
-        self.allow_text_edit = True
-        sdl2.SDL_StartTextInput()
-        self.enable_cursor()
+        if self.parent_field.editable:
+            self.alert("Turning text input on", level='vv')
+            self.allow_text_edit = True
+            sdl2.SDL_StartTextInput()
+            self.enable_cursor()
 
     def enable_cursor(self):
         if not self.draw_cursor:

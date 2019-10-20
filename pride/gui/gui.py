@@ -58,14 +58,20 @@ class Organizer(base.Base):
     def pack_children(self, parent, children):
         if not children:
             return
+        area = parent.area
+        z = parent.z + 1
 
-        _lists = {"top" : [], "main" : [], "bottom" : [], "left" : [], "right" : []}
+        _lists = {"top" : [], "main" : [], "bottom" : [], "left" : [],
+                  "right" : []}
         old_area = dict()
         for child in children:
             pack_mode = child.pack_mode
-            if pack_mode is None:
+            if pack_mode is None or child.hidden:
                 continue
-            if child.hidden:
+            if pack_mode == "fill":
+                old_area[child] = child.area
+                child.z = z
+                child.area = area
                 continue
             else:
                 try:
@@ -76,8 +82,6 @@ class Organizer(base.Base):
 
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
         assert len(main) in (0, 1), main
-        area = parent.area
-        z = parent.z + 1
 
         if top or main or bottom:
             self.pack_verticals(area, z, top, main, bottom)
@@ -571,11 +575,11 @@ class _Window_Object(Organized_Object):
             self._clear_tip_bar_text()
         except AttributeError:
             pass # self.tip_bar is None
-        self.sdl_window.remove_window_object(self)
         self.theme.delete()
         if self.parent.reference != self.sdl_window:
             #self.parent.pack()
             self.pack()
+        self.sdl_window.remove_window_object(self)
         super(_Window_Object, self).delete()
 
     def deselect(self, mouse, next_active_object):
@@ -659,7 +663,9 @@ class Animated_Object(_Window_Object):
 
     defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
                 "theme_type" : "pride.gui.themes.Animated_Theme2",
-                "animation_enabled" : True}
+                "animation_enabled" : True, "click_animation_enabled" : True,
+                "click_radius" : 2,
+                "_mouse_click_type" : "pride.gui.gui._Mouse_Click"}
     predefaults = {"animating" : False, "_old_theme" : None,
                    "_colors_backup" : None, "_start_animation_enabled" : False,
                    "_transition_state" : 0}
@@ -681,6 +687,13 @@ class Animated_Object(_Window_Object):
     def __init__(self, **kwargs):
         super(Animated_Object, self).__init__(**kwargs)
         self._start_animation_enabled = True
+
+    def left_click(self, mouse):
+        if self.click_animation_enabled:
+            x, y = mouse.x, mouse.y
+            radius = self.click_radius
+            rect = self.create(self._mouse_click_type)
+            rect.area = (x - radius, y - radius, radius, radius)
 
     def show(self, parent_call=False):
         super(Animated_Object, self).show(parent_call)
@@ -722,7 +735,8 @@ class Animated_Object(_Window_Object):
                 assert state_counter < self.frame_count, (state_counter, self.frame_count)
                 self.next_frame()
                 self._transition_state += 1
-                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
+                assert not self.deleted
+                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self)
         super(Animated_Object, self).draw_texture()
 
     def next_frame(self):
@@ -765,6 +779,14 @@ class Animated_Object(_Window_Object):
             except AttributeError:
                 if hasattr(self.theme, "draw_frames"):
                     raise
+
+class _Mouse_Click(Animated_Object):
+
+    defaults = {"clickable" : False, "pack_mode" : "fill"}
+
+    def handle_transition_animation_end(self):
+        #self.delete()
+        self.sdl_window.schedule_postdraw_operation(self.delete, self)
 
 
 Window_Object = Animated_Object # can upgrade everything in-place by changing this

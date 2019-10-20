@@ -165,6 +165,7 @@ class Decrement_Button(pride.gui.gui.Button):
     autoreferences = ("target_entry", )
 
     def left_click(self, mouse):
+        super(Decrement_Button, self).left_click(mouse)
         self.target_entry.decrement_value(self.increment)
 
 
@@ -234,6 +235,7 @@ class Toggle_Entry(Entry):
             self.status_light.disable_indicator()
 
     def left_click(self, mouse):
+        super(Toggle_Entry, self).left_click(mouse)
         parent_field = self.parent_field
         parent_field.value = not parent_field.value
         if parent_field.value:
@@ -412,6 +414,7 @@ class Continuum(pride.gui.gui.Button):
         self.bar.pack()
 
     def left_click(self, mouse):
+        super(Continuum, self).left_click(mouse)
         # unpack data
         # evaluate contextual meaning of data (build more data from relations between present data)
         # compute value based on data
@@ -438,10 +441,10 @@ class Continuum(pride.gui.gui.Button):
 
     def mousemotion(self, x, y, x_change, y_change):
         if self.held:
-            self.left_click(self._mousetuple(x))
+            self.left_click(self._mousetuple(x, y))
 
-    def _mousetuple(self, x, f=collections.namedtuple("mouse", 'x')):
-        return f(x)
+    def _mousetuple(self, x, y, f=collections.namedtuple("mouse", ('x', 'y'))):
+        return f(x, y)
 
 
 class Endcap_Entry(Text_Entry):

@@ -4,7 +4,7 @@ import os.path
 import pride.gui.gui
 import pride.gui.widgetlibrary
 import pride.gui.widgets.tabs
-import pride.gui.widgets.sliders
+import pride.gui.widgets.form
 
 try:
     import cefparser
@@ -14,28 +14,11 @@ except ImportError:
     raise
 
 
-class Color_Field(pride.gui.gui.Container):
+class Color_Field(pride.gui.widgets.form.Form):
 
-    defaults = {"field_info" : tuple(), "field_attributes" : dict(),
-                "pack_mode" : "top"}
-
-    def __init__(self, **kwargs):
-        super(Color_Field, self).__init__(**kwargs)
-        field_name, _object = self.field_info
-        for key, bounds in self.field_attributes.items():
-            self.create(pride.gui.widgets.sliders.Slider_Widget, label=key,
-                        bounds=bounds, target=(_object, key), h_range=(0, .10),
-                        on_adjustment=self._adjustment_callback)
-
-    def _adjustment_callback(self):
-        queue = self.sdl_window.predraw_queue
-        method = self.target_theme.update_theme_users
-        if method not in queue:
-            queue.append(method)
-
-    def readjust_sliders(self):
-        for slider_widget in self.objects["Slider_Widget"]:
-            slider_widget.readjust_sliders()
+    def handle_value_changed(self, field, old_value, new_value):
+        super(Color_Field, self).handle_value_changed(field, old_value, new_value)
+        self.theme.update_theme_users()
 
 
 class Profile_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
@@ -43,10 +26,6 @@ class Profile_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
     color_keys = ("background", "shadow", "text", "text_background")
     defaults = {"profile_info" : None}
     required_attributes = ("profile_info", )
-
-    def readjust_sliders(self):
-        for tab in self.tab_bar.tabs:
-            tab.window.readjust_sliders()
 
     def initialize_tabs_and_windows(self):
         self.tab_types = tuple(pride.gui.widgets.tabs.Tab_Button.from_info(text=text, include_delete_button=False) for
@@ -61,18 +40,26 @@ class Profile_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
             key = tab.text
             tab.text = key.replace('_', ' ')
             _object = info[key]
+            kwargs = dict()
             try:
-                kwargs = {"field_attributes" : {'r' : _object.r_range, 'g' : _object.g_range,
-                                                'b' : _object.b_range, 'a' : _object.a_range},
-                          "field_info" : (key, _object)}
+                rmin, rmax = _object.r_range; gmin, gmax = _object.g_range
+                bmin, bmax = _object.b_range; amin, amax = _object.a_range
+                fields = [
+                          [('a', {"minimum" : amin, "maximum" : amax})],
+                          [('r', {"minimum" : rmin, "maximum" : rmax})],
+                          [('g', {"minimum" : gmin, "maximum" : gmax})],
+                          [('b', {"minimum" : bmin, "maximum" : bmax})]
+                         ]
             except AttributeError:
-                kwargs = {"field_attributes" : {key : (0, 16)},
-                          "field_info" : (key, info)}
-            #else:
-            #    if key == "text":
-            #        del kwargs["field_attributes"]['a']
-            kwargs["target_theme"] = target_theme
-            field = self.create(Color_Field, tab=tab, **kwargs)
+                fields = [
+                          [(key, {"minimum" : 0, "maximum" : 16})]
+                         ]
+                # make field here
+                kwargs["target_object"] = info
+                kwargs["h_range"] = (0, .25)
+            else:
+                kwargs["target_object"] = _object
+            field = self.create(Color_Field, tab=tab, fields=fields, **kwargs)
             tab.window = field
             if index:
                 field.hide()
@@ -92,13 +79,6 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
     defaults = {"target_theme" : None, "bar" : None, "delete_callback" : None}
     autoreferences = ("_file_selector", "bar")
     required_attributes = ("target_theme", )
-
-    def readjust_sliders(self):
-        for tab in self.tab_bar.tabs:
-            try:
-                tab.window.readjust_sliders()
-            except AttributeError:
-                continue
 
     def initialize_tabs_and_windows(self):
         if self.bar is None:
@@ -212,7 +192,7 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                 del theme_colors[profile][key]
         self.theme.update_theme_users()
         self.hide_status()
-        self.readjust_sliders()
+        #self.readjust_sliders()
 
     def delete_color_options(self):
         self.delete()

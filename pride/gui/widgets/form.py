@@ -49,7 +49,7 @@ class Field(pride.gui.gui.Container):
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True}
     predefaults = {"target_object" : None}
     required_attributes = ("target_object", )
-    autoreferences = ("identifier", "displayer")
+    autoreferences = ("identifier", "displayer", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
@@ -62,7 +62,8 @@ class Field(pride.gui.gui.Container):
                 raise exception
     def _set_value(self, value):
         if self.editable:
-            if self.handle_value_changed(self.value, value):
+            old_value = self.value
+            if self.handle_value_changed(old_value, value):
                 try:
                     setattr(self.target_object, self.name, value)
                 except AttributeError as exception:
@@ -72,6 +73,9 @@ class Field(pride.gui.gui.Container):
                     except TypeError:
                         raise exception
                 self.entry.texture_invalid = True # updates text later
+                parent_form = self.parent_form
+                if parent_form is not None:
+                    parent_form.handle_value_changed(self, old_value, value)
     value = property(_get_value, _set_value)
 
     def __init__(self, **kwargs):
@@ -584,9 +588,12 @@ class Form(pride.gui.gui.Window):
                         field_type = dropdown
                 assert field_type is not None
                 assert "field_type" not in entries
-                field = container.create(field_type, name=name,
+                field = container.create(field_type, name=name, parent_form=self,
                                          target_object=target_object,
                                          **entries)
+
+    def handle_value_changed(self, field, old_value, new_value):
+        pass
 
     @classmethod
     def from_file(cls, filename):

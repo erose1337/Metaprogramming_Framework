@@ -513,7 +513,6 @@ class _Window_Object(Organized_Object):
             window.clear_tip_bar_text()
             self._tip_set = False
 
-
     def hide(self, parent_call=False):
         self.sdl_window.remove_window_object(self)
         self.sdl_window.dirty_layers.add(self.z)

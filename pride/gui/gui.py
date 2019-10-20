@@ -688,7 +688,8 @@ class Animated_Object(_Window_Object):
         super(Animated_Object, self).__init__(**kwargs)
         self._start_animation_enabled = True
 
-    def left_click(self, mouse):
+    def press(self, mouse):
+        super(Animated_Object, self).press(mouse)
         if self.click_animation_enabled:
             x, y = mouse.x, mouse.y
             radius = self.click_radius

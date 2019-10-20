@@ -53,11 +53,24 @@ class Field(pride.gui.gui.Container):
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
-        return getattr(self.target_object, self.name)
+        try:
+            return getattr(self.target_object, self.name)
+        except AttributeError as exception:
+            try:
+                return self.target_object[self.name]
+            except TypeError:
+                raise exception
     def _set_value(self, value):
         if self.editable:
             if self.handle_value_changed(self.value, value):
-                setattr(self.target_object, self.name, value)
+                try:
+                    setattr(self.target_object, self.name, value)
+                except AttributeError as exception:
+                    assert hasattr(self, "target_object")
+                    try: # duck typing might fail for mapping-like objects that don't restrict attribute assignment the way a dict does
+                        self.target_object[self.name] = value
+                    except TypeError:
+                        raise exception
                 self.entry.texture_invalid = True # updates text later
     value = property(_get_value, _set_value)
 
@@ -328,7 +341,18 @@ class Dropdown_Entry(Entry):
                 entry.show()
 
         parent_field = self.parent_field
-        setattr(parent_field.target_object, parent_field.name, selected_entry.value)
+        try:
+            setattr(parent_field.target_object, parent_field.name, selected_entry.value)
+        except AttributeError as exception:
+            if not (hasattr(parent_field, "target_object") and
+                    hasattr(parent_field, "name") and
+                    hasattr(selected_entry, "value")):
+                raise
+            try:
+                parent_field.target_object[parent_field.name] = selected_entry.value
+            except TypeError:
+                raise exception
+
         self.pack()
         self.selected_entry = selected_entry
         assert not selected_entry.hidden
@@ -541,7 +565,13 @@ class Form(pride.gui.gui.Window):
 
                 field_type = entries.pop("field_type", None)
                 if field_type is None:
-                    value = getattr(target_object, name)
+                    try:
+                        value = getattr(target_object, name)
+                    except AttributeError as exception:
+                        try:
+                            value = target_object[name]
+                        except TypeError:
+                            raise exception
                     if "minimum" in entries and "maximum" in entries: # check here before checking for int/float
                         field_type = Slider_Field
                     elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
@@ -570,10 +600,11 @@ class Form(pride.gui.gui.Window):
         import pride.components.base
         window = pride.objects[pride.gui.enable()]
 
-        _object = pride.components.base.Base(text='1', spinbox=2, toggle=True,
+        _object = dict(text='1', spinbox=2, toggle=True,
                                              toggle2=False, toggle3=True, toggle4=False,
                                              slider=32,  dropdown=None)
-        setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
+        #setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
+        _object["my text field"] = "texcellent!"
         fields = [[   "toggle",    "toggle2",    "toggle3",    "toggle4"      ],
                   [     "text",                       "my text field"         ],
                   [ "spinbox",    ("slider", {"minimum" : 0, "maximum" : 255})],
@@ -590,12 +621,17 @@ class Form(pride.gui.gui.Window):
                  **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
+        assert _object["text"] == '1'
+        assert _object["spinbox"] == 2
+        assert _object["toggle"] == True
+        assert _object["slider"] == 32
+        assert _object["dropdown"] == None
         #assert _object.dropdown == 0
-        assert _object.text == '1'
-        assert getattr(_object, "my text field") == "texcellent!"
-        #assert _object.notaspinbox == '2', (_object.notaspinbox, type(_object.notaspinbox))
-        assert _object.spinbox == 2
-        assert _object.toggle == True
+        #assert _object.text == '1'
+        #assert getattr(_object, "my text field") == "texcellent!"
+        ##assert _object.notaspinbox == '2', (_object.notaspinbox, type(_object.notaspinbox))
+        #assert _object.spinbox == 2
+        #assert _object.toggle == True
 
 if __name__ == "__main__":
     Form.unit_test()

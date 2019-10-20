@@ -129,7 +129,7 @@ class Perspective_Theme(Theme):
         if self.vanishing_point_backup is None:
             self.vanishing_point_backup = self.vanishing_point
         if not self.animating:
-            self.sdl_window.schedule_postdraw_operation(self.animate)
+            self.sdl_window.schedule_postdraw_operation(self.animate, self)
             self.animating = True
             self.frame_number = 0
             self.vanishing_point = self.vanishing_point_backup
@@ -142,16 +142,11 @@ class Perspective_Theme(Theme):
             self.animating = False
             self.vanishing_point = tuple()
         else:
-            self.sdl_window.schedule_postdraw_operation(self.animate)
+            self.sdl_window.schedule_postdraw_operation(self.animate, self)
             self.vanishing_point = (x, y)
             self.frame_number += 1
 
         self.wrapped_object.texture_invalid = True
-
-    def delete(self):
-        if self.animating:
-            self.sdl_window.postdraw_queue.remove(self.animate)
-        super(Perspective_Theme, self).delete()
 
     def draw_texture(self):
         assert not self.hidden
@@ -249,7 +244,7 @@ class Animated_Theme(Perspective_Theme):
         self.draw("copy", self.frames[frame_number], area, area)
         if frame_number + 1 < self.frame_count:
             self.frame_number = frame_number + 1
-            self.sdl_window.schedule_postdraw_operation(self._next_frame)
+            self.sdl_window.schedule_postdraw_operation(self._next_frame, self)
 
     def _next_frame(self):
         self.wrapped_object.texture_invalid = True
@@ -281,7 +276,7 @@ class Animated_Theme(Perspective_Theme):
         frames.append(texture)
 
     def start_animation(self):
-        self.sdl_window.schedule_postdraw_operation(self._enable_animation)
+        self.sdl_window.schedule_postdraw_operation(self._enable_animation, self)
 
     def _enable_animation(self):
         self.frame_number = 0
@@ -330,7 +325,8 @@ class Animated_Theme2(Minimal_Theme):
             if self.frame_number > self.frame_count or (self.x, self.y, self.w, self.h) == self.wrapped_object.area:
                 assert (self.x, self.y, self.w, self.h) == self.wrapped_object.area
                 self.end_animation()
-            self.sdl_window.schedule_postdraw_operation(self._invalidate_texture)
+            else: # end_animation can delete this self; delete clears the postdraw queue
+                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self)
         else:
             super(Animated_Theme2, self).draw_texture()
 

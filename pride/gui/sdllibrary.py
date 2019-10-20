@@ -91,9 +91,9 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
-    mutable_defaults = {"redraw_objects" : list, "postdraw_queue" : list,
+    mutable_defaults = {"redraw_objects" : list,
                         "layer_cache" : list, "dirty_layers" : set,
-                        "predraw_queue" : list,
+                        "predraw_queue" : list, "postdraw_scheduled" : dict,
                         "drawing_instructions" : collections.OrderedDict}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
@@ -177,6 +177,10 @@ class SDL_Window(SDL_Component):
 
     def remove_window_object(self, window_object):
         try:
+            del self.postdraw_scheduled[window_object]
+        except KeyError:
+            pass
+        try:
             self.user_input._remove_from_coordinates(window_object.reference)
         except ValueError:
             pass
@@ -199,6 +203,7 @@ class SDL_Window(SDL_Component):
 
     def run(self):
         self.run_instruction.execute(priority=self.priority)
+        assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
         self.user_input.run()
 
         if self.predraw_queue:
@@ -220,9 +225,10 @@ class SDL_Window(SDL_Component):
             assert not self.redraw_objects
             self.running = False
 
-        if self.postdraw_queue:
-            queue = self.postdraw_queue
-            self.postdraw_queue = []
+        if self.postdraw_scheduled:
+            assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
+            queue = itertools.chain(*self.postdraw_scheduled.values())
+            self.postdraw_scheduled = dict()
             for callable in queue:
                 callable()
 
@@ -299,8 +305,12 @@ class SDL_Window(SDL_Component):
         self.dirty_layers.clear()
         renderer.present()
 
-    def schedule_postdraw_operation(self, callable):
-        self.postdraw_queue.append(callable)
+    def schedule_postdraw_operation(self, callable, caller):
+        assert not caller.deleted
+        try:
+            self.postdraw_scheduled[caller].append(callable)
+        except KeyError:
+            self.postdraw_scheduled[caller] = [callable]
 
     def schedule_predraw_operation(self, callable):
         self.predraw_queue.append(callable)

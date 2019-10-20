@@ -55,7 +55,7 @@ class Method_Button(gui.Button):
 
 class Delete_Button(Method_Button):
 
-    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete", 
+    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete",
                 "scale_to_text" : True}
 
 
@@ -668,7 +668,7 @@ class Popup_Notification(pride.gui.gui.Container):
         updates = self.fade_duration / refresh_rate
         self.change = max(1, int(maximum / updates))
         assert self.fade_alpha not in window.postdraw_queue, window.postdraw_queue
-        window.schedule_postdraw_operation(self.fade_alpha)
+        window.schedule_postdraw_operation(self.fade_alpha, self)
 
     def fade_alpha(self):
         assert not self.deleted
@@ -685,7 +685,7 @@ class Popup_Notification(pride.gui.gui.Container):
                     self.texture_invalid = True
         if not finished:
             assert self.fade_alpha not in self.sdl_window.postdraw_queue, self.sdl_window.postdraw_queue
-            self.sdl_window.schedule_postdraw_operation(self.fade_alpha)
+            self.sdl_window.schedule_postdraw_operation(self.fade_alpha, self)
         else:
             assert self.parent._status == self.reference, (self.parent._status, self.reference)
             assert self.fade_alpha not in self.sdl_window.postdraw_queue, self.sdl_window.postdraw_queue

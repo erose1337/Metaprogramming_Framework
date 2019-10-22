@@ -130,7 +130,7 @@ class Field(pride.gui.gui.Container):
 
 class Text_Entry(Entry):
 
-    defaults = {"h" : 16, "allow_text_edit" : False, "cursor_blink_rate" : .5,
+    defaults = {"h" : 16, "allow_text_edit" : False, "cursor_blink_rate" : 13,
                 "cursor_symbol" : '_'}
 
     def __init__(self, **kwargs):
@@ -146,24 +146,41 @@ class Text_Entry(Entry):
             sdl2.SDL_StartTextInput()
             self.enable_cursor()
 
-    def enable_cursor(self):
-        if not self.draw_cursor:
-            self.disable_cursor_instruction.execute(priority=self.cursor_blink_rate)
-            self.texture_invalid = self.draw_cursor = True
+    def wait_and_disable(self):
+        if self._counter == self.cursor_blink_rate:
+            self.disable_cursor()
+        else:
+            self._counter += 1
+            self.sdl_window.schedule_postdraw_operation(self.wait_and_disable, self)
 
-    def disable_cursor(self):
+    def wait_and_enable(self):
+        if self._counter == self.cursor_blink_rate:
+            self.enable_cursor()
+        else:
+            self._counter += 1
+            self.sdl_window.schedule_postdraw_operation(self.wait_and_enable, self)
+
+    def enable_cursor(self):
+        assert self.draw_cursor == False
+        assert not self.deleted
+        self.sdl_window.schedule_postdraw_operation(self.wait_and_disable, self)
+        self.texture_invalid = self.draw_cursor = True
+        self._counter = 0
+
+    def disable_cursor(self, reenable=True):        
+        assert not self.deleted
         self.draw_cursor = False
         self.texture_invalid = True
-        if self.allow_text_edit:
-            self.enable_cursor_instruction.execute(priority=self.cursor_blink_rate)
-        else:
-            self.enable_cursor_instruction.unschedule()
+        if reenable:
+            self.sdl_window.schedule_postdraw_operation(self.wait_and_enable, self)
+            self._counter = 0
 
     def deselect(self, mouse, next_active_object):
         super(Text_Entry, self).deselect(mouse, next_active_object)
         self.alert("Disabling text input", level='vv')
         self.allow_text_edit = False
         sdl2.SDL_StopTextInput()
+        self.disable_cursor(False)
 
 
 class Increment_Button(pride.gui.gui.Button):
@@ -356,7 +373,6 @@ class Dropdown_Entry(Entry):
                 parent_field.target_object[parent_field.name] = selected_entry.value
             except TypeError:
                 raise exception
-
         self.pack()
         self.selected_entry = selected_entry
         assert not selected_entry.hidden
@@ -384,13 +400,14 @@ class Spinbox(Field):
 
     def create_entry(self, pack_mode):
         container = self.create(pride.gui.gui.Container, pack_mode=pack_mode)
-        subcontainer = container.create(pride.gui.gui.Container, pack_mode="right",
-                                        w_range=(0, .05))
-        entry = self.entry = container.create(self.entry_type,
+        entry = self.entry = container.create(self.entry_type, pack_mode="left",
                                               tip_bar_text=self.tip_bar_text,
                                               parent_field=self)
-        subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
-        subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
+        if self.editable:
+            subcontainer = container.create(pride.gui.gui.Container, pack_mode="right",
+                                            w_range=(0, .05))
+            subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
+            subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
 
     def handle_value_changed(self, old_value, new_value):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
@@ -533,11 +550,13 @@ class Form(pride.gui.gui.Window):
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
                 "dropdown_type" : Dropdown_Field, "target_object" : None,
                 "balancer" : None, "include_balance_display" : True}
-    autoreferences = ("displayer", )
-    required_attributes = ("target_object", )
+    autoreferences = ("displayer", "target_object")
+
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
+        if self.target_object is None:
+            self.target_object = self
         balancer = self.balancer
         if balancer is not None and self.include_balance_display:
             displayer = self.create(Text_Display, name="balance",
@@ -547,10 +566,8 @@ class Form(pride.gui.gui.Window):
             self.displayer = displayer
         else:
             displayer = None
-        spinbox = self.spinbox_type
-        text_field = self.text_field_type
-        toggle = self.toggle_type
-        dropdown = self.dropdown_type
+        spinbox = self.spinbox_type; text_field = self.text_field_type;
+        toggle = self.toggle_type; dropdown = self.dropdown_type;
         empty_entries = {"balancer" : balancer, "displayer" : displayer}
         target_object = self.target_object
         for row in self.fields:

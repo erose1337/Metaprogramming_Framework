@@ -326,7 +326,7 @@ class Animated_Theme2(Minimal_Theme):
                 assert (self.x, self.y, self.w, self.h) == self.wrapped_object.area
                 self.end_animation()
             else: # end_animation can delete this self; delete clears the postdraw queue
-                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self)
+                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self.wrapped_object)
         else:
             super(Animated_Theme2, self).draw_texture()
 

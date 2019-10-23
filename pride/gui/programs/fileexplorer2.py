@@ -119,8 +119,6 @@ class File_Saver(pride.gui.gui.Application):
                 _file.write(self.data)
             self.delete()
 
-print
-
 def test():
     import pride.gui
     window = pride.objects[pride.gui.enable()]

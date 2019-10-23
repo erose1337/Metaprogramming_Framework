@@ -167,7 +167,7 @@ class Text_Entry(Entry):
         self.texture_invalid = self.draw_cursor = True
         self._counter = 0
 
-    def disable_cursor(self, reenable=True):        
+    def disable_cursor(self, reenable=True):
         assert not self.deleted
         self.draw_cursor = False
         self.texture_invalid = True
@@ -544,14 +544,38 @@ class Slider_Field(Field):
         self.entry.continuum.update_position_from_value()
 
 
+class Callable_Entry(Entry):
+
+    def _get_text(self):
+        return self.parent_field.button_text
+    def _set_text(self, value):
+        try:
+            value = self.parent_field.button_text
+        except AttributeError:
+            if not hasattr(self, "parent_field"):
+                raise
+        super(Callable_Entry, self)._set_text(value)
+    text = property(_get_text, _set_text)
+
+    def left_click(self, mouse):
+        parent_field = self.parent_field
+        parent_field.value()
+
+
+class Callable_Field(Field):
+
+    defaults = {"entry_type" : Callable_Entry, "orientation" : "side by side",
+                "auto_create_id" : False, "button_text" : ''}
+
+
 class Form(pride.gui.gui.Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
-                "dropdown_type" : Dropdown_Field, "target_object" : None,
-                "balancer" : None, "include_balance_display" : True}
-    autoreferences = ("displayer", "target_object")
-
+                "dropdown_type" : Dropdown_Field, "callable_type" : Callable_Field,
+                "target_object" : None, "balancer" : None,
+                "include_balance_display" : True}
+    autoreferences = ("displayer", )
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
@@ -568,6 +592,7 @@ class Form(pride.gui.gui.Window):
             displayer = None
         spinbox = self.spinbox_type; text_field = self.text_field_type;
         toggle = self.toggle_type; dropdown = self.dropdown_type;
+        callable = self.callable_type
         empty_entries = {"balancer" : balancer, "displayer" : displayer}
         target_object = self.target_object
         for row in self.fields:
@@ -603,6 +628,8 @@ class Form(pride.gui.gui.Window):
                         field_type = text_field
                     elif "values" in entries:
                         field_type = dropdown
+                    elif hasattr(value, "__call__"):
+                        field_type = callable
                 assert field_type is not None
                 assert "field_type" not in entries
                 field = container.create(field_type, name=name, parent_form=self,
@@ -611,6 +638,10 @@ class Form(pride.gui.gui.Window):
 
     def handle_value_changed(self, field, old_value, new_value):
         pass
+
+    def delete(self):
+        del self.target_object
+        super(Form, self).delete()
 
     @classmethod
     def from_file(cls, filename):
@@ -624,16 +655,20 @@ class Form(pride.gui.gui.Window):
         import pride.components.base
         window = pride.objects[pride.gui.enable()]
 
+        def callable():
+            print("Callable!")
+
         _object = dict(text='1', spinbox=2, toggle=True,
                                              toggle2=False, toggle3=True, toggle4=False,
-                                             slider=32,  dropdown=None)
+                                             slider=32,  dropdown=None, callable=callable)
         #setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
         _object["my text field"] = "texcellent!"
         fields = [[   "toggle",    "toggle2",    "toggle3",    "toggle4"      ],
                   [     "text",                       "my text field"         ],
                   [ "spinbox",    ("slider", {"minimum" : 0, "maximum" : 255})],
                   [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #|   #| is just for appearance
-                                             {"key" : "value pairs"})})       ]
+                                             {"key" : "value pairs"})})       ],
+                  [       ("callable", {"button_text" : "Press me!"})         ]
                  ]
 
         balancer = Balancer(255, "Remaining Balance")

@@ -212,18 +212,18 @@ class SDL_Window(SDL_Component):
             for callable in queue:
                 callable()
 
+        organizer = self.organizer
+        if organizer.pack_queue or organizer.window_queue:
+            organizer.pack_items()
+
+        if self.redraw_objects:
+            self.update_drawing_instructions()
+        assert not self.redraw_objects
+
         if self.running:
-            organizer = self.organizer
-            if organizer.pack_queue or organizer.window_queue:
-                organizer.pack_items()
-
-            if self.redraw_objects:
-                self.update_drawing_instructions()
-            assert not self.redraw_objects
-
             self.draw(self.drawing_instructions)
             assert not self.redraw_objects
-            self.running = False
+        self.running = False
 
         if self.postdraw_scheduled:
             assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())

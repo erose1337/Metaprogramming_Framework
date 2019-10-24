@@ -120,7 +120,7 @@ class Recursive_Menu(pride.gui.gui.Application):
 
 def test():
     import pride.gui
-    window = objects[pride.gui.enable()]
+    window = pride.objects[pride.gui.enable()]
     def printf(output):
         print(output)
 
@@ -128,8 +128,10 @@ def test():
             '5' : ['9', "13"], '6' : ["10", "14"],
             '9' : printf, '10' : printf, '13' : printf, '14' : printf,
             '17' : ['2', '5', '6'], '19' : ['6', '10', '14']}
-    menu = window.create(Recursive_Menu, tree=tree, initial_options=('1', '2'),
-                         menu_name="Test Menu")
+    menu = lambda **kwargs: Recursive_Menu(tree=tree, initial_options=('1', '2'),
+                                           menu_name="Test Menu", **kwargs)
+    gui = window.create("pride.gui.main.Gui", user=pride.objects["/User"],
+                        startup_programs=(menu, ))
 
 if __name__ == "__main__":
     test()

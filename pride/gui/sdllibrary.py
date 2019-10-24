@@ -86,7 +86,9 @@ class SDL_Window(SDL_Component):
 
     defaults = {"showing" : True,
                 'x' : 0, 'y' : 0, 'z' : 0, 'w' : 1024, 'h' : 768,#pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                 "priority" : .038, "name" : "/Python",
+                "priority" : .038, "name" : "/Python",
+                "tip_bar_type" : "pride.gui.gui.Container", "tip_bar_h_range" : (0, .05),
+                "tip_bar_location" : "bottom",
                 "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
@@ -98,6 +100,8 @@ class SDL_Window(SDL_Component):
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
+
+    autoreferences = ("tip_bar", )
 
     def _get_size(self):
         return (self.w, self.h)
@@ -138,6 +142,8 @@ class SDL_Window(SDL_Component):
         #self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
         self.drawing_instructions[0] = []
 
+        self.tip_bar = self.create(self.tip_bar_type, pack_mode=self.tip_bar_location,
+                                   h_range=self.tip_bar_h_range)
         if self.showing:
             self.show()
 
@@ -312,6 +318,9 @@ class SDL_Window(SDL_Component):
         except KeyError:
             self.postdraw_scheduled[caller] = [callable]
 
+    def unschedule_postdraw_operation(self, callable, caller):
+        self.postdraw_scheduled[caller].remove(callable)
+
     def schedule_predraw_operation(self, callable):
         self.predraw_queue.append(callable)
 
@@ -337,6 +346,12 @@ class SDL_Window(SDL_Component):
         super(SDL_Window, self).delete()
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)
+
+    def set_tip_bar_text(self, text):
+        self.tip_bar.text = text
+
+    def clear_tip_bar_text(self):
+        self.tip_bar.text = ''
 
 
 class Window_Context(SDL_Window):

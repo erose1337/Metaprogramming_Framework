@@ -487,31 +487,20 @@ class _Window_Object(Organized_Object):
             self.theme_profile = "hover"
             self.texture_invalid = True
 
-        if not self._tip_set and self.tip_bar_text:
-            try:
-                window = self.parent_application
-            except ValueError:
-                pass
-            else:
-                if window.create_tip_bar:
-                    window.set_tip_bar_text(self.tip_bar_text)
-                    self._tip_set = True
+        if self.tip_bar_text:
+            self.sdl_window.set_tip_bar_text(self.tip_bar_text)
+            self._tip_set = True
 
     def hover_ends(self):
         if self.theme_profile == "hover":
             self.theme_profile = "interactive"
             self.texture_invalid = True
         if self._tip_set:
-            self._clear_tip_bar_text()
+            self.clear_tip_bar_text()
 
-    def _clear_tip_bar_text(self):
-        try:
-            window = self.parent_application
-        except ValueError:
-            pass
-        else:
-            window.clear_tip_bar_text()
-            self._tip_set = False
+    def clear_tip_bar_text(self):
+        self.sdl_window.clear_tip_bar_text()
+        self._tip_set = False
 
     def hide(self, parent_call=False):
         self.sdl_window.remove_window_object(self)
@@ -570,13 +559,9 @@ class _Window_Object(Organized_Object):
     def delete(self):
         assert not self.deleted, self
         self.sdl_window.dirty_layers.add(self.z)
-        try:
-            self._clear_tip_bar_text()
-        except AttributeError:
-            pass # self.tip_bar is None
+        self.clear_tip_bar_text()
         self.theme.delete()
         if self.parent.reference != self.sdl_window:
-            #self.parent.pack()
             self.pack()
         self.sdl_window.remove_window_object(self)
         super(_Window_Object, self).delete()
@@ -620,39 +605,11 @@ class _Window_Object(Organized_Object):
         pprint.pprint(self.objects)
         self._children.remove(self.theme)
 
-    def show_status(self, text, fade_out=True, **kwargs):
-        if self._status is not None:
-            return
-        _kwargs = {"h_range" : (0, .10), "pack_mode" : "top"}
-        _kwargs.update(kwargs)
+    def show_status(self, text):
+        self.sdl_window.set_tip_bar_text(text)
 
-        app = self.parent_application
-        window = self.sdl_window
-        while True:
-            if getattr(app, "tip_bar", None) is not None:
-                app.set_tip_bar_text(text)
-                window.run()
-                return
-            try:
-                app = app.parent_application
-            except AttributeError:
-                break
-            if app == app.parent_application:
-                break
-
-        if fade_out:
-            self._status = self.create("pride.gui.widgetlibrary.Popup_Notification", text=text, **_kwargs).reference
-        else:
-            self._status = self.create("pride.gui.gui.Container", text=text, **_kwargs).reference
-        window.run()
-
-    def hide_status(self):
-        if hasattr(self, "application_window"):
-            self.application_window.hide_status()
-            return
-        if self._status is not None:
-            pride.objects[self._status].delete()
-            self._status = None
+    def clear_status(self):
+        self.sdl_window.clear_tip_bar_text()
 
     def handle_area_change(self, old_area):
         assert old_area != self.area
@@ -780,6 +737,7 @@ class Animated_Object(_Window_Object):
                 if hasattr(self.theme, "draw_frames"):
                     raise
 
+
 class _Mouse_Click(Animated_Object):
 
     defaults = {"clickable" : False, "pack_mode" : "fill"}
@@ -794,13 +752,7 @@ Window_Object = Animated_Object # can upgrade everything in-place by changing th
 
 class Window(Window_Object):
 
-    defaults = {"pack_mode" : "main"}#, "size" : pride.gui.SCREEN_SIZE}
-
-#    def __init__(self, **kwargs):
-#        super(Window, self).__init__(**kwargs)
-#        self.texture = create_texture(pride.gui.SCREEN_SIZE) # could possibly be done after being organized
-
-
+    defaults = {"pack_mode" : "main"}
 
 
 class Container(Window_Object):
@@ -821,49 +773,11 @@ class Application(Window):
                 "create_tip_bar" : True,
                 "tip_bar_tip_bar_text" : "Tip Bar: Provides details, hints, and status information"}
     predefaults = {"transparency_enabled" : False}
-    autoreferences = ("tip_bar", )
+    autoreferences = ("application_window", )
 
     def __init__(self, **kwargs):
         super(Application, self).__init__(**kwargs)
-        window = self.application_window = self.create(self.application_window_type)
-        self.initialize_tip_bar()
-
-    def initialize_tip_bar(self):
-        parent_app = self.parent_application
-        if parent_app is self:
-            if self.create_tip_bar:
-                self._create_tip_bar()
-        else:
-            if parent_app.tip_bar is not None:
-                self.tip_bar = self.parent_application.tip_bar
-            else:
-                if self.create_tip_bar:
-                    self._create_tip_bar()
-
-    def _create_tip_bar(self):
-        self.tip_bar = self.create(self.tip_bar_type, h_range=(0, .05), center_text=False,
-                                   pack_mode="bottom", text="tip bar",
-                                   tip_bar_text=self.tip_bar_tip_bar_text)
-
-    def set_tip_bar_text(self, text):
-        self.tip_bar.text = text
-        self._current_text = text
-
-    def clear_tip_bar_text(self):
-        self.tip_bar.text = ''
-        self._current_text = ''
-
-    def show_status(self, text, *args, **kwargs):
-        if self.create_tip_bar:
-            self.set_tip_bar_text(text)
-        else:
-            super(Application, self).show_status(text, *args, **kwargs)
-
-    def hide_status(self):
-        if self.create_tip_bar:
-            self.clear_tip_bar_text()
-        else:
-            super(Application, self).hide_status()
+        self.application_window = self.create(self.application_window_type)
 
     def draw_texture(self):
         assert not self.deleted

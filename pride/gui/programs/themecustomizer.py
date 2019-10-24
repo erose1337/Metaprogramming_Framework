@@ -82,17 +82,16 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 
     def initialize_tabs_and_windows(self):
         if self.bar is None:
-            bar = self.create("pride.gui.gui.Container", h_range=(0, .05), pack_mode="top")
-            bar.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
-                    method="delete_color_options", text='x', pack_mode="right")
-            bar.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
-                    method="export_color_options", text="Export color options",
-                    pack_mode="right")
-            bar.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
-                    method="import_color_options", text="Import color options",
-                    pack_mode="right")
-            self.bar = bar
-
+            self.bar = self.create("pride.gui.widgets.form.Form", target_object=self,
+                                   pack_mode="top", h_range=(0, .05),
+                                   fields=[[("delete_color_options", {"button_text" : 'x',
+                                                                      "scale_to_text" : True,
+                                                                      "pack_mode" : "right"}),
+                                            ("save_color_options", {"button_text" : "Export color options",
+                                                                    "pack_mode" : "right"}),
+                                            ("load_color_options", {"button_text" : "Import color options",
+                                                                    "pack_mode" : "right"})
+                                          ]])
         profiles = self.target_theme.theme_colors
         self.tab_types = tuple(pride.gui.widgets.tabs.Tab_Button.from_info(text=text, include_delete_button=False) for
                                text in sorted(profiles.keys()))
@@ -109,28 +108,12 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
             if not index:
                 tab.left_click(None)
 
-    def export_color_options(self):
-        self._file_selector = self.parent.create("game3.gui.window2.File_Selector",
-                                                 write_field_method=self._write_color_filename_export,
-                                                 file_category="color",
-                                                 delete_callback=self.close_file_selector)
-        self.hide()
+    def save_color_options(self):
+        self.create("pride.gui.programs.fileexplorer2.File_Saver",
+                    pack_mode="fill", data=self.serialize_color_options())
 
-    def close_file_selector(self):
-        if self._file_selector is not None:
-            assert not self._file_selector.deleted
-            self._file_selector.delete()
-            self._file_selector = None
-        self.show()
-
-    def _write_color_filename_export(self, field_name, value):
-        self._file_selector.update_recent_files(value, "color")
-        self.color_options_file = value
-        self.close_file_selector()
-        self._export_color_options()
-
-    def _export_color_options(self):
-        self.show_status("Exporting color options...")
+    def serialize_color_options(self):
+        self.show_status("Serializing color options...")
         theme = self.theme.__class__.theme_colors
         lines = ["Theme Profiles",
                  '=' * len("Theme Profiles"),
@@ -147,28 +130,13 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                 else:
                     lines.append("      " + "- {}: {}".format(parameter, (r, g, b, a)))
             lines.append('\n')
+        return '\n'.join(lines)
 
-        with open(self.color_options_file, 'w') as _file:
-            _file.write('\n'.join(lines))
+    def load_color_options(self):
+        self.create("pride.gui.programs.fileexplorer2.File_Selector",
+                    pack_mode="fill")
 
-    def import_color_options(self):
-        self._file_selector = self.parent.create("game3.gui.window2.File_Selector",
-                                                 write_field_method=self._write_color_filename_import,
-                                                 file_category="color",
-                                                 delete_callback=self.close_file_selector)
-        self.hide()
-
-    def _write_color_filename_import(self, field_name, value):
-        if not os.path.exists(value):
-            self.show_status("File does not exist")
-            return
-        self._file_selector.update_recent_files(value, "color")
-        self.color_options_file = value
-        self._file_selector.delete()
-        self.show()
-        self._import_color_options()
-
-    def _import_color_options(self):
+    def _load_color_options(self):
         self.show_status("Importing color options...")
         theme = cefparser.parse_filename(self.color_options_file)
         theme_colors = self.theme.theme_colors
@@ -203,5 +171,6 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 if __name__ == "__main__":
     import pride.gui
     import pride.gui.themes
-    window = pride.gui.enable()
-    pride.objects[window].create(Theme_Customizer, target_theme=pride.gui.themes.Minimal_Theme)
+    window = pride.objects[pride.gui.enable()]
+    window.create("pride.gui.main.Gui", user=pride.objects["/User"],
+                  startup_programs=(lambda **kwargs: Theme_Customizer(target_theme=pride.gui.themes.Minimal_Theme, **kwargs), ))

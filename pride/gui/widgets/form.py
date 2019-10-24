@@ -93,14 +93,14 @@ class Field(pride.gui.gui.Container):
         if self.orientation == "stacked":
             pack_mode = "top"
             scale_to_text = False
-            id_kwargs["h_range"] = (0, .10)
+            id_kwargs["h_range"] = (0, .05)
         elif self.orientation == "side by side":
             pack_mode = "left"
             scale_to_text = True
         assert self.identifier is None
         if self.auto_create_id:
             self.create_id(pack_mode, scale_to_text, **id_kwargs)
-        self.create_entry()
+        self.create_entry(pack_mode)
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
@@ -108,8 +108,8 @@ class Field(pride.gui.gui.Container):
                                       pack_mode=pack_mode, scale_to_text=scale_to_text,
                                       **id_kwargs)
 
-    def create_entry(self):
-        self.entry = self.create(self.entry_type, pack_mode=self.pack_mode,
+    def create_entry(self, pack_mode):
+        self.entry = self.create(self.entry_type, pack_mode=pack_mode,
                                  parent_field=self, scale_to_text=self.scale_to_text)
 
     def handle_value_changed(self, old_value, new_value):
@@ -178,10 +178,19 @@ class Text_Entry(Entry):
         if reenable:
             self.sdl_window.schedule_postdraw_operation(self.wait_and_enable, self)
             self._counter = 0
+        else:
+            try:
+                self.sdl_window.unschedule_postdraw_operation(self.wait_and_enable, self)
+            except (KeyError, ValueError):
+                pass
+            try:
+                self.sdl_window.unschedule_postdraw_operation(self.wait_and_disable, self)
+            except (KeyError, ValueError):
+                pass
 
     def deselect(self, mouse, next_active_object):
         super(Text_Entry, self).deselect(mouse, next_active_object)
-        self.alert("Disabling text input", level='vv')
+        self.alert("Disabling text input", level=0)#'vv')
         self.allow_text_edit = False
         sdl2.SDL_StopTextInput()
         self.disable_cursor(False)
@@ -402,8 +411,8 @@ class Spinbox(Field):
 
     defaults = {"entry_type" : Integer_Entry}
 
-    def create_entry(self):
-        container = self.create(pride.gui.gui.Container, pack_mode=self.pack_mode)
+    def create_entry(self, pack_mode):
+        container = self.create(pride.gui.gui.Container, pack_mode=pack_mode)
         entry = self.entry = container.create(self.entry_type, pack_mode="left",
                                               tip_bar_text=self.tip_bar_text,
                                               parent_field=self)

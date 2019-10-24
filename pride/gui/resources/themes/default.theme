@@ -1,6 +1,30 @@
 Theme Profiles
 ==============
 
+alert
+-----
+
+      - background: (129, 57, 8, 200)
+      - glow: (255, 255, 255, 235)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 255)
+      - shadow_thickness: 5
+      - text: (45, 45, 45, 255)
+      - text_background: (0, 0, 85, 255)
+
+
+blank
+-----
+
+      - background: (0, 0, 0, 0)
+      - glow: (0, 0, 0, 0)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 0)
+      - shadow_thickness: 0
+      - text: (0, 0, 0, 0)
+      - text_background: (0, 0, 0, 0)
+
+
 borderless
 ----------
 
@@ -83,3 +107,4 @@ placeholder
       - shadow_thickness: 5
       - text: (45, 45, 45, 255)
       - text_background: (0, 0, 0, 255)
+

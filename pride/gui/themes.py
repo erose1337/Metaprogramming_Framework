@@ -24,7 +24,7 @@ class Theme(pride.components.base.Wrapper):
 
     defaults = {"dont_save" : True}
     theme_profiles = ("default", "interactive", "hover", "placeholder",
-                      "indicator", "inert", "borderless")
+                      "indicator", "inert", "borderless", "alert")
     theme_colors = dict((profile, _default_colors()) for profile in theme_profiles)
     assert theme_colors["default"]["text_background"].b == 85, str(theme_colors["default"]["text_background"])
     theme_colors["interactive"]["background"] = pride.gui.color.Color(225, 225, 225, 200)

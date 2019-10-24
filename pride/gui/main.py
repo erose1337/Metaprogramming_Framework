@@ -61,6 +61,7 @@ class Gui(pride.gui.gui.Application):
                     values[key] = _color
             theme_colors[profile].update(values)
         self.theme.update_theme_users()
+        self.clear_status()
 
     def login_success(self, username):
         self.show_status("Logged in as {}".format(username))

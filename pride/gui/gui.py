@@ -496,9 +496,9 @@ class _Window_Object(Organized_Object):
             self.theme_profile = "interactive"
             self.texture_invalid = True
         if self._tip_set:
-            self.clear_tip_bar_text()
+            self._clear_tip_bar_text()
 
-    def clear_tip_bar_text(self):
+    def _clear_tip_bar_text(self):
         self.sdl_window.clear_tip_bar_text()
         self._tip_set = False
 
@@ -559,7 +559,7 @@ class _Window_Object(Organized_Object):
     def delete(self):
         assert not self.deleted, self
         self.sdl_window.dirty_layers.add(self.z)
-        self.clear_tip_bar_text()
+        self._clear_tip_bar_text()
         self.theme.delete()
         if self.parent.reference != self.sdl_window:
             self.pack()

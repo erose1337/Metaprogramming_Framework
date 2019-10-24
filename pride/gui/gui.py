@@ -499,8 +499,9 @@ class _Window_Object(Organized_Object):
             self._clear_tip_bar_text()
 
     def _clear_tip_bar_text(self):
-        self.sdl_window.clear_tip_bar_text()
-        self._tip_set = False
+        if self._tip_set:
+            self.sdl_window.clear_tip_bar_text()
+            self._tip_set = False
 
     def hide(self, parent_call=False):
         self.sdl_window.remove_window_object(self)

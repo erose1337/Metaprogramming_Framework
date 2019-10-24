@@ -143,7 +143,8 @@ class SDL_Window(SDL_Component):
         self.drawing_instructions[0] = []
 
         self.tip_bar = self.create(self.tip_bar_type, pack_mode=self.tip_bar_location,
-                                   h_range=self.tip_bar_h_range)
+                                   h_range=self.tip_bar_h_range,
+                                   tip_bar_text="Tip Bar: Provides details, hints, and status information")
         if self.showing:
             self.show()
 

@@ -1,28 +1,53 @@
 Currently working on:
 
-fixing bug with sliders and Animated_Theme
-
 
 To Do/Bugs
 =====
 
-- add indicator light to Toggles
-- refactor theme customizer to use Forms
-- re-write Lockscreen using Forms
-    - create hidden text field for Forms
+- finish theme customizer
+    - needs a File_Selector
+        - make a tree viewer abstraction
+        - a file directory explorer is a special case of a tree viewer
+        - Use Forms if convenient to make the tree viewer
 
-- re-do text rendering to use an atlas
+
+        |    parent nodes    |       child nodes       |
+
+
+    each parent node is a callable field that sets the content of the child node viewer
+    given a list of N nodes, determine how many rows and columns there should be
+        - There should be approximately sqrt(N) rows and columns. The last row may not be filled completely.
+        - Must put limit to size of sqrt(N) - if N is very large, having more than a certain number of columns would be impossible to display
+            - 64x64 pixels is probably smallest practical size to use for a field
+                - number of fields that can fit in space w: w/64
+                - number of Forms required to display N items: N / min(w/64, sqrt(N))
+                - number of fields in remaining Form: N % min(w/64, sqrt(N))
+            - Put remaining Forms into new page further down
+            - use slider to control which page is selected
+    create/show the parent nodes form
+    setting the content of the child node viewer should create/show a Form of Callable Fields
+    clicking/hovering on child node should show information (e.g. file metadata) in tip bar
+        - further behavior can be customised per application
+
+
+
+- refactor Lockscreen using Forms
+    - create hidden text field for Forms
+- mouse click animation looks dark/opaque when clicking on empty space in container with buttons
+
+- refactor text rendering to use an atlas
+    - current basic text rendering solution is very inefficient
+    - disproportionate amount of time is spent rendering text relative to other draw operations
+
+
 
 
 - Text-to-Speech for tip_bar_text?
-
-
 - theme_profile ideas/guidelines
     - make interactive components light and non-interactive components dark (or vice versa)
     - make text colors on interactive components different than text colors on non-interactive components
-
-
-
+- Sound effects?
+    - very subtle/soft sound on_hover/click/etc
 
 
 -  rounded rectangles
@@ -32,8 +57,6 @@ To Do/Bugs
         - simply remove the SDL_SetRenderDrawBlendMode calls
     - alternatively, replace SDL_Renderer with OpenGL
 
-- Sound effects?
-    - very subtle/soft sound on_hover/click/etc
 
 
 - File Explorer and `save as` functionality
@@ -183,14 +206,6 @@ deal with certificates properly
 
 
 
-
-
-text alpha slider still not working
------------------------------------
-- reproducible: ?(describe how, if possible)
-- screenshot: highlight the problem
-
-
 full screen toggle, resolution sliders
 --------------------------------------
 - started: windowoptions
@@ -218,12 +233,6 @@ optimize render
 - if a window object creates a child and that child does not have limited size, then the window object is not visible
     - only if the children are opaque
 
-
-create Animations
------------------
-- draw each frame and cache it ahead of time
-    - must be done after component is organized
-- copy cached frame to screen when rendering
 
 2d slider pad
 -------------

@@ -75,7 +75,8 @@ class Prompt(pride.gui.widgets.form.Form):
 
 class Overwrite_Prompt(Prompt):
 
-    defaults = {"prompt_text" : "File already exists. Overwrite?"}
+    defaults = {"prompt_text" : "File already exists. Overwrite?",
+                "theme_profile" : "alert"}
 
     def handle_yes(self):
         self.parent_application.save_as(overwrite=True)
@@ -87,7 +88,8 @@ class Overwrite_Prompt(Prompt):
 
 class File_Saver(pride.gui.gui.Application):
 
-    defaults = {"filename" : '', "data" : '', "create_tip_bar" : False}
+    defaults = {"filename" : '', "data" : '', "create_tip_bar" : False,
+                "autodelete" : True}
     autoreferences = ("address_bar", "prompt")
 
     def __init__(self, **kwargs):
@@ -95,29 +97,37 @@ class File_Saver(pride.gui.gui.Application):
         window = self.application_window
         top = window.create("pride.gui.gui.Container", pack_mode="top",
                             h_range=(0, .25))
+        fields = [["filename", ("save_as", {"button_text" : "save"})]]
         self.address_bar = top.create(pride.gui.widgets.form.Form,
-                                      target_object=self, fields=[["filename"]],
+                                      target_object=self, fields=fields,
                                       pack_mode="left")
-        top.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
-                   method="save_as", pack_mode="left", text="save")
+        #top.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
+        #           method="save_as", pack_mode="left", text="save")
 
     def save_as(self, overwrite=False):
-        # make warning if saving over existing file?
-        #size = len(self.data)
-        #units = ["bytes", "KB", "MB", "GB", "TB"]
-        #index = 0
-        #while size / 1024.0 > 1024:
-        #    index += 1
-        #    size /= 1024.0
-        #sizestr = "{} {}".format(size, units[index])
-        #self.show_status("Saving {} to {}...".format(sizestr, self.filename))
         if os.path.exists(self.filename) and self.prompt is None:
             self.prompt = self.application_window.create(Overwrite_Prompt)
 
         if self.prompt is None or overwrite:
-            with open(self.filename, "wb") as _file:
-                _file.write(self.data)
-            self.delete()
+            if overwrite:
+                self.prompt.delete()
+            size = len(self.data)
+            units = ["bytes", "KB", "MB", "GB", "TB"]
+            index = 0
+            while size > 1024:
+                index += 1
+                size /= 1024.0
+            self.show_status("Saving {0:.2f}{1} to {2}...".format(size, units[index], self.filename))
+            try:
+                with open(self.filename, "wb") as _file:
+                    _file.write(self.data)
+            except IOError:
+                if os.path.exists(self.filename):
+                    raise
+                self.show_status("Unable to write to file; Ensure all directories exist and are spelled correctly and try again.")
+            else:
+                if self.autodelete:
+                    self.delete()
 
 def test():
     import pride.gui

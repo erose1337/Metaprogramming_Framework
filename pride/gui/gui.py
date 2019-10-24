@@ -767,13 +767,9 @@ class Button(Window_Object):
 
 
 class Application(Window):
-
-    defaults = {"startup_components" : ("pride.gui.widgetlibrary.Task_Bar", ),
-                "application_window_type" : "pride.gui.gui.Window",
-                "tip_bar_type" : "pride.gui.gui.Container",
-                "create_tip_bar" : True,
-                "tip_bar_tip_bar_text" : "Tip Bar: Provides details, hints, and status information"}
-    predefaults = {"transparency_enabled" : False}
+    """ Applications have an application_window attribute.
+        This extra window allows the background to be customized (e.g. rotating stars)"""
+    defaults = {"application_window_type" : "pride.gui.gui.Window"}
     autoreferences = ("application_window", )
 
     def __init__(self, **kwargs):

@@ -100,7 +100,7 @@ class Field(pride.gui.gui.Container):
         assert self.identifier is None
         if self.auto_create_id:
             self.create_id(pack_mode, scale_to_text, **id_kwargs)
-        self.create_entry(pack_mode)
+        self.create_entry(pack_mode, scale_to_text)
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
@@ -108,9 +108,9 @@ class Field(pride.gui.gui.Container):
                                       pack_mode=pack_mode, scale_to_text=scale_to_text,
                                       **id_kwargs)
 
-    def create_entry(self, pack_mode):
+    def create_entry(self, pack_mode, scale_to_text):
         self.entry = self.create(self.entry_type, pack_mode=pack_mode,
-                                 parent_field=self, scale_to_text=self.scale_to_text)
+                                 parent_field=self, scale_to_text=scale_to_text)
 
     def handle_value_changed(self, old_value, new_value):
         if old_value == new_value:
@@ -190,7 +190,7 @@ class Text_Entry(Entry):
 
     def deselect(self, mouse, next_active_object):
         super(Text_Entry, self).deselect(mouse, next_active_object)
-        self.alert("Disabling text input", level=0)#'vv')
+        self.alert("Disabling text input", level='vv')
         self.allow_text_edit = False
         sdl2.SDL_StopTextInput()
         self.disable_cursor(False)
@@ -411,7 +411,7 @@ class Spinbox(Field):
 
     defaults = {"entry_type" : Integer_Entry}
 
-    def create_entry(self, pack_mode):
+    def create_entry(self, pack_mode, scale_to_text):
         container = self.create(pride.gui.gui.Container, pack_mode=pack_mode)
         entry = self.entry = container.create(self.entry_type, pack_mode="left",
                                               tip_bar_text=self.tip_bar_text,
@@ -569,6 +569,8 @@ class Callable_Entry(Entry):
                 raise
         self.text_initialized = False
         super(Callable_Entry, self)._set_text(value)
+        if self.parent_field is not None:
+            self.parent_field.w_range = self.w_range
     text = property(_get_text, _set_text)
 
     def left_click(self, mouse):

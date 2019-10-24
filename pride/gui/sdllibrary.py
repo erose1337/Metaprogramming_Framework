@@ -349,6 +349,8 @@ class SDL_Window(SDL_Component):
 
     def set_tip_bar_text(self, text):
         self.tip_bar.text = text
+        self.run_instruction.unschedule()
+        self.run()
 
     def clear_tip_bar_text(self):
         self.tip_bar.text = ''

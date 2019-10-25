@@ -835,37 +835,22 @@ class Renderer(SDL_Component):
         x, y, w, h = area
         assert w, (area, text, kwargs)
         #kwargs.setdefault("width", w)
-        ellipses = ''
-        _text = text
         assert "width" in kwargs
-        if "hide_excess_text" in kwargs:
-            del kwargs["hide_excess_text"]
-        hide_excess = False#kwargs.get("hide_excess_text", False) # needs to be re-done
-        while True:
-            texture = self.sprite_factory.from_text(text + ellipses,
-                                                    fontmanager=self.font_manager,
-                                                    **kwargs)
-            #print type(texture)
-            _w, _h = texture.size
-            if kwargs.get("center_text", False) and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
-                destination = [(x + (w / 2)) - (_w / 2),
-                               (y + (h / 2)) - (_h / 2),
-                               _w - 2, _h]
-            else:
-                destination = (x + 2, y + 2, _w - 2, _h)
+        #if kwargs.get("center_text", False):
+        #    kwargs["width"] /= 2
+        #print
+        texture = self.sprite_factory.from_text(text,
+                                                fontmanager=self.font_manager,
+                                                **kwargs)
+        #print type(texture)
+        _w, _h = texture.size
+        if kwargs.get("center_text", False) and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
+            destination = [(x + (w / 2)) - (_w / 2),
+                           (y + (h / 2)) - (_h / 2),
+                           _w - 2, _h]
+        else:
+            destination = (x + 2, y + 2, _w - 2, _h)
 
-            if hide_excess:
-                if destination[2] <= w - 12:
-                    break
-                else:
-                    #    print "Shrinking...", destination, area
-                    text = text[:-3]
-                    ellipses = "..."
-                    if not text:
-                        text = _text
-                        break
-            else:
-                break
         sdl2.SDL_SetTextureBlendMode(texture.texture, TEXT_BLENDMODE)
         self.copy(texture, dstrect=destination)
 

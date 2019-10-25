@@ -106,7 +106,7 @@ class Minimal_Theme(Theme):
                 text += self.cursor_symbol
             self.draw("text", area, text, width=w if self.wrap_text else None,
                     bg_color=self.text_background_color, color=self.text_color,
-                    center_text=self.center_text, hide_excess_text=self.hide_excess_text)
+                    center_text=self.center_text)
 
 
 class Perspective_Theme(Theme):
@@ -175,7 +175,7 @@ class Perspective_Theme(Theme):
                 assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
                 self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                         bg_color=self.text_background_color, color=self.text_color,
-                        center_text=self.center_text, hide_excess_text=self.hide_excess_text)
+                        center_text=self.center_text)
             return
         self.draw("fill", area, color=self.background_color)
         #print("Drawing texture for {}/{} {} {}".format(self.frame_number, self.frame_count - 1, size, profile))
@@ -224,7 +224,7 @@ class Perspective_Theme(Theme):
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
                     bg_color=self.text_background_color, color=self.text_color,
-                    center_text=self.center_text, hide_excess_text=self.hide_excess_text)
+                    center_text=self.center_text)
 
 
 class Animated_Theme(Perspective_Theme):

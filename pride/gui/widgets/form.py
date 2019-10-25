@@ -52,7 +52,8 @@ class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
-                "editable" : True, "pack_mode" : "left", "auto_create_id" : True}
+                "editable" : True, "pack_mode" : "left", "auto_create_id" : True,
+                "display_name" : ''}
     predefaults = {"target_object" : None}
     required_attributes = ("target_object", )
     autoreferences = ("identifier", "displayer", "parent_form")
@@ -96,7 +97,7 @@ class Field(pride.gui.gui.Container):
             id_kwargs["h_range"] = (0, .05)
         elif self.orientation == "side by side":
             pack_mode = "left"
-            scale_to_text = True
+            scale_to_text = self.scale_to_text
         assert self.identifier is None
         if self.auto_create_id:
             self.create_id(pack_mode, scale_to_text, **id_kwargs)
@@ -104,9 +105,9 @@ class Field(pride.gui.gui.Container):
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
-        self.identifier = self.create(pride.gui.gui.Container, text=self.name,
-                                      pack_mode=pack_mode, scale_to_text=scale_to_text,
-                                      **id_kwargs)
+        self.identifier = self.create(pride.gui.gui.Container, pack_mode=pack_mode,
+                                      text=self.display_name or self.name,
+                                      scale_to_text=scale_to_text, **id_kwargs)
 
     def create_entry(self, pack_mode, scale_to_text):
         self.entry = self.create(self.entry_type, pack_mode=pack_mode,
@@ -575,13 +576,14 @@ class Callable_Entry(Entry):
 
     def left_click(self, mouse):
         parent_field = self.parent_field
-        parent_field.value()
+        parent_field.value(*parent_field.args, **parent_field.kwargs)
 
 
 class Callable_Field(Field):
 
     defaults = {"entry_type" : Callable_Entry, "orientation" : "side by side",
-                "auto_create_id" : False, "button_text" : ''}
+                "auto_create_id" : False, "button_text" : '', "args" : tuple()}
+    mutable_defaults = {"kwargs" : dict}
 
 
 class Form(pride.gui.gui.Window):
@@ -589,7 +591,7 @@ class Form(pride.gui.gui.Window):
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
                 "dropdown_type" : Dropdown_Field, "callable_type" : Callable_Field,
-                "target_object" : None, "balancer" : None,
+                "target_object" : None, "balancer" : None, "row_h_range" : tuple(),
                 "include_balance_display" : True}
     autoreferences = ("displayer", )
 
@@ -611,8 +613,10 @@ class Form(pride.gui.gui.Window):
         callable = self.callable_type
         empty_entries = {"balancer" : balancer, "displayer" : displayer}
         target_object = self.target_object
+        row_h_range = self.row_h_range or (0, 1.0)
         for row in self.fields:
-            container = self.create("pride.gui.gui.Container", pack_mode="top")
+            container = self.create("pride.gui.gui.Container", pack_mode="top",
+                                    h_range=row_h_range)
             for item in row:
                 if isinstance(item, str):
                     name = item

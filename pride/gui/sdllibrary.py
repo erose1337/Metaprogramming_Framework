@@ -143,7 +143,7 @@ class SDL_Window(SDL_Component):
         self.drawing_instructions[0] = []
 
         self.tip_bar = self.create(self.tip_bar_type, pack_mode=self.tip_bar_location,
-                                   h_range=self.tip_bar_h_range,
+                                   h_range=self.tip_bar_h_range, center_text=False,
                                    tip_bar_text="Tip Bar: Provides details, hints, and status information")
         if self.showing:
             self.show()
@@ -834,17 +834,12 @@ class Renderer(SDL_Component):
     def draw_text(self, area, text, **kwargs):
         x, y, w, h = area
         assert w, (area, text, kwargs)
-        #kwargs.setdefault("width", w)
         assert "width" in kwargs
-        #if kwargs.get("center_text", False):
-        #    kwargs["width"] /= 2
-        #print
         texture = self.sprite_factory.from_text(text,
                                                 fontmanager=self.font_manager,
                                                 **kwargs)
-        #print type(texture)
         _w, _h = texture.size
-        if kwargs.get("center_text", False) and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
+        if kwargs.get("center_text", False):# and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
             destination = [(x + (w / 2)) - (_w / 2),
                            (y + (h / 2)) - (_h / 2),
                            _w - 2, _h]

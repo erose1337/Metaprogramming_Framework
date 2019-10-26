@@ -49,7 +49,7 @@ class Tree_Viewer(pride.gui.gui.Application):
         fields=[
                 [("handle_back", {"button_text" : '<',
                                   "scale_to_text" : True}),
-                 ("handle_up", {"button_text" : "up", "scale_to_text" : True}),
+                 ("handle_up", {"button_text" : "/\\", "scale_to_text" : True}),
                  ("current_node", {"display_name" : self.node_label}),
                  ("view_node", {"button_text" : "view",
                                 "scale_to_text" : True})
@@ -165,9 +165,10 @@ class Directory_Viewer(Tree_Viewer):
             return [identifier]
 
     def handle_up(self):
-        node = os.path.split(self.current_node)[0]
-        if node == '~':
-            node = "~/"
+        node = self.current_node
+        if node == "~/":
+            node = '~'
+        node = os.path.split(os.path.expanduser(node))[0]
         if self.current_node != node:
             self.current_node = node
             self.view_node()

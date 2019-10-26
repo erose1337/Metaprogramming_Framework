@@ -593,6 +593,7 @@ class Form(pride.gui.gui.Window):
                 "dropdown_type" : Dropdown_Field, "callable_type" : Callable_Field,
                 "target_object" : None, "balancer" : None, "row_h_range" : tuple(),
                 "include_balance_display" : True}
+    mutable_defaults = {"_fields_dict" : dict}
     autoreferences = ("displayer", )
 
     def __init__(self, **kwargs):
@@ -614,6 +615,7 @@ class Form(pride.gui.gui.Window):
         empty_entries = {"balancer" : balancer, "displayer" : displayer}
         target_object = self.target_object
         row_h_range = self.row_h_range or (0, 1.0)
+        _fields_dict = self._fields_dict
         for row in self.fields:
             container = self.create("pride.gui.gui.Container", pack_mode="top",
                                     h_range=row_h_range)
@@ -655,6 +657,7 @@ class Form(pride.gui.gui.Window):
                 field = container.create(field_type, name=name, parent_form=self,
                                          target_object=target_object,
                                          **entries)
+                _fields_dict[name] = field
 
     def handle_value_changed(self, field, old_value, new_value):
         pass
@@ -662,6 +665,9 @@ class Form(pride.gui.gui.Window):
     def delete(self):
         del self.target_object
         super(Form, self).delete()
+
+    def update_text(self, field_name):
+        self._fields_dict[field_name].entry.texture_invalid = True
 
     @classmethod
     def from_file(cls, filename):

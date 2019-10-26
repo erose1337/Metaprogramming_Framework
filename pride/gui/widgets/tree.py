@@ -21,6 +21,7 @@
 # clicking/hovering on child node should show information (e.g. file metadata) in tip bar
 # - further behavior can be customised per application
 import os
+import time
 
 import pride.gui.gui
 import pride.gui.widgets.form
@@ -46,8 +47,9 @@ class Tree_Viewer(pride.gui.gui.Application):
     def create_subcomponents(self):
         window = self.application_window
         fields=[
-                [("handle_back", {"button_text" : "<",
+                [("handle_back", {"button_text" : '<',
                                   "scale_to_text" : True}),
+                 ("handle_up", {"button_text" : "up", "scale_to_text" : True}),
                  ("current_node", {"display_name" : self.node_label}),
                  ("view_node", {"button_text" : "view",
                                 "scale_to_text" : True})
@@ -61,16 +63,25 @@ class Tree_Viewer(pride.gui.gui.Application):
     def view_node(self, identifier=None): # "view" button does not identifier and uses self.current_node
         if identifier is None:
             identifier = self.current_node
+        if self.history and identifier == self.history[-1]:
+            return
         children = self.lookup(identifier)
         fields = self.children_to_fields(children)
         if self.viewer is not None:
             self.viewer.delete()
         self.viewer = self.bottom.create(Node_Viewer, target_object=self,
                                          fields=fields, row_h_range=(0, .15))
-        self.history.append(identifier)
+        if self.history: # need to check for contents before testing [-1] in case history is empty
+            if self.history[-1] != identifier:
+                self.history.append(identifier)
+        else:
+            self.history.append(identifier)
+        self.current_node = identifier
+        self.top.update_text("current_node")
 
     def handle_back(self):
-        #assert self.history[-2] == self.current_node, (self.history, self.current_node)
+        if self.history:
+            assert self.history[-1] == self.current_node, (self.history, self.current_node)
         try:
             prior = self.history[-2]
         except IndexError:
@@ -78,6 +89,9 @@ class Tree_Viewer(pride.gui.gui.Application):
         else:
             del self.history[-2:]
             self.view_node(prior)
+
+    def handle_up(self):
+        raise NotImplementedError()
 
     def children_to_fields(self, children):
         return [[self.new_entry(child) for child in chunk] for
@@ -98,6 +112,10 @@ class Directory_Viewer(Tree_Viewer):
                 "node_label" : "Directory Explorer"}
 
     @staticmethod
+    def epoch_to_english(_time):
+        return time.asctime(time.localtime(_time))
+
+    @staticmethod
     def new_entry(child):
         alt = os.path.split(str(child))[-1]
         if os.path.isfile(child):
@@ -107,11 +125,34 @@ class Directory_Viewer(Tree_Viewer):
         return (name, {"button_text" : getattr(child, "text", alt),
                        "args" : (child, )})
 
+    def convert_size_unit(self, size):
+        units = ["bytes", "KB", "MB", "GB", "TB"]
+        index = 0
+        while size > 1024:
+            index += 1
+            size /= 1024.0
+        # size < 1024 won't trigger loop and size would be an int
+        # int has no `is_integer` method that select_file expects size to have
+        return float(size), units[index]
+
     def select_file(self, identifier):
         self.selected_file = identifier
-        self.show_status("Selected file: {}".format(identifier))
+        extension = os.path.splitext(identifier)[-1]
+        size, unit = self.convert_size_unit(os.path.getsize(identifier))
+        if not size.is_integer():
+            size = "{:.2f}".format(size)
+        else:
+            size = int(size)
+        file_information = os.stat(identifier)
+        created  = self.epoch_to_english(file_information.st_ctime)
+        modified = self.epoch_to_english(file_information.st_mtime)
+        str1 = "Selected file: {}  |  Type: {}  |  Size: {} {}\n".format(identifier, extension, size, unit)
+        str2 = str1 + "Created: {}  |  Modified: {}".format(created, modified)
+        self.show_status(str2)
 
     def lookup(self, identifier):
+        if identifier == '~': # normalize because os.path.split('~') = ('', '~'); os.path.split("~/") = ('~', '/')
+            identifier = "~/"
         identifier = identifier.strip()
         identifier = os.path.expanduser(identifier) # will change ~/ into home directory, or not do anything at all
         if not os.path.exists(identifier) and identifier[0]:
@@ -122,6 +163,14 @@ class Directory_Viewer(Tree_Viewer):
                            child in children if max(set(bytearray(child))) < 128])
         else:
             return [identifier]
+
+    def handle_up(self):
+        node = os.path.split(self.current_node)[0]
+        if node == '~':
+            node = "~/"
+        if self.current_node != node:
+            self.current_node = node
+            self.view_node()
 
 
 def unit_test():

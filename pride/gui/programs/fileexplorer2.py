@@ -3,55 +3,7 @@ import os
 
 import pride.gui.gui
 import pride.gui.widgets.form
-
-
-class File_Info(pride.gui.widgets.form.Form):
-
-    name = ("name", {"auto_create_id" : False})
-    _type = ("type", {"editable" : False, "auto_create_id" : False})
-    filesize = ("filesize", {"editable" : False, "auto_create_id" : False})
-    created = ("created", {"editable" : False, "auto_create_id" : False})
-    modified = ("created", {"editable" : False, "auto_create_id" : False})
-    defaults = {"fields" : [[name, _type, filesize, created, modified]],
-                "name" : '', "type" : '', "filesize" : 0, "created" : '',
-                "modified" : '', "pack_mode" : "top"}
-    del name, _type, filesize, created, modified
-
-
-class File_Explorer(pride.gui.gui.Window):
-
-    defaults = {"path" : os.curdir}
-    mutable_defaults = {"contents" : list}
-
-    def __init__(self, **kwargs):
-        super(File_Explorer, self).__init__(**kwargs)
-        self.view_directory(self.path)
-
-    def view_directory(self, directory):
-        contents = self.contents
-        for child in contents:
-            child.delete()
-        del contents[:]
-        directories = []
-        for filename in os.listdir(directory):
-            full_name = os.path.join(directory, filename)
-            file_type = os.path.splitext(filename)[-1] or filename
-            epoch_to_english = lambda _time: time.asctime(time.localtime(_time))
-            if os.path.isfile(full_name):
-                file_information = os.stat(full_name)
-                _entry = self.create(File_Info, name=full_name, type=file_type,
-                            filesize=os.path.getsize(full_name),
-                            created=epoch_to_english(file_information.st_ctime),
-                            modified=epoch_to_english(file_information.st_mtime))
-                contents.append(_entry)
-            else:
-                directories.append(full_name)
-        for full_name in directories:
-            _entry = self.create(pride.gui.widgetlibrary.Method_Button, target=self.reference,
-                                 method="view_directory", args=(full_name, ),
-                                 text=full_name, scale_to_text=False)
-            contents.append(_entry)
-
+import pride.gui.widgets.tree
 
 class Prompt(pride.gui.widgets.form.Form):
 
@@ -129,11 +81,101 @@ class File_Saver(pride.gui.gui.Application):
                 if self.autodelete:
                     self.delete()
 
-def test():
+class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
+
+    defaults = {"current_node" : '~/', "selected_file" : '',
+                "node_label" : "Directory Explorer", "pack_mode" : "top"}
+
+    @staticmethod
+    def epoch_to_english(_time):
+        return time.asctime(time.localtime(_time))
+
+    @staticmethod
+    def new_entry(child):
+        alt = os.path.split(str(child))[-1]
+        if os.path.isfile(child):
+            name = "select_file"
+        else:
+            name = "view_node"
+        return (name, {"button_text" : getattr(child, "text", alt),
+                       "args" : (child, )})
+
+    def convert_size_unit(self, size):
+        units = ["bytes", "KB", "MB", "GB", "TB"]
+        index = 0
+        while size > 1024:
+            index += 1
+            size /= 1024.0
+        # size < 1024 won't trigger loop and size would be an int
+        # int has no `is_integer` method that select_file expects size to have
+        return float(size), units[index]
+
+    def select_file(self, identifier):
+        self.selected_file = identifier
+        extension = os.path.splitext(identifier)[-1]
+        size, unit = self.convert_size_unit(os.path.getsize(identifier))
+        if not size.is_integer():
+            size = "{:.2f}".format(size)
+        else:
+            size = int(size)
+        file_information = os.stat(identifier)
+        created  = self.epoch_to_english(file_information.st_ctime)
+        modified = self.epoch_to_english(file_information.st_mtime)
+        str1 = "Selected file: {}  |  Type: {}  |  Size: {} {}\n".format(identifier, extension, size, unit)
+        str2 = str1 + "Created: {}  |  Modified: {}".format(created, modified)
+        self.show_status(str2)
+
+    def lookup(self, identifier):
+        if identifier == '~': # normalize because os.path.split('~') = ('', '~'); os.path.split("~/") = ('~', '/')
+            identifier = "~/"
+        identifier = identifier.strip()
+        identifier = os.path.expanduser(identifier) # will change ~/ into home directory, or not do anything at all
+        if not os.path.exists(identifier) and identifier[0]:
+            raise ValueError("{} does not exist".format(identifier))
+        if os.path.isdir(identifier):
+            children = os.listdir(identifier)
+            return sorted([os.path.join(identifier, child) for
+                           child in children if max(set(bytearray(child))) < 128])
+        else:
+            return [identifier]
+
+    def handle_up(self):
+        node = self.current_node
+        if node == "~/":
+            node = '~'
+        node = os.path.split(os.path.expanduser(node))[0]
+        if self.current_node != node:
+            self.current_node = node
+            self.view_node()
+
+    def view_node(self, identifier=None):
+        if identifier is None and not os.path.exists(os.path.expanduser(self.current_node)):
+            self.show_status("{} does not exist".format(self.current_node))
+            return
+        super(Directory_Viewer, self).view_node(identifier)
+
+
+class File_Selector(Directory_Viewer):
+
+    required_attributes = ("callback", )
+
+    def select_file(self, filename):
+        self.callback(filename)
+
+
+
+def directory_explorer_test():
+    import pride.gui
+    window = pride.objects[pride.gui.enable()]
+    window.create("pride.gui.main.Gui", startup_programs=(Directory_Viewer, ),
+                  user=pride.objects["/User"])
+
+def file_saver_test():
     import pride.gui
     window = pride.objects[pride.gui.enable()]
     gui = window.create("pride.gui.main.Gui", user=pride.objects["/User"],
                         startup_programs=(File_Saver, ))
 
 if __name__ == "__main__":
-    test()
+    directory_explorer_test()
+    #file_saver_test()

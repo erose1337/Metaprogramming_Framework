@@ -53,7 +53,8 @@ class Field(pride.gui.gui.Container):
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True,
-                "display_name" : ''}
+                "display_name" : '', "scale_to_text" : True,
+                "entry_scale_to_text" : False}
     predefaults = {"target_object" : None}
     required_attributes = ("target_object", )
     autoreferences = ("identifier", "displayer", "parent_form")
@@ -101,7 +102,7 @@ class Field(pride.gui.gui.Container):
         assert self.identifier is None
         if self.auto_create_id:
             self.create_id(pack_mode, scale_to_text, **id_kwargs)
-        self.create_entry(pack_mode, scale_to_text)
+        self.create_entry(pack_mode, self.entry_scale_to_text)
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
@@ -442,7 +443,8 @@ class Toggle(Field):
 
 class Dropdown_Field(Field):
 
-    defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side"}
+    defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side",
+                "entry_scale_to_text" : False}
 
     def compute_cost(self, old_value, new_value):
         return 1
@@ -582,7 +584,8 @@ class Callable_Entry(Entry):
 class Callable_Field(Field):
 
     defaults = {"entry_type" : Callable_Entry, "orientation" : "side by side",
-                "auto_create_id" : False, "button_text" : '', "args" : tuple()}
+                "auto_create_id" : False, "button_text" : '', "args" : tuple(),
+                "entry_scale_to_text" : True}
     mutable_defaults = {"kwargs" : dict}
 
 
@@ -590,11 +593,58 @@ class Form(pride.gui.gui.Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
-                "dropdown_type" : Dropdown_Field, "callable_type" : Callable_Field,
-                "target_object" : None, "balancer" : None, "row_h_range" : tuple(),
+                "dropdown_type" : Dropdown_Field, "row_h_range" : tuple(),
+                "slider_type" : Slider_Field, "callable_type" : Callable_Field,
+                "target_object" : None, "balancer" : None,
                 "include_balance_display" : True}
     mutable_defaults = {"_fields_dict" : dict}
     autoreferences = ("displayer", )
+
+    def create_balance_display(self):
+        displayer = self.create(Text_Display, name="balance",
+                                target_object=self.balancer, pack_mode="top",
+                                h_range=(.05, .1), orientation="side by side")
+        displayer.editable = False
+        self.displayer = displayer
+
+    def _unpack(self, item, empty_entries):
+        if isinstance(item, str):
+            name = item
+            entries = empty_entries
+        elif len(item) == 1:
+            name = item[0]
+            entries = empty_entries
+        else:
+            name, entries = item
+            entries.setdefault("balancer", self.balancer)
+            entries.setdefault("displayer", self.displayer)
+        return name, entries
+
+    def determine_field_type(self, target_object, name, entries):
+        field_type = entries.pop("field_type", None)
+        if field_type is None:
+            try:
+                value = getattr(target_object, name)
+            except AttributeError as exception:
+                try:
+                    value = target_object[name]
+                except TypeError:
+                    raise exception
+            if "minimum" in entries and "maximum" in entries: # check here before checking for int/float
+                field_type = self.slider_type
+            elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
+                field_type = self.toggle_type
+            elif isinstance(value, int) or isinstance(value, float):
+                field_type = self.spinbox_type
+            elif isinstance(value, str):
+                field_type = self.text_field_type
+            elif "values" in entries:
+                field_type = self.dropdown_type
+            elif hasattr(value, "__call__"):
+                field_type = self.callable_type
+        assert field_type is not None
+        assert "field_type" not in entries
+        return field_type
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
@@ -602,17 +652,9 @@ class Form(pride.gui.gui.Window):
             self.target_object = self
         balancer = self.balancer
         if balancer is not None and self.include_balance_display:
-            displayer = self.create(Text_Display, name="balance",
-                                    target_object=balancer, pack_mode="top",
-                                    h_range=(.05, .1), orientation="side by side")
-            displayer.editable = False
-            self.displayer = displayer
-        else:
-            displayer = None
-        spinbox = self.spinbox_type; text_field = self.text_field_type;
-        toggle = self.toggle_type; dropdown = self.dropdown_type;
-        callable = self.callable_type
-        empty_entries = {"balancer" : balancer, "displayer" : displayer}
+            self.create_balance_display()
+
+        empty_entries = {"balancer" : balancer, "displayer" : self.displayer}
         target_object = self.target_object
         row_h_range = self.row_h_range or (0, 1.0)
         _fields_dict = self._fields_dict
@@ -620,43 +662,11 @@ class Form(pride.gui.gui.Window):
             container = self.create("pride.gui.gui.Container", pack_mode="top",
                                     h_range=row_h_range)
             for item in row:
-                if isinstance(item, str):
-                    name = item
-                    entries = empty_entries
-                elif len(item) == 1:
-                    name = item[0]
-                    entries = empty_entries
-                else:
-                    name, entries = item
-                    entries.setdefault("balancer", balancer)
-                    entries.setdefault("displayer", displayer)
+                name, entries = self._unpack(item, empty_entries)
+                field_type = self.determine_field_type(target_object, name, entries)
 
-                field_type = entries.pop("field_type", None)
-                if field_type is None:
-                    try:
-                        value = getattr(target_object, name)
-                    except AttributeError as exception:
-                        try:
-                            value = target_object[name]
-                        except TypeError:
-                            raise exception
-                    if "minimum" in entries and "maximum" in entries: # check here before checking for int/float
-                        field_type = Slider_Field
-                    elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
-                        field_type = toggle
-                    elif isinstance(value, int) or isinstance(value, float):
-                        field_type = spinbox
-                    elif isinstance(value, str):
-                        field_type = text_field
-                    elif "values" in entries:
-                        field_type = dropdown
-                    elif hasattr(value, "__call__"):
-                        field_type = callable
-                assert field_type is not None
-                assert "field_type" not in entries
                 field = container.create(field_type, name=name, parent_form=self,
-                                         target_object=target_object,
-                                         **entries)
+                                         target_object=target_object, **entries)
                 _fields_dict[name] = field
 
     def handle_value_changed(self, field, old_value, new_value):
@@ -717,6 +727,7 @@ class Form(pride.gui.gui.Window):
         ##assert _object.notaspinbox == '2', (_object.notaspinbox, type(_object.notaspinbox))
         #assert _object.spinbox == 2
         #assert _object.toggle == True
+
 
 if __name__ == "__main__":
     Form.unit_test()

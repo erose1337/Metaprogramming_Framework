@@ -20,7 +20,13 @@ def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                                                   size, access=access)
 
 class Organizer(base.Base):
+    """ Note: Using both horizontal (top/bottom) and vertical (left/right) pack modes will break *unless* a main item is present.
+        If a main item is not present, then the organizer would have to decide whether to scale the height of the vertical item according to either the top/bottom arbitrarily
+        Quoting the zen of python:
 
+            > In the face of ambiguity, refuse the temptation to guess.
+
+        If mixing horizontal and vertical pack modes is necessary, include a `main` object."""
     mutable_defaults = {"pack_queue" : list, "window_queue" : list}
 
     def schedule_pack(self, item):

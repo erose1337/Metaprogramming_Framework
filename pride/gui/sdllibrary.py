@@ -354,7 +354,8 @@ class SDL_Window(SDL_Component):
         self.run()
 
     def clear_tip_bar_text(self):
-        self.tip_bar.text = ''
+        if not self.tip_bar.deleted:
+            self.tip_bar.text = ''
 
 
 class Window_Context(SDL_Window):

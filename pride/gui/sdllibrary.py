@@ -201,6 +201,7 @@ class SDL_Window(SDL_Component):
             self.redraw_objects.remove(window_object)
         except ValueError:
             pass
+        window_object.texture_invalid = False # texture_invalid reflects whether or not window_object is in redraw_objects
         try:
             self.drawing_instructions[window_object.z].remove(window_object)
         except (KeyError, ValueError):
@@ -279,7 +280,6 @@ class SDL_Window(SDL_Component):
                     layer_cache.append((z, layer_texture))
                     # assert layer_texture is sorted(layer_cache)[z][1]
                     needs_sorting = True
-
         del self.redraw_objects[:]
         if needs_sorting:
             layer_cache = sorted(layer_cache)

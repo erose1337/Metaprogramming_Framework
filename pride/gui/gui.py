@@ -312,18 +312,15 @@ class _Window_Object(Organized_Object):
     def _get_texture_invalid(self):
         return self._texture_invalid
     def _set_texture_invalid(self, value):
-        if not self._texture_invalid and value and not self.deleted and not self.hidden:
-            #assert self.sdl_window
-            assert (not self.hidden)
+        assert not self.deleted
+        if value and not self.hidden and not self._texture_invalid:
             self.sdl_window.invalidate_object(self)
         self._redraw_needed = self._texture_invalid = value
     texture_invalid = property(_get_texture_invalid, _set_texture_invalid)
 
     def _on_set(self, coordinate, value):
-        if not self.texture_invalid:# and coordinate in ('z', 'x', 'y', 'w', 'h', 'r', 'g', 'b', 'a'):
+        if not self.texture_invalid:
             self.texture_invalid = True
-        #if self.scale_to_text and coordinate == 'w' and self.w_range[1] > value:
-        #    self._backup_text = self.text
         super(_Window_Object, self)._on_set(coordinate, value)
 
     def _get_text(self):
@@ -331,14 +328,11 @@ class _Window_Object(Organized_Object):
     def _set_text(self, value):
         self._text = value
         if value and self.scale_to_text:
-            #assert self.sdl_window
             w, h = self.sdl_window.renderer.get_text_size(self.area, value)
             w += 20
-        #    print("Scaling to text {} ({}) ({})".format(value, w, self.texture_invalid))
             if not self._backup_w_range:
                 self._backup_w_range = self.w_range
             self.w_range = (0, w)
-            #self.w = w
         elif self._backup_w_range and self._backup_w_range != self.w_range:
             self.w_range = self._backup_w_range
         self.texture_invalid = True
@@ -512,18 +506,15 @@ class _Window_Object(Organized_Object):
     def hide(self, parent_call=False):
         self.sdl_window.remove_window_object(self)
         self.sdl_window.dirty_layers.add(self.z)
-        assert self not in self.sdl_window.redraw_objects
-        #self.texture_invalid = True
         if parent_call:
             self._parent_hidden = True
         else:
             self.hidden = True
+        self.hover_ends()
         for child in self.children:
             child.hide(True)
-        self.hover_ends()
 
     def show(self, parent_call=False):
-        #assert self.hidden
         if parent_call:
             self._parent_hidden = False
         else:
@@ -531,9 +522,9 @@ class _Window_Object(Organized_Object):
         if not self.hidden:
             window = self.sdl_window
             window.user_input._update_coordinates(self, self.reference, self.area, self.z)
-            window.invalidate_object(self) # needed because of `remove_window_object`
+            assert not self.hidden
+            assert not self.deleted
             self.texture_invalid = True
-            self._redraw_needed = False
             for child in self.children:
                 child.show(True)
 
@@ -781,11 +772,6 @@ class Application(Window):
     def __init__(self, **kwargs):
         super(Application, self).__init__(**kwargs)
         self.application_window = self.create(self.application_window_type)
-
-    def draw_texture(self):
-        assert not self.deleted
-        super(Application, self).draw_texture()
-        self.application_window.texture_invalid = True
 
     def __getstate__(self):
         state = super(Application, self).__getstate__()

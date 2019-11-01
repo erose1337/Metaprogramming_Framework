@@ -53,8 +53,8 @@ class Field(pride.gui.gui.Container):
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True,
-                "display_name" : '', "scale_to_text" : True,
-                "entry_scale_to_text" : False}
+                "display_name" : '', "scale_to_text" : True}
+    mutable_defaults = {"entry_kwargs" : dict}
     predefaults = {"target_object" : None}
     required_attributes = ("target_object", )
     autoreferences = ("identifier", "displayer", "parent_form")
@@ -92,17 +92,19 @@ class Field(pride.gui.gui.Container):
 
     def create_id_and_entry(self):
         id_kwargs = dict()
-        if self.orientation == "stacked":
+        orientation = self.orientation
+        if orientation == "stacked":
             pack_mode = "top"
             scale_to_text = False
             id_kwargs["h_range"] = (0, .05)
-        elif self.orientation == "side by side":
+        else:
+            assert orientation == "side by side"
             pack_mode = "left"
             scale_to_text = self.scale_to_text
         assert self.identifier is None
         if self.auto_create_id:
             self.create_id(pack_mode, scale_to_text, **id_kwargs)
-        self.create_entry(pack_mode, self.entry_scale_to_text)
+        self.create_entry(pack_mode)
 
     def create_id(self, pack_mode, scale_to_text, **id_kwargs):
         id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
@@ -110,9 +112,10 @@ class Field(pride.gui.gui.Container):
                                       text=self.display_name or self.name,
                                       scale_to_text=scale_to_text, **id_kwargs)
 
-    def create_entry(self, pack_mode, scale_to_text):
-        self.entry = self.create(self.entry_type, pack_mode=pack_mode,
-                                 parent_field=self, scale_to_text=scale_to_text)
+    def create_entry(self, pack_mode):
+        kwargs = self.entry_kwargs
+        kwargs.setdefault("pack_mode", pack_mode)
+        self.entry = self.create(self.entry_type, parent_field=self, **kwargs)
 
     def handle_value_changed(self, old_value, new_value):
         if old_value == new_value:
@@ -412,14 +415,15 @@ class Text_Display(Text_Field):
 class Spinbox(Field):
 
     defaults = {"entry_type" : Integer_Entry}
+    mutable_defaults = {"entry_kwargs" : lambda: {"pack_mode" : "left"}}
 
-    def create_entry(self, pack_mode, scale_to_text):
+    def create_entry(self, pack_mode):
         container = self.create(pride.gui.gui.Container, pack_mode=pack_mode)
-        entry = self.entry = container.create(self.entry_type, pack_mode="left",
+        entry = self.entry = container.create(self.entry_type, parent_field=self,
                                               tip_bar_text=self.tip_bar_text,
-                                              parent_field=self)
+                                               **self.entry_kwargs)
         if self.editable:
-            subcontainer = container.create(pride.gui.gui.Container, pack_mode="right",
+            subcontainer = container.create(pride.gui.gui.Container, pack_mode="left",
                                             w_range=(0, .05))
             subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
             subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
@@ -443,8 +447,8 @@ class Toggle(Field):
 
 class Dropdown_Field(Field):
 
-    defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side",
-                "entry_scale_to_text" : False}
+    defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side"}
+    mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : False}}
 
     def compute_cost(self, old_value, new_value):
         return 1
@@ -456,26 +460,45 @@ class Continuum(pride.gui.gui.Button):
 
     def __init__(self, **kwargs):
         super(Continuum, self).__init__(**kwargs)
-        self.bar = bar = self.create(pride.gui.gui.Container, pack_mode="left",
+        if self.orientation == "side by side":
+            bar_pack_mode = "left"
+            notch_kwargs = {"pack_mode" : "right", "w_range" : (0, .025)}
+            self._adjustment_target = "w_range"
+        else:
+            bar_pack_mode = "top"
+            notch_kwargs = {"pack_mode" : "bottom", "h_range" : (0, .025)}
+            self._adjustment_target = "h_range"
+        self.bar = bar = self.create(pride.gui.gui.Container, pack_mode=bar_pack_mode,
                                      clickable=False)
-        self.notch = bar.create(pride.gui.gui.Container, pack_mode="right",
-                                w_range=(0, .025), clickable=False,
-                                theme_profile="interactive")
+        self.notch = bar.create(pride.gui.gui.Container, clickable=False,
+                                theme_profile="interactive", **notch_kwargs)
 
     def update_position_from_value(self):
+        if self._adjustment_target == "w_range":
+            size = 'w'
+        else:
+            assert self._adjustment_target == "h_range"
+            size = 'h'
+
         parent_field = self.parent_field
         entry = parent_field.entry
         left = entry.left
 
         percent = float(parent_field.value) / parent_field.maximum
-        width = (entry.w - left.w) - entry.right.w
+        width = (getattr(entry, size) - getattr(left, size)) - getattr(entry.right, size)
         offset = int(width * percent)
-
-        self.bar.w_range = (offset, offset)
+        setattr(self.bar, "{}_range".format(size), (offset, offset))
         self.bar.pack()
 
     def left_click(self, mouse):
         super(Continuum, self).left_click(mouse)
+        if self._adjustment_target == "w_range":
+            coord = 'x'
+            size = 'w'
+        else:
+            assert self._adjustment_target == "h_range"
+            coord = 'y'
+            size = 'h'
         # unpack data
         # evaluate contextual meaning of data (build more data from relations between present data)
         # compute value based on data
@@ -484,9 +507,10 @@ class Continuum(pride.gui.gui.Button):
         parent_field = self.parent_field
         entry = parent_field.entry
         left = entry.left
-        width = (entry.w - left.w) - entry.right.w
+        width = (getattr(entry, size) - getattr(left, size)) - getattr(entry.right, size)
 
-        offset = mouse.x - entry.x - left.w; offset = min(max(0, offset), width);
+        offset = getattr(mouse, coord) - getattr(entry, coord) - getattr(left, size)
+        offset = min(max(0, offset), width)
         percent = float(offset) / width; percent = max(0, min(1, percent));
 
         value = int(parent_field.maximum * percent)
@@ -497,7 +521,7 @@ class Continuum(pride.gui.gui.Button):
         if parent_field.value != before: # insufficient balance can cause setting.value to fail
             new_size = int(percent * width)
             bar = self.bar
-            bar.w_range = (new_size, new_size)
+            setattr(bar, "{}_range".format(size), (new_size, new_size))
             bar.pack()
 
     def mousemotion(self, x, y, x_change, y_change):
@@ -528,6 +552,8 @@ class Endcap(Text_Display):
 
 class Slider_Entry(Entry):
 
+    defaults = {"orientation" : "side by side", "include_incdec_buttons" : True,
+                "include_minmax_buttons" : True}
     autoreferences = ("left", "continuum", "right")
 
     def __init__(self, **kwargs):
@@ -537,17 +563,74 @@ class Slider_Entry(Entry):
     def create_subcomponents(self):
         parent_field = self.parent_field
         assert parent_field.minimum is not None and parent_field.maximum is not None
-        self.left = self.create(Endcap, pack_mode="left", target_object=parent_field,
-                                name="minimum")
-        self.continuum = self.create(Continuum, pack_mode="left",
-                                     parent_field=parent_field, parent_entry=self)
-        self.right = self.create(Endcap, pack_mode="right", target_object=parent_field,
-                                 name="maximum")
 
+        orientation = self.orientation
+        kwargs = dict()
+        if orientation == "stacked":
+            pack_mode = "top"
+            kwargs["h_range"] = (0, .05)
+        else:
+            pack_mode = "left"
+            kwargs["w_range"] = (0, .08)
+
+        include_minmax = self.include_minmax_buttons
+        include_incdec = self.include_incdec_buttons
+        left = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
+        self.left = left
+        if include_minmax:
+            left.create(Endcap, pack_mode=pack_mode, name="minimum",
+                        target_object=parent_field, **kwargs)
+        if include_incdec:
+            left.create(Callable_Field, name="decrement_value", pack_mode=pack_mode,
+                        parent_field=parent_field, target_object=self,
+                        button_text='-', **kwargs)
+        self.continuum = self.create(Continuum, pack_mode=pack_mode,
+                                     orientation=orientation, parent_entry=self,
+                                     parent_field=parent_field)
+        right = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
+        self.right = right
+        if include_incdec:
+            self.right.create(Callable_Field, name="increment_value", pack_mode=pack_mode,
+                        parent_field=parent_field, target_object=self,
+                        button_text='+', **kwargs)
+        if include_minmax:
+            right.create(Endcap, target_object=parent_field, pack_mode=pack_mode,
+                        name="maximum", **kwargs)
+
+    def increment_value(self):
+        parent_field = self.parent_field
+        parent_field.value = min(parent_field.value + 1, parent_field.maximum)
+        parent_field.update_position_from_value()
+
+    def decrement_value(self):
+        parent_field = self.parent_field
+        parent_field.value = max(parent_field.value - 1, parent_field.minimum)
+        parent_field.update_position_from_value()
 
 class Slider_Field(Field):
 
     defaults = {"entry_type" : Slider_Entry}
+    predefaults = {"_minimum" : 0, "_maximum" : 0}
+
+    def _get_minimum(self):
+        return self._minimum
+    def _set_minimum(self, value):
+        self._minimum = value
+        if self.minimum == self.maximum:
+            self.hide()
+        else:
+            self.show()
+    minimum = property(_get_minimum, _set_minimum)
+
+    def _get_maximum(self):
+        return self._maximum
+    def _set_maximum(self, value):
+        self._maximum = value
+        if self.minimum == self.maximum:
+            self.hide()
+        else:
+            self.show()
+    maximum = property(_get_maximum, _set_maximum)
 
     def compute_cost(self, old_value, new_value):
         return new_value - old_value
@@ -584,26 +667,102 @@ class Callable_Entry(Entry):
 class Callable_Field(Field):
 
     defaults = {"entry_type" : Callable_Entry, "orientation" : "side by side",
-                "auto_create_id" : False, "button_text" : '', "args" : tuple(),
-                "entry_scale_to_text" : True}
-    mutable_defaults = {"kwargs" : dict}
+                "auto_create_id" : False, "button_text" : '', "args" : tuple()}
+    mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : True},
+                        "kwargs" : dict}
 
 
-class Form(pride.gui.gui.Window):
+class Scrollable_Window(pride.gui.gui.Window):
+
+    defaults = {"vertical_slider_position" : "right",
+                "horizontal_slider_position" : "bottom"}
+    predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
+    autoreferences = ("vertical_slider", "horizontal_slider")
+
+    def _get_y_scroll_value(self):
+        return self._y_scroll_value
+    def _set_y_scroll_value(self, new_value):
+        old_value = self._y_scroll_value
+        self._y_scroll_value = new_value
+        self.handle_y_scroll(old_value, new_value)
+    y_scroll_value = property(_get_y_scroll_value, _set_y_scroll_value)
+
+    def _get_x_scroll_value(self):
+        return self._x_scroll_value
+    def _set_x_scroll_value(self, new_value):
+        old_value = self._x_scroll_value
+        self._x_scroll_value = new_value
+        self.handle_x_scroll(old_value, new_value)
+    x_scroll_value = property(_get_x_scroll_value, _set_x_scroll_value)
+
+    def __init__(self, **kwargs):
+        super(Scrollable_Window, self).__init__(**kwargs)
+        self.main_window = self.create("pride.gui.gui.Container", pack_mode="main")
+        position = self.vertical_slider_position
+        if position is not None:
+            self.vertical_slider = \
+            self.create("pride.gui.widgets.form.Slider_Field", pack_mode=position,
+                        orientation="stacked", w_range=(0, .025), target_object=self,
+                        name="y_scroll_value", minimum=0, maximum=0,
+                        auto_create_id=False,
+                        entry_kwargs={"orientation" : "stacked"})
+        position = self.horizontal_slider_position
+        if position is not None:
+            self.horizontal_slider = \
+            self.create("pride.gui.widgets.form.Slider_Field", pack_mode=position,
+                        orientation="side by side", h_range=(0, .025), target_object=self,
+                        auto_create_id=False,
+                        name="x_scroll_value", minimum=0, maximum=0)
+
+    def handle_x_scroll(self, old_value, new_value):
+        self.alert("Changed x_scroll from {} to {}".format(old_value, new_value))
+
+    def handle_y_scroll(self, old_value, new_value):
+        self.alert("Changed y_scroll from {} to {}".format(old_value, new_value))
+
+
+class Form(Scrollable_Window):
 
     defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
                 "text_field_type" : Text_Field, "toggle_type" : Toggle,
                 "dropdown_type" : Dropdown_Field, "row_h_range" : tuple(),
                 "slider_type" : Slider_Field, "callable_type" : Callable_Field,
-                "target_object" : None, "balancer" : None,
+                "target_object" : None, "balancer" : None, "_page_number" : 0,
                 "include_balance_display" : True}
     mutable_defaults = {"_fields_dict" : dict}
     autoreferences = ("displayer", )
 
+    def __init__(self, **kwargs):
+        super(Form, self).__init__(**kwargs)
+        if self.target_object is None:
+            self.target_object = self
+        #self.create_page_controls()
+        balancer = self.balancer
+        if balancer is not None and self.include_balance_display:
+            self.create_balance_display()
+        #return
+        empty_entries = {"balancer" : balancer, "displayer" : self.displayer}
+        target_object = self.target_object
+        row_h_range = self.row_h_range or (0, 1.0)
+        _fields_dict = self._fields_dict
+        window = self.main_window
+        for row in self.fields:
+            container = window.create("pride.gui.gui.Container", pack_mode="top",
+                                      h_range=row_h_range)
+            for item in row:
+                name, entries = self._unpack(item, empty_entries)
+                field_type = self.determine_field_type(target_object, name, entries)
+
+                field = container.create(field_type, name=name, parent_form=self,
+                                         target_object=target_object, **entries)
+                _fields_dict[name] = field
+
+        self.vertical_slider.maximum = len(self.fields) / 10
+
     def create_balance_display(self):
-        displayer = self.create(Text_Display, name="balance",
-                                target_object=self.balancer, pack_mode="top",
-                                h_range=(.05, .1), orientation="side by side")
+        displayer = self.main_window.create(Text_Display, name="balance",
+                                            target_object=self.balancer, pack_mode="top",
+                                            h_range=(.05, .1), orientation="side by side")
         displayer.editable = False
         self.displayer = displayer
 
@@ -646,29 +805,6 @@ class Form(pride.gui.gui.Window):
         assert "field_type" not in entries
         return field_type
 
-    def __init__(self, **kwargs):
-        super(Form, self).__init__(**kwargs)
-        if self.target_object is None:
-            self.target_object = self
-        balancer = self.balancer
-        if balancer is not None and self.include_balance_display:
-            self.create_balance_display()
-
-        empty_entries = {"balancer" : balancer, "displayer" : self.displayer}
-        target_object = self.target_object
-        row_h_range = self.row_h_range or (0, 1.0)
-        _fields_dict = self._fields_dict
-        for row in self.fields:
-            container = self.create("pride.gui.gui.Container", pack_mode="top",
-                                    h_range=row_h_range)
-            for item in row:
-                name, entries = self._unpack(item, empty_entries)
-                field_type = self.determine_field_type(target_object, name, entries)
-
-                field = container.create(field_type, name=name, parent_form=self,
-                                         target_object=target_object, **entries)
-                _fields_dict[name] = field
-
     def handle_value_changed(self, field, old_value, new_value):
         pass
 
@@ -709,11 +845,7 @@ class Form(pride.gui.gui.Window):
 
         balancer = Balancer(255, "Remaining Balance")
         form_callable = lambda *args, **kwargs:\
-            Form(*args,
-                 balancer=balancer,
-                 fields=fields,
-                 target_object=_object,
-                 **kwargs)
+            Form(*args, balancer=balancer, fields=fields, target_object=_object, **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
         assert _object["text"] == '1'

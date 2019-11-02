@@ -728,8 +728,8 @@ class Form(Scrollable_Window):
                 "dropdown_type" : Dropdown_Field, "row_h_range" : tuple(),
                 "slider_type" : Slider_Field, "callable_type" : Callable_Field,
                 "target_object" : None, "balancer" : None, "_page_number" : 0,
-                "include_balance_display" : True}
-    mutable_defaults = {"_fields_dict" : dict}
+                "include_balance_display" : True, "max_rows" : 3}
+    mutable_defaults = {"_fields_dict" : dict, "rows" : list}
     autoreferences = ("displayer", )
 
     def __init__(self, **kwargs):
@@ -746,9 +746,12 @@ class Form(Scrollable_Window):
         row_h_range = self.row_h_range or (0, 1.0)
         _fields_dict = self._fields_dict
         window = self.main_window
-        for row in self.fields:
+        max_rows = self.max_rows
+        rows = self.rows
+        for row_number, row in enumerate(self.fields):
             container = window.create("pride.gui.gui.Container", pack_mode="top",
                                       h_range=row_h_range)
+            rows.append(container)
             for item in row:
                 name, entries = self._unpack(item, empty_entries)
                 field_type = self.determine_field_type(target_object, name, entries)
@@ -756,8 +759,25 @@ class Form(Scrollable_Window):
                 field = container.create(field_type, name=name, parent_form=self,
                                          target_object=target_object, **entries)
                 _fields_dict[name] = field
+            if row_number >= max_rows:
+                container.hide()
 
-        self.vertical_slider.maximum = len(self.fields) / 10
+        self.vertical_slider.maximum = len(rows) - max_rows
+
+    def handle_y_scroll(self, old_value, new_value):
+        super(Form, self).handle_y_scroll(old_value, new_value)
+        max_rows = self.max_rows
+        rows = self.rows
+        row_count = len(rows)
+        for row_number, row in enumerate(rows):
+            if row_number >= new_value and row_number < (new_value + max_rows):
+                if row.hidden:
+                    row.show()
+                    row.pack()
+            else:
+                if not row.hidden:
+                    row.hide()
+                    row.pack()
 
     def create_balance_display(self):
         displayer = self.main_window.create(Text_Display, name="balance",

@@ -504,6 +504,7 @@ class _Window_Object(Organized_Object):
             self._tip_set = False
 
     def hide(self, parent_call=False):
+        # include if already hidden early return?
         self.sdl_window.remove_window_object(self)
         self.sdl_window.dirty_layers.add(self.z)
         if parent_call:
@@ -515,6 +516,7 @@ class _Window_Object(Organized_Object):
             child.hide(True)
 
     def show(self, parent_call=False):
+        # include if not hidden early return?
         if parent_call:
             self._parent_hidden = False
         else:

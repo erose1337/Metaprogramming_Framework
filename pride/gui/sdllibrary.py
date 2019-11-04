@@ -426,7 +426,7 @@ class Window_Handler(pride.components.base.Base):
             pass
 
     def handle_focus_gained(self, event):
-        self.parent.user_input._ignore_click = True
+        pass 
 
     def handle_focus_lost(self, event):
         try:

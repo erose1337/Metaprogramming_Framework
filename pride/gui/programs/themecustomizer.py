@@ -109,7 +109,7 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                 tab.left_click(None)
 
     def save_color_options(self):
-        self.create("pride.gui.programs.fileexplorer2.File_Saver",
+        self.create("pride.gui.programs.fileexplorer.File_Saver",
                     pack_mode="fill", data=self.serialize_color_options())
 
     def serialize_color_options(self):
@@ -133,7 +133,7 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
         return '\n'.join(lines)
 
     def load_color_options(self):
-        self.file_selector = self.create("pride.gui.programs.fileexplorer2.File_Selector",
+        self.file_selector = self.create("pride.gui.programs.fileexplorer.File_Selector",
                                          pack_mode="top", callback=self._load_color_options)
 
     def _load_color_options(self, filename):

@@ -1,175 +1,178 @@
 import time
-import collections
 import os
 
-import pride.gui.widgetlibrary
 import pride.gui.gui
+import pride.gui.widgets.form
+import pride.gui.widgets.tree
 
-class File_Explorer(pride.gui.gui.Application):
+class Prompt(pride.gui.widgets.form.Form):
 
-    defaults = {"current_working_directory" : '.', "filetype_filter" : '',
-                "tip_bar_enabled" : False, "pack_mode" : "main"}
-
-    def __init__(self, **kwargs):
-        self.file_details = collections.defaultdict(lambda: [])
-        super(File_Explorer, self).__init__(**kwargs)
-
-        current_directory = self.current_working_directory
-        epoch_to_english = lambda _time: time.asctime(time.localtime(_time))
-        for filename in os.listdir(current_directory):
-            full_name = os.path.join(current_directory, filename)
-            file_type = os.path.splitext(filename)[-1] or filename
-            if ((file_type == self.filetype_filter and self.filetype_filter) or
-                os.path.isfile(full_name)):
-                self.file_details["Name"].append(filename)
-                self.file_details["Type"].append(file_type)
-                self.file_details["Size"].append(os.path.getsize(full_name))
-
-                file_information = os.stat(full_name)
-
-                self.file_details["Date_Created"].append(epoch_to_english(file_information.st_ctime))
-                self.file_details["Date_Modified"].append(epoch_to_english(file_information.st_mtime))
-        window = self.application_window
-        window.create(Navigation_Bar)
-        window.create(Directory_Viewer)
-        #self.create(Info_Bar, pack_mode="bottom")
-      #  self.create(File_Open_Prompt, background_color=(255, 255, 255, 0), pack_mode="bottom")
-
-
-class Navigation_Bar(pride.gui.gui.Container):
-
-    defaults = {"pack_mode" : "top", "h_range" : (0, .10)}
+    defaults = {"prompt_text" : '',
+                "fields" : [ [("prompt_text", {"editable" : False, "auto_create_id" : False,
+                                               "scale_to_text" : True,
+                                               "entry_kwargs" : {"theme_profile" : "default"}}),
+                              ("handle_yes", {"orientation" : "stacked",
+                                              "button_text" : "Yes"}),
+                              ("handle_no", {"orientation" : "stacked",
+                                             "button_text" : "No"})
+                             ]
+                           ],
+                "pack_mode" : "top", "h_range" : (.25, .25),
+                "include_delete_button" : True
+                }
 
     def __init__(self, **kwargs):
-        super(Navigation_Bar, self).__init__(**kwargs)
-        self.create(Back_Button)
-        self.create(Forward_Button)
-        #self.create(History_Dropdown)
-        self.create(Ascend_Button)
-        self.create(Search_Bar,
-                    callback=(self.parent_application.reference + "/Directory_Viewer",
-                              "handle_input"))
+        super(Prompt, self).__init__(**kwargs)
+        assert self.include_delete_button
+
+    def handle_yes(self):
+        raise NotImplementedError()
+
+    def handle_no(self):
+        raise NotImplementedError()
 
 
-class Back_Button(pride.gui.widgetlibrary.Method_Button):
+class Overwrite_Prompt(Prompt):
 
-    defaults = {"text" : "<-", "method" : "back", "pack_mode" : "left",}
+    defaults = {"prompt_text" : "File already exists. Overwrite?",
+                "theme_profile" : "alert"}
 
+    def handle_yes(self):
+        self.parent_application.save_as(overwrite=True)
+        assert self.deleted
 
-class Forward_Button(pride.gui.widgetlibrary.Method_Button):
-
-    defaults = {"text" : "/", "method" : "forward", "pack_mode" : "left"}
-
-
-class History_Dropdown(pride.gui.widgetlibrary.Popup_Button):
-
-    defaults = {"popup_type" : "pride.gui.programs.fileexplorer.Directory_History",
-                "pack_mode" : "left", "text" : "history"}
-    predefaults = {"scale_to_text" : True}
+    def handle_no(self):
+        self.parent_application.delete()
 
 
-class Ascend_Button(pride.gui.widgetlibrary.Method_Button):
+class File_Saver(pride.gui.widgets.form.Form):
 
-    defaults = {"method" : "ascend_directory", "text" : "..", "pack_mode" : "left"}
+    defaults = {"filename" : '', "data" : '', "autodelete" : True,
+                "fields" : [["filename", ("save_data", {"button_text" : "save"})]],
+                "h_range" : (0, .25), "include_delete_button" : True,
+                "form_name" : "File saver"}
 
+    def save_data(self, overwrite=False):
+        if os.path.exists(self.filename) and self.prompt is None:
+            self.prompt = self.application_window.create(Overwrite_Prompt)
 
-class Search_Bar(pride.gui.widgetlibrary.Prompt):
-
-    defaults = {"pack_mode" : "left", "use_done_button" : True}
-
-
-class Places_Bar(pride.gui.gui.Container):
-
-    defaults = {"pack_mode" : "left", "w_range" : (0, 200)}
-
-    def __init__(self, **kwargs):
-        super(Places_Bar, self).__init__(**kwargs)
-        #self.create(Lru_Directory_Dropdown)
-        #self.create(Remote_Host_Dropdown)
-
-
-class Info_Bar(pride.gui.gui.Container):
-
-    defaults = {"pack_mode" : "bottom", "h_range" : (0, .10)}
-
-    def __init__(self, **kwargs):
-        super(Info_Bar, self).__init__(**kwargs)
-        #self.create(Item_Count_Indicator
-        #self.create(Selection_Count_Indicator)
-        #self.create(File_Size_Indicator)
-
-
-class Directory_Viewer(pride.gui.gui.Window):
-
-    defaults = {"pack_mode" : "main"}
-
-    def __init__(self, **kwargs):
-        super(Directory_Viewer, self).__init__(**kwargs)
-        self.create(Places_Bar)
-        viewer = self.create(Column_Viewer)
-    #    self.create("pride.gui.widgetlibrary.Scroll_Bar", pack_mode="right",
-    #                target=(viewer.reference, "texture_window_y"))
-
-
-class Column_Viewer(pride.gui.gui.Window):
-
-    defaults = {"default_columns" : ("Name", "Type", "Size",
-                                     "Date_Created", "Date_Modified"),
-                "pack_mode" : "left", "sorted_by" : "Type"}
-
-    def __init__(self, **kwargs):
-        super(Column_Viewer, self).__init__(**kwargs)
-        for column_name in self.default_columns:
-            container = self.create("pride.gui.gui.Container", pack_mode="left")
-            container.create(Sort_Button, text=column_name, h_range=(0, .10))
-            if column_name == "Name":
-                button_type = Filename_Button
+        if self.prompt is None or overwrite:
+            if overwrite:
+                self.prompt.delete()
+            size = len(self.data)
+            units = ["bytes", "KB", "MB", "GB", "TB"]
+            index = 0
+            while size > 1024:
+                index += 1
+                size /= 1024.0
+            self.show_status("Saving {0:.2f}{1} to {2}...".format(size, units[index], self.filename))
+            try:
+                with open(self.filename, "wb") as _file:
+                    _file.write(self.data)
+            except IOError:
+                if os.path.exists(self.filename):
+                    raise
+                self.show_status("Unable to write to file; Ensure all directories exist and are spelled correctly and try again.")
             else:
-                button_type = "pride.gui.widgetlibrary.Text_Box"
-
-            for file_detail in self.parent_application.file_details[column_name]:
-                container.create(button_type, text=str(file_detail), pack_mode="top",
-                                 h_range=(0, .10))
+                if self.autodelete:
+                    self.delete()
 
 
-class Sort_Button(pride.gui.gui.Button):
+class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
 
-    def left_click(self, mouse):
-        self.parent.sorted_by = self.text
+    defaults = {"current_node" : '~/', "selected_file" : '',
+                "node_label" : "Directory Explorer", "pack_mode" : "top"}
 
+    @staticmethod
+    def epoch_to_english(_time):
+        return time.asctime(time.localtime(_time))
 
-class Filename_Button(pride.gui.gui.Button):
-
-    predefaults = {"selected" : False}
-
-    def left_click(self, mouse):
-        if not self.selected:
-            self.selected = True
+    @staticmethod
+    def new_entry(child):
+        alt = os.path.split(str(child))[-1]
+        if os.path.isfile(child):
+            name = "select_file"
         else:
-            self.allow_text_edit = True
+            name = "view_node"
+        return (name, {"button_text" : getattr(child, "text", alt),
+                       "args" : (child, )})
+
+    def convert_size_unit(self, size):
+        units = ["bytes", "KB", "MB", "GB", "TB"]
+        index = 0
+        while size > 1024:
+            index += 1
+            size /= 1024.0
+        # size < 1024 won't trigger loop and size would be an int
+        # int has no `is_integer` method that select_file expects size to have
+        return float(size), units[index]
+
+    def select_file(self, identifier):
+        self.selected_file = identifier
+        extension = os.path.splitext(identifier)[-1]
+        size, unit = self.convert_size_unit(os.path.getsize(identifier))
+        if not size.is_integer():
+            size = "{:.2f}".format(size)
+        else:
+            size = int(size)
+        file_information = os.stat(identifier)
+        created  = self.epoch_to_english(file_information.st_ctime)
+        modified = self.epoch_to_english(file_information.st_mtime)
+        str1 = "Selected file: {}  |  Type: {}  |  Size: {} {}\n".format(identifier, extension, size, unit)
+        str2 = str1 + "Created: {}  |  Modified: {}".format(created, modified)
+        self.show_status(str2)
+
+    def lookup(self, identifier):
+        if identifier == '~': # normalize because os.path.split('~') = ('', '~'); os.path.split("~/") = ('~', '/')
+            identifier = "~/"
+        identifier = identifier.strip()
+        identifier = os.path.expanduser(identifier) # will change ~/ into home directory, or not do anything at all
+        if not os.path.exists(identifier) and identifier[0]:
+            raise ValueError("{} does not exist".format(identifier))
+        if os.path.isdir(identifier):
+            children = os.listdir(identifier)
+            return sorted([os.path.join(identifier, child) for
+                           child in children if max(set(bytearray(child))) < 128])
+        else:
+            return [identifier]
+
+    def handle_up(self):
+        node = self.current_node
+        if node == "~/":
+            node = '~'
+        node = os.path.split(os.path.expanduser(node))[0]
+        if self.current_node != node:
+            self.current_node = node
+            self.view_node()
+
+    def view_node(self, identifier=None):
+        if identifier is None and not os.path.exists(os.path.expanduser(self.current_node)):
+            self.show_status("{} does not exist".format(self.current_node))
+            return
+        super(Directory_Viewer, self).view_node(identifier)
 
 
-class File_Open_Prompt(pride.gui.gui.Container):
+class File_Selector(Directory_Viewer):
 
-    defaults = {"h_range" : (0, 200), "pack_mode" : "bottom",
-                'a' : 255}
+    required_attributes = ("callback", )
 
-    def __init__(self, **kwargs):
-        super(File_Open_Prompt, self).__init__(**kwargs)
-        textbox = self.create("pride.gui.widgetlibrary.Text_Box",
-                              pack_mode="top")
-        self.create(Filetype_Filter_Selector)
+    def select_file(self, filename):
+        self.callback(filename)
 
 
-class Filetype_Filter_Selector(pride.gui.widgetlibrary.Popup_Button):
 
-    defaults = {"popup_type" : "pride.gui.pyobjecttest.List"}
-
-
-def test():
+def directory_explorer_test():
     import pride.gui
     window = pride.objects[pride.gui.enable()]
-    gui = window.create("pride.gui.main.Gui", startup_programs=(File_Explorer, ))
+    window.create("pride.gui.main.Gui", startup_programs=(Directory_Viewer, ),
+                  user=pride.objects["/User"])
+
+def file_saver_test():
+    import pride.gui
+    window = pride.objects[pride.gui.enable()]
+    gui = window.create("pride.gui.main.Gui", user=pride.objects["/User"],
+                        startup_programs=(File_Saver, ))
 
 if __name__ == "__main__":
-    test()
+    directory_explorer_test()
+    #file_saver_test()

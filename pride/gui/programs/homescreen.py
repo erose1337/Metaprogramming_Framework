@@ -30,7 +30,7 @@ class Theme_Customizer_Button(pride.gui.gui.Button):
 
 class File_Explorer_Button(pride.gui.gui.Button):
 
-    defaults = {"program_type" : "pride.gui.programs.fileexplorer.File_Explorer",
+    defaults = {"program_type" : "pride.gui.programs.fileexplorer.Directory_Viewer",
                 "text" : "File Explorer", "h_range" : (.025, .1)}
 
     def left_click(self, mouse):

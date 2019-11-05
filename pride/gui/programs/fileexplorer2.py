@@ -8,15 +8,22 @@ import pride.gui.widgets.tree
 class Prompt(pride.gui.widgets.form.Form):
 
     defaults = {"prompt_text" : '',
-                "fields" : [ [("prompt_text", {"editable" : False}),
+                "fields" : [ [("prompt_text", {"editable" : False, "auto_create_id" : False,
+                                               "scale_to_text" : True,
+                                               "entry_kwargs" : {"theme_profile" : "default"}}),
                               ("handle_yes", {"orientation" : "stacked",
                                               "button_text" : "Yes"}),
                               ("handle_no", {"orientation" : "stacked",
                                              "button_text" : "No"})
                              ]
                            ],
-                "pack_mode" : "fill"
+                "pack_mode" : "top", "h_range" : (.25, .25),
+                "include_delete_button" : True
                 }
+
+    def __init__(self, **kwargs):
+        super(Prompt, self).__init__(**kwargs)
+        assert self.include_delete_button
 
     def handle_yes(self):
         raise NotImplementedError()
@@ -35,28 +42,17 @@ class Overwrite_Prompt(Prompt):
         assert self.deleted
 
     def handle_no(self):
-        self.delete()
+        self.parent_application.delete()
 
 
-class File_Saver(pride.gui.gui.Application):
+class File_Saver(pride.gui.widgets.form.Form):
 
-    defaults = {"filename" : '', "data" : '', "create_tip_bar" : False,
-                "autodelete" : True}
-    autoreferences = ("address_bar", "prompt")
+    defaults = {"filename" : '', "data" : '', "autodelete" : True,
+                "fields" : [["filename", ("save_data", {"button_text" : "save"})]],
+                "h_range" : (0, .25), "include_delete_button" : True,
+                "form_name" : "File saver"}
 
-    def __init__(self, **kwargs):
-        super(File_Saver, self).__init__(**kwargs)
-        window = self.application_window
-        top = window.create("pride.gui.gui.Container", pack_mode="top",
-                            h_range=(0, .25))
-        fields = [["filename", ("save_as", {"button_text" : "save"})]]
-        self.address_bar = top.create(pride.gui.widgets.form.Form,
-                                      target_object=self, fields=fields,
-                                      pack_mode="left")
-        #top.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
-        #           method="save_as", pack_mode="left", text="save")
-
-    def save_as(self, overwrite=False):
+    def save_data(self, overwrite=False):
         if os.path.exists(self.filename) and self.prompt is None:
             self.prompt = self.application_window.create(Overwrite_Prompt)
 
@@ -80,6 +76,7 @@ class File_Saver(pride.gui.gui.Application):
             else:
                 if self.autodelete:
                     self.delete()
+
 
 class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
 

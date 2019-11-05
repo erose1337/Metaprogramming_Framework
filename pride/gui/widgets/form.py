@@ -715,10 +715,10 @@ class Scrollable_Window(pride.gui.gui.Window):
                         name="x_scroll_value", minimum=0, maximum=0)
 
     def handle_x_scroll(self, old_value, new_value):
-        self.alert("Changed x_scroll from {} to {}".format(old_value, new_value))
+        pass
 
     def handle_y_scroll(self, old_value, new_value):
-        self.alert("Changed y_scroll from {} to {}".format(old_value, new_value))
+        pass
 
 
 class Form(Scrollable_Window):
@@ -728,19 +728,39 @@ class Form(Scrollable_Window):
                 "dropdown_type" : Dropdown_Field, "row_h_range" : tuple(),
                 "slider_type" : Slider_Field, "callable_type" : Callable_Field,
                 "target_object" : None, "balancer" : None, "_page_number" : 0,
-                "include_balance_display" : True, "max_rows" : 3}
+                "include_balance_display" : True, "max_rows" : 4,
+                "form_name" : '', "include_delete_button" : False}
     mutable_defaults = {"_fields_dict" : dict, "rows" : list}
     autoreferences = ("displayer", )
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
+        self.create_subcomponents()
+
+    def create_subcomponents(self):
+        if self.form_name or self.include_delete_button:
+            # form_name and include_delete_button being Falsey prevents further recursion
+            field = []
+            if self.form_name:
+                field.append(("form_name", {"editable" : False,
+                                            "auto_create_id" : False}))
+            if self.include_delete_button:
+                assert self.include_delete_button
+                field.append(("handle_delete_button", {"button_text" : 'x',
+                                                       "auto_create_id" : False,
+                                                       "pack_mode" : "right"}))
+            
+            self.create(Form, h_range=(0, .05), pack_mode="top", fields=[field],
+                        form_name='', include_delete_button=False, parent_form=self,
+                        target_object=self)
+
         if self.target_object is None:
             self.target_object = self
-        #self.create_page_controls()
+
         balancer = self.balancer
         if balancer is not None and self.include_balance_display:
             self.create_balance_display()
-        #return
+
         empty_entries = {"balancer" : balancer, "displayer" : self.displayer}
         target_object = self.target_object
         row_h_range = self.row_h_range or (0, 1.0)
@@ -762,7 +782,7 @@ class Form(Scrollable_Window):
             if row_number >= max_rows:
                 container.hide()
 
-        self.vertical_slider.maximum = len(rows) - max_rows
+        self.vertical_slider.maximum = max(0, len(rows) - max_rows)
 
     def handle_y_scroll(self, old_value, new_value):
         super(Form, self).handle_y_scroll(old_value, new_value)
@@ -778,6 +798,9 @@ class Form(Scrollable_Window):
                 if not row.hidden:
                     row.hide()
                     row.pack()
+
+    def handle_delete_button(self):
+        self.delete()
 
     def create_balance_display(self):
         displayer = self.main_window.create(Text_Display, name="balance",

@@ -1,25 +1,3 @@
-# - make a tree viewer abstraction
-# - a file directory explorer is a special case of a tree viewer
-# - Use Forms if convenient to make the tree viewer
-#
-#
-# |    parent nodes    |       child nodes       |
-#
-#
-# each parent node is a callable field that sets the content of the child node viewer
-# given a list of N nodes, determine how many rows and columns there should be
-# - There should be approximately sqrt(N) rows and columns. The last row may not be filled completely.
-# - Must put limit to size of sqrt(N) - if N is very large, having more than a certain number of columns would be impossible to display
-#     - 64x64 pixels is probably smallest practical size to use for a field
-#         - number of fields that can fit in space w: w/64
-#         - number of Forms required to display N items: N / min(w/64, sqrt(N))
-#         - number of fields in remaining Form: N % min(w/64, sqrt(N))
-#     - Put remaining Forms into new page further down
-#     - use slider to control which page is selected
-# create/show the parent nodes form
-# setting the content of the child node viewer should create/show a Form of Callable Fields
-# clicking/hovering on child node should show information (e.g. file metadata) in tip bar
-# - further behavior can be customised per application
 import os
 import time
 
@@ -52,7 +30,8 @@ class Tree_Viewer(pride.gui.gui.Application):
                  ("handle_up", {"button_text" : "/\\", "scale_to_text" : True}),
                  ("current_node", {"display_name" : self.node_label}),
                  ("view_node", {"button_text" : "view",
-                                "scale_to_text" : True})
+                                "scale_to_text" : True}),
+                 ("delete", {"button_text" : 'x', "scale_to_text" : True})
                 ]
                ]
         self.top = window.create(pride.gui.widgets.form.Form, pack_mode="top",

@@ -138,7 +138,16 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 
     def _load_color_options(self, filename):
         self.show_status("Importing color options from {}...".format(filename))
-        theme = cefparser.parse_filename(filename)
+        try:
+            theme = cefparser.parse_filename(filename)
+        except Exception: # cefparser needs to be improved to throw exceptions properly on malformed files
+            assert hasattr(cefparser, "parse_filename")
+            self.show_status("Invalid or corrupt theme file")
+            return
+        else:
+            if "Theme Profiles" not in theme:
+                self.show_status("Invalid or corrupt theme file")
+                return
         theme_colors = self.theme.theme_colors
         for profile, values in theme["Theme Profiles"].iteritems():
             bad_keys = []
@@ -161,7 +170,6 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
         self.theme.update_theme_users()
         self.clear_status()
         self.file_selector.delete()
-
 
     def delete_color_options(self):
         self.delete()

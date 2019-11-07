@@ -110,7 +110,7 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 
     def save_color_options(self):
         self.create("pride.gui.programs.fileexplorer.File_Saver",
-                    pack_mode="fill", data=self.serialize_color_options())
+                    pack_mode="top", data=self.serialize_color_options())
 
     def serialize_color_options(self):
         self.show_status("Serializing color options...")
@@ -137,7 +137,8 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                                          pack_mode="top", callback=self._load_color_options)
 
     def _load_color_options(self, filename):
-        self.show_status("Importing color options from {}...".format(filename))
+        self.show_status("Importing color options from {}...".format(filename),
+                         immediately=True)
         try:
             theme = cefparser.parse_filename(filename)
         except Exception: # cefparser needs to be improved to throw exceptions properly on malformed files

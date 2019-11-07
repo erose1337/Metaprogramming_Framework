@@ -558,9 +558,11 @@ class _Window_Object(Organized_Object):
 
     def delete(self):
         assert not self.deleted, self
+        del self._draw_operations[:]
         self.sdl_window.dirty_layers.add(self.z)
         self._clear_tip_bar_text()
         self.theme.delete()
+        self.theme = None
         if self.parent.reference != self.sdl_window:
             self.pack()
         self.sdl_window.remove_window_object(self)
@@ -605,8 +607,8 @@ class _Window_Object(Organized_Object):
         pprint.pprint(self.objects)
         self._children.remove(self.theme)
 
-    def show_status(self, text):
-        self.sdl_window.set_tip_bar_text(text)
+    def show_status(self, text, immediately=False):
+        self.sdl_window.set_tip_bar_text(text, immediately)
 
     def clear_status(self):
         self.sdl_window.clear_tip_bar_text()

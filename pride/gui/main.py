@@ -24,7 +24,7 @@ class User(pride.components.user.User):
 
 class Gui(pride.gui.gui.Application):
 
-    defaults = {"lockscreen_type" : "pride.gui.widgets.lockscreen.Login_Screen",
+    defaults = {"lockscreen_type" : "pride.gui.programs.lockscreen.Login_Screen",
                 "startup_components" : tuple(), "startup_programs" : tuple(),
                 "theme_file" : os.path.join(pride.site_config.GUI_DIRECTORY,
                                             "resources", "themes",

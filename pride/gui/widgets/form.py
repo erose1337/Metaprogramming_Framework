@@ -139,6 +139,11 @@ class Field(pride.gui.gui.Container):
         assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
         raise NotImplementedError()
 
+    def delete(self):
+        del self.entry_kwargs
+        del self.target_object
+        super(Field, self).delete()
+
 
 class Text_Entry(Entry):
 
@@ -260,7 +265,7 @@ class Integer_Entry(Text_Entry):
 
 class Status_Light(pride.gui.gui.Container):
 
-    defaults = {"pack_mode" : "top", "h_range" : (0, .03),
+    defaults = {"pack_mode" : "top",
                 "theme_profile" : "placeholder", "clickable" : False}
 
     def enable_indicator(self):
@@ -273,6 +278,7 @@ class Status_Light(pride.gui.gui.Container):
 class Toggle_Entry(Entry):
 
     defaults = {"status_light_type" : Status_Light}
+    mutable_defaults = {"indicator_kwargs" : dict}
     autoreferences = ("status_light", )
 
     def __init__(self, **kwargs):
@@ -280,7 +286,7 @@ class Toggle_Entry(Entry):
         self.create_subcomponents()
 
     def create_subcomponents(self):
-        self.status_light = self.create(self.status_light_type)
+        self.status_light = self.create(self.status_light_type, **self.indicator_kwargs)
         if self.parent_field.value:
             self.status_light.enable_indicator()
         else:
@@ -346,6 +352,10 @@ class Dropdown_Entry(Entry):
         self.entries = [self.create(self.entry_type, value=value) for value in self.parent_field.values]
         self.hide_menu(self.entries[0], _initialized_already=False)
         self._initialized_already = True
+
+    def delete(self):
+        del self.entries[:]
+        super(Dropdown_Entry, self).delete()
 
     def left_click(self, mouse):
         super(Dropdown_Entry, self).left_click(mouse)
@@ -607,6 +617,7 @@ class Slider_Entry(Entry):
         parent_field.value = max(parent_field.value - 1, parent_field.minimum)
         parent_field.update_position_from_value()
 
+
 class Slider_Field(Field):
 
     defaults = {"entry_type" : Slider_Entry}
@@ -671,13 +682,17 @@ class Callable_Field(Field):
     mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : True},
                         "kwargs" : dict}
 
+    def delete(self):
+        del self.kwargs
+        super(Callable_Field, self).delete()
+
 
 class Scrollable_Window(pride.gui.gui.Window):
 
     defaults = {"vertical_slider_position" : "right",
                 "horizontal_slider_position" : "bottom"}
     predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
-    autoreferences = ("vertical_slider", "horizontal_slider")
+    autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
 
     def _get_y_scroll_value(self):
         return self._y_scroll_value
@@ -723,10 +738,11 @@ class Scrollable_Window(pride.gui.gui.Window):
 
 class Form(Scrollable_Window):
 
-    defaults = {"fields" : tuple(), "spinbox_type" : Spinbox,
-                "text_field_type" : Text_Field, "toggle_type" : Toggle,
-                "dropdown_type" : Dropdown_Field, "row_h_range" : tuple(),
-                "slider_type" : Slider_Field, "callable_type" : Callable_Field,
+    _ = "pride.gui.widgets.form."
+    defaults = {"fields" : tuple(), "spinbox_type" : _ + "Spinbox",
+                "text_field_type" : _ + "Text_Field", "toggle_type" : _ + "Toggle",
+                "dropdown_type" : _ + "Dropdown_Field", "row_h_range" : tuple(),
+                "slider_type" : _ + "Slider_Field", "callable_type" : _  + "Callable_Field",
                 "target_object" : None, "balancer" : None, "_page_number" : 0,
                 "include_balance_display" : True, "max_rows" : 4,
                 "form_name" : '', "include_delete_button" : False}
@@ -749,13 +765,12 @@ class Form(Scrollable_Window):
                 field.append(("handle_delete_button", {"button_text" : 'x',
                                                        "auto_create_id" : False,
                                                        "pack_mode" : "right"}))
-            
+
             self.create(Form, h_range=(0, .05), pack_mode="top", fields=[field],
-                        form_name='', include_delete_button=False, parent_form=self,
-                        target_object=self)
+                        form_name='', include_delete_button=False, target_object=self)
 
         if self.target_object is None:
-            self.target_object = self
+            self.target_object = self # can't use autoreferences because non-Base objects don't have a .reference attribute
 
         balancer = self.balancer
         if balancer is not None and self.include_balance_display:
@@ -769,19 +784,23 @@ class Form(Scrollable_Window):
         max_rows = self.max_rows
         rows = self.rows
         for row_number, row in enumerate(self.fields):
+            assert row
             container = window.create("pride.gui.gui.Container", pack_mode="top",
                                       h_range=row_h_range)
             rows.append(container)
             for item in row:
                 name, entries = self._unpack(item, empty_entries)
                 field_type = self.determine_field_type(target_object, name, entries)
-
+                entries.setdefault("target_object", target_object)
                 field = container.create(field_type, name=name, parent_form=self,
-                                         target_object=target_object, **entries)
+                                         **entries)
+                # target_object must be removed from entries (and consequently from fields)
+                # continued presence in .fields is a hanging reference that prevents proper deletion
+                del entries["target_object"]
                 _fields_dict[name] = field
             if row_number >= max_rows:
                 container.hide()
-
+        #del self.fields
         self.vertical_slider.maximum = max(0, len(rows) - max_rows)
 
     def handle_y_scroll(self, old_value, new_value):
@@ -853,6 +872,9 @@ class Form(Scrollable_Window):
 
     def delete(self):
         del self.target_object
+        del self.rows
+        del self.fields
+        del self._fields_dict
         super(Form, self).delete()
 
     def update_text(self, field_name):

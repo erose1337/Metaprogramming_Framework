@@ -21,10 +21,6 @@ class Prompt(pride.gui.widgets.form.Form):
                 "include_delete_button" : True
                 }
 
-    def __init__(self, **kwargs):
-        super(Prompt, self).__init__(**kwargs)
-        assert self.include_delete_button
-
     def handle_yes(self):
         raise NotImplementedError()
 
@@ -38,27 +34,28 @@ class Overwrite_Prompt(Prompt):
                 "theme_profile" : "alert"}
 
     def handle_yes(self):
-        self.parent_application.save_as(overwrite=True)
-        assert self.deleted
+        self.parent.save_data(overwrite=True)
+        assert not self.deleted
+        self.delete()
 
     def handle_no(self):
-        self.parent_application.delete()
+        assert not self.deleted
+        self.delete()
 
 
 class File_Saver(pride.gui.widgets.form.Form):
 
-    defaults = {"filename" : '', "data" : '', "autodelete" : True,
-                "fields" : [["filename", ("save_data", {"button_text" : "save"})]],
+    defaults = {"filename" : '', "data" : '', "autodelete" : False,
+                "fields" : (("filename", ("save_data", {"button_text" : "save"})), ),
                 "h_range" : (0, .25), "include_delete_button" : True,
                 "form_name" : "File saver"}
+    autoreferences = ("prompt", )
 
     def save_data(self, overwrite=False):
-        if os.path.exists(self.filename) and self.prompt is None:
-            self.prompt = self.application_window.create(Overwrite_Prompt)
+        if (not overwrite) and os.path.exists(self.filename) and self.prompt is None:
+            self.prompt = self.create(Overwrite_Prompt)
 
         if self.prompt is None or overwrite:
-            if overwrite:
-                self.prompt.delete()
             size = len(self.data)
             units = ["bytes", "KB", "MB", "GB", "TB"]
             index = 0
@@ -72,7 +69,7 @@ class File_Saver(pride.gui.widgets.form.Form):
             except IOError:
                 if os.path.exists(self.filename):
                     raise
-                self.show_status("Unable to write to file; Ensure all directories exist and are spelled correctly and try again.")
+                self.show_status("Unable to write to file {}; Ensure all directories exist and are spelled correctly and try again.".format(self.filename))
             else:
                 if self.autodelete:
                     self.delete()
@@ -160,7 +157,6 @@ class File_Selector(Directory_Viewer):
         self.callback(filename)
 
 
-
 def directory_explorer_test():
     import pride.gui
     window = pride.objects[pride.gui.enable()]
@@ -174,5 +170,5 @@ def file_saver_test():
                         startup_programs=(File_Saver, ))
 
 if __name__ == "__main__":
-    directory_explorer_test()
-    #file_saver_test()
+    #directory_explorer_test()
+    file_saver_test()

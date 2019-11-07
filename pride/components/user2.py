@@ -65,30 +65,33 @@ class User(pride.components.base.Base):
                 "username" : '', "private_key" : None, "public_key" : None, "secret" : None,
                 "master_encryption_key" : None, "master_mac_key" : None,
                 "data_encryption_key" : None, "data_mac_key" : None,
-                "public_key" : None, "private_key" : None, "password" : None,
+                "public_key" : None, "private_key" : None, "password" : '',
                 "logged_in" : False,
 
                 "storage_reference" : "/Python/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password for '{}': ",
-                "auto_register" : False, "auto_login" : True, "prompt_flag" : True}
+                "auto_register" : False, "auto_login" : True, "prompt_flag" : True,
+                "prompt_for_creds" : True}
 
     parser_args = ("username", )
     mutable_defaults = {"login_token" : dict}
-    predefaults = {"_password" : None}
+    predefaults = {"_password" : ''}
     verbosity = {"login_success" : "vv", "registering" : "vv"}
 
 
     def _get_password(self):
-        if self._password is None:
-            self._password = getpass.getpass(self.password_prompt.format(self.reference, self.username))
+        if self.prompt_for_creds:
+            if not self._password:
+                self._password = getpass.getpass(self.password_prompt.format(self.reference, self.username))
         return self._password
     def _set_password(self, value):
         self._password = value
     password = property(_get_password, _set_password)
 
     def _get_username(self):
-        while self._username in (None, ''):
-            self._username = raw_input("{}: Please provide username: ".format(self.reference))
+        if self.prompt_for_creds:
+            while not self._username:
+                self._username = raw_input("{}: Please provide username: ".format(self.reference))
         return self._username
     def _set_username(self, value):
         self._username = value
@@ -106,15 +109,14 @@ class User(pride.components.base.Base):
             try:
                 cryptogram = self.find_identity(self.username)
             except ValueError:
-                self.username = self.password = None
+                self.username = self.password = ''
                 continue
             else:
                 try:
                     private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)
                 except pride.functions.security.InvalidTag:
                     self.alert("Invalid password", level=0)
-                    self.password = None
-                    self.username = None
+                    self.password = self.username = ''
                 else:
                     break
 
@@ -134,13 +136,13 @@ class User(pride.components.base.Base):
         try:
             cryptogram = self.find_identity(self.username)
         except ValueError:
-            self.username = self.password = None
+            self.username = self.password = ''
             return False
         else:
             try:
                 private_key, public_key, secret = decrypt_identity(cryptogram, self.master_encryption_key, self.master_mac_key)
             except pride.functions.security.InvalidTag:
-                self.password = self.username = None
+                self.password = self.username = ''
                 return False
 
         self.private_key = pride.components.asymmetric.EC_Private_Key.deserialize(private_key)

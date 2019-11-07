@@ -166,6 +166,7 @@ class SDL_Window(SDL_Component):
         return texture
 
     def invalidate_object(self, instance):
+        assert not instance.deleted
         self._schedule_run()
         self.redraw_objects.append(instance)
 
@@ -348,10 +349,11 @@ class SDL_Window(SDL_Component):
         objects["/Finalizer"].remove_callback((self.reference, "delete"), 0)
         pride.Instruction.purge(self.reference)
 
-    def set_tip_bar_text(self, text):
+    def set_tip_bar_text(self, text, immediately=False):
         self.tip_bar.text = text
-        self.run_instruction.unschedule()
-        self.run()
+        if immediately:
+            self.run_instruction.unschedule()
+            self.run()
 
     def clear_tip_bar_text(self):
         if not self.tip_bar.deleted:
@@ -426,7 +428,7 @@ class Window_Handler(pride.components.base.Base):
             pass
 
     def handle_focus_gained(self, event):
-        pass 
+        pass
 
     def handle_focus_lost(self, event):
         try:
@@ -663,13 +665,15 @@ class SDL_User_Input(pride.components.base.Base):
                 if under_mouse.reference != new_under_mouse:
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse
-                    pride.objects[new_under_mouse].on_hover()
+                    if new_under_mouse is not None:
+                        pride.objects[new_under_mouse].on_hover()
             else:
                 if not pride.gui.point_in_area(under_mouse.area, position):
                     new_under_mouse = self._get_object_under_mouse(position)
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse
-                    pride.objects[new_under_mouse].on_hover()
+                    if new_under_mouse is not None:
+                        pride.objects[new_under_mouse].on_hover()
                 elif self.always_on_top:
                     for item in self.always_on_top:
                         if item is under_mouse:
@@ -678,7 +682,8 @@ class SDL_User_Input(pride.components.base.Base):
                             new_under_mouse = item
                             under_mouse.hover_ends()
                             self.under_mouse = new_under_mouse.reference
-                            new_under_mouse.on_hover()
+                            if new_under_mouse is not None:
+                                new_under_mouse.on_hover()
                             break
 
     def handle_keydown(self, event):

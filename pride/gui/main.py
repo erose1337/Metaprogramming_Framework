@@ -13,7 +13,7 @@ except ImportError:
 
 class User(pride.components.user.User):
 
-    defaults = {"auto_login" : False, "auto_register" : True}
+    defaults = {"auto_login" : False, "auto_register" : False}
 
     def handle_not_registered(self, identifier):
         if self.auto_register:

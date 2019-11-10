@@ -275,7 +275,7 @@ class _Window_Object(Organized_Object):
                 "text" : '', "scroll_bars_enabled" : False,
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None,
                 "theme_type" : "pride.gui.themes.Minimal_Theme",
-                "_selected" : False,
+                "_selected" : False, "confidential" : False,
                 "_cached" : False, "tip_bar_text" : '',
                 "theme_profile" : "default", "clickable" : True}
 
@@ -568,10 +568,10 @@ class _Window_Object(Organized_Object):
         self.sdl_window.remove_window_object(self)
         super(_Window_Object, self).delete()
 
-    def deselect(self, mouse, next_active_object):
+    def deselect(self, next_active_object):
         self._selected = False
 
-    def select(self, mouse):
+    def select(self):
         self._selected = True
 
     def text_entry(self, text):

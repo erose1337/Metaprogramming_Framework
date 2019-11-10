@@ -64,6 +64,7 @@ class Minimal_Theme(Theme):
 
     theme_colors = copy.deepcopy(Theme.theme_colors)
     _cache = dict() # for conspiring with gui.Animated_Object. update_theme_users should flush the cache
+    _replacement_string = '*' * 10
 
     @classmethod
     def update_theme_users(cls):
@@ -102,11 +103,14 @@ class Minimal_Theme(Theme):
             assert self.wrap_text
             assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
             text = self.text
+            # note that it is the responsibility of the theme to control whether or not passwords are displayed
+            if text and self.wrapped_object.confidential:
+                text = self._replacement_string
             if self.draw_cursor:
                 text += self.cursor_symbol
             self.draw("text", area, text, width=w if self.wrap_text else None,
-                    bg_color=self.text_background_color, color=self.text_color,
-                    center_text=self.center_text)
+                      bg_color=self.text_background_color, color=self.text_color,
+                      center_text=self.center_text)
 
 
 class Perspective_Theme(Theme):

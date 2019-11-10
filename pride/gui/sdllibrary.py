@@ -196,7 +196,7 @@ class SDL_Window(SDL_Component):
             self.user_input.always_on_top.remove(window_object)
         except ValueError:
             pass
-        if self.user_input.under_mouse == window_object.reference:
+        if self.user_input.under_mouse == window_object:
             self.user_input.under_mouse = None
         try:
             self.redraw_objects.remove(window_object)
@@ -445,11 +445,10 @@ class Window_Handler(pride.components.base.Base):
 
 class SDL_User_Input(pride.components.base.Base):
 
-    defaults = {"event_verbosity" : 0, "_ignore_click" : False, "active_item" : None,
-                "under_mouse" : None}
+    defaults = {"event_verbosity" : 0, "_ignore_click" : False}
     mutable_defaults = {"_layer_tracker" : collections.OrderedDict,
                         "always_on_top" : list}
-
+    autoreferences = ("active_item", "under_mouse")
     verbosity = {"handle_text_input" : "vvv"}
 
     def _get_active_item(self):
@@ -557,7 +556,7 @@ class SDL_User_Input(pride.components.base.Base):
         self.alert("Handling textinput {} {} {}".format(text, cursor, selection_length),
                    level=self.verbosity["handle_text_input"])
         if self.active_item:
-            instance = pride.objects[self.active_item]
+            instance = self.active_item
             instance.text_entry(text)
 
     def handle_unhandled_event(self, event):
@@ -572,13 +571,13 @@ class SDL_User_Input(pride.components.base.Base):
         mouse = event.button
         self.alert("mouse button down at {}".format((mouse.x, mouse.y)), level='v')
         active_item = self.under_mouse
-        self.select_active_item(active_item, mouse)
+        self.select_active_item(active_item)
         if active_item:
             if self._ignore_click:
                 self._ignore_click = False
             else:
                 try:
-                    objects[active_item].press(mouse)
+                    active_item.press(mouse)
                 except KeyError:
                     if active_item in objects:
                         raise
@@ -587,25 +586,18 @@ class SDL_User_Input(pride.components.base.Base):
                         #           level=self.verbosity["active_item_deleted"])
                         self.active_item = None
 
-    def select_active_item(self, active_item, mouse):
+    def select_active_item(self, active_item):
         objects = pride.objects
 
         # deselect old active item
         old_active_item = self.active_item
-        if old_active_item and objects[old_active_item]._selected: # item can deselect itself
-            try:
-                objects[old_active_item].deselect(mouse, active_item)
-            except KeyError:
-                if old_active_item in objects:
-                    raise
+        if old_active_item and old_active_item._selected: # item can deselect itself
+            old_active_item.deselect(active_item)
 
         # select new active item
         self.active_item = active_item
-        try:
-            objects[active_item].select(mouse)
-        except KeyError:
-            if active_item in objects:
-                raise
+        if active_item:
+            active_item.select()
 
     def _get_object_under_mouse(self, mouse_position):
         # find the top-most item such that the mouse position is within its area
@@ -613,15 +605,15 @@ class SDL_User_Input(pride.components.base.Base):
         active_item = None
         for item in self.always_on_top:
             if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
-                active_item = item.reference
+                active_item = item
                 break
         else:
             for layer_number, layer in reversed(self._layer_tracker.items()):
                 for item in layer:
                     #assert item in objects
                     #assert not pride.objects[item].hidden
-                    _item = objects[item]
-                    if _item.clickable and pride.gui.point_in_area(_item.area, mouse_position):
+                    item = objects[item]
+                    if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
                         active_item = item
                         break
                 if active_item:
@@ -631,7 +623,7 @@ class SDL_User_Input(pride.components.base.Base):
     def handle_mousebuttonup(self, event):
         active_item = self.active_item
         if active_item:
-            instance = pride.objects[active_item]
+            instance = active_item
             if instance.held:
                 area = instance.area
                 mouse = event.button
@@ -642,38 +634,34 @@ class SDL_User_Input(pride.components.base.Base):
     def handle_mousewheel(self, event):
         if self.active_item:
             wheel = event.wheel
-            pride.objects[self.active_item].mousewheel(wheel.x, wheel.y)
+            self.active_item.mousewheel(wheel.x, wheel.y)
 
     def handle_mousemotion(self, event):
         motion = event.motion
         mouse_x, mouse_y = position = (motion.x, motion.y)
         if self.active_item:
             motion = event.motion
-            pride.objects[self.active_item].mousemotion(mouse_x, mouse_y,
-                                                        motion.xrel, motion.yrel)
+            self.active_item.mousemotion(mouse_x, mouse_y,
+                                         motion.xrel, motion.yrel)
         if not self.under_mouse:
             self.under_mouse = under_mouse = self._get_object_under_mouse(position)
-            try:
-                pride.objects[under_mouse].on_hover()
-            except KeyError:
-                if under_mouse is not None:
-                    raise
+            under_mouse.on_hover()
         else:
-            under_mouse = pride.objects[self.under_mouse]
+            under_mouse = self.under_mouse
             if under_mouse.children:
                 new_under_mouse = self._get_object_under_mouse(position)
-                if under_mouse.reference != new_under_mouse:
+                if under_mouse != new_under_mouse:
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse
                     if new_under_mouse is not None:
-                        pride.objects[new_under_mouse].on_hover()
+                        new_under_mouse.on_hover()
             else:
                 if not pride.gui.point_in_area(under_mouse.area, position):
                     new_under_mouse = self._get_object_under_mouse(position)
                     under_mouse.hover_ends()
                     self.under_mouse = new_under_mouse
                     if new_under_mouse is not None:
-                        pride.objects[new_under_mouse].on_hover()
+                        new_under_mouse.on_hover()
                 elif self.always_on_top:
                     for item in self.always_on_top:
                         if item is under_mouse:
@@ -681,20 +669,16 @@ class SDL_User_Input(pride.components.base.Base):
                         if item.clickable and pride.gui.point_in_area(item.area, position):
                             new_under_mouse = item
                             under_mouse.hover_ends()
-                            self.under_mouse = new_under_mouse.reference
+                            self.under_mouse = new_under_mouse
                             if new_under_mouse is not None:
                                 new_under_mouse.on_hover()
                             break
 
     def handle_keydown(self, event):
-        try:
-            instance = pride.objects[self.active_item]
-        except KeyError:
-            if self.active_item is not None:
-                self.alert("No instance of '{}' to handle keystrokes".format(self.active_item), level='v')
-            else:
-                self.alert("Active item is None; unable to handle keystrokes", level='v')
+        if self.active_item is None:
+            self.alert("Active item is None; unable to handle keystrokes", level='v')
             return
+        instance = self.active_item
 
         key_value = event.key.keysym.sym
         modifier = event.key.keysym.mod

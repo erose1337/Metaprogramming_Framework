@@ -22,7 +22,7 @@ class Balancer(object):
 
 class Entry(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : "right"}
+    defaults = {"pack_mode" : "right", "confidential" : False}
     predefaults = {"parent_field" : None, "text_initialized" : False}
     autoreferences = ("parent_field", )
 
@@ -31,7 +31,6 @@ class Entry(pride.gui.gui.Button):
     def _set_text(self, value):
         if self.text_initialized:
             if self.allow_text_edit:
-                # apparently there's no need to set actual .text attribute on the entry
                 self.parent_field.value = value
             else:
                 parent_field = self.parent_field
@@ -150,8 +149,8 @@ class Text_Entry(Entry):
     defaults = {"h" : 16, "allow_text_edit" : False, "cursor_blink_rate" : 13,
                 "cursor_symbol" : '_'}
 
-    def select(self, mouse):
-        super(Text_Entry, self).select(mouse)
+    def select(self):
+        super(Text_Entry, self).select()
         if self.parent_field.editable:
             self.alert("Turning text input on", level='vv')
             self.allow_text_edit = True
@@ -198,8 +197,8 @@ class Text_Entry(Entry):
             except (KeyError, ValueError):
                 pass
 
-    def deselect(self, mouse, next_active_object):
-        super(Text_Entry, self).deselect(mouse, next_active_object)
+    def deselect(self, next_active_object):
+        super(Text_Entry, self).deselect(next_active_object)
         self.alert("Disabling text input", level='vv')
         self.allow_text_edit = False
         sdl2.SDL_StopTextInput()
@@ -328,8 +327,8 @@ class _Dropdown_Entry(Entry):
         super(_Dropdown_Entry, self).left_click(mouse)
         self.parent.toggle_menu(self)
 
-    def deselect(self, mouse, next_active_object):
-        self.parent.deselect(mouse, next_active_object)
+    def deselect(self, next_active_object):
+        self.parent.deselect(next_active_object)
 
 
 class Dropdown_Entry(Entry):
@@ -361,7 +360,7 @@ class Dropdown_Entry(Entry):
         super(Dropdown_Entry, self).left_click(mouse)
         self.show_menu()
 
-    def deselect(self, mouse, next_active_object):
+    def deselect(self, next_active_object):
         if pride.objects[next_active_object] not in self.entries:
             if self.menu_open:
                 self.hide_menu(self.selected_entry)
@@ -579,6 +578,7 @@ class Slider_Entry(Entry):
         if orientation == "stacked":
             pack_mode = "top"
             kwargs["h_range"] = (0, .05)
+            self.include_minmax_buttons = False
         else:
             pack_mode = "left"
             kwargs["w_range"] = (0, .08)
@@ -746,28 +746,21 @@ class Form(Scrollable_Window):
                 "target_object" : None, "balancer" : None, "_page_number" : 0,
                 "include_balance_display" : True, "max_rows" : 4,
                 "form_name" : '', "include_delete_button" : False}
-    mutable_defaults = {"_fields_dict" : dict, "rows" : list}
+    mutable_defaults = {"_fields_dict" : collections.OrderedDict, "rows" : list}
     autoreferences = ("displayer", )
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
         self.create_subcomponents()
 
+    def handle_tab(self):
+        self._selected_field_index += 1
+        self._selected_field_index %= sum(len(row) for row in self.rows)
+        self.sdl_window.user_input.select_active_item(self._fields_dict.values()[self._selected_field_index])
+
     def create_subcomponents(self):
         if self.form_name or self.include_delete_button:
-            # form_name and include_delete_button being Falsey prevents further recursion
-            field = []
-            if self.form_name:
-                field.append(("form_name", {"editable" : False,
-                                            "auto_create_id" : False}))
-            if self.include_delete_button:
-                assert self.include_delete_button
-                field.append(("handle_delete_button", {"button_text" : 'x',
-                                                       "auto_create_id" : False,
-                                                       "pack_mode" : "right"}))
-
-            self.create(Form, h_range=(0, .05), pack_mode="top", fields=[field],
-                        form_name='', include_delete_button=False, target_object=self)
+            self.create_top_display()
 
         if self.target_object is None:
             self.target_object = self # can't use autoreferences because non-Base objects don't have a .reference attribute
@@ -784,7 +777,7 @@ class Form(Scrollable_Window):
         max_rows = self.max_rows
         rows = self.rows
         for row_number, row in enumerate(self.fields):
-            assert row
+            #assert row
             container = window.create("pride.gui.gui.Container", pack_mode="top",
                                       h_range=row_h_range)
             rows.append(container)
@@ -802,6 +795,26 @@ class Form(Scrollable_Window):
                 container.hide()
         #del self.fields
         self.vertical_slider.maximum = max(0, len(rows) - max_rows)
+
+    def create_top_display(self):
+        assert self.form_name or self.include_delete_button
+        field = []
+        if self.form_name:
+            field.append(("form_name", {"editable" : False,
+                                        "auto_create_id" : False,
+                                        "entry_kwargs" : {"theme_profile" : "default",
+                                                          "tip_bar_text" : self.tip_bar_text}
+                                        }
+                         ))
+        if self.include_delete_button:
+            assert self.include_delete_button
+            field.append(("handle_delete_button", {"button_text" : 'x',
+                                                   "auto_create_id" : False,
+                                                   "pack_mode" : "right"}))
+
+        # form_name and include_delete_button being Falsey prevents further recursion
+        self.create(Form, h_range=(0, .05), pack_mode="top", fields=[field],
+                    form_name='', include_delete_button=False, target_object=self)
 
     def handle_y_scroll(self, old_value, new_value):
         super(Form, self).handle_y_scroll(old_value, new_value)

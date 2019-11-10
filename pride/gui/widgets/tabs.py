@@ -86,22 +86,22 @@ class Tab_Button(pride.gui.gui.Button):
             self.window = self.parent.parent.initialize_window(self.window_type)
         self.parent.parent.select_tab(self)
 
-    def select(self, mouse):
-        super(Tab_Button, self).select(mouse)
+    def select(self):
+        super(Tab_Button, self).select()
         if self.editable:
             self.alert("Turning text input on", level='vv')
             self.allow_text_edit = True
             sdl2.SDL_StartTextInput()
 
-    def deselect(self, mouse, next_active_object):
-        super(Tab_Button, self).deselect(mouse, next_active_object)
+    def deselect(self, next_active_object):
+        super(Tab_Button, self).deselect(next_active_object)
         if self.editable:
             self.alert("Disabling text input", level='vv')
             self.allow_text_edit = False
             sdl2.SDL_StopTextInput()
 
     def handle_return(self):
-        self.deselect(None, None)
+        self.deselect(None)
 
     @classmethod
     def from_info(cls, **kwargs):

@@ -645,7 +645,8 @@ class SDL_User_Input(pride.components.base.Base):
                                          motion.xrel, motion.yrel)
         if not self.under_mouse:
             self.under_mouse = under_mouse = self._get_object_under_mouse(position)
-            under_mouse.on_hover()
+            if under_mouse is not None:
+                under_mouse.on_hover()
         else:
             under_mouse = self.under_mouse
             if under_mouse.children:

@@ -4,6 +4,12 @@ import pride.gui.gui
 
 import sdl2
 
+# key codes for arrows, used for hotkeys
+UP_ARROW = 1073741906
+DOWN_ARROW = 1073741905
+RIGHT_ARROW = 1073741903
+LEFT_ARROW = 1073741904
+
 class Balancer(object):
 
     def __init__(self, balance, name):
@@ -284,6 +290,9 @@ class Toggle_Entry(Entry):
         super(Toggle_Entry, self).__init__(**kwargs)
         self.create_subcomponents()
 
+    def handle_return(self):
+        self._toggle()
+
     def create_subcomponents(self):
         self.status_light = self.create(self.status_light_type, **self.indicator_kwargs)
         if self.parent_field.value:
@@ -293,6 +302,9 @@ class Toggle_Entry(Entry):
 
     def left_click(self, mouse):
         super(Toggle_Entry, self).left_click(mouse)
+        self._toggle()
+
+    def _toggle(self):
         parent_field = self.parent_field
         parent_field.value = not parent_field.value
         if parent_field.value:
@@ -328,6 +340,7 @@ class _Dropdown_Entry(Entry):
         self.parent.toggle_menu(self)
 
     def deselect(self, next_active_object):
+        super(_Dropdown_Entry, self).deselect(next_active_object)
         self.parent.deselect(next_active_object)
 
 
@@ -335,6 +348,8 @@ class Dropdown_Entry(Entry):
 
     defaults = {"pack_mode" : "top", "menu_open" : False,
                 "entry_type" : _Dropdown_Entry, "_initialized_already" : False}
+    hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
+               (DOWN_ARROW, None) : "handle_down_arrow"}
 
     def _get_text(self):
         return ''
@@ -361,7 +376,8 @@ class Dropdown_Entry(Entry):
         self.show_menu()
 
     def deselect(self, next_active_object):
-        if pride.objects[next_active_object] not in self.entries:
+        super(Dropdown_Entry, self).deselect(next_active_object)
+        if next_active_object not in self.entries:
             if self.menu_open:
                 self.hide_menu(self.selected_entry)
 
@@ -404,6 +420,24 @@ class Dropdown_Entry(Entry):
         self.selected_entry = selected_entry
         assert not selected_entry.hidden
 
+    def handle_up_arrow(self):
+        entries = self.entries
+        for index, entry in enumerate(entries):
+            if entry is self.selected_entry:
+                entry.hide()
+                index = min(index + 1, len(entries) - 1)
+                self.hide_menu(entries[index])
+                break
+
+    def handle_down_arrow(self):
+        entries = self.entries
+        for index, entry in enumerate(entries):
+            if entry is self.selected_entry:
+                entry.hide()
+                index = max(index - 1, 0)
+                self.hide_menu(entries[index])
+                break
+
 
 class Text_Field(Field):
 
@@ -423,8 +457,9 @@ class Text_Display(Text_Field):
 
 class Spinbox(Field):
 
-    defaults = {"entry_type" : Integer_Entry}
+    defaults = {"entry_type" : Integer_Entry, "include_incdec_buttons" : False}
     mutable_defaults = {"entry_kwargs" : lambda: {"pack_mode" : "left"}}
+    allowed_values = {"include_incdec_buttons" : (False, )} # not actually part of the interface
 
     def create_entry(self, pack_mode):
         container = self.create(pride.gui.gui.Container, pack_mode=pack_mode)
@@ -434,8 +469,11 @@ class Spinbox(Field):
         if self.editable:
             subcontainer = container.create(pride.gui.gui.Container, pack_mode="left",
                                             w_range=(0, .05))
-            subcontainer.create(Increment_Button, target_entry=entry, pack_mode="top")
-            subcontainer.create(Decrement_Button, target_entry=entry, pack_mode="top")
+            kwargs = {"target_entry" : entry, "pack_mode" : "top"}
+            self.inc_button = subcontainer.create(Increment_Button, **kwargs)
+            assert kwargs == {"target_entry" : entry, "pack_mode" : "top"}
+            self.dec_button = subcontainer.create(Decrement_Button, **kwargs)
+            self.include_incdec_buttons = True # this is used by Form tab selection feature
 
     def handle_value_changed(self, old_value, new_value):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
@@ -563,11 +601,32 @@ class Slider_Entry(Entry):
 
     defaults = {"orientation" : "side by side", "include_incdec_buttons" : True,
                 "include_minmax_buttons" : True}
-    autoreferences = ("left", "continuum", "right")
+    autoreferences = ("left", "continuum", "right", "max_button", "min_button",
+                      "inc_button", "dec_button")
+    hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
+               (DOWN_ARROW, None) : "handle_down_arrow",
+               (LEFT_ARROW, None) : "handle_left_arrow",
+               (RIGHT_ARROW, None) : "handle_right_arrow"}
 
     def __init__(self, **kwargs):
         super(Slider_Entry, self).__init__(**kwargs)
         self.create_subcomponents()
+
+    def handle_left_arrow(self):
+        if self.orientation == "side by side":
+            self.decrement_value()
+
+    def handle_right_arrow(self):
+        if self.orientation == "side by side":
+            self.increment_value()
+
+    def handle_up_arrow(self):
+        if self.orientation == "stacked":
+            self.decrement_value()
+
+    def handle_down_arrow(self):
+        if self.orientation == "stacked":
+            self.increment_value()
 
     def create_subcomponents(self):
         parent_field = self.parent_field
@@ -588,24 +647,24 @@ class Slider_Entry(Entry):
         left = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
         self.left = left
         if include_minmax:
-            left.create(Endcap, pack_mode=pack_mode, name="minimum",
-                        target_object=parent_field, **kwargs)
+            self.min_button = left.create(Endcap, pack_mode=pack_mode, name="minimum",
+                                          target_object=parent_field, **kwargs)
         if include_incdec:
-            left.create(Callable_Field, name="decrement_value", pack_mode=pack_mode,
-                        parent_field=parent_field, target_object=self,
-                        button_text='-', **kwargs)
+            self.dec_button = left.create(Callable_Field, name="decrement_value",
+                                          pack_mode=pack_mode, parent_field=parent_field,
+                                          target_object=self, button_text='-', **kwargs)
         self.continuum = self.create(Continuum, pack_mode=pack_mode,
                                      orientation=orientation, parent_entry=self,
                                      parent_field=parent_field)
         right = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
         self.right = right
         if include_incdec:
-            self.right.create(Callable_Field, name="increment_value", pack_mode=pack_mode,
-                        parent_field=parent_field, target_object=self,
-                        button_text='+', **kwargs)
+            self.inc_button = self.right.create(Callable_Field, name="increment_value",
+                                                pack_mode=pack_mode, parent_field=parent_field,
+                                                target_object=self, button_text='+', **kwargs)
         if include_minmax:
-            right.create(Endcap, target_object=parent_field, pack_mode=pack_mode,
-                        name="maximum", **kwargs)
+            self.max_button = right.create(Endcap, target_object=parent_field,
+                                           pack_mode=pack_mode, name="maximum", **kwargs)
 
     def increment_value(self):
         parent_field = self.parent_field
@@ -669,6 +728,10 @@ class Callable_Entry(Entry):
         if self.parent_field is not None:
             self.parent_field.w_range = self.w_range
     text = property(_get_text, _set_text)
+
+    def handle_return(self):
+        parent_field = self.parent_field
+        parent_field.value(*parent_field.args, **parent_field.kwargs)
 
     def left_click(self, mouse):
         parent_field = self.parent_field
@@ -743,20 +806,54 @@ class Form(Scrollable_Window):
                 "text_field_type" : _ + "Text_Field", "toggle_type" : _ + "Toggle",
                 "dropdown_type" : _ + "Dropdown_Field", "row_h_range" : tuple(),
                 "slider_type" : _ + "Slider_Field", "callable_type" : _  + "Callable_Field",
-                "target_object" : None, "balancer" : None, "_page_number" : 0,
+                "target_object" : None, "balancer" : None,
                 "include_balance_display" : True, "max_rows" : 4,
                 "form_name" : '', "include_delete_button" : False}
     mutable_defaults = {"_fields_dict" : collections.OrderedDict, "rows" : list}
     autoreferences = ("displayer", )
+    hotkeys = {("\t", None) : "handle_tab"}
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
         self.create_subcomponents()
 
     def handle_tab(self):
-        self._selected_field_index += 1
-        self._selected_field_index %= sum(len(row) for row in self.rows)
-        self.sdl_window.user_input.select_active_item(self._fields_dict.values()[self._selected_field_index])
+        fields_dict = self._fields_dict
+        length = len(fields_dict)
+        values = fields_dict.values()
+        for index, child in enumerate(values):
+            child_entry = child.entry
+            _selected = False
+            if getattr(child, "include_incdec_buttons", False): # Spinbox
+                _selected = (_selected or child.inc_button._selected or
+                             child.dec_button._selected)
+            if getattr(child_entry, "include_incdec_buttons", False): # Slider
+                _selected = (_selected or child_entry.inc_button.entry._selected or
+                             child_entry.dec_button.entry._selected)
+            if getattr(child_entry, "include_minmax_buttons", False): # Slider
+                _selected = (_selected or child_entry.max_button.entry._selected or
+                             child_entry.min_button.entry._selected)
+            if (child_entry._selected or child._selected or
+                getattr(child_entry, "continuum", child)._selected): # Slider
+                _selected = True
+            _selected = _selected or any((entry._selected for entry in
+                                          getattr(child_entry, "entries", tuple()))) # Dropdown
+
+            if _selected:
+                index = (index + 1) % length
+                select = self.sdl_window.user_input.select_active_item
+                field = values[index]
+                entry = field.entry
+                if entry.hidden:
+                    slider = self.vertical_slider
+                    slider.value = (slider.value + 1) % (len(self.rows) + 1 - self.max_rows)
+                select(entry)
+                self.show_status("Selected: {}".format(field.name))
+                break
+        else:
+            field = values[0]
+            self.show_status("Selected: {}".format(field.name))
+            self.sdl_window.user_input.select_active_item(field.entry)
 
     def create_subcomponents(self):
         if self.form_name or self.include_delete_button:
@@ -783,13 +880,14 @@ class Form(Scrollable_Window):
             rows.append(container)
             for item in row:
                 name, entries = self._unpack(item, empty_entries)
-                field_type = self.determine_field_type(target_object, name, entries)
-                entries.setdefault("target_object", target_object)
+                _target_object = entries.setdefault("target_object", target_object)
+                field_type = self.determine_field_type(_target_object, name, entries)
                 field = container.create(field_type, name=name, parent_form=self,
                                          **entries)
                 # target_object must be removed from entries (and consequently from fields)
                 # continued presence in .fields is a hanging reference that prevents proper deletion
                 del entries["target_object"]
+                #entries.clear()
                 _fields_dict[name] = field
             if row_number >= max_rows:
                 container.hide()
@@ -909,11 +1007,11 @@ class Form(Scrollable_Window):
             print("Callable!")
 
         _object = dict(text='1', spinbox=2, toggle=True,
-                                             toggle2=False, toggle3=True, toggle4=False,
+                                             toggle1=False, toggle2=True, toggle3=False,
                                              slider=32,  dropdown=None, callable=callable)
         #setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
         _object["my text field"] = "texcellent!"
-        fields = [[   "toggle",    "toggle2",    "toggle3",    "toggle4"      ],
+        fields = [[   "toggle",    "toggle1",    "toggle2",    "toggle3"      ],
                   [     "text",                       "my text field"         ],
                   [ "spinbox",    ("slider", {"minimum" : 0, "maximum" : 255})],
                   [("dropdown", {"values" : (None, 1, "test", 2.0, [True, ], #|   #| is just for appearance

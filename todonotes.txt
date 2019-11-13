@@ -6,19 +6,25 @@ To Do/Bugs
 
 - need confirmation of some sort before acting on selected object in File_Saver
     - clicking on it once should allow the user to examine it before committing to it
-- rename fileexplorer2 to fileexplorer and get ride of old code
+
+- create command line shell using Forms
+- create messenger using Forms and Data Transfer Service
+
+- Lockscreen needs register button sorted out
+    - user2 doesn't have a register method...
+    - currently using auto_register, but having a "register" button seems more friendly
 
 Form stuff
 ----------
+- slider notch needs to be re-done
+    - clicking at very end of continuum only selects second to last value
 - hide/show bugs when switching tabs in game and closing theme customizer
     - refactor tabs to use Forms and see if it is still an issue
 - implement lazy loading of rows in Form
-- balance on Forms probably still needs testing
+- update Form max_rows on area change
+    - when more space is available, more rows can be displayed
 - scroll bars in dropdown menus for very large menus
-- refactor Lockscreen using Forms
-    - create hidden text field for Forms
-- slider notch needs to be re-done
-    - clicking at very end of continuum only selects second to last value
+- balance on Forms probably still needs testing
 
 
 - mouse click animation looks dark/opaque when clicking on empty space in container with buttons
@@ -105,7 +111,6 @@ Refactor gui package
 - remove all deprecated and/or unused+untested code
 
 
-- May need to re-do the layout of toggles
 
 Homescreen
 ----------
@@ -184,6 +189,9 @@ deal with certificates properly
 -------------------------------
 - ...
 
+Have a clearly defined user model
+---------------------------------
+
 
 
 full screen toggle, resolution sliders
@@ -205,13 +213,28 @@ make proper file selector with directory viewer
 optimize render
 ---------------
 - cache every x layers
+    - saves multiplicative factor
+    - only useful when there are a large number of layers
 - batch draw rects of the same color and depth
+    - needs to respect order that draw instructions were arranged
+    - not clear that grouping instructions by type would meaningfully improve performance
 - when re-drawing an object, check to see if another object with that size and profile has been drawn
 - give each window object a texture to cache the result of its drawing
     - can share textures from objects of the same size, theme, and theme profile
+    - useful when there are large numbers of the same shape
+    - a per object texture will be prohibitively expensive unless most objects are identical
 - don't draw occluded objects
-- if a window object creates a child and that child does not have limited size, then the window object is not visible
-    - only if the children are opaque
+    - because of alpha blending the occlusion is only partial
+    - not drawing the occluded object would change the displayed result
+- if a window object creates a child and that child does not have limited size, then the window object is occluded
+    - see above
+- optimize organizer to use CPU_COUNT processes to do the work
+    - could use threads, but python threads make things slower rather than faster
+    - could use processes, but then there is no shared state and data needs to be sent back and forth
+        - only useful for very large tasks
+    - does cython offer a usable and worthwhile threading solution?
+- fuse organization and re-draw loop?
+    - handle_area_change can perform re-draw
 
 
 2d slider pad
@@ -224,12 +247,6 @@ Tip Bar
 - set timeout on tip bar text?
 - implement colors in tip bar text?
 
-
-autoreferences
---------------
-- finish converting autoreferences:
-    - do tabs/window
-    - do sdl_window
 
 
 indicate unusable buttons as being unusable (e.g. grey-out)

@@ -685,11 +685,15 @@ class SDL_User_Input(pride.components.base.Base):
         modifier = event.key.keysym.mod
 
         #  if key_value < 256 or key_value > 0: # in ascii range
-
         try:
             key = chr(key_value)
         except ValueError:
-            return # key was a modifier key
+            if not modifier:
+                reference, method = self.get_hotkey(instance, (key_value, None))
+                if reference is not None:
+                    getattr(pride.objects[reference], method)()
+            else:
+                return # key was a modifier key
         else:
             if key == "\r":
                 key = "\n"

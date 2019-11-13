@@ -274,7 +274,7 @@ class Status_Light(pride.gui.gui.Container):
                 "theme_profile" : "placeholder", "clickable" : False}
 
     def enable_indicator(self):
-        self.theme_profile = "hover"
+        self.theme_profile = "indicator"
 
     def disable_indicator(self):
         self.theme_profile = "placeholder"

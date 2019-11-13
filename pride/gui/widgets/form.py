@@ -848,11 +848,13 @@ class Form(Scrollable_Window):
                     slider = self.vertical_slider
                     slider.value = (slider.value + 1) % (len(self.rows) + 1 - self.max_rows)
                 select(entry)
-                self.show_status("Selected: {}".format(field.name))
+                name = getattr(field, "button_text", '') or field.display_name or field.name
+                self.show_status("Selected: {}".format(name))
                 break
         else:
             field = values[0]
-            self.show_status("Selected: {}".format(field.name))
+            name = getattr(field, "button_text", '') or field.display_name or field.name
+            self.show_status("Selected: {}".format(name))
             self.sdl_window.user_input.select_active_item(field.entry)
 
     def create_subcomponents(self):

@@ -164,14 +164,14 @@ class Text_Box(gui.Container):
 
     defaults = {"h" : 16, "pack_mode" : "left", "allow_text_edit" : True}
 
-    def select(self, mouse):
-        super(Text_Box, self).select(mouse)
+    def select(self):
+        super(Text_Box, self).select()
         self.alert("Turning text input on", level='vv')
         self.allow_text_edit = True
         sdl2.SDL_StartTextInput()
 
-    def deselect(self, mouse, next_active_object):
-        super(Text_Box, self).deselect(mouse, next_active_object)
+    def deselect(self, next_active_object):
+        super(Text_Box, self).deselect(next_active_object)
         self.alert("Disabling text input", level='vv')
         self.allow_text_edit = False
         sdl2.SDL_StopTextInput()
@@ -333,7 +333,7 @@ class Palette_Button(pride.gui.gui.Button):
     defaults = {"button_type" : ''}
     required_attributes = ("button_type", )
 
-    def deselected(self, mouse, next_active_item):
+    def deselected(self, next_active_item):
         pride.objects[next_active_item].create(self.button_type)
 
 
@@ -437,10 +437,10 @@ class Dropdown_Box_Entry(pride.gui.gui.Button):
             #self.show()
         self.pack()
 
-    def deselect(self, mouse, next_active_object):
-        if pride.objects[next_active_object] not in self.parent.entries:
+    def deselect(self, next_active_object):
+        if next_active_object not in self.parent.entries:
             if self.parent.menu_open:
-                self.left_click(mouse, True)
+                self.left_click(None, True)
 
     @classmethod
     def from_info(cls, text, selection_value=''):
@@ -537,13 +537,13 @@ class Field_Entry(Text_Box):
                 "theme_profile" : "interactive"}
     required_attributes = ("write_field_method", )
 
-    def deselect(self, mouse, next_active_object):
-        super(Field_Entry, self).deselect(mouse, next_active_object)
+    def deselect(self, next_active_object):
+        super(Field_Entry, self).deselect(next_active_object)
         if self.text:
             self.write_field_method(self.text)
 
     def handle_return(self):
-        self.deselect(None, None)
+        self.deselect(None)
         if self.return_method:
             self.return_method()
 
@@ -600,9 +600,9 @@ class Field(pride.gui.gui.Container):
     def return_method(self):
         pass
 
-    def select(self, mouse):
-        super(Field, self).select(mouse)
-        self.sdl_window.user_input.select_active_item(self.entry.reference, mouse)
+    def select(self):
+        super(Field, self).select()
+        self.sdl_window.user_input.select_active_item(self.entry.reference)
 
 
 class Status_Indicator(pride.gui.gui.Container):

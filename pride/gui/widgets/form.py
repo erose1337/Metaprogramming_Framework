@@ -671,8 +671,29 @@ class Dropdown_Entry(Form):
 
     defaults = {"include_balance_display" : False, "callable_type" : _Dropdown_Callable}
     required_attributes = ("fields", )
-    hotkeys = {('\t', None) : None} # tab will cycle through dropdown options if this is not done
+    hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
+               (DOWN_ARROW, None) : "handle_down_arrow",
+               ('\t', None) : None} # tab will cycle through dropdown options if this is not done
                                     # and it will cause tabbing to return back to the default field
+
+    def handle_up_arrow(self):
+        parent_field = self.parent_field
+        rows = self.rows
+        for index, row in enumerate(rows):
+            if not row.hidden:
+                index = min(index + 1, len(rows) - 1)
+                parent_field.close_menu(self._fields_list[index].args[0])
+                break
+
+    def handle_down_arrow(self):
+        parent_field = self.parent_field
+        rows = self.rows
+        for index, row in enumerate(rows):
+            if not row.hidden:
+                index = max(index - 1, 0)
+                parent_field.close_menu(self._fields_list[index].args[0])
+                break
+
 
 class Text_Field(Field):
 
@@ -766,7 +787,6 @@ class Dropdown_Field(Field):
         for row in rows:
             field = row.children[0]
             field.entry.always_on_top = False
-            print field.name, field.args[0], value, field.args[0] is value
             if field.args[0] is not value:
                 row.hide()
             else:

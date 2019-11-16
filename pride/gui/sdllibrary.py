@@ -211,6 +211,7 @@ class SDL_Window(SDL_Component):
             self.running = True # trigger run to wipe out the screen
 
     def run(self):
+        #frame_start = timestamp()
         self.run_instruction.execute(priority=self.priority)
         assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
         self.user_input.run()
@@ -225,14 +226,20 @@ class SDL_Window(SDL_Component):
         if organizer.pack_queue or organizer.window_queue:
             organizer.pack_items()
 
+        #before = timestamp()
         if self.redraw_objects:
-            self.update_drawing_instructions()
+            self.update_drawing_instructions() # tends to take more time than the draw+present loop
+        #after = timestamp()
+        #print("Time taken to reorganize draw instructions: {0:.5f}".format(after - before))
         assert not self.redraw_objects
 
+        #before = timestamp()
         if self.running:
-            self.draw(self.drawing_instructions)
+            self.draw(self.drawing_instructions) # tends to take less time than re-arranging draw instructions
             assert not self.redraw_objects
         self.running = False
+        #after = timestamp()
+        #print("Time taken to redraw and present:           {0:.5f}".format(after - before))
 
         if self.postdraw_scheduled:
             assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
@@ -240,6 +247,8 @@ class SDL_Window(SDL_Component):
             self.postdraw_scheduled = dict()
             for callable in queue:
                 callable()
+        #frame_end = timestamp()
+        #print("Allocated {0:.5f}; Used: {1:.5f}; Spare: {2:.5f}".format(self.priority, frame_end - frame_start, self.priority - (frame_end - frame_start)))
 
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions
@@ -247,6 +256,7 @@ class SDL_Window(SDL_Component):
         dirty_layers = self.dirty_layers
         _size = self.size
         needs_sorting = False
+        #print("Redoing {} different drawing instructions".format(len(self.redraw_objects)))
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
             assert not window_object.hidden
@@ -599,6 +609,15 @@ class SDL_User_Input(pride.components.base.Base):
         if active_item:
             active_item.select()
 
+    #def _check_children(self, active_item, mouse_position):
+    #    # have to check if it clicked on the children of the always_on_top item
+    #    for child in active_item.children:
+    #        if child.clickable and pride.gui.point_in_area(active_item.area, mouse_position):
+    #            active_item = child
+    #            active_item = self._check_children(active_item, mouse_position) # recursion until no descendants left to check
+    #            break
+    #    return active_item
+
     def _get_object_under_mouse(self, mouse_position):
         # find the top-most item such that the mouse position is within its area
         objects = pride.objects
@@ -606,6 +625,7 @@ class SDL_User_Input(pride.components.base.Base):
         for item in self.always_on_top:
             if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
                 active_item = item
+                #active_item = self._check_children(active_item)
                 break
         else:
             for layer_number, layer in reversed(self._layer_tracker.items()):
@@ -709,12 +729,17 @@ class SDL_User_Input(pride.components.base.Base):
 
             if ord(key) < 32 or key_press[1] is not None:
                 reference, method = self.get_hotkey(instance, tuple(key_press))
-                if reference is not None:
+                if reference is not None and method is not None:
                     getattr(pride.objects[reference], method)()
 
     def get_hotkey(self, instance, key_press):
         if key_press in instance.hotkeys:
             callback_info = (instance.reference, instance.hotkeys[key_press])
+            if callback_info[1] is None:
+                try:
+                    callback_info = self.get_hotkey(instance.parent, key_press)
+                except AttributeError:
+                    callback_info = (None, None)
         else:
             try:
                 callback_info = self.get_hotkey(instance.parent, key_press)

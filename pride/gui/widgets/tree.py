@@ -56,7 +56,7 @@ class Tree_Viewer(pride.gui.gui.Application):
         else:
             self.history.append(identifier)
         self.current_node = identifier
-        self.top.update_text("current_node")
+        self.top.synchronize_fields()
 
     def handle_back(self):
         if self.history:

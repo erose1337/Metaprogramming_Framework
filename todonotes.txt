@@ -4,6 +4,12 @@ Currently working on:
 To Do/Bugs
 =====
 
+- post processing queue and end of frame queue
+    - rename postdraw to end of frame
+    - add list of instructions to be performed after all other drawing is done
+
+- theme customizer: don't open additional file selector/savers if one already exists
+
 - need confirmation of some sort before acting on selected object in File_Saver
     - clicking on it once should allow the user to examine it before committing to it
 
@@ -16,14 +22,12 @@ To Do/Bugs
 
 Form stuff
 ----------
-- slider notch needs to be re-done
-    - clicking at very end of continuum only selects second to last value
+- add arrow key support for text fields
 - hide/show bugs when switching tabs in game and closing theme customizer
     - refactor tabs to use Forms and see if it is still an issue
 - implement lazy loading of rows in Form
 - update Form max_rows on area change
     - when more space is available, more rows can be displayed
-- scroll bars in dropdown menus for very large menus
 - balance on Forms probably still needs testing
 
 
@@ -235,6 +239,13 @@ optimize render
     - does cython offer a usable and worthwhile threading solution?
 - fuse organization and re-draw loop?
     - handle_area_change can perform re-draw
+- memoize SDL_Renderer.draw_text
+    - should be easy performance gain without having to implement the texture atlas
+- invalidate texture and text separately
+    - frequently it will be the case that an items text will change while the rest remains the same
+    - could split invalidation into two tiers, one that invalidates everything, and another that redraws only the text
+
+
 
 
 2d slider pad

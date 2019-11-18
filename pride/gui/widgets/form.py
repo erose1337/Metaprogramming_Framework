@@ -185,6 +185,7 @@ class Form(Scrollable_Window):
 
         if self.vertical_slider is not None:
             self.vertical_slider.maximum = max(0, len(rows) - max_rows)
+            self.vertical_slider.update_position_from_value()
 
     def create_top_display(self):
         assert self.form_name or self.include_delete_button
@@ -858,19 +859,27 @@ class Continuum(pride.gui.gui.Button):
         parent_field = self.parent_field
         entry = parent_field.entry
         left = entry.left
+        value = parent_field.value
 
-        maximum = parent_field.maximum
-        if maximum:
-            percent = float(parent_field.value) / parent_field.maximum
-        else:
-            percent = 0.0
+        maximum = parent_field.maximum; minimum = parent_field.minimum
         width = (getattr(entry, size) - getattr(left, size)) - getattr(entry.right, size)
-        offset = int(width * percent)
-        setattr(self.bar, "{}_range".format(size), (offset, offset))
+        if value == maximum:
+            new_size = width
+        elif value == minimum:
+            new_size = 0
+        else:
+            bucket_width = width / (float(maximum - minimum) + 1)
+            new_size = int(bucket_width * parent_field.value)
+        setattr(self.bar, "{}_range".format(size), (new_size, new_size))
         self.bar.pack()
 
     def left_click(self, mouse):
         super(Continuum, self).left_click(mouse)
+        # partition available space into n buckets
+        # make notch w equal to bucket_width in size
+        # find which bucket was clicked and assign that value
+        # set width of bar to bucket_width * bucket_number
+        #   aligns right edge of notch to right edge of selected bucket
         if self._adjustment_target == "w_range":
             coord = 'x'
             size = 'w'
@@ -878,27 +887,29 @@ class Continuum(pride.gui.gui.Button):
             assert self._adjustment_target == "h_range"
             coord = 'y'
             size = 'h'
+
         # unpack data
         # evaluate contextual meaning of data (build more data from relations between present data)
         # compute value based on data
         # ensure value fits the expected constraints
         # respond to computed value
-        parent_field = self.parent_field
-        entry = parent_field.entry
-        left = entry.left
+        parent_field = self.parent_field; entry = parent_field.entry; left = entry.left
         width = (getattr(entry, size) - getattr(left, size)) - getattr(entry.right, size)
-
+        maximum = parent_field.maximum; minimum = parent_field.minimum
+        buckets = (maximum - minimum) + 1 # + 1 because minimum is a selectable choice (e.g. max = 1, min = 0)
+        bucket_width = width / float(buckets)
         offset = getattr(mouse, coord) - getattr(entry, coord) - getattr(left, size)
-        offset = min(max(0, offset), width)
-        percent = float(offset) / width; percent = max(0, min(1, percent));
-
-        value = int(parent_field.maximum * percent)
-        assert value <= parent_field.maximum
-        assert value >= parent_field.minimum
+        value = max(min(int(offset / bucket_width), maximum), minimum)
+        assert minimum <= value <= maximum
         before = parent_field.value
         parent_field.value = value
         if parent_field.value != before: # insufficient balance can cause setting.value to fail
-            new_size = int(percent * width)
+            if value == maximum:
+                new_size = width
+            elif value == minimum:
+                new_size = 0
+            else:
+                new_size = int(bucket_width * value)
             bar = self.bar
             setattr(bar, "{}_range".format(size), (new_size, new_size))
             bar.pack()

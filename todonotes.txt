@@ -8,8 +8,6 @@ To Do/Bugs
     - rename postdraw to end of frame
     - add list of instructions to be performed after all other drawing is done
 
-- theme customizer: don't open additional file selector/savers if one already exists
-
 - need confirmation of some sort before acting on selected object in File_Saver
     - clicking on it once should allow the user to examine it before committing to it
 

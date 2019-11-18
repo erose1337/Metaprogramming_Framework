@@ -77,7 +77,7 @@ class Profile_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
 
     defaults = {"target_theme" : None, "bar" : None, "delete_callback" : None}
-    autoreferences = ("file_selector", "bar")
+    autoreferences = ("file_saver", "file_selector", "bar")
     required_attributes = ("target_theme", )
 
     def initialize_tabs_and_windows(self):
@@ -109,8 +109,9 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
                 tab.left_click(None)
 
     def save_color_options(self):
-        self.create("pride.gui.programs.fileexplorer.File_Saver",
-                    pack_mode="top", data=self.serialize_color_options())
+        if self.file_saver is None:
+            self.file_saver = self.create("pride.gui.programs.fileexplorer.File_Saver",
+                                          pack_mode="top", data=self.serialize_color_options())
 
     def serialize_color_options(self):
         self.show_status("Serializing color options...")
@@ -133,8 +134,9 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
         return '\n'.join(lines)
 
     def load_color_options(self):
-        self.file_selector = self.create("pride.gui.programs.fileexplorer.File_Selector",
-                                         pack_mode="top", callback=self._load_color_options)
+        if self.file_selector is None:
+            self.file_selector = self.create("pride.gui.programs.fileexplorer.File_Selector",
+                                            pack_mode="top", callback=self._load_color_options)
 
     def _load_color_options(self, filename):
         self.show_status("Importing color options from {}...".format(filename),

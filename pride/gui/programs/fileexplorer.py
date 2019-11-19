@@ -152,9 +152,25 @@ class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
 class File_Selector(Directory_Viewer):
 
     required_attributes = ("callback", )
+    autoreferences = ("confirmation_box", )
 
     def select_file(self, filename):
-        self.callback(filename)
+        self.filename = filename
+        if self.confirmation_box is None:
+            fields = [["filename", ("confirm_selection", {"button_text" : "Confirm"}),
+                       ("delete_confirmation", {"button_text" : 'x'})
+                     ]]
+            box = self.application_window.create(pride.gui.widgets.form.Form,
+                                                fields=fields, target_object=self)
+            self.confirmation_box = box
+
+    def delete_confirmation(self):
+        self.confirmation_box.delete()
+
+    def confirm_selection(self):
+        self.callback(self.filename)
+        if not self.deleted:
+            self.delete()
 
 
 def directory_explorer_test():

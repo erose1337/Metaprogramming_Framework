@@ -608,7 +608,7 @@ class Field(pride.gui.gui.Container):
 class Status_Indicator(pride.gui.gui.Container):
 
     defaults = {"w_range" : (0, .03), "pack_mode" : "left",
-                "theme_profile" : "blank"}
+                "theme_profile" : "blank", "clickable" : False}
     #mutable_defaults = {"meaning" : lambda: {True: '', False : ''}}
 
     def __init__(self, **kwargs):
@@ -620,10 +620,6 @@ class Status_Indicator(pride.gui.gui.Container):
                                         clickable=False).reference
         self.create("pride.gui.gui.Container", pack_mode="top",
                     theme_profile="placeholder", clickable=False)
-
-    def left_click(self, mouse):
-        super(Status_Indicator, self).left_click(mouse)
-        self.parent.left_click(mouse)
 
     def enable_indicator(self):
         pride.objects[self.status_light].theme_profile = "indicator"

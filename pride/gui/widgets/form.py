@@ -5,11 +5,12 @@ import pride.gui.gui
 
 import sdl2
 
-# key codes for arrows, used for hotkeys
+# key codes used for hotkeys
 UP_ARROW = 1073741906
 DOWN_ARROW = 1073741905
 RIGHT_ARROW = 1073741903
 LEFT_ARROW = 1073741904
+DELETE_KEY = "\x7f"
 
 class Balancer(object):
 
@@ -453,6 +454,8 @@ class Field(pride.gui.gui.Container):
 
 class Callable_Entry(Entry):
 
+    hotkeys = {('\n', None) : "handle_return"}
+
     def _get_text(self):
         return self.parent_field.button_text
     def _set_text(self, value):
@@ -491,7 +494,51 @@ class Callable_Field(Field):
 class Text_Entry(Entry):
 
     defaults = {"h" : 16, "allow_text_edit" : False, "cursor_blink_rate" : 13,
-                "cursor_symbol" : '_'}
+                "cursor_symbol" : '_', "_cursor_offset" : 0}
+    hotkeys = {(LEFT_ARROW, None) : "handle_left_arrow",
+               (RIGHT_ARROW, None) : "handle_right_arrow",
+               ("\b", None) : "handle_backspace", (DELETE_KEY, None) : "handle_delete_key"}
+
+    def handle_left_arrow(self):
+        self._cursor_offset = min(self._cursor_offset + 1, len(self.text))
+        self.keep_cursor_visible() # keeps cursor visible while moving cursor
+
+    def handle_right_arrow(self):
+        self._cursor_offset = max(0, self._cursor_offset - 1)
+        self.keep_cursor_visible()
+
+    def handle_backspace(self):
+        if self.allow_text_edit:
+            offset = self._cursor_offset
+            if offset:
+                self.text = self.text[:-offset - 1] + self.text[-offset:]
+            else:
+                self.text = self.text[:-1]
+            self.keep_cursor_visible()
+
+    def handle_delete_key(self):
+        if self.allow_text_edit:
+            offset = self._cursor_offset
+            if offset:
+                if offset == 1:
+                    self.text = self.text[:-offset]
+                else:
+                    self.text = self.text[:-offset] + self.text[-(offset - 1):]
+                self._cursor_offset = max(0, offset - 1)
+            self.keep_cursor_visible()
+
+    def text_entry(self, text):
+        if self.allow_text_edit:
+            offset = self._cursor_offset
+            if offset:
+                self.text = self.text[:-offset] + text + self.text[-offset:]
+            else:
+                self.text += text
+            self.keep_cursor_visible()
+
+    def keep_cursor_visible(self):
+        self.disable_cursor(False)
+        self.enable_cursor()
 
     def select(self):
         super(Text_Entry, self).select()
@@ -623,6 +670,7 @@ class Toggle_Entry(Entry):
     defaults = {"status_light_type" : Status_Light}
     mutable_defaults = {"indicator_kwargs" : dict}
     autoreferences = ("status_light", )
+    hotkeys = {('\n', None) : "handle_return"}
 
     def __init__(self, **kwargs):
         super(Toggle_Entry, self).__init__(**kwargs)

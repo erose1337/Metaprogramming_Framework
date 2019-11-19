@@ -291,8 +291,7 @@ class _Window_Object(Organized_Object):
     mutable_defaults = {"_draw_operations" : list, "_children" : list,
                         "scroll_instructions" : list, "colors" : dict}
     verbosity = {"press" : "vv", "release" : "vv"}
-
-    hotkeys = {("\b", None) : "handle_backspace", ("\n", None) : "handle_return"}
+    hotkeys = dict()
     inherited_attributes = {"hotkeys" : dict}
     autoreferences = ("_sdl_window", )
 
@@ -577,13 +576,6 @@ class _Window_Object(Organized_Object):
     def text_entry(self, text):
         if self.allow_text_edit:
             self.text += text
-
-    def handle_return(self):
-        pass
-
-    def handle_backspace(self):
-        if self.allow_text_edit:
-            self.text = self.text[:-1]
 
     def __getstate__(self):
         state = super(_Window_Object, self).__getstate__()

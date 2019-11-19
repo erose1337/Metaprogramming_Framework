@@ -32,6 +32,7 @@ class Tab_Button(pride.gui.gui.Button):
                 "window" : None}
     predefaults = {"_editable" : False}
     autoreferences = ("delete_button", "indicator", "window")
+    hotkeys = {('\n', None) : "handle_return"}
 
     def _get_editable(self):
         return self._editable

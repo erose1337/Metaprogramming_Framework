@@ -1,33 +1,23 @@
 Currently working on:
 
-
 To Do/Bugs
 =====
-
-- post processing queue and end of frame queue
-    - rename postdraw to end of frame
-    - add list of instructions to be performed after all other drawing is done
-
-- need confirmation of some sort before acting on selected object in File_Saver
-    - clicking on it once should allow the user to examine it before committing to it
-
-- create command line shell using Forms
-- create messenger using Forms and Data Transfer Service
 
 - Lockscreen needs register button sorted out
     - user2 doesn't have a register method...
     - currently using auto_register, but having a "register" button seems more friendly
 
+- create command line shell using Forms
+- create messenger using Forms and Data Transfer Service
+
 Form stuff
 ----------
-- add arrow key support for text fields
 - hide/show bugs when switching tabs in game and closing theme customizer
     - refactor tabs to use Forms and see if it is still an issue
 - implement lazy loading of rows in Form
 - update Form max_rows on area change
     - when more space is available, more rows can be displayed
 - balance on Forms probably still needs testing
-
 
 - mouse click animation looks dark/opaque when clicking on empty space in container with buttons
 
@@ -201,15 +191,6 @@ full screen toggle, resolution sliders
 - started: windowoptions
 
 
-make proper file selector with directory viewer
------------------------------------------------
-- different views (details, tiles)
-- clicking on filename opens detailed information about the file
-- display current directory
-- change current directory
-    - back/forward buttons, up button
-    - address bar
-- started: fileexplorer
 
 
 optimize render

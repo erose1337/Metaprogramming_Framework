@@ -149,10 +149,15 @@ class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
         super(Directory_Viewer, self).view_node(identifier)
 
 
+
 class File_Selector(Directory_Viewer):
 
     required_attributes = ("callback", )
     autoreferences = ("confirmation_box", )
+    hotkeys = {('\n', None) : "handle_return"}
+
+    def handle_return(self):
+        self.view_node()
 
     def select_file(self, filename):
         self.filename = filename

@@ -702,7 +702,6 @@ class SDL_User_Input(pride.components.base.Base):
         instance = self.active_item
         key_value = event.key.keysym.sym
         modifier = event.key.keysym.mod
-
         #  if key_value < 256 or key_value > 0: # in ascii range
         try:
             key = chr(key_value)
@@ -726,7 +725,7 @@ class SDL_User_Input(pride.components.base.Base):
             elif modifier:
                 key_press[1] = modifier
 
-            if ord(key) < 32 or key_press[1] is not None:
+            if ord(key) < 32 or ord(key) == 127 or key_press[1] is not None: # delete is 127
                 reference, method = self.get_hotkey(instance, tuple(key_press))
                 if reference is not None and method is not None:
                     getattr(pride.objects[reference], method)()

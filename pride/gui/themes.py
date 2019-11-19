@@ -107,7 +107,11 @@ class Minimal_Theme(Theme):
             if text and self.wrapped_object.confidential:
                 text = self._replacement_string
             if self.draw_cursor:
-                text += self.cursor_symbol
+                offset = getattr(self, "_cursor_offset", 0)
+                if offset:
+                    text = text[:-offset] + self.cursor_symbol + text[-offset:]
+                else:
+                    text += self.cursor_symbol
             self.draw("text", area, text, width=w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
                       center_text=self.center_text)

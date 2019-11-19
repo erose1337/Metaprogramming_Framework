@@ -163,6 +163,7 @@ class Task_Bar(gui.Container):
 class Text_Box(gui.Container):
 
     defaults = {"h" : 16, "pack_mode" : "left", "allow_text_edit" : True}
+    hotkeys = {('\n', None) : "handle_return"}
 
     def select(self):
         super(Text_Box, self).select()

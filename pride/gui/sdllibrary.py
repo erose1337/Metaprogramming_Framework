@@ -700,7 +700,6 @@ class SDL_User_Input(pride.components.base.Base):
             self.alert("Active item is None; unable to handle keystrokes", level='v')
             return
         instance = self.active_item
-
         key_value = event.key.keysym.sym
         modifier = event.key.keysym.mod
 
@@ -783,6 +782,7 @@ class Renderer(SDL_Component):
         self.instructions["rect_perspective"] = self.draw_rect_perspective
         self.instructions["line_perspective"] = self.draw_line_perspective
         self.instructions["rounded_rect"] = self.draw_rounded_rect
+        self.instructions["render_copy"] = self.render_copy
         self.clear()
 
         info = self.get_renderer_info()
@@ -790,7 +790,7 @@ class Renderer(SDL_Component):
 
     def render_copy(self, source_area=None, destination_area=None, angle=0,
                     center=None, flip=sdl2.SDL_FLIP_NONE):
-        self.copy(sdl2.SDL2_GetRenderTarget, source_area, destination_area,
+        self.copy(self.get_render_target(), source_area, destination_area,
                   angle, center, flip)
 
     def draw_rounded_rect(self, rect, radius=22, **kwargs):
@@ -900,8 +900,7 @@ class Renderer(SDL_Component):
             raise ValueError("error code {}. Could not set render target of renderer {} to texture {}".format(code, self.wrapped_object.renderer, texture))
 
     def get_render_target(self):
-        target = sdl2.SDL_GetRenderTarget(self.wrapped_object.renderer)
-        return target
+        return sdl2.SDL_GetRenderTarget(self.renderer).contents
 
     def draw(self, texture, draw_instructions, background=None, clear=True,
              blendmode=DRAW_BLENDMODE):

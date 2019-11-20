@@ -156,37 +156,37 @@ class Form(Scrollable_Window):
         if balancer is not None and self.include_balance_display:
             self.create_balance_display()
 
-        empty_entries = {"balancer" : balancer, "displayer" : self.displayer}
-        target_object = self.target_object
-        row_h_range = self.row_h_range or (0, 1.0)
-        row_pack_mode = self.row_pack_mode
-        _fields_list = self._fields_list
-        window = self.main_window
-        max_rows = self.max_rows
-        rows = self.rows
-        for row_number, row in enumerate(self.fields):
-            #assert row
-            container = window.create("pride.gui.gui.Container", pack_mode=row_pack_mode,
-                                      h_range=row_h_range)
-            rows.append(container)
-            for item in row:
-                name, entries = self._unpack(item, empty_entries)
-                _target_object = entries.setdefault("target_object", target_object)
-                field_type = self.determine_field_type(_target_object, name, entries)
-                field = container.create(field_type, name=name, parent_form=self,
-                                         **entries)
-                # target_object must be removed from entries (and consequently from fields)
-                # continued presence in .fields is a hanging reference that prevents proper deletion
-                del entries["target_object"]
-                #entries.clear()
-                _fields_list.append(field)
-
+        target_object = self.target_object; max_rows = self.max_rows
+        for row_number, _row in enumerate(self.fields):
+            row, _row_number = self.create_row(); assert row_number == _row_number
+            for field_info in _row:
+                self.create_field(field_info, row, target_object)
             if row_number >= max_rows:
-                container.hide()
+                row.hide()
 
         if self.vertical_slider is not None:
-            self.vertical_slider.maximum = max(0, len(rows) - max_rows)
+            self.vertical_slider.maximum = max(0, len(self.rows) - max_rows)
             self.vertical_slider.update_position_from_value()
+
+    def create_row(self):
+        row = self.main_window.create("pride.gui.gui.Container",
+                                      pack_mode=self.row_pack_mode,
+                                      h_range=self.row_h_range or (0, 1.0))
+        rows = self.rows
+        rows.append(row)
+        return row, rows.index(row)
+
+    def create_field(self, field_info, row, target_obect=None):
+        empty_entries = {"balancer" : self.balancer, "displayer" : self.displayer}
+        name, entries = self._unpack(field_info, empty_entries)
+        _target_object = entries.setdefault("target_object", self.target_object)
+        field_type = self.determine_field_type(_target_object, name, entries)
+        field = row.create(field_type, name=name, parent_form=self, **entries)
+        # target_object must be removed from entries (and consequently from fields)
+        # continued presence in .fields is a hanging reference that prevents proper deletion
+        del entries["target_object"]
+        #entries.clear()
+        self._fields_list.append(field)
 
     def create_top_display(self):
         assert self.form_name or self.include_delete_button

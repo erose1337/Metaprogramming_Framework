@@ -314,12 +314,12 @@ class SDL_Window(SDL_Component):
             if layer_number in dirty_layers:
                 renderer.set_render_target(layer_texture)
                 renderer.clear()
+                #print("Performing {} instructions for layer {}".format(sum(len(item._draw_operations) for item in layer), layer_number))
                 for item in layer:
                     for operation, args, kwargs in item._draw_operations:
                         draw_procedures[operation](*args, **kwargs)
                 renderer.set_render_target(None)
             renderer.copy(layer_texture, area, area)
-
         self.dirty_layers.clear()
         renderer.present()
 
@@ -899,7 +899,7 @@ class Renderer(SDL_Component):
             raise ValueError("error code {}. Could not set render target of renderer {} to texture {}".format(code, self.wrapped_object.renderer, texture))
 
     def get_render_target(self):
-        return sdl2.SDL_GetRenderTarget(self.renderer).contents
+        return sdl2.SDL_GetRenderTarget(self.renderer)
 
     def draw(self, texture, draw_instructions, background=None, clear=True,
              blendmode=DRAW_BLENDMODE):

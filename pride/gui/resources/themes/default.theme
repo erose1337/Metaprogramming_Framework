@@ -28,7 +28,7 @@ blank
 borderless
 ----------
 
-      - background: (180, 180, 180, 200)
+      - background: (15, 15, 20, 200)
       - glow: (255, 255, 255, 235)
       - glow_thickness: 0
       - shadow: (0, 0, 0, 255)
@@ -105,6 +105,6 @@ placeholder
       - glow_thickness: 0
       - shadow: (0, 0, 0, 255)
       - shadow_thickness: 5
-      - text: (45, 45, 45, 255)
+      - text: (111, 166, 233, 255)
       - text_background: (0, 0, 0, 255)
 

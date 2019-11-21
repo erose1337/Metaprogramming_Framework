@@ -87,7 +87,7 @@ class Form(Scrollable_Window):
                 "target_object" : None, "balancer" : None,
                 "include_balance_display" : True, "max_rows" : 4,
                 "form_name" : '', "include_delete_button" : False}
-    mutable_defaults = {"_fields_list" : list, "rows" : list}
+    mutable_defaults = {"fields_list" : list, "rows" : list}
     autoreferences = ("displayer", )
     hotkeys = {("\t", None) : "handle_tab"}
 
@@ -97,7 +97,7 @@ class Form(Scrollable_Window):
 
     def synchronize_fields(self):
         assert not self.deleted
-        for field in self._fields_list:
+        for field in self.fields_list:
             field.entry.texture_invalid = True
 
     def check_if_selected(self, child, child_entry):
@@ -116,12 +116,12 @@ class Form(Scrollable_Window):
         if not _selected: # Dropdown
             _selected = any((entry._selected for entry in
                              getattr(child_entry, "entries", tuple())))
-        if not _selected and hasattr(child_entry, "_fields_list"):
-            _selected = any(self.check_if_selected(item, item.entry) for item in child_entry._fields_list)
+        if not _selected and hasattr(child_entry, "fields_list"):
+            _selected = any(self.check_if_selected(item, item.entry) for item in child_entry.fields_list)
         return _selected
 
     def handle_tab(self):
-        values = self._fields_list
+        values = self.fields_list
         length = len(values)
         for index, child in enumerate(values):
             child_entry = child.entry
@@ -186,7 +186,7 @@ class Form(Scrollable_Window):
         # continued presence in .fields is a hanging reference that prevents proper deletion
         del entries["target_object"]
         #entries.clear()
-        self._fields_list.append(field)
+        self.fields_list.append(field)
 
     def create_top_display(self):
         assert self.form_name or self.include_delete_button
@@ -279,7 +279,7 @@ class Form(Scrollable_Window):
         del self.target_object
         del self.rows
         del self.fields
-        del self._fields_list
+        del self.fields_list
         super(Form, self).delete()
 
     @classmethod
@@ -485,6 +485,10 @@ class Callable_Field(Field):
                 "auto_create_id" : False, "button_text" : '', "args" : tuple()}
     mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : True},
                         "kwargs" : dict}
+
+    def create_entry(self, pack_mode):
+        super(Callable_Field, self).create_entry(pack_mode)
+        self.entry.text = self.entry.text # .text may not get set, if so then scale_to_text wont happen
 
     def delete(self):
         del self.kwargs
@@ -731,7 +735,7 @@ class Dropdown_Entry(Form):
         for index, row in enumerate(rows):
             if not row.hidden:
                 index = min(index + 1, len(rows) - 1)
-                parent_field.close_menu(self._fields_list[index].args[0])
+                parent_field.close_menu(self.fields_list[index].args[0])
                 break
 
     def handle_down_arrow(self):
@@ -740,7 +744,7 @@ class Dropdown_Entry(Form):
         for index, row in enumerate(rows):
             if not row.hidden:
                 index = max(index - 1, 0)
-                parent_field.close_menu(self._fields_list[index].args[0])
+                parent_field.close_menu(self.fields_list[index].args[0])
                 break
 
 

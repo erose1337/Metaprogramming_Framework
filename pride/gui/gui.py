@@ -269,11 +269,11 @@ class _Window_Object(Organized_Object):
             Exception TypeError: "'NoneType' object is not callable" in <bound method Window.__del__ of <sdl2.ext.window.Window object at 0xXXXXXXX> ignore
             Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored
         A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
-    defaults = {"outline_width" : 1, "center_text" : True,
+    defaults = {"outline_width" : 1, "center_text" : True, "hoverable" : False,
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
                 "_ignore_click" : False, "hidden" : False, "movable" : False,
-                "text" : '', "scroll_bars_enabled" : False,
-                "_scroll_bar_h" : None, "_scroll_bar_w" : None,
+                "text" : '', "scroll_bars_enabled" : False, "_hover_backup_theme_profile" : '',
+                "_scroll_bar_h" : None, "_scroll_bar_w" : None, "hovering" : False,
                 "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "_selected" : False, "confidential" : False,
                 "_cached" : False, "tip_bar_text" : '',
@@ -482,17 +482,21 @@ class _Window_Object(Organized_Object):
 
     def on_hover(self):
         #self.alert("Mouse hovering")
-        if self.theme_profile == "interactive":
+        if self.hoverable:
+            self._hover_backup_theme_profile = self.theme_profile
             self.theme_profile = "hover"
             self.texture_invalid = True
+            self.hovering = True
 
         if self.tip_bar_text:
             self.sdl_window.set_tip_bar_text(self.tip_bar_text)
             self._tip_set = True
 
     def hover_ends(self):
-        if self.theme_profile == "hover":
-            self.theme_profile = "interactive"
+        if self.hovering and self.theme_profile == "hover":
+            assert self.hoverable
+            self.theme_profile = self._hover_backup_theme_profile
+            self._hover_backup_theme_profile = ''
             self.texture_invalid = True
         if self._tip_set:
             self._clear_tip_bar_text()
@@ -756,7 +760,8 @@ class Container(Window_Object):
 
 class Button(Window_Object):
 
-    defaults = {"pack_mode" : "top", "theme_profile" : "interactive"}
+    defaults = {"pack_mode" : "top", "theme_profile" : "interactive",
+                "hoverable" : True}
 
 
 class Application(Window):

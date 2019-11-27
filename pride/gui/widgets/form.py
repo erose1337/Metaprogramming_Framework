@@ -988,8 +988,7 @@ class Endcap_Entry(Text_Entry):
 
 class Endcap(Text_Display):
 
-    defaults = {"auto_create_id" : False, "w_range" : (0, .05),
-                "entry_type" : Endcap_Entry}
+    defaults = {"auto_create_id" : False, "entry_type" : Endcap_Entry}
 
 
 class Slider_Entry(Entry):
@@ -1032,7 +1031,7 @@ class Slider_Entry(Entry):
         if orientation == "stacked":
             pack_mode = "top"
             kwargs["h_range"] = (0, .05)
-            self.include_minmax_buttons = False
+            kwargs["entry_kwargs"] = {"scale_to_text" : False}
         else:
             pack_mode = "left"
             kwargs["w_range"] = (0, .08)

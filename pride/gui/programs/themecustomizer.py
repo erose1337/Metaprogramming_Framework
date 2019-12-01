@@ -1,10 +1,6 @@
 import ast
-import os.path
 
-import pride.gui.gui
-import pride.gui.widgetlibrary
-import pride.gui.widgets.tabs
-import pride.gui.widgets.form
+import pride.gui.widgets.tabs2
 
 try:
     import cefparser
@@ -13,100 +9,102 @@ except ImportError:
     print("Please download and install cefparser from https://github.com/erose1337/cef_parser")
     raise
 
+class Value_Editor(pride.gui.widgets.tabs2.Tabbed_Window):
 
-class Color_Field(pride.gui.widgets.form.Form):
+    defaults = {"include_new_tab_button" : False, "pack_mode" : "top",
+                "include_delete_button" : False, "names" : tuple(),
+                "new_window_type" : "pride.gui.widgets.form.Form"}
+    mutable_defaults = {"target_object" : dict}
+    required_attributes = ("target_object", "names")
+
+    def create_subcomponents(self):
+        self.show_status("Initializing value editor...", immediately=True)
+        self.tab_targets = [self.create_window(name) for name in self.names]
+        super(Value_Editor, self).create_subcomponents()
+        # creates tabs via new_tab()
+
+    def create_window(self, name):
+        window = self.main_window.create(self.new_window_type, fields=[[name]],
+                                         tab_text=name.replace('_', ' '),
+                                         target_object=self.target_object)
+        return window
+
+
+class Color_Form(pride.gui.widgets.form.Form):
 
     def handle_value_changed(self, field, old_value, new_value):
-        super(Color_Field, self).handle_value_changed(field, old_value, new_value)
+        super(Color_Form, self).handle_value_changed(field, old_value,
+                                                     new_value)
         self.theme.update_theme_users()
 
 
-class Profile_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
+class Profile_Editor(Value_Editor):
 
-    color_keys = ("background", "shadow", "text", "text_background")
-    defaults = {"profile_info" : None}
-    required_attributes = ("profile_info", )
-
-    def initialize_tabs_and_windows(self):
-        self.tab_types = tuple(pride.gui.widgets.tabs.Tab_Button.from_info(text=text, include_delete_button=False) for
-                               text in sorted(self.profile_info.keys()))
-        super(Profile_Customizer, self).initialize_tabs_and_windows()
-
-    def create_windows(self):
-        # create r/g/b/a/ sliders for each color key in profile_info
-        info = self.profile_info
-        target_theme = self.target_theme
-        for index, tab in enumerate(self.tab_bar.tabs):
-            key = tab.text
-            tab.text = key.replace('_', ' ')
-            _object = info[key]
-            kwargs = dict()
+    def create_window(self, name):
+        try:
+            _object = self.target_object[name]
+        except KeyError as error:
             try:
-                rmin, rmax = _object.r_range; gmin, gmax = _object.g_range
-                bmin, bmax = _object.b_range; amin, amax = _object.a_range
-                fields = [
-                          [('a', {"minimum" : amin, "maximum" : amax})],
-                          [('r', {"minimum" : rmin, "maximum" : rmax})],
-                          [('g', {"minimum" : gmin, "maximum" : gmax})],
-                          [('b', {"minimum" : bmin, "maximum" : bmax})]
-                         ]
-            except AttributeError:
-                fields = [
-                          [(key, {"minimum" : 0, "maximum" : 16})]
-                         ]
-                # make field here
-                kwargs["target_object"] = info
-                kwargs["h_range"] = (0, .25)
-            else:
-                kwargs["target_object"] = _object
-            field = self.create(Color_Field, tab=tab, fields=fields, **kwargs)
-            tab.window = field
-            if index:
-                field.hide()
-            else:
-                tab.indicator.enable_indicator()
+                _object = self.target_object["{}_color".format(name)]
+            except KeyError:
+                raise error
+        kwargs = dict()
+        try:
+            rmin, rmax = _object.r_range; gmin, gmax = _object.g_range
+            bmin, bmax = _object.b_range; amin, amax = _object.a_range
+            fields = [
+                      [('a', {"minimum" : amin, "maximum" : amax})],
+                      [('r', {"minimum" : rmin, "maximum" : rmax})],
+                      [('g', {"minimum" : gmin, "maximum" : gmax})],
+                      [('b', {"minimum" : bmin, "maximum" : bmax})]
+                     ]
+        except AttributeError:
+            orientation = "side by side"
+            fields = [
+                      [(name, {"minimum" : 0, "maximum" : 16,
+                               "entry_kwargs" : {"orientation" : orientation}})]
+                     ]
+            target = self.target_object
+            if orientation == "stacked":
+                kwargs["w_range"] = (0, .25)
+        else:
+            target = _object
+        window = self.main_window
+        form = window.create(Color_Form, fields=fields, pack_mode="top",
+                             target_object=target, tab_text=name,
+                             **kwargs)
+        form.hide()
+        return form
 
-    @classmethod
-    def from_info(cls, **kwargs):
-        def callable(**_kwargs):
-            _kwargs.update(kwargs)
-            return cls(**_kwargs)
-        return callable
 
+class Theme_Editor(Value_Editor):
 
-class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
+    defaults = {"new_window_type" : Profile_Editor}
+    autoreferences = ("file_saver", "file_selector")
 
-    defaults = {"target_theme" : None, "bar" : None, "delete_callback" : None}
-    autoreferences = ("file_saver", "file_selector", "bar")
-    required_attributes = ("target_theme", )
+    def create_subcomponents(self):
+        self.create("pride.gui.widgets.form.Form", target_object=self,
+                    pack_mode="top", h_range=(0, .05),
+                    fields=[[("delete_color_options", {"button_text" : 'x',
+                                                       "scale_to_text" : True,
+                                                       "pack_mode" : "right"}),
+                             ("save_color_options", {"button_text" : "Export color options",
+                                                     "pack_mode" : "right"}),
+                             ("load_color_options", {"button_text" : "Import color options",
+                                                     "pack_mode" : "right"})
+                           ]])
+        self.tab_targets = [self.create_window(profile) for profile in self.target_object.theme_colors.keys()]
+        super(Theme_Editor, self).create_subcomponents()
+        self.show_status("...Done")
 
-    def initialize_tabs_and_windows(self):
-        if self.bar is None:
-            self.bar = self.create("pride.gui.widgets.form.Form", target_object=self,
-                                   pack_mode="top", h_range=(0, .05),
-                                   fields=[[("delete_color_options", {"button_text" : 'x',
-                                                                      "scale_to_text" : True,
-                                                                      "pack_mode" : "right"}),
-                                            ("save_color_options", {"button_text" : "Export color options",
-                                                                    "pack_mode" : "right"}),
-                                            ("load_color_options", {"button_text" : "Import color options",
-                                                                    "pack_mode" : "right"})
-                                          ]])
-        profiles = self.target_theme.theme_colors
-        self.tab_types = tuple(pride.gui.widgets.tabs.Tab_Button.from_info(text=text, include_delete_button=False) for
-                               text in sorted(profiles.keys()))
-        super(Theme_Customizer, self).initialize_tabs_and_windows()
-
-    def create_windows(self):
-        target_theme = self.target_theme
-        profiles = target_theme.theme_colors
-        for index, tab in enumerate(self.tab_bar.tabs):
-            key = tab.text
-            profile = profiles[key]
-            tab.window_type = Profile_Customizer.from_info(target_theme=target_theme,
-                                                           profile_info=profile)
-            if not index:
-                tab.left_click(None)
+    def create_window(self, profile):
+        theme = self.target_object; theme_colors = theme.theme_colors
+        names = sorted(theme_colors.values()[0].keys())
+        window = self.main_window.create(self.new_window_type, names=names,
+                                       target_object=theme_colors[profile],
+                                       tab_text=profile)
+        window.hide()
+        return window
 
     def save_color_options(self):
         if self.file_saver is None:
@@ -180,9 +178,25 @@ class Theme_Customizer(pride.gui.widgets.tabs.Tab_Switching_Window):
             self.delete_callback()
 
 
+
+
+
 if __name__ == "__main__":
     import pride.gui
     import pride.gui.themes
-    window = pride.objects[pride.gui.enable()]
+    import pride.components.base
+    window = pride.objects[pride.gui.enable(x=50, y=50)]
+    _object = pride.components.base.Base(test_value=1)
+    #callable = lambda **kwargs: Value_Editor(target_object=_object,
+    #                                         names=("test_value", ),
+    #                                         **kwargs)
+    theme = pride.gui.themes.Minimal_Theme
+    info = theme.theme_colors
+    #callable = lambda **kwargs: Profile_Editor(target_object=info.values()[0],
+    #                                           names=sorted(info.values()[0].keys()),
+    #                                           **kwargs)
+    callable = lambda **kwargs: Theme_Editor(target_object=theme,
+                                             names=sorted(theme.theme_colors.keys()),
+                                             **kwargs)
     window.create("pride.gui.main.Gui", user=pride.objects["/User"],
-                  startup_programs=(lambda **kwargs: Theme_Customizer(target_theme=pride.gui.themes.Minimal_Theme, **kwargs), ))
+                  startup_programs=(callable, ))

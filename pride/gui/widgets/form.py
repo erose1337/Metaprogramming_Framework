@@ -127,15 +127,21 @@ class Form(Scrollable_Window):
             child_entry = child.entry
             selected = self.check_if_selected(child, child_entry)
             if selected:
-                index = (index + 1) % length
-                select = self.sdl_window.user_input.select_active_item
-                field = values[index]
+                # lazily load the next row if there is one
+                if index + 1 == length and len(self.rows) < len(self.fields):
+                    _row = self.fields[len(self.rows)]
+                    row, row_number = self.create_row()
+                    self.create_fields(_row, row, self.target_object)
+                    field = row.children[0]
+                else:
+                    index = (index + 1) % length
+                    field = values[index]
                 entry = field.entry
                 if entry.hidden:
                     slider = self.vertical_slider
                     if slider is not None:
                         slider.value = (slider.value + 1) % (len(self.rows) + 1 - self.max_rows)
-                select(entry)
+                self.sdl_window.user_input.select_active_item(entry)
                 name = getattr(field, "button_text", '') or field.display_name or field.name
                 self.show_status("Selected: {}".format(name))
                 break
@@ -158,15 +164,19 @@ class Form(Scrollable_Window):
 
         target_object = self.target_object; max_rows = self.max_rows
         for row_number, _row in enumerate(self.fields):
-            row, _row_number = self.create_row(); assert row_number == _row_number
-            for field_info in _row:
-                self.create_field(field_info, row, target_object)
-            if row_number >= max_rows:
-                row.hide()
+            if row_number >= max_rows: # lazy loading on the rest of the rows
+                continue
+            else:
+                row, _row_number = self.create_row(); assert row_number == _row_number
+                self.create_fields(_row, row, target_object)
 
         if self.vertical_slider is not None:
-            self.vertical_slider.maximum = max(0, len(self.rows) - max_rows)
+            self.vertical_slider.maximum = max(0, len(self.fields) - max_rows)
             self.vertical_slider.update_position_from_value()
+
+    def create_fields(self, _row, row, target_object):
+        for field_info in _row:
+            self.create_field(field_info, row, target_object)
 
     def create_row(self):
         row = self.main_window.create("pride.gui.gui.Container",
@@ -213,6 +223,13 @@ class Form(Scrollable_Window):
         max_rows = self.max_rows
         rows = self.rows
         row_count = len(rows)
+        if new_value > (row_count - self.max_rows):
+            # lazy load the next row(s)
+            for count in range(abs(old_value - new_value)):
+                _row = self.fields[len(rows)]
+                row, row_number = self.create_row()
+                self.create_fields(_row, row, self.target_object)
+
         for row_number, row in enumerate(rows):
             if row_number >= new_value and row_number < new_value + max_rows:
                 if row.hidden:

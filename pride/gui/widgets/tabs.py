@@ -1,242 +1,85 @@
-import pride.gui.gui
-import pride.gui.widgetlibrary
+import pride.gui.widgets.form
 
-import sdl2
+class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
 
-class New_Tab_Button(pride.gui.widgetlibrary.Method_Button):
-
-    defaults = {"pack_mode" : "left", "w_range" : (0, 40),
-                "scale_to_text" : False}
-
-
-class _Tab_Button(pride.gui.gui.Button):
-
-    def left_click(self, mouse):
-        self.parent.left_click(mouse)
-
-
-class _Editable_Tab_Button(pride.gui.widgetlibrary.Text_Box):
-
-    def left_click(self, mouse):
-        super(_Editable_Tab_Button, self).left_click(mouse)
-        self.parent.left_click(mouse)
-
-
-class Tab_Button(pride.gui.gui.Button):
-
-    defaults = {"pack_mode" : "left", "scale_to_text" : False,
-                "include_delete_button" : True,
-                "delete_tip" : "Close this window",
-                "_tab_button_type" : _Tab_Button, "w_range" : (0, 200),
-                "allow_text_edit" : True, "window_type" : None,
-                "window" : None}
-    predefaults = {"_editable" : False}
-    autoreferences = ("delete_button", "indicator", "window")
-    hotkeys = {('\n', None) : "handle_return"}
-
-    def _get_editable(self):
-        return self._editable
-    def _set_editable(self, value):
-        if not value and self.allow_text_edit:
-            self.allow_text_edit = False
-            sdl2.SDL_StopTextInput()
-        self._editable = value
-    editable = property(_get_editable, _set_editable)
-
-    def __init__(self, **kwargs):
-        super(Tab_Button, self).__init__(**kwargs)
-        if self.include_delete_button:
-            kwargs = dict(pack_mode="right", scale_to_text=True,
-                          target=self.reference, method="delete_tab", text='x',
-                          theme_type="pride.gui.themes.Text_Only_Theme",
-                          w_range=(0, 10), tip_bar_text=self.delete_tip,
-                          theme_profile="placeholder")
-            self.delete_button = self.create(pride.gui.widgetlibrary.Method_Button, **kwargs)
-        indicator = self.create("pride.gui.widgetlibrary.Status_Indicator")
-        self.indicator = indicator
-
-    #def on_hover(self):
-    #    super(Tab_Button, self).on_hover()
-    #    if self.delete_button is not None:
-    #        self.delete_button.theme_profile = "interactive"
-
-    #def hover_ends(self):
-    #    super(Tab_Button, self).hover_ends()
-    #    if self.delete_button is not None:
-    #        self.delete_button.theme_profile = "placeholder"
-
-    def delete_tab(self):
-        # delete the tab
-        # delete the associated window
-        # remove the tab from tab_bar.tabs
-        # select the previous tab in tab_bar if possible
-        tabs = self.parent.tabs
-        tabs.remove(self)
-        self.delete()
-        tabbed_window = self.parent.parent
-        tabbed_window.window_listing.remove(self.window)
-        self.window.delete()
-        try:
-            tabbed_window.select_tab(tabs[-1])
-        except IndexError:
-            if tabs:
-                raise
-
-    def left_click(self, mouse):
-        if self.window is None:
-            self.window = self.parent.parent.initialize_window(self.window_type)
-        self.parent.parent.select_tab(self)
-
-    def select(self):
-        super(Tab_Button, self).select()
-        if self.editable:
-            self.alert("Turning text input on", level='vv')
-            self.allow_text_edit = True
-            sdl2.SDL_StartTextInput()
-
-    def deselect(self, next_active_object):
-        super(Tab_Button, self).deselect(next_active_object)
-        if self.editable:
-            self.alert("Disabling text input", level='vv')
-            self.allow_text_edit = False
-            sdl2.SDL_StopTextInput()
-
-    def handle_return(self):
-        self.deselect(None)
-
-    @classmethod
-    def from_info(cls, **kwargs):
-        def _callable(**_kwargs):
-            _kwargs.update(kwargs)
-            return cls(**_kwargs)
-        return _callable
-
-
-class Tab_Bar(pride.gui.gui.Container):
-
-    defaults = {"h_range" : (0, 40), "pack_mode" : "top", "label" : '',
-                "tab_type" : Tab_Button, "new_button_tip" : ''}
-    mutable_defaults = {"tabs" : list}
-
-    def __init__(self, **kwargs):
-        super(Tab_Bar, self).__init__(**kwargs)
-        self.initialize_tabs()
-
-    def initialize_tabs(self):
-        if self.label:
-            self.create("pride.gui.gui.Container", text=self.label,
-                        scale_to_text=True, pack_mode="left")
-        self.create(New_Tab_Button, text='+', target=self.parent.reference,
-                    method="new_tab", tip_bar_text=self.new_button_tip)
-
-    def new_tab(self, **kwargs):
-        tab = self.create(self.tab_type, **kwargs)
-        self.tabs.append(tab)
-        return tab
-
-
-class Tab_Switcher_Bar(Tab_Bar):
-
-    defaults = {"tab_types" : tuple()}
-
-    def initialize_tabs(self):
-        if self.label:
-            self.create("pride.gui.gui.Container", text=self.label,
-                        scale_to_text=True, pack_mode="left")
-        for tab_type in self.tab_types:
-            self.tab_type = tab_type
-            self.new_tab(scale_to_text=False)
-
-
-class Tab_Switching_Window(pride.gui.gui.Window):
-
-    defaults = {"tab_bar_type" : Tab_Switcher_Bar, "tab_types" : tuple(),
-                "tab_bar_label" : '', "window_types" : tuple()}
-    autoreferences = ("tab_bar", )
-
-    def __init__(self, **kwargs):
-        super(Tab_Switching_Window, self).__init__(**kwargs)
-        self.initialize_tabs_and_windows()
-
-    def initialize_tabs_and_windows(self):
-        self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
-                                   tab_types=self.tab_types)
-        self.create_windows()
-
-    def create_windows(self):
-        tabs = self.tab_bar.tabs
-        for index, window_type in reversed(list(enumerate(self.window_types))):
-            tab = tabs[index]
-            tab.window_type = window_type
-            if not index:
-                tab.left_click(None)
-
-    def initialize_window(self, window_type, **window_kwargs):
-        window_kwargs = window_kwargs if window_kwargs is not None else dict()
-        return self.create(window_type, **window_kwargs)
-
-    def select_tab(self, selected_tab):
-        for tab_reference in self.tab_bar.tabs:
-            tab = tab_reference
-            if tab_reference != selected_tab and tab.window is not None:
-                tab.window.hide()
-                tab.indicator.disable_indicator()
-            elif tab.window is not None:
-                window = tab.window
-                if window.hidden:
-                    window.show()
-                indicator = tab.indicator
-                indicator.enable_indicator()
-        self.pack()
-
-
-class Tabbed_Window(pride.gui.gui.Window):
-
-    defaults = {"tab_bar_type" : Tab_Bar, "tab_type" : Tab_Button,
-                "tab_bar_label" : '', "window_type" : "pride.gui.gui.Window",
-                "new_button_tip" : ''}
-    mutable_defaults = {"window_listing" : list}
+    defaults = {"include_new_tab_button" : True, "tab_targets" : tuple(),
+                "new_window_type" : "pride.gui.gui.Container",
+                "include_tab_delete_button" : True,
+                "new_window_tab_text" : "New Window"}
     autoreferences = ("tab_bar", )
 
     def __init__(self, **kwargs):
         super(Tabbed_Window, self).__init__(**kwargs)
-        self.initialize_tab_bar()
+        self.create_subcomponents()
 
-    def initialize_tab_bar(self):
-        self.tab_bar = self.create(self.tab_bar_type, label=self.tab_bar_label,
-                                   tab_type=self.tab_type,
-                                   new_button_tip=self.new_button_tip)
+    def create_subcomponents(self):
+        if self.include_new_tab_button:
+            fields = [[("new_tab", {"button_text" : '+',
+                                    "scale_to_text" : True})]]
+        else:
+            fields = [[]]
+        fields[0].extend([("select_tab", {"button_text" : _object.tab_text,
+                                          "args" : (_object, )})
+                          for _object in self.tab_targets])
+        self.tab_bar = self.create(pride.gui.widgets.form.Form, pack_mode="top",
+                                   fields=fields, target_object=self,
+                                   h_range=(0, .05), max_rows=1)
+        for _object in self.tab_targets:
+            _object.hide()
+        self.select_tab(self.tab_targets[0])
 
-    def new_tab(self, window_kwargs=None, tab_kwargs=None):
-        tab_kwargs = tab_kwargs if tab_kwargs is not None else dict()
-        window_kwargs = window_kwargs if window_kwargs is not None else dict()
-        window = self.initialize_window(self.window_type, **window_kwargs)
-        tab_kwargs.setdefault("window", window)
-        new_tab = self.tab_bar.new_tab(**tab_kwargs)
-        window.tab = new_tab
-        self.select_tab(new_tab)
-        return (new_tab, window)
+    def new_tab(self):
+        tab_bar = self.tab_bar
+        _object = self.main_window.create(self.new_window_type, text="debug text")
+        fields = [("select_tab", {"args" : (_object, ),
+                                  "button_text" : self.new_window_tab_text,
+                                  "theme_profile" : "placeholder",
+                                  "entry_kwargs" : {"theme_profile" : "placeholder",
+                                                    "scale_to_text" : True}})]
+        if self.include_tab_delete_button:
+            fields.append(("delete_tab", {"args" : (_object, ),
+                                          "button_text" : 'x',
+                                          "theme_profile" : "placeholder",
+                                          "entry_kwargs" : {"theme_profile" : "placeholder",
+                                                            "scale_to_text" : True}})
+                         )
+        row = tab_bar.rows[0]
+        for field_info in fields:
+            tab_bar.create_field(field_info, row)
 
-    def initialize_window(self, window_type, **window_kwargs):
-        window_kwargs = window_kwargs if window_kwargs is not None else dict()
-        window = self.create(self.window_type, **window_kwargs)
-        self.window_listing.append(window)
-        return window
+    def select_tab(self, _object):
+        if _object.hidden:
+            _object.show()
+        else:
+            _object.hide()
+        _object.pack()
+        for tab in self.tab_bar.fields_list:
+            if tab.args[0] is _object:
+                if _object.hidden:
+                    tab.theme_profile = "placeholder"
+                else:
+                    tab.theme_profile = "indicator"
 
-    def select_tab(self, selected_tab):
-        found = False
-        for tab in self.tab_bar.tabs:
-            if tab != selected_tab:
-                tab.window.hide()
-                tab.indicator.disable_indicator()
-            else:
-                if tab.window is None:
-                    window = self.initialize_window(tab.window_type)
-                window = tab.window
-                if window.hidden:
-                    window.show()
-                indicator = tab.indicator
-                indicator.enable_indicator()
-                found = True
-        assert found
-        self.pack()
+    def delete_tab(self, _object):
+        _object.delete()
+        found = []
+        for field in self.tab_bar.fields_list:
+            if field.args and field.args[0] == _object:
+                found.append(field) # don't delete until after done iterating over fields list
+        for field in found:
+            field.delete()
+
+    def delete(self):
+        del self.tab_targets
+        super(Tabbed_Window, self).delete()
+
+
+def test_Tabbed_Window():
+    import pride.gui
+    import pride.gui.main
+    window = pride.objects[pride.gui.enable(x=52, y=52)]
+    window.create(pride.gui.main.Gui, startup_programs=(Tabbed_Window, ),
+                  user=pride.objects["/User"])
+
+if __name__ == "__main__":
+    test_Tabbed_Window()

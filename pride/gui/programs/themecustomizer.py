@@ -1,6 +1,6 @@
 import ast
 
-import pride.gui.widgets.tabs2
+import pride.gui.widgets.tabs
 
 try:
     import cefparser
@@ -9,13 +9,13 @@ except ImportError:
     print("Please download and install cefparser from https://github.com/erose1337/cef_parser")
     raise
 
-class Value_Editor(pride.gui.widgets.tabs2.Tabbed_Window):
+class Value_Editor(pride.gui.widgets.tabs.Tabbed_Window):
 
     defaults = {"include_new_tab_button" : False, "pack_mode" : "top",
                 "include_delete_button" : False, "names" : tuple(),
                 "new_window_type" : "pride.gui.widgets.form.Form"}
     mutable_defaults = {"target_object" : dict}
-    required_attributes = ("target_object", "names")
+    required_attributes = ("target_object", )
 
     def create_subcomponents(self):
         self.show_status("Initializing value editor...", immediately=True)
@@ -83,6 +83,7 @@ class Theme_Editor(Value_Editor):
     autoreferences = ("file_saver", "file_selector")
 
     def create_subcomponents(self):
+        self.names = sorted(theme.theme_colors.keys())
         self.create("pride.gui.widgets.form.Form", target_object=self,
                     pack_mode="top", h_range=(0, .05),
                     fields=[[("delete_color_options", {"button_text" : 'x',
@@ -174,12 +175,6 @@ class Theme_Editor(Value_Editor):
 
     def delete_color_options(self):
         self.delete()
-        if self.delete_callback is not None:
-            self.delete_callback()
-
-
-
-
 
 if __name__ == "__main__":
     import pride.gui
@@ -196,7 +191,6 @@ if __name__ == "__main__":
     #                                           names=sorted(info.values()[0].keys()),
     #                                           **kwargs)
     callable = lambda **kwargs: Theme_Editor(target_object=theme,
-                                             names=sorted(theme.theme_colors.keys()),
                                              **kwargs)
     window.create("pride.gui.main.Gui", user=pride.objects["/User"],
                   startup_programs=(callable, ))

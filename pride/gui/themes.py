@@ -35,6 +35,8 @@ class Theme(pride.components.base.Wrapper):
     theme_colors["borderless"]["shadow_thickness"] = 0
     theme_colors["blank"] = dict((key, pride.gui.color.Color(0, 0, 0, 0)) for key in _default_colors().keys())
     theme_colors["blank"].update({"glow_thickness" : 0, "shadow_thickness" : 0})
+    theme_profiles += ("blank", )
+
     _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
 
     def draw_texture(self):

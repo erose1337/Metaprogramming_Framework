@@ -168,6 +168,8 @@ class File_Selector(Directory_Viewer):
             box = self.application_window.create(pride.gui.widgets.form.Form,
                                                 fields=fields, target_object=self)
             self.confirmation_box = box
+        else:
+            self.confirmation_box.synchronize_fields()
 
     def delete_confirmation(self):
         self.confirmation_box.delete()

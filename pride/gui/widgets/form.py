@@ -886,7 +886,7 @@ class Dropdown_Field(Field):
             row.hide()
 
         self.menu_open = True
-        entry.vertical_slider.maximum = max(0, len(rows) - entry.max_rows)
+        entry.vertical_slider.maximum = max(0, len(entry.fields) - max_rows)
         entry.vertical_slider.pack()
 
     def select_entry(self, value):

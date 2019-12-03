@@ -127,9 +127,17 @@ class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
         if not os.path.exists(identifier) and identifier[0]:
             raise ValueError("{} does not exist".format(identifier))
         if os.path.isdir(identifier):
-            children = os.listdir(identifier)
-            return sorted([os.path.join(identifier, child) for
-                           child in children if max(set(bytearray(child))) < 128])
+            try:
+                children = os.listdir(identifier)
+            except OSError as error:
+                if error.errno != 13:
+                    raise
+                else:
+                    self.show_status("Unable to open '{}'; Access denied".format(identifier))
+                    return None
+            else:
+                return sorted([os.path.join(identifier, child) for
+                              child in children if max(set(bytearray(child))) < 128])
         else:
             return [identifier]
 
@@ -193,5 +201,5 @@ def file_saver_test():
                         startup_programs=(File_Saver, ))
 
 if __name__ == "__main__":
-    #directory_explorer_test()
+    directory_explorer_test()
     file_saver_test()

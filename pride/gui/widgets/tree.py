@@ -39,12 +39,14 @@ class Tree_Viewer(pride.gui.gui.Application):
                                  fields=fields)
         self.bottom = window.create("pride.gui.gui.Container", pack_mode="top")
 
-    def view_node(self, identifier=None): # "view" button does not identifier and uses self.current_node
+    def view_node(self, identifier=None): # "view" button does not use identifier and uses self.current_node
         if identifier is None:
             identifier = self.current_node
         if self.history and identifier == self.history[-1]:
             return
         children = self.lookup(identifier)
+        if children is None:
+            return
         fields = self.children_to_fields(children)
         if self.viewer is not None:
             self.viewer.delete()

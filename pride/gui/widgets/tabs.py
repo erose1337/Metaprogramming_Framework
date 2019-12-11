@@ -1,5 +1,38 @@
 import pride.gui.widgets.form
 
+class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
+
+    defaults = {"_end_hover_set_profile" : ''}
+
+    def left_click(self, mouse):
+        parent_field = self.parent_field
+        parent_field.value(self, *parent_field.args, **parent_field.kwargs)
+        _object = self.parent_field.args[0]
+        if _object.hidden:
+            self._end_hover_set_profile = "interactive"
+        else:
+            self._end_hover_set_profile = "indicator"
+
+
+    def handle_return(self):
+        parent_field = self.parent_field
+        parent_field.value(self, *parent_field.args, **parent_field.kwargs)
+
+
+
+    def hover_ends(self):
+        super(Tab_Button_Entry, self).hover_ends()
+        new_profile = self._end_hover_set_profile
+        if new_profile:
+            self.theme_profile = new_profile
+            self._end_hover_set_profile = ''
+
+
+class Tab_Button_Field(pride.gui.widgets.form.Callable_Field):
+
+    defaults = {"entry_type" : Tab_Button_Entry}
+
+
 class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
 
     defaults = {"include_new_tab_button" : True, "tab_targets" : tuple(),
@@ -19,23 +52,25 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         else:
             fields = [[]]
         fields[0].extend([("select_tab", {"button_text" : _object.tab_text,
-                                          "args" : (_object, )})
+                                          "args" : (_object, ),
+                                          "field_type" : Tab_Button_Field})
                           for _object in self.tab_targets])
         self.tab_bar = self.create(pride.gui.widgets.form.Form, pack_mode="top",
                                    fields=fields, target_object=self,
                                    h_range=(0, .05), max_rows=1)
-        for _object in self.tab_targets:
-            _object.hide()
-        self.select_tab(self.tab_targets[0])
+        if self.tab_targets:
+            for tab, _object in zip(self.tab_bar.fields_list, self.tab_targets):
+                self._set_color(tab, _object)
 
-    def new_tab(self):
+    def new_tab(self, new_tab_button):
         tab_bar = self.tab_bar
         _object = self.main_window.create(self.new_window_type, text="debug text")
         fields = [("select_tab", {"args" : (_object, ),
                                   "button_text" : self.new_window_tab_text,
                                   "theme_profile" : "placeholder",
                                   "entry_kwargs" : {"theme_profile" : "placeholder",
-                                                    "scale_to_text" : True}})]
+                                                    "scale_to_text" : True},
+                                  "field_type" : Tab_Button_Field})]
         if self.include_tab_delete_button:
             fields.append(("delete_tab", {"args" : (_object, ),
                                           "button_text" : 'x',
@@ -45,29 +80,32 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                          )
         row = tab_bar.rows[0]
         for field_info in fields:
-            tab_bar.create_field(field_info, row)
+            field = tab_bar.create_field(field_info, row)
+            if field.name == "select_tab":
+                self._set_color(field.entry, field.args[0])
 
-    def select_tab(self, _object):
+    def select_tab(self, tab, _object):
         if _object.hidden:
             _object.show()
         else:
             _object.hide()
         _object.pack()
-        for tab in self.tab_bar.fields_list:
-            if tab.args[0] is _object:
-                if _object.hidden:
-                    tab.theme_profile = "placeholder"
-                else:
-                    tab.theme_profile = "indicator"
+        self._set_color(tab, _object)
+        #self.sdl_window.schedule_postdraw_operation(lambda: self._set_color(tab, _object), self)
 
-    def delete_tab(self, _object):
+    def _set_color(self, tab, _object):
+        if _object.hidden:
+            tab.theme_profile = "placeholder"
+        else:
+            tab.theme_profile = "indicator"
+
+    def delete_tab(self, delete_button, _object):
         _object.delete()
-        found = []
+        delete_button.parent_field.delete()
         for field in self.tab_bar.fields_list:
             if field.args and field.args[0] == _object:
-                found.append(field) # don't delete until after done iterating over fields list
-        for field in found:
-            field.delete()
+                field.delete() # modifies list that is being iterated over
+                break          # won't matter if we don't do anything further with it
 
     def delete(self):
         del self.tab_targets

@@ -69,8 +69,8 @@ indicator
       - glow_thickness: 4
       - shadow: (0, 0, 0, 255)
       - shadow_thickness: 5
-      - text: (45, 45, 45, 255)
-      - text_background: (0, 0, 0, 255)
+      - text: (214, 221, 255, 255)
+      - text_background: (16, 38, 106, 255)
 
 
 inert

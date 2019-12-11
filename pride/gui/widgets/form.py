@@ -197,6 +197,7 @@ class Form(Scrollable_Window):
         del entries["target_object"]
         #entries.clear()
         self.fields_list.append(field)
+        return field
 
     def create_top_display(self):
         assert self.form_name or self.include_delete_button

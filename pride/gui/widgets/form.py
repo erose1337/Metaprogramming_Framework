@@ -348,7 +348,8 @@ class Form(Scrollable_Window):
 
 class Entry(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : "right", "confidential" : False}
+    defaults = {"pack_mode" : "right", "confidential" : False,
+                "show_status_when_selected" : True}
     predefaults = {"parent_field" : None, "text_initialized" : False}
     autoreferences = ("parent_field", )
 
@@ -371,6 +372,13 @@ class Entry(pride.gui.gui.Button):
             super(Entry, self)._set_text(value)
             self.text_initialized = True
     text = property(_get_text, _set_text)
+
+    def select(self):
+        super(Entry, self).select()
+        if self.show_status_when_selected:
+            field = self.parent_field
+            name = getattr(field, "button_text", '') or field.display_name or field.name
+            self.show_status("Selected: {}".format(name))
 
 
 class Field(pride.gui.gui.Container):
@@ -994,6 +1002,8 @@ class Continuum(pride.gui.gui.Button):
 
 class Endcap_Entry(Text_Entry):
 
+    defaults = {"show_status_when_selected" : False}
+
     def left_click(self, mouse):
         super(Endcap_Entry, self).left_click(mouse)
         parent_field = self.parent_field
@@ -1053,6 +1063,7 @@ class Slider_Entry(Entry):
         else:
             pack_mode = "left"
             kwargs["w_range"] = (0, .08)
+        kwargs["show_status_when_selected"] = False
 
         include_minmax = self.include_minmax_buttons
         include_incdec = self.include_incdec_buttons

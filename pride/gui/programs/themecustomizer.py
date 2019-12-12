@@ -18,10 +18,14 @@ class Value_Editor(pride.gui.widgets.tabs.Tabbed_Window):
     required_attributes = ("target_object", )
 
     def create_subcomponents(self):
-        self.show_status("Initializing value editor...", immediately=True)
-        self.tab_targets = [self.create_window(name) for name in self.names]
+        create_window = self.create_window
+        targets = self.tab_targets = []
+        for name in self.names:
+            def callable(name=name):
+                return create_window(name)
+            callable.tab_text = name
+            targets.append(callable)
         super(Value_Editor, self).create_subcomponents()
-        # creates tabs via new_tab()
 
     def create_window(self, name):
         window = self.main_window.create(self.new_window_type, fields=[[name]],
@@ -49,6 +53,7 @@ class Profile_Editor(Value_Editor):
             except KeyError:
                 raise error
         kwargs = dict()
+        print _object, name
         try:
             rmin, rmax = _object.r_range; gmin, gmax = _object.g_range
             bmin, bmax = _object.b_range; amin, amax = _object.a_range
@@ -83,6 +88,7 @@ class Theme_Editor(Value_Editor):
     autoreferences = ("file_saver", "file_selector")
 
     def create_subcomponents(self):
+        self.show_status("Initializing theme editor...", immediately=True)
         self.names = sorted(theme.theme_colors.keys())
         self.create("pride.gui.widgets.form.Form", target_object=self,
                     pack_mode="top", h_range=(0, .05),
@@ -94,7 +100,14 @@ class Theme_Editor(Value_Editor):
                              ("load_color_options", {"button_text" : "Import color options",
                                                      "pack_mode" : "right"})
                            ]])
-        self.tab_targets = [self.create_window(profile) for profile in self.target_object.theme_colors.keys()]
+
+        targets = self.tab_targets = []
+        print self.target_object.theme_colors.keys()
+        for profile in self.target_object.theme_colors.keys():
+            def callable(profile=profile):
+                print("Lazily created window for {}".format(profile))
+                return self.create_window(profile)
+            targets.append(callable)
         super(Theme_Editor, self).create_subcomponents()
         self.show_status("...Done")
 
@@ -102,8 +115,8 @@ class Theme_Editor(Value_Editor):
         theme = self.target_object; theme_colors = theme.theme_colors
         names = sorted(theme_colors.values()[0].keys())
         window = self.main_window.create(self.new_window_type, names=names,
-                                       target_object=theme_colors[profile],
-                                       tab_text=profile)
+                                         target_object=theme_colors[profile],
+                                         tab_text=profile)
         window.hide()
         return window
 

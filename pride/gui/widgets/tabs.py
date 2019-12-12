@@ -2,10 +2,14 @@ import pride.gui.widgets.form
 
 class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
 
-    defaults = {"_end_hover_set_profile" : ''}
+    defaults = {"_end_hover_set_profile" : '', "_already_constructed" : False,
+                "use_lazy_loading" : True}
 
     def left_click(self, mouse):
         parent_field = self.parent_field
+        if self.use_lazy_loading: not self._already_constructed:
+            parent_field.args = (parent_field.args[0](), ) + parent_field.args[1:]
+            self._already_constructed = True
         parent_field.value(self, *parent_field.args, **parent_field.kwargs)
         _object = self.parent_field.args[0]
         if _object.hidden:
@@ -13,12 +17,9 @@ class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
         else:
             self._end_hover_set_profile = "indicator"
 
-
     def handle_return(self):
         parent_field = self.parent_field
         parent_field.value(self, *parent_field.args, **parent_field.kwargs)
-
-
 
     def hover_ends(self):
         super(Tab_Button_Entry, self).hover_ends()
@@ -58,9 +59,6 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         self.tab_bar = self.create(pride.gui.widgets.form.Form, pack_mode="top",
                                    fields=fields, target_object=self,
                                    h_range=(0, .05), max_rows=1)
-        if self.tab_targets:
-            for tab, _object in zip(self.tab_bar.fields_list, self.tab_targets):
-                self._set_color(tab, _object)
 
     def new_tab(self, new_tab_button):
         tab_bar = self.tab_bar
@@ -95,7 +93,7 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
 
     def _set_color(self, tab, _object):
         if _object.hidden:
-            tab.theme_profile = "placeholder"
+            tab.theme_profile = "interactive"
         else:
             tab.theme_profile = "indicator"
 

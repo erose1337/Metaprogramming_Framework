@@ -7,7 +7,7 @@ class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
 
     def left_click(self, mouse):
         parent_field = self.parent_field
-        if self.use_lazy_loading: not self._already_constructed:
+        if self.use_lazy_loading and not self._already_constructed:
             parent_field.args = (parent_field.args[0](), ) + parent_field.args[1:]
             self._already_constructed = True
         parent_field.value(self, *parent_field.args, **parent_field.kwargs)

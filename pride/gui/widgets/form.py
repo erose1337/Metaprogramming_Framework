@@ -359,7 +359,10 @@ class Entry(pride.gui.gui.Button):
     def _set_text(self, value):
         if self.text_initialized:
             if self.allow_text_edit:
-                self.parent_field.value = value
+                if isinstance(self, Integer_Entry):
+                    self.parent_field.value = int(value)
+                else:
+                    self.parent_field.value = value
             else:
                 parent_field = self.parent_field
                 try:

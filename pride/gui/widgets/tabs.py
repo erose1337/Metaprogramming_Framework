@@ -39,7 +39,8 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
     defaults = {"include_new_tab_button" : True, "tab_targets" : tuple(),
                 "new_window_type" : "pride.gui.gui.Container",
                 "include_tab_delete_button" : True,
-                "new_window_tab_text" : "New Window"}
+                "new_window_tab_text" : "New Window",
+                "tab_bar_title_text" : ''}
     autoreferences = ("tab_bar", )
 
     def __init__(self, **kwargs):
@@ -58,6 +59,7 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                           for _object in self.tab_targets])
         self.tab_bar = self.create(pride.gui.widgets.form.Form, pack_mode="top",
                                    fields=fields, target_object=self,
+                                   form_name=self.tab_bar_title_text,
                                    h_range=(0, .05), max_rows=1)
 
     def new_tab(self, new_tab_button):

@@ -1,7 +1,32 @@
 Currently working on:
 
+- hide/show bugs when switching tabs in game and closing theme customizer
+    - refactor tabs to use Forms and see if it is still an issue
+    - still an issue
+        - click on a continuum then try to open another tab
+
+- refactor things that use tabs:
+    - Homescreen?
+        - just write a new one with Forms
+    - gamestuff
+
+
+
 To Do/Bugs
 =====
+
+- if some object is not clickable, should that apply to children?
+    - current behavior does not do so
+        - must set both parent and child `clickable` flags to False
+
+- database viewer program
+    - select db file (File_Selector)
+    - use Database.db_info and table_info to display contents
+
+- add form names to theme customizer tabs
+- open tabs left/right instead of top/bottom
+
+- documentation for Forms and Tabs
 
 - Lockscreen needs register button sorted out
     - user2 doesn't have a register method...
@@ -12,9 +37,10 @@ To Do/Bugs
 
 Form stuff
 ----------
-- hide/show bugs when switching tabs in game and closing theme customizer
-    - refactor tabs to use Forms and see if it is still an issue
-- implement lazy loading of rows in Form
+- Field_Info and Entry_Info ?
+    - instead of (name, kwargs_dict) pairs, use Field_Info(name, option=value, ...)
+                                            and Entry_Info(option=value, ...)
+    - Cleaner syntax than tuples containing dictionaries
 - update Form max_rows on area change
     - when more space is available, more rows can be displayed
 - balance on Forms probably still needs testing
@@ -85,6 +111,106 @@ Make identicons
     - if pattern a is a translation or rotation of pattern b, then pattern a and b are different representations of the same pattern
     - generate all symmetries for an NxN grid:
         - assume the only possible configuration of a cell is a solid fill of color1 or color2
+
+
+Shape, Outline color, background color, and shape color
+-------------------------------------------------------
+
+- Draw an outline with color w
+- Fill the background inside it with color x
+- Draw a shape y with color z inside the outlined and filled area
+
+- color can display lots of information
+    - 4 bits per color channel rgb: 12-bits of possible colors
+    - 3 separate colors can display a maximum of 2 ** (12 * 3) = 2 ** 36
+        - Some combinations are not useful, e.g. outline color = background color = shape color
+- For shapes:
+    - Easy: pick from a selection of the simplest shapes
+        - point (circle), line, triangle, square, pentagon, trapezoid, perpendicular lines, parallel lines
+            - stop at pentagon, because distinguishing n-gons at a glace quickly becomes impractical
+            - could use combinations of shapes
+                - e.g. place triangles along the edges of a square
+
+    - Hard?: Geometrical representation of error correcting codes
+        - good error correcting codes are maximally different from each other
+            - does this apply to their geometrical realization as well?
+
+    - Choice of shape itself does not contribute huge amount of bits to possibility space
+        - but the use of the shape enables the use of a third color, which does have a large influence.
+
+Which is more useful:
+
+- Having a small number of features with a huge number of possible states per feature
+    - e.g. having only one color that can take 2 ** 12 possible values
+    - can technically distinguish 2 ** 12 different states
+- Having a large number of features with a smaller amount of possible states per feature
+    - having 4 different shapes present where each shape can take on 2 ** 3 possible values
+    - can technically distinguish 2 ** (3 * 4) = 2 ** 12 different states
+    -
+
+Reformulate the question:
+
+- Is having a (single) feature with a huge number of possible states useful?
+    - how many different identifiers should there be in a given subcategory
+
+
+- use shapes to determine location in a tree of types, and use color to determine the selection within that location of the tree
+
+    shape0     shape1     shape2
+
+    shape3     shape4     shape5
+
+    shape6     shape7     shape8
+
+    The value of shape0 determines a specific category among the broadest possible categories
+        - program/data?
+
+
+What metadata can be defined about something (program/data) in the abstract?
+
+    - Not using concrete details, e.g. a hash of the bits
+    - Using abstract details, such as what it is for (e.g. financial accounting application)
+        - What abstract details exist?
+
+                - Name
+                - Type/purpose
+                    - application
+                        - system tool
+                            - Tools for working with the file system
+                            - Tools for working with pride
+                            - Tools for working with the OS
+                            - Tools for working with the hardware
+                        - settings
+                        - development/work/productivity
+                            - text/document editors
+                            - programming IDE
+                            - photoshop
+                            - audacity
+                        - internet
+                            - web browser
+                            - email
+                            - internet messenger (e.g. discord, slack)
+                            - applications that depend exclusively or heavily on internet in order to function
+                        - media
+                            - music player
+                            - video player
+                            - book reader
+                        - game
+                            - tactics/strategy
+                            - ...
+                        - misc
+                    - data/file (suggestion: use radius of the polygon/shape to indicate file size)
+                        - configuration file
+                        - database
+                        - movie
+                        - music
+                        - picture
+                        - shell script
+                        - source code
+                        - misc
+                    - shortcuts?
+                        - e.g. documents, downloads, etc
+                    - user-specified/custom/pinned/starred
 
 
 
@@ -220,10 +346,12 @@ optimize render
     - handle_area_change can perform re-draw
 - memoize SDL_Renderer.draw_text
     - should be easy performance gain without having to implement the texture atlas
+- "floating" z cache
 - invalidate texture and text separately
     - frequently it will be the case that an items text will change while the rest remains the same
     - could split invalidation into two tiers, one that invalidates everything, and another that redraws only the text
-
+- draw all text separately at end of layer
+    - can cache rest of drawing so that only text needs to be re-drawn (when applicable)
 
 
 

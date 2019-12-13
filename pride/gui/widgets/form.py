@@ -203,10 +203,11 @@ class Form(Scrollable_Window):
         assert self.form_name or self.include_delete_button
         field = []
         if self.form_name:
-            field.append(("form_name", {"editable" : False,
+            field.append(("form_name", {"editable" : False, "clickable" : False,
                                         "auto_create_id" : False,
                                         "entry_kwargs" : {"theme_profile" : "default",
-                                                          "tip_bar_text" : self.tip_bar_text}
+                                                          "tip_bar_text" : self.tip_bar_text,
+                                                          "clickable" : False}
                                         }
                          ))
         if self.include_delete_button:

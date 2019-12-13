@@ -53,7 +53,6 @@ class Profile_Editor(Value_Editor):
             except KeyError:
                 raise error
         kwargs = dict()
-        print _object, name
         try:
             rmin, rmax = _object.r_range; gmin, gmax = _object.g_range
             bmin, bmax = _object.b_range; amin, amax = _object.a_range
@@ -102,10 +101,8 @@ class Theme_Editor(Value_Editor):
                            ]])
 
         targets = self.tab_targets = []
-        print self.target_object.theme_colors.keys()
         for profile in self.target_object.theme_colors.keys():
             def callable(profile=profile):
-                print("Lazily created window for {}".format(profile))
                 return self.create_window(profile)
             targets.append(callable)
         super(Theme_Editor, self).create_subcomponents()
@@ -116,6 +113,7 @@ class Theme_Editor(Value_Editor):
         names = sorted(theme_colors.values()[0].keys())
         window = self.main_window.create(self.new_window_type, names=names,
                                          target_object=theme_colors[profile],
+                                         tab_bar_title_text="{} profile settings".format(profile),
                                          tab_text=profile)
         window.hide()
         return window

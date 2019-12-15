@@ -1,6 +1,8 @@
 import datetime
 
 import pride.gui.gui
+import pride.gui.color
+_Color = pride.gui.color.Color
 
 MONTHS = ("January", "February", "March", "April", "May", "June", "July",
           "August", "September", "October", "November", "December")
@@ -32,8 +34,8 @@ def to_hour(number):
 
 class Calendar(pride.gui.gui.Window):
 
-    defaults = {"month" : '', "background_color" : (255, 255, 255, 50),
-                "color" : (21, 21, 21, 255), "text_color" : (68, 68, 68, 255)}
+    defaults = {"month" : '', "background_color" : _Color(255, 255, 255, 50),
+                "color" : _Color(21, 21, 21, 255), "text_color" : _Color(68, 68, 68, 255)}
     required_attributes = ("month", )
     post_initializer = "setup_calendar"
 
@@ -246,4 +248,7 @@ class Day_Display_Button(pride.gui.gui.Button): pass
 
 if __name__ == "__main__":
     window = pride.gui.enable()
-    calendar = objects[window].create(Calendar, month="January")
+    def callable(**kwargs): return Calendar(month="January", **kwargs)
+    calendar = objects[window].create("pride.gui.main.Gui",
+                                      startup_programs=(callable, ),
+                                      user=pride.objects["/User"])

@@ -74,6 +74,7 @@ class Minimal_Theme(Theme):
         super(Minimal_Theme, cls).update_theme_users()
 
     def draw_texture(self):
+        assert not self.deleted
         assert not self.hidden
         x, y, w, h = area = self.x, self.y, self.w, self.h
         if not w or not h:

@@ -65,7 +65,7 @@ class Profile_Editor(Value_Editor):
         except AttributeError:
             orientation = "side by side"
             fields = [
-                      [(name, {"minimum" : 0, "maximum" : 16,
+                      [(name, {#"minimum" : 0, "maximum" : 16,
                                "entry_kwargs" : {"orientation" : orientation}})]
                      ]
             target = self.target_object

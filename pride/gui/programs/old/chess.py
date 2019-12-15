@@ -244,3 +244,8 @@ class Chess(pride.gui.boardgame.Board_Game):
             game_board[piece_index][-1].create("pride.gui.chess." + piece_name, text_color=black_text,
                                                color=black, text=piece_name, team="black",
                                                background_color=black_background)
+
+if __name__ == "__main__":
+    import pride.gui
+    window = pride.objects[pride.gui.enable()]
+    window.create("pride.gui.main.Gui", startup_programs=(Chess, ), user=pride.objects["/User"])

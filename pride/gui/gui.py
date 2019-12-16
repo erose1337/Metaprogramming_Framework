@@ -5,7 +5,6 @@ import pride.functions.utilities
 import pride.components.base as base
 import pride.gui
 import pride.gui.shapes
-import pride.gui.color
 import pride.gui.sdllibrary
 Instruction = pride.Instruction
 
@@ -525,11 +524,13 @@ class _Window_Object(Organized_Object):
         else:
             self.hidden = False
         if not self.hidden:
+            assert not self.deleted
             window = self.sdl_window
             window.user_input._update_coordinates(self, self.reference, self.area, self.z)
-            assert not self.hidden
-            assert not self.deleted
-            self.texture_invalid = True
+            if self.texture_invalid:
+                window.invalidate_object(self) # need to re-invalidate after _update_coordinates
+            else:
+                self.texture_invalid = True
             for child in self.children:
                 child.show(True)
 

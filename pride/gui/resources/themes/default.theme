@@ -40,7 +40,7 @@ borderless
 default
 -------
 
-      - background: (20, 34, 51, 12)
+      - background: (20, 34, 10, 12)
       - glow: (255, 255, 255, 235)
       - glow_thickness: 0
       - shadow: (31, 105, 172, 128)

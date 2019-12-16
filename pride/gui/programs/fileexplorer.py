@@ -139,7 +139,9 @@ class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
                 return sorted([os.path.join(identifier, child) for
                               child in children if max(set(bytearray(child))) < 128])
         else:
-            return [identifier]
+            assert os.path.isfile(identifier)
+            self.select_file(identifier)
+            return None
 
     def handle_up(self):
         node = self.current_node

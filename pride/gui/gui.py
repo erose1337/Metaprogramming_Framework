@@ -73,6 +73,10 @@ class Organizer(base.Base):
             pack_mode = child.pack_mode
             if pack_mode is None or child.hidden:
                 continue
+            if pack_mode == 'z':
+                old_area[child] = child.area
+                child.z = z
+                continue
             if pack_mode == "fill":
                 old_area[child] = child.area
                 child.z = z
@@ -506,7 +510,8 @@ class _Window_Object(Organized_Object):
             self._tip_set = False
 
     def hide(self, parent_call=False):
-        # include if already hidden early return?
+        if self.hidden:
+            return
         self.sdl_window.remove_window_object(self)
         self.sdl_window.dirty_layers.add(self.z)
         if parent_call:
@@ -518,7 +523,8 @@ class _Window_Object(Organized_Object):
             child.hide(True)
 
     def show(self, parent_call=False):
-        # include if not hidden early return?
+        if not self.hidden:
+            return
         if parent_call:
             self._parent_hidden = False
         else:

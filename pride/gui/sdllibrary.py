@@ -259,7 +259,7 @@ class SDL_Window(SDL_Component):
         #print("Redoing {} different drawing instructions".format(len(self.redraw_objects)))
         for window_object in self.redraw_objects:
             assert not window_object.deleted, window_object.reference
-            assert not window_object.hidden
+            assert not window_object.hidden, window_object
             old_z = self.user_input._update_coordinates(window_object,
                                                         window_object.reference,
                                                         window_object.area,

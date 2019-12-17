@@ -1,6 +1,7 @@
 import ast
 
 import pride.gui.widgets.tabs
+import pride.gui.widgets.form
 
 try:
     import cefparser
@@ -64,9 +65,9 @@ class Profile_Editor(Value_Editor):
                      ]
         except AttributeError:
             orientation = "side by side"
+            field_info = pride.gui.widgets.form.field_info
             fields = [
-                      [(name, {#"minimum" : 0, "maximum" : 16,
-                               "entry_kwargs" : {"orientation" : orientation}})]
+                      [field_info(name, entry_kwargs=dict(orientation=orientation))]
                      ]
             target = self.target_object
             if orientation == "stacked":

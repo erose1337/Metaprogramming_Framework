@@ -28,12 +28,18 @@ class Balancer(object):
         self.balance += amount
 
 
+def field_info(field_name, **kwargs):
+    return (field_name, kwargs)
+
+
 class Scrollable_Window(pride.gui.gui.Window):
 
     defaults = {"vertical_slider_position" : "right",
                 "horizontal_slider_position" : "bottom"}
     predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
     autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
+    mutable_defaults = {"vertical_slider_entry_kwargs" : lambda: {"orientation" : "stacked"},
+                        "horizontal_slider_entry_kwargs" : dict}
 
     def _get_y_scroll_value(self):
         return self._y_scroll_value
@@ -61,13 +67,13 @@ class Scrollable_Window(pride.gui.gui.Window):
                         orientation="stacked", w_range=(0, .025), target_object=self,
                         name="y_scroll_value", minimum=0, maximum=0,
                         auto_create_id=False,
-                        entry_kwargs={"orientation" : "stacked"})
+                        entry_kwargs=self.vertical_slider_entry_kwargs)
         position = self.horizontal_slider_position
         if position is not None:
             self.horizontal_slider = \
             self.create("pride.gui.widgets.form.Slider_Field", pack_mode=position,
                         orientation="side by side", h_range=(0, .025), target_object=self,
-                        auto_create_id=False,
+                        auto_create_id=False, entry_kwargs=self.horizontal_slider_entry_kwargs,
                         name="x_scroll_value", minimum=0, maximum=0)
 
     def handle_x_scroll(self, old_value, new_value):

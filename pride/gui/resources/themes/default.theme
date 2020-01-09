@@ -33,7 +33,7 @@ borderless
       - glow_thickness: 0
       - shadow: (0, 0, 0, 255)
       - shadow_thickness: 0
-      - text: (45, 45, 45, 255)
+      - text: (146, 169, 235, 255)
       - text_background: (0, 0, 0, 255)
 
 

@@ -176,9 +176,14 @@ class Form(Scrollable_Window):
                 row, _row_number = self.create_row(); assert row_number == _row_number
                 self.create_fields(_row, row, target_object)
 
-        if self.vertical_slider is not None:
-            self.vertical_slider.maximum = max(0, len(self.fields) - max_rows)
-            self.vertical_slider.update_position_from_value()
+        self.synchronize_scroll_bars()
+
+    def synchronize_scroll_bars(self):
+        slider = self.vertical_slider
+        if slider is not None:
+            slider.maximum = max(0, len(self.fields) - self.max_rows)
+            slider.update_position_from_value()
+            self.pack()
 
     def create_fields(self, _row, row, target_object):
         for field_info in _row:
@@ -192,7 +197,7 @@ class Form(Scrollable_Window):
         rows.append(row)
         return row, rows.index(row)
 
-    def create_field(self, field_info, row, target_obect=None):
+    def create_field(self, field_info, row, target_object=None):
         empty_entries = {"balancer" : self.balancer, "displayer" : self.displayer}
         name, entries = self._unpack(field_info, empty_entries)
         _target_object = entries.setdefault("target_object", self.target_object)
@@ -234,9 +239,9 @@ class Form(Scrollable_Window):
         if new_value > (row_count - self.max_rows):
             # lazy load the next row(s)
             for count in range(abs(old_value - new_value)):
-                _row = self.fields[len(rows)]
+                row_info = self.fields[len(rows)]
                 row, row_number = self.create_row()
-                self.create_fields(_row, row, self.target_object)
+                self.create_fields(row_info, row, self.target_object)
 
         for row_number, row in enumerate(rows):
             if row_number >= new_value and row_number < new_value + max_rows:
@@ -387,7 +392,7 @@ class Entry(pride.gui.gui.Button):
         super(Entry, self).select()
         if self.show_status_when_selected:
             field = self.parent_field
-            name = getattr(field, "button_text", '') or field.display_name or field.name
+            name = field.tip_name or getattr(field, "button_text", '') or field.display_name or field.name
             self.show_status("Selected: {}".format(name))
 
 
@@ -396,17 +401,17 @@ class Field(pride.gui.gui.Container):
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "pack_mode" : "top", "balancer" : None, "_value_initialized" : False,
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True,
-                "display_name" : '', "scale_to_text" : True}
-    mutable_defaults = {"entry_kwargs" : dict}
+                "display_name" : '', "scale_to_text" : True, "tip_name" : ''}
+    mutable_defaults = {"entry_kwargs" : dict, "id_kwargs" : dict}
     predefaults = {"target_object" : None}
-    required_attributes = ("target_object", )
+    #required_attributes = ("target_object", ) # target_object could be a list that starts out empty
     autoreferences = ("identifier", "displayer", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
         try:
             return getattr(self.target_object, self.name)
-        except AttributeError as exception:
+        except (TypeError, AttributeError) as exception:
             try:
                 return self.target_object[self.name]
             except TypeError:
@@ -417,7 +422,7 @@ class Field(pride.gui.gui.Container):
             if self.handle_value_changed(old_value, value):
                 try:
                     setattr(self.target_object, self.name, value)
-                except AttributeError as exception:
+                except (TypeError, AttributeError) as exception:
                     assert hasattr(self, "target_object")
                     try: # duck typing might fail for mapping-like objects that don't restrict attribute assignment the way a dict does
                         self.target_object[self.name] = value
@@ -434,12 +439,12 @@ class Field(pride.gui.gui.Container):
         self.create_id_and_entry()
 
     def create_id_and_entry(self):
-        id_kwargs = dict()
+        id_kwargs = self.id_kwargs
         orientation = self.orientation
         if orientation == "stacked":
             pack_mode = "top"
             scale_to_text = False
-            id_kwargs["h_range"] = (0, .05)
+            id_kwargs.setdefault("h_range", (0, .05))
         else:
             assert orientation == "side by side"
             pack_mode = "left"
@@ -619,14 +624,17 @@ class Text_Entry(Entry):
             self.sdl_window.schedule_postdraw_operation(self.wait_and_enable, self)
             self._counter = 0
         else:
-            try:
-                self.sdl_window.unschedule_postdraw_operation(self.wait_and_enable, self)
-            except (KeyError, ValueError):
-                pass
-            try:
-                self.sdl_window.unschedule_postdraw_operation(self.wait_and_disable, self)
-            except (KeyError, ValueError):
-                pass
+            self.purge_blink_instructions()
+
+    def purge_blink_instructions(self):
+        try:
+            self.sdl_window.unschedule_postdraw_operation(self.wait_and_enable, self)
+        except (KeyError, ValueError):
+            pass
+        try:
+            self.sdl_window.unschedule_postdraw_operation(self.wait_and_disable, self)
+        except (KeyError, ValueError):
+            pass
 
     def deselect(self, next_active_object):
         super(Text_Entry, self).deselect(next_active_object)
@@ -1032,13 +1040,23 @@ class Endcap(Text_Display):
 class Slider_Entry(Entry):
 
     defaults = {"orientation" : "side by side", "include_incdec_buttons" : True,
-                "include_minmax_buttons" : True}
+                "include_minmax_buttons" : True, "hide_text" : False}
     autoreferences = ("left", "continuum", "right", "max_button", "min_button",
                       "inc_button", "dec_button")
     hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
                (DOWN_ARROW, None) : "handle_down_arrow",
                (LEFT_ARROW, None) : "handle_left_arrow",
                (RIGHT_ARROW, None) : "handle_right_arrow"}
+
+    def _get_text(self):
+        if self.hide_text:
+            #super(Slider_Entry, self)._get_text()
+            return ''
+        else:
+            return super(Slider_Entry, self)._get_text()
+    def _set_text(self, value):
+        super(Slider_Entry, self)._set_text(value)
+    text = property(_get_text, _set_text)
 
     def __init__(self, **kwargs):
         super(Slider_Entry, self).__init__(**kwargs)

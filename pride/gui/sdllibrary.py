@@ -796,13 +796,14 @@ class Renderer(SDL_Component):
         raise NotImplementedError("rounded_rect not yet supported")
         x, y, w, h = rect
         #print self.wrapped_object.renderer
-        #r, g, b, a = kwargs["color"]
-        #draw_mode = sdl2.SDL_BlendMode()
-        #assert not sdl2.SDL_GetRenderDrawBlendMode(self.wrapped_object.renderer, draw_mode)
-        #sdl2.sdlgfx.roundedRectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, radius, r, g, b, 255)
+        r, g, b, a = kwargs["color"]
+        renderer = self.wrapped_object.renderer
+        draw_mode = sdl2.SDL_BlendMode()
+        assert not sdl2.SDL_GetRenderDrawBlendMode(self.wrapped_object.renderer, draw_mode)
+        sdl2.sdlgfx.roundedRectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, radius, r, g, b, a)
+        #sdl2.sdlgfx.rectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, *kwargs["color"])
         #self.draw_rect(rect, **kwargs)
-        sdl2.sdlgfx.rectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, *kwargs["color"])
-        #assert not sdl2.SDL_SetRenderDrawBlendMode(self.wrapped_object.renderer, draw_mode)
+        assert not sdl2.SDL_SetRenderDrawBlendMode(renderer, draw_mode)
 
     def draw_line_perspective(self, point, length, vanishing_point, **kwargs):
         x, y = point
@@ -947,6 +948,7 @@ class Font_Manager(SDL_Component):
                                            "resources", "fonts", "Aero.ttf"),
                 "default_font_size" : 14, "default_color" : (150, 150, 255),
                 "default_background" : (0, 0, 0)}
+    mutable_defaults = {"font_listing" : list}
 
     def __init__(self, **kwargs):
         _defaults = self.defaults
@@ -956,6 +958,19 @@ class Font_Manager(SDL_Component):
                    "bg_color" : _defaults["default_background"]}
         kwargs["wrapped_object"] = sdl2.ext.FontManager(**options)
         super(Font_Manager, self).__init__(**kwargs)
+        self.load_fonts()
+
+    def load_fonts(self):
+        fonts_dir = os.path.join(pride.gui.PACKAGE_LOCATION, "resources", "fonts")
+        listing = self.font_listing
+        for file in (item for item in os.listdir(fonts_dir)):
+            _file, extension = os.path.splitext(file)
+            if extension != ".ttf":
+                continue
+            listing.append(os.path.split(_file)[-1])
+            font_file = os.path.join(fonts_dir, file)
+            # take care to distinguish between self.add (from Base) and FontManager.add (from SDL2)
+            self.wrapped_object.add(font_file)
 
     def save(self):
         raise NotImplementedError()

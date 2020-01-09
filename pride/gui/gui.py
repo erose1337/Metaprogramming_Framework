@@ -279,7 +279,7 @@ class _Window_Object(Organized_Object):
                 "_scroll_bar_h" : None, "_scroll_bar_w" : None, "hovering" : False,
                 "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "_selected" : False, "confidential" : False,
-                "_cached" : False, "tip_bar_text" : '',
+                "_cached" : False, "tip_bar_text" : '', "font" : "Aero",
                 "theme_profile" : "default", "clickable" : True}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,

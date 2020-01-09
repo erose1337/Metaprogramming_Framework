@@ -117,7 +117,7 @@ class Minimal_Theme(Theme):
                     text += self.cursor_symbol
             self.draw("text", area, text, width=w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text)
+                      center_text=self.center_text, alias=self.font)
 
 
 class Perspective_Theme(Theme):

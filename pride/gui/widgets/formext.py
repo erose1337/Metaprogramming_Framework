@@ -41,6 +41,7 @@ class Scrollable_Text_Window(pride.gui.widgets.form.Scrollable_Window):
                               field_type=_Text_Field, parent_window=self,
                               entry_kwargs={"center_text" : False,
                                             "hoverable" : False,
+                                            "_formext_fix" : True, # conspries with Minimal_Themes draw_texture to fix a text jittering bug
                                             "font" : "Hack-Regular"})],
                  ]
         form = window.create(pride.gui.widgets.form.Form, fields=fields,
@@ -59,9 +60,10 @@ class Scrollable_Text_Window(pride.gui.widgets.form.Scrollable_Window):
         self.input_history.append(self._current_line)
         self._current_line = ''
         self.lines.append('')
-        if not self.vertical_slider.hidden:
-            self.y_scroll_value += 1
         self.synchronize_scroll_bars()
+        if not self.vertical_slider.hidden: # auto scroll to end; necessary to prevent weird newline behavior
+            self.y_scroll_value = max(0, len(self.lines) - self.line_count)
+            self.vertical_slider.update_position_from_value()
 
     def handle_backspace(self):
         try:

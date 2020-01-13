@@ -115,6 +115,14 @@ class Minimal_Theme(Theme):
                     text = text[:-offset] + self.cursor_symbol + text[-offset:]
                 else:
                     text += self.cursor_symbol
+            if getattr(self, "_formext_fix", False):
+                # conspires with gui.widgets.formext.Scrollable_Text_Window
+                # fixes a bug that causes a jittering effect
+                # bug is caused by the width of the texture produced when rendering the text
+                # if the text consists of only one line (contains no `\n`), then it will have a width determined by the text length
+                # if the text has newlines, then the texture will have the maximum width
+                # when text rendering is upgraded to use an atlas, this fix should no longer be necessary
+                text += "\n\n"
             self.draw("text", area, text, width=w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
                       center_text=self.center_text, alias=self.font)

@@ -1,3 +1,7 @@
+""" pride.gui.gui - Contains the root `Window_Object`.
+`Window_Object`s represent a rectangular area on the screen.
+`Window_Object`s provide hooks for user input within (or related to) that area."""
+
 import operator
 
 import pride
@@ -19,7 +23,11 @@ def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                                                   size, access=access)
 
 class Organizer(base.Base):
-    """ Note: Using both horizontal (top/bottom) and vertical (left/right) pack modes will break *unless* a main item is present.
+    """ The `Organizer` component is responsible for determining the size and placement of `Window_Object`s, based on their relative positions and constraints (e.g. screen size).
+        Each `Window_Object` specifies its relative location within its parent object.
+            - Each `Window_Object` declares whether it should be on the left, right, top, bottom, or main (middle) area.
+
+        Note: Using both horizontal (top/bottom) and vertical (left/right) pack modes will break *unless* a main item is present.
         If a main item is not present, then the organizer would have to decide whether to scale the height of the vertical item according to either the top/bottom arbitrarily
         Quoting the zen of python:
 
@@ -231,16 +239,20 @@ class Organizer(base.Base):
 
 
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
+    """ A `Bounded_Shape` that can be organized into place via the `pack` method.
+        `Organized_Object`s have a `pack_mode` attribute that determines the placement of the object within its parent."""
 
     defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
                 "_pack_requested" : False, "_in_pack_queue" : False}
-
-    #predefaults = {"sdl_window" : ''}
-
+    allowed_values = {"pack_mode" : ("left", "right", "top", "bottom", "main",
+                                     'z', "fill", None)}
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
 
     def pack(self):
+        """ usage: window_object.pack()
+
+        Ensures that `self` has its area updated before the next frame is presented"""
         parent = self.parent
         if not parent._in_pack_queue:
             parent._in_pack_queue = self._pack_requested = True

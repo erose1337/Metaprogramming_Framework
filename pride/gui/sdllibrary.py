@@ -1,3 +1,14 @@
+""" pride.gui.sdllibrary contains the components that are responsible for:
+
+    - Creating/managing OS-level windows
+    - Drawing to those windows
+    - Capturing user input in those windows
+
+The api is designed to work with the `Window_Object`s provided by `pride.gui.gui`.
+`SDL_Component`s are a `Proxy` for pysdl2 components, which are wrappers around SDL2 components.
+They extend the behavior of the underlying objects and adapt them for use with the rest of the system.
+"""
+
 import itertools
 import operator
 import os

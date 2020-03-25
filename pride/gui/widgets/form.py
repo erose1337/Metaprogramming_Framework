@@ -286,7 +286,9 @@ class Form(Scrollable_Window):
                     value = target_object[name]
                 except TypeError:
                     raise exception
-            if "minimum" in entries and "maximum" in entries: # check here before checking for int/float
+            if "values" in entries: # check for dropdowns before checking value
+                field_type = self.dropdown_type
+            elif "minimum" in entries and "maximum" in entries: # check here before checking for int/float
                 field_type = self.slider_type
             elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
                 field_type = self.toggle_type
@@ -294,8 +296,6 @@ class Form(Scrollable_Window):
                 field_type = self.spinbox_type
             elif isinstance(value, str):
                 field_type = self.text_field_type
-            elif "values" in entries:
-                field_type = self.dropdown_type
             elif hasattr(value, "__call__"):
                 field_type = self.callable_type
         assert field_type is not None
@@ -848,8 +848,9 @@ class Toggle(Field):
 class Dropdown_Field(Field):
 
     defaults = {"entry_type" : Dropdown_Entry, "orientation" : "side by side",
-                "menu_open" : True}
+                "menu_open" : True, "values" : tuple()}
     mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : False}}
+    required_attributes = ("values", )
 
     def create_entry(self, pack_mode):
         kwargs = self.entry_kwargs

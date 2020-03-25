@@ -497,7 +497,7 @@ class _Window_Object(Organized_Object):
 
     def on_hover(self):
         #self.alert("Mouse hovering")
-        if self.hoverable:
+        if self.hoverable and not self.hovering:
             self._hover_backup_theme_profile = self.theme_profile
             self.theme_profile = "hover"
             self.texture_invalid = True
@@ -508,11 +508,14 @@ class _Window_Object(Organized_Object):
             self._tip_set = True
 
     def hover_ends(self):
-        if self.hovering and self.theme_profile == "hover":
+        if self.hovering:
             assert self.hoverable
-            self.theme_profile = self._hover_backup_theme_profile
-            self._hover_backup_theme_profile = ''
-            self.texture_invalid = True
+            if self.theme_profile == "hover":
+                self.theme_profile = self._hover_backup_theme_profile
+                self._hover_backup_theme_profile = ''
+                self.texture_invalid = True
+            self.hovering = False
+
         if self._tip_set:
             self._clear_tip_bar_text()
 

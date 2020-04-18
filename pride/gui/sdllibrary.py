@@ -252,6 +252,9 @@ class SDL_Window(SDL_Component):
         #after = timestamp()
         #print("Time taken to redraw and present:           {0:.5f}".format(after - before))
 
+        #if self.take_screenshot:
+
+
         if self.postdraw_scheduled:
             assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
             queue = itertools.chain(*self.postdraw_scheduled.values())
@@ -673,7 +676,7 @@ class SDL_User_Input(pride.components.base.Base):
         if self.active_item:
             motion = event.motion
             self.active_item.mousemotion(mouse_x, mouse_y,
-                                         motion.xrel, motion.yrel)
+                                         motion.xrel, motion.yrel, event.button)
         if not self.under_mouse:
             self.under_mouse = under_mouse = self._get_object_under_mouse(position)
             if under_mouse is not None:
@@ -798,23 +801,31 @@ class Renderer(SDL_Component):
         info = self.get_renderer_info()
         self.max_size = (info.max_texture_width, info.max_texture_height)
 
+    def screencapture(self, filename):
+        format = sdl2.SDL_PIXELFORMAT_ARGB8888
+        surface = sdl2.SDL_CreateRGBSurfaceWithFormat(0, 800, 600, 32, format)
+        sdl2.SDL_RenderReadPixels(self.wrapped_object.renderer, None, format,
+                                  surface.pixels, surface.pitch);
+        sdl2.SDL_SaveBMP(surface, filename);
+        sdl2.SDL_FreeSurface(surface);
+
     def render_copy(self, source_area=None, destination_area=None, angle=0,
                     center=None, flip=sdl2.SDL_FLIP_NONE):
         self.copy(self.get_render_target(), source_area, destination_area,
                   angle, center, flip)
 
     def draw_rounded_rect(self, rect, radius=22, **kwargs):
-        raise NotImplementedError("rounded_rect not yet supported")
+        #raise NotImplementedError("rounded_rect not yet supported")
         x, y, w, h = rect
         #print self.wrapped_object.renderer
         r, g, b, a = kwargs["color"]
         renderer = self.wrapped_object.renderer
         draw_mode = sdl2.SDL_BlendMode()
         assert not sdl2.SDL_GetRenderDrawBlendMode(self.wrapped_object.renderer, draw_mode)
-        sdl2.sdlgfx.roundedRectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, radius, r, g, b, a)
+        sdl2.sdlgfx.roundedRectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, radius, r, g, b, 255)
         #sdl2.sdlgfx.rectangleRGBA(self.wrapped_object.renderer, x, y, x + w, y + h, *kwargs["color"])
         #self.draw_rect(rect, **kwargs)
-        assert not sdl2.SDL_SetRenderDrawBlendMode(renderer, draw_mode)
+        assert not sdl2.SDL_SetRenderDrawBlendMode(renderer, DRAW_BLENDMODE)
 
     def draw_line_perspective(self, point, length, vanishing_point, **kwargs):
         x, y = point

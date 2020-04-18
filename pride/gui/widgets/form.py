@@ -14,9 +14,9 @@ DELETE_KEY = "\x7f"
 
 class Balancer(object):
 
-    def __init__(self, balance, name):
-        self.balance = balance
+    def __init__(self, name, balance):
         self.name = name
+        self.balance = balance
 
     def get_balance(self):
         return self.balance
@@ -26,6 +26,14 @@ class Balancer(object):
 
     def earn(self, amount):
         self.balance += amount
+
+    def compute_cost(self, field, old, new):
+        try:
+            return field.compute_cost(old, new)
+        except AttributeError:
+            if hasattr(field, "compute_cost"):
+                raise
+            return 0
 
 
 def field_info(field_name, **kwargs):
@@ -90,10 +98,12 @@ class Form(Scrollable_Window):
                 "text_field_type" : _ + "Text_Field", "toggle_type" : _ + "Toggle",
                 "dropdown_type" : _ + "Dropdown_Field", "row_h_range" : tuple(),
                 "slider_type" : _ + "Slider_Field", "callable_type" : _  + "Callable_Field",
-                "target_object" : None, "balancer" : None,
+                "balancer" : None,
                 "include_balance_display" : True, "max_rows" : 4,
                 "form_name" : '', "include_delete_button" : False}
-    mutable_defaults = {"fields_list" : list, "rows" : list}
+    mutable_defaults = {"fields_list" : list, "rows" : list,
+                        "target_object" : lambda: None,
+                        "balance_display_kwargs" : dict}
     autoreferences = ("displayer", )
     hotkeys = {("\t", None) : "handle_tab"}
 
@@ -257,9 +267,21 @@ class Form(Scrollable_Window):
         self.delete()
 
     def create_balance_display(self):
-        displayer = self.main_window.create(Text_Display, name="balance",
-                                            target_object=self.balancer, pack_mode="top",
-                                            h_range=(.05, .1), orientation="side by side")
+        kwargs = self.balance_display_kwargs.copy()
+        kwargs.setdefault("name", "balance")
+        kwargs.setdefault("target_object", self.balancer)
+        kwargs.setdefault("pack_mode", "top")
+        kwargs.setdefault("h_range", (0, .075))
+        kwargs.setdefault("orientation", "side by side")
+        kwargs.setdefault("display_name", self.balancer.name)
+
+        try:
+            entry_kwargs = kwargs["entry_kwargs"]
+        except KeyError:
+            entry_kwargs = kwargs["entry_kwargs"] = dict()
+        entry_kwargs.setdefault("hoverable", False)
+
+        displayer = self.main_window.create(Text_Display, **kwargs)
         displayer.editable = False
         self.displayer = displayer
 
@@ -340,7 +362,7 @@ class Form(Scrollable_Window):
                   [       ("callable", {"button_text" : "Press me!"})         ]
                  ]
 
-        balancer = Balancer(255, "Remaining Balance")
+        balancer = Balancer("Remaining Balance", 255)
         form_callable = lambda *args, **kwargs:\
             Form(*args, balancer=balancer, fields=fields, target_object=_object, **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
@@ -470,15 +492,17 @@ class Field(pride.gui.gui.Container):
             return False
         balancer = self.balancer
         if balancer is not None:
-            balance = self.balancer.get_balance()
-            cost = self.compute_cost(old_value, new_value) # maybe self.cost_model.compute_cost instead ?
+            balance = balancer.get_balance()
+            cost = balancer.compute_cost(self, old_value, new_value)
 
         if balancer is None or cost <= balance:
             self.alert("Value changing from {} to {}".format(old_value, new_value),
                         level=self.verbosity["handle_value_changed"])
             if balancer is not None:
                 balancer.spend(cost)
-                self.displayer.entry.texture_invalid = True
+                self.parent_form.synchronize_fields()
+                if self.displayer is not None:
+                    self.displayer.entry.texture_invalid = True
             return True
         else:
             return False
@@ -924,7 +948,7 @@ class Dropdown_Field(Field):
             self.close_menu(value)
 
     def compute_cost(self, old_value, new_value):
-        return 1
+        return 0
 
 
 class Continuum(pride.gui.gui.Button):
@@ -955,11 +979,19 @@ class Continuum(pride.gui.gui.Button):
 
         parent_field = self.parent_field
         entry = parent_field.entry
-        left = entry.left
+        left = entry.left; right = entry.right
         value = parent_field.value
 
+        if left is None:
+            left_size = 0
+        else:
+            left_size = getattr(left, size)
+        if right is None:
+            right_size = 0
+        else:
+            right_size = getattr(right,size)
         maximum = parent_field.maximum; minimum = parent_field.minimum
-        width = (getattr(entry, size) - getattr(left, size)) - getattr(entry.right, size)
+        width = (getattr(entry, size) - left_size) - right_size
         if value == maximum:
             new_size = width
         elif value == minimum:
@@ -990,12 +1022,21 @@ class Continuum(pride.gui.gui.Button):
         # compute value based on data
         # ensure value fits the expected constraints
         # respond to computed value
-        parent_field = self.parent_field; entry = parent_field.entry; left = entry.left
-        width = (getattr(entry, size) - getattr(left, size)) - getattr(entry.right, size)
+        parent_field = self.parent_field; entry = parent_field.entry;
+        left = entry.left; right = entry.right
+        if left is None:
+            left_size = 0
+        else:
+            left_size = getattr(left, size)
+        if right is None:
+            right_size = 0
+        else:
+            right_size = getattr(right, size)
+        width = (getattr(entry, size) - left_size) - right_size
         maximum = parent_field.maximum; minimum = parent_field.minimum
         buckets = (maximum - minimum) + 1 # + 1 because minimum is a selectable choice (e.g. max = 1, min = 0)
         bucket_width = width / float(buckets)
-        offset = getattr(mouse, coord) - getattr(entry, coord) - getattr(left, size)
+        offset = getattr(mouse, coord) - getattr(entry, coord) - left_size
         value = max(min(int(offset / bucket_width), maximum), minimum)
         assert minimum <= value <= maximum
         before = parent_field.value
@@ -1011,7 +1052,7 @@ class Continuum(pride.gui.gui.Button):
             setattr(bar, "{}_range".format(size), (new_size, new_size))
             bar.pack()
 
-    def mousemotion(self, x, y, x_change, y_change):
+    def mousemotion(self, x, y, x_change, y_change, mouse):
         if self.held:
             self.left_click(self._mousetuple(x, y))
 
@@ -1096,27 +1137,68 @@ class Slider_Entry(Entry):
 
         include_minmax = self.include_minmax_buttons
         include_incdec = self.include_incdec_buttons
-        left = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
-        self.left = left
+        if include_minmax and include_incdec:
+            left = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
+            self.left = left
+        else:
+            left = None
+
         if include_minmax:
-            self.min_button = left.create(Endcap, pack_mode=pack_mode, name="minimum",
-                                          target_object=parent_field, **kwargs)
+            if left is not None:
+                self.min_button = left.create(Endcap, pack_mode=pack_mode, name="minimum",
+                                              target_object=parent_field, **kwargs)
+            else:
+                self.min_button = self.left = self.create(Endcap, pack_mode=pack_mode, name="minimum",
+                                                          target_object=parent_field, **kwargs)
         if include_incdec:
-            self.dec_button = left.create(Callable_Field, name="decrement_value",
-                                          pack_mode=pack_mode, parent_field=parent_field,
-                                          target_object=self, button_text='-', **kwargs)
+            if left is not None:
+                self.dec_button = left.create(Callable_Field,
+                                              name="decrement_value",
+                                              pack_mode=pack_mode,
+                                              parent_field=parent_field,
+                                              target_object=self,
+                                              button_text='-', **kwargs)
+            else:
+                self.dec_button = self.left =\
+                  self.create(Callable_Field, name="decrement_value",
+                              pack_mode=pack_mode, parent_field=parent_field,
+                              target_object=self, button_text='-', **kwargs)
+
         self.continuum = self.create(Continuum, pack_mode=pack_mode,
                                      orientation=orientation, parent_entry=self,
                                      parent_field=parent_field)
-        right = self.create(pride.gui.gui.Container, pack_mode=pack_mode, **kwargs)
-        self.right = right
+
+        if include_minmax and include_incdec:
+            right = self.create(pride.gui.gui.Container, pack_mode=pack_mode,
+                                **kwargs)
+            self.right = right
+        else:
+            right = None
+
         if include_incdec:
-            self.inc_button = self.right.create(Callable_Field, name="increment_value",
-                                                pack_mode=pack_mode, parent_field=parent_field,
-                                                target_object=self, button_text='+', **kwargs)
+            if right is not None:
+                self.inc_button = self.right.create(Callable_Field,
+                                                    name="increment_value",
+                                                    pack_mode=pack_mode,
+                                                    parent_field=parent_field,
+                                                    target_object=self,
+                                                    button_text='+', **kwargs)
+            else:
+                self.inc_button = self.right =\
+                 self.create(Callable_Field, name="increment_value",
+                             pack_mode=pack_mode, parent_field=parent_field,
+                             target_object=self, button_text='+', **kwargs)
+
         if include_minmax:
-            self.max_button = right.create(Endcap, target_object=parent_field,
-                                           pack_mode=pack_mode, name="maximum", **kwargs)
+            if right is not None:
+                self.max_button = right.create(Endcap,
+                                               target_object=parent_field,
+                                               pack_mode=pack_mode,
+                                               name="maximum", **kwargs)
+            else:
+                self.max_button = self.right =\
+                 self.create(Endcap, target_object=parent_field,
+                             pack_mode=pack_mode, name="maximum", **kwargs)
 
     def increment_value(self):
         parent_field = self.parent_field

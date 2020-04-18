@@ -88,3 +88,5 @@ bin*
 *.exe
 *.out
 *.app
+
+*.bak

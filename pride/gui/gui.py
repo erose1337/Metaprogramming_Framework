@@ -492,7 +492,7 @@ class _Window_Object(Organized_Object):
     def mousewheel(self, x_amount, y_amount):
         pass
 
-    def mousemotion(self, x, y, x_change, y_change):
+    def mousemotion(self, x, y, x_change, y_change, mouse):
         pass
 
     def on_hover(self):
@@ -772,7 +772,7 @@ Window_Object = Animated_Object # can upgrade everything in-place by changing th
 
 class Window(Window_Object):
 
-    defaults = {"pack_mode" : "main"}
+    defaults = {"pack_mode" : "top"}
 
 
 class Container(Window_Object):

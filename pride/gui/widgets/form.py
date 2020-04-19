@@ -718,11 +718,16 @@ class Integer_Entry(Text_Entry):
 
     def increment_value(self, amount):
         parent_field = self.parent_field
-        parent_field.value = int(parent_field.value or '0') + amount
+        _min, _max = parent_field.minimum, parent_field.maximum
+        value = int(parent_field.value or '0') + amount
+        if _max is not None:
+            value = min(_max, value)
+        if _min is not None:
+            value = max(_min, value)
+        parent_field.value = value
 
     def decrement_value(self, amount):
-        parent_field = self.parent_field
-        parent_field.value = int(parent_field.value or '0') - amount
+        self.increment_value(-amount)
 
 
 class Status_Light(pride.gui.gui.Container):
@@ -834,7 +839,10 @@ class Text_Display(Text_Field):
 
 class Spinbox(Field):
 
-    defaults = {"entry_type" : Integer_Entry, "include_incdec_buttons" : False}
+    defaults = {"entry_type" : Integer_Entry, "include_incdec_buttons" : False,
+                "minimum" : None, "maximum" : None}
+                # can only use either minimum or maximum but not both by default
+                # must specify Spinbox type explicitly if min and max are used.
     mutable_defaults = {"entry_kwargs" : lambda: {"pack_mode" : "left"}}
     allowed_values = {"include_incdec_buttons" : (False, )} # not actually part of the interface
 

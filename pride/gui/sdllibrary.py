@@ -738,11 +738,10 @@ class SDL_User_Input(pride.components.base.Base):
                     pass
             elif modifier:
                 key_press[1] = modifier
-
-            if ord(key) < 32 or ord(key) == 127 or key_press[1] is not None: # delete is 127
-                reference, method = self.get_hotkey(instance, tuple(key_press))
-                if reference is not None and method is not None:
-                    getattr(pride.objects[reference], method)()
+            #if ord(key) < 32 or ord(key) == 127 or key_press[1] is not None: # delete is 127
+            reference, method = self.get_hotkey(instance, tuple(key_press))
+            if reference is not None and method is not None:
+                getattr(pride.objects[reference], method)()
 
     def get_hotkey(self, instance, key_press):
         if key_press in instance.hotkeys:
@@ -796,6 +795,7 @@ class Renderer(SDL_Component):
         self.instructions["line_perspective"] = self.draw_line_perspective
         self.instructions["rounded_rect"] = self.draw_rounded_rect
         self.instructions["render_copy"] = self.render_copy
+        self.instructions["set_blendmode"] = self.set_blendmode
         self.clear()
 
         info = self.get_renderer_info()
@@ -813,6 +813,13 @@ class Renderer(SDL_Component):
                     center=None, flip=sdl2.SDL_FLIP_NONE):
         self.copy(self.get_render_target(), source_area, destination_area,
                   angle, center, flip)
+
+    def set_blendmode(self, blendmode):
+        error = sdl2.SDL_SetRenderDrawBlendMode(self.wrapped_object.renderer,
+                                                blendmode)
+        if error:
+            message = "SDL_SetRenderDrawBlendMode failed with code {}"
+            raise Sdl2Error(message.format(error))
 
     def draw_rounded_rect(self, rect, radius=22, **kwargs):
         #raise NotImplementedError("rounded_rect not yet supported")

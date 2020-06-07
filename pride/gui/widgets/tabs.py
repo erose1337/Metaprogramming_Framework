@@ -4,19 +4,27 @@ from pride.functions.utilities import slide
 class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
 
     defaults = {"_end_hover_set_profile" : '', "_already_constructed" : False,
-                "use_lazy_loading" : True}
+                "use_lazy_loading" : True, "_just_constructed" : False}
 
     def left_click(self, mouse):
         parent_field = self.parent_field
         if self.use_lazy_loading and not self._already_constructed:
-            parent_field.args = (parent_field.args[0](), ) + parent_field.args[1:]
-            self._already_constructed = True
+            self.lazy_load_object()
         parent_field.value(self, *parent_field.args, **parent_field.kwargs)
         _object = self.parent_field.args[0]
         if _object.hidden:
             self._end_hover_set_profile = "interactive"
         else:
             self._end_hover_set_profile = "indicator"
+
+    def lazy_load_object(self):
+        parent_field = self.parent_field
+        callable = parent_field.args[0]
+        tab_ref = callable.tab_reference
+        _object = callable()
+        _object.tab_reference = tab_ref
+        parent_field.args = (_object, ) + parent_field.args[1:]
+        self._just_constructed = self._already_constructed = True
 
     def handle_return(self):
         parent_field = self.parent_field
@@ -32,7 +40,7 @@ class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
 
 class Tab_Button_Field(pride.gui.widgets.form.Callable_Field):
 
-    defaults = {"entry_type" : Tab_Button_Entry}
+    defaults = {"entry_type" : Tab_Button_Entry, "editable" : True}
 
 
 class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
@@ -52,16 +60,20 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         fields = [[("select_tab", {"button_text" : _object.tab_text,#getattr(_object,
                                                         #   "tab_text", ''),
                                    "args" : (_object, ),
-                                   "field_type" : Tab_Button_Field})
+                                   "field_type" : Tab_Button_Field,
+                                   "w_range" : (0, 1.0 / self.tabs_per_row)})
                    for _object in row] for
                         row in slide(self.tab_targets, self.tabs_per_row)]
+        offset = 0
         if self.include_new_tab_button:
+            offset += 1
             entry = ("new_tab", {"button_text" : '+', "scale_to_text" : True})
             if fields:
                 fields[0].insert(0, entry)
             else:
                 fields.append([entry])
         if self.include_label:
+            offset += 1
             entry = ("tab_bar_label", {"hoverable" : False,
                                        "field_type" : "pride.gui.gui.Window",
                                        "pack_mode" : "left",
@@ -78,6 +90,18 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                                    form_name=self.tab_bar_title_text,
                                    vertical_slider_entry_kwargs=kwargs,
                                    h_range=(0, .05), max_rows=1)
+        tabs = self.tab_bar.fields_list
+        for tab_no, target in enumerate(self.tab_targets):
+            target.tab_reference = tabs[tab_no].reference
+
+        if self.tab_targets:
+            first_tab = tabs[offset]
+            try:
+                self._set_color(first_tab.entry, self.tab_targets[0])
+            except AttributeError:
+                first_tab.entry.lazy_load_object()
+                self._set_color(first_tab.entry, first_tab.args[0])
+                first_tab.entry._just_constructed = False
 
     def new_tab(self):
         tab_bar = self.tab_bar
@@ -89,7 +113,9 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                                                     "scale_to_text" : True,
                                                     "use_lazy_loading" : False},
                                   "field_type" : Tab_Button_Field})]
+        offset = -1
         if self.include_tab_delete_button:
+            offset -= 1
             fields.append(("delete_tab", {"args" : (_object, ),
                                           "button_text" : 'x',
                                           "theme_profile" : "placeholder",
@@ -109,12 +135,17 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
             if field.name == "select_tab":
                 self._set_color(field.entry, field.args[0])
 
+        _object.tab_reference = tab_bar.fields_list[offset].reference
+
     def select_tab(self, tab, _object):
-        if _object.hidden:
-            _object.show()
+        if not tab._just_constructed:
+            if _object.hidden:
+                _object.show()
+            else:
+                _object.hide()
+            _object.pack()
         else:
-            _object.hide()
-        _object.pack()
+            tab._just_constructed = False
         self._set_color(tab, _object)
         #self.sdl_window.schedule_postdraw_operation(lambda: self._set_color(tab, _object), self)
 

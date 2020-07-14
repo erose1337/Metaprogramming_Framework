@@ -78,7 +78,6 @@ class Profile_Editor(Value_Editor):
         form = window.create(Color_Form, fields=fields, pack_mode="top",
                              target_object=target, tab_text=name,
                              **kwargs)
-        form.hide()
         return form
 
 
@@ -89,6 +88,7 @@ class Theme_Editor(Value_Editor):
 
     def create_subcomponents(self):
         self.show_status("Initializing theme editor...", immediately=True)
+        theme = self.target_object
         self.names = sorted(theme.theme_colors.keys())
         self.create("pride.gui.widgets.form.Form", target_object=self,
                     pack_mode="top", h_range=(0, .05),
@@ -116,7 +116,6 @@ class Theme_Editor(Value_Editor):
                                          target_object=theme_colors[profile],
                                          tab_bar_title_text="{} profile settings".format(profile),
                                          tab_text=profile)
-        window.hide()
         return window
 
     def save_color_options(self):

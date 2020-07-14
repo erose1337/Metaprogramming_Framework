@@ -159,7 +159,9 @@ class SDL_Window(SDL_Component):
         if self.showing:
             self.show()
 
-        #self.top_texture = self.create_texture(self.renderer.max_size, self.texture_access_flag)# for drawing always_on_top separately
+        # for drawing always_on_top separately
+        self.top_texture = self.create_texture(self.renderer.max_size,
+                                               self.texture_access_flag)
 
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
         self.run_instruction.execute(priority=self.priority)
@@ -330,11 +332,28 @@ class SDL_Window(SDL_Component):
                 renderer.clear()
                 #print("Performing {} instructions for layer {}".format(sum(len(item._draw_operations) for item in layer), layer_number))
                 for item in layer:
+                    #if item.always_on_top:
+                    #    continue
                     for operation, args, kwargs in item._draw_operations:
                         draw_procedures[operation](*args, **kwargs)
                 renderer.set_render_target(None)
             renderer.copy(layer_texture, area, area)
         self.dirty_layers.clear()
+
+        top_items = self.user_input.always_on_top
+        if top_items:
+            dirty = False
+            top_texture = self.top_texture.texture
+            renderer.set_render_target(top_texture)
+            renderer.clear()
+            for item in self.user_input.always_on_top:
+                if item.texture_invalid:
+                    dirty = True
+                    for operation, args, kwargs in item._draw_operations:
+                        draw_procedures[operation](*args, **kwargs)
+            if dirty:
+                renderer.set_render_target(None)
+                renderer.copy(top_texture, area, area)
         renderer.present()
 
     def schedule_postdraw_operation(self, callable, caller):
@@ -777,6 +796,7 @@ class Renderer(SDL_Component):
 
     defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
                 "blendmode_flag" : DRAW_BLENDMODE, "logical_size" : (800, 600)}
+    mutable_defaults = {"_get_text_size_memo" : dict}
 
     def __init__(self, window, **kwargs):
         super(Renderer, self).__init__(**kwargs)
@@ -899,12 +919,17 @@ class Renderer(SDL_Component):
         self.copy(texture, dstrect=destination)
 
     def get_text_size(self, area, text, **kwargs):
-        x, y, w, h = area
-        kwargs.setdefault("w", w)
-        texture = self.sprite_factory.from_text(text,
-                                                fontmanager=self.font_manager,
-                                                **kwargs)
-        return texture.size
+        try:
+            return self._get_text_size_memo[(area, text)]
+        except KeyError:
+            x, y, w, h = area
+            kwargs.setdefault("w", w)
+            texture = self.sprite_factory.from_text(text,
+                                                    fontmanager=self.font_manager,
+                                                    **kwargs)
+            size = texture.size
+            self._get_text_size_memo[(area, text)] = size
+            return size
 
     def draw_rect_width(self, area, **kwargs):
         width = kwargs.pop("width")

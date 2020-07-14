@@ -322,7 +322,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         self.objects = {}
 
         for attribute, value_type in self.mutable_defaults.items():
-            setattr(self, attribute, value_type())
+            if attribute not in kwargs:
+                setattr(self, attribute, value_type())
 
         for attribute, value in itertools.chain(self.predefaults.items(),
                                                 self.defaults.items()):

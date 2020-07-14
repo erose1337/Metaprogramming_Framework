@@ -341,14 +341,18 @@ class _Window_Object(Organized_Object):
         return self._text
     def _set_text(self, value):
         self._text = value
-        if value and self.scale_to_text:
-            w, h = self.sdl_window.renderer.get_text_size(self.area, value)
-            w += 20
+        if self.scale_to_text:
+            if value:
+                w, h = self.sdl_window.renderer.get_text_size(self.area, value)
+                w += 20
+            else:
+                w = 20
             if not self._backup_w_range:
                 self._backup_w_range = self.w_range
             self.w_range = (0, w)
         elif self._backup_w_range and self._backup_w_range != self.w_range:
             self.w_range = self._backup_w_range
+            self._backup_w_range = tuple()
         self.texture_invalid = True
     text = property(_get_text, _set_text)
 

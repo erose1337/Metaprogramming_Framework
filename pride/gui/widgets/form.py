@@ -103,7 +103,8 @@ class Form(Scrollable_Window):
                 "form_name" : '', "include_delete_button" : False}
     mutable_defaults = {"fields_list" : list, "rows" : list,
                         "target_object" : lambda: None,
-                        "balance_display_kwargs" : dict}
+                        "balance_display_kwargs" : dict,
+                        "row_kwargs" : dict}
     autoreferences = ("displayer", )
     hotkeys = {("\t", None) : "handle_tab"}
 
@@ -179,11 +180,18 @@ class Form(Scrollable_Window):
             self.create_balance_display()
 
         target_object = self.target_object; max_rows = self.max_rows
+        row_kwargs = self.row_kwargs
         for row_number, _row in enumerate(self.fields):
             if row_number >= max_rows: # lazy loading on the rest of the rows
-                continue
+                break
             else:
-                row, _row_number = self.create_row(); assert row_number == _row_number
+                try:
+                    row, _row_number = self.create_row(**row_kwargs[row_number])
+                except (KeyError, IndexError):
+                    if row_number in row_kwargs:
+                        raise
+                    row, _row_number = self.create_row()
+                assert row_number == _row_number
                 self.create_fields(_row, row, target_object)
 
         self.synchronize_scroll_bars()
@@ -199,10 +207,11 @@ class Form(Scrollable_Window):
         for field_info in _row:
             self.create_field(field_info, row, target_object)
 
-    def create_row(self):
-        row = self.main_window.create("pride.gui.gui.Container",
-                                      pack_mode=self.row_pack_mode,
-                                      h_range=self.row_h_range or (0, 1.0))
+    def create_row(self, **kwargs):
+        kwargs = dict((key, value) for key, value in kwargs.items())
+        kwargs.setdefault("pack_mode", self.row_pack_mode)
+        kwargs.setdefault("h_range", self.row_h_range or (0, 1.0))
+        row = self.main_window.create("pride.gui.gui.Container", **kwargs)
         rows = self.rows
         rows.append(row)
         return row, rows.index(row)
@@ -310,7 +319,9 @@ class Form(Scrollable_Window):
                     value = target_object[name]
                 except TypeError:
                     raise exception
-            if "values" in entries: # check for dropdowns before checking value
+            if hasattr(value, "field_type"):
+                field_type = value.field_type
+            elif "values" in entries: # check for dropdowns before checking value
                 field_type = self.dropdown_type
             elif "minimum" in entries and "maximum" in entries: # check here before checking for int/float
                 field_type = self.slider_type
@@ -322,7 +333,11 @@ class Form(Scrollable_Window):
                 field_type = self.text_field_type
             elif hasattr(value, "__call__"):
                 field_type = self.callable_type
-        assert field_type is not None
+            #elif isinstance(value, tuple) or isinstance(value, list):
+            #    field_type = "pride.gui.widgets.formext.Tabbed_Form"
+        if field_type is None:
+            message = "Unable to determine field_type for {}"
+            raise ValueError(message.format((target_object, name, value, entries)))
         assert "field_type" not in entries
         return field_type
 
@@ -352,9 +367,9 @@ class Form(Scrollable_Window):
             print("Callable!")
 
         _object = dict(text='1', spinbox=2, toggle=True,
-                                             toggle1=False, toggle2=True, toggle3=False,
-                                             slider=32,  dropdown=None, callable=callable)
-        #setattr(_object, "my text field", 'texcellent!') # can use spaces in field display name this way
+                       toggle1=False, toggle2=True, toggle3=False,
+                       slider=32,  dropdown=None, callable=callable)
+
         _object["my text field"] = "texcellent!"
         fields = [[   "toggle",    "toggle1",    "toggle2",    "toggle3"      ],
                   [     "text",                       "my text field"         ],
@@ -495,7 +510,6 @@ class Field(pride.gui.gui.Container):
         if balancer is not None:
             balance = balancer.get_balance()
             cost = balancer.compute_cost(self, old_value, new_value)
-
         if balancer is None or cost <= balance:
             self.alert("Value changing from {} to {}".format(old_value, new_value),
                         level=self.verbosity["handle_value_changed"])

@@ -1,6 +1,10 @@
+import copy
 from math import ceil
 
+import pride.components.base
 import pride.gui.widgets.form
+import pride.gui.widgets.tabs
+from pride.functions.utilities import slide
 field_info = pride.gui.widgets.form.field_info
 
 class _Text_Entry(pride.gui.widgets.form.Text_Entry): pass
@@ -100,6 +104,104 @@ class Scrollable_Text_Window(pride.gui.widgets.form.Scrollable_Window):
             self.update_text_field()
 
 
+
+class Data(pride.components.base.Base):
+    """ Use: set as the target_object of a Tabbed_Form
+        Attributes named in `tab_names` will have tabs generated.
+        `fields` can be used to control appearance.
+        *should have _either_ tab_names or fields set*
+        Iterables such as tuples/lists will be turned into Tabbed_Forms
+        row_kwargs can be used to set attributes on rows in the form
+        - row kwargs is a dictionary mapping row numbers to dictionaries """
+    tab_names = tuple()
+    inherited_attributes = {"tab_names" : tuple}
+    field_type = "pride.gui.widgets.form.Form"
+
+
+class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
+    """ Creates one tab per item in target_object.tab_names. """
+
+    defaults = {"target_object" : None, "include_new_tab_button" : False,
+                "default_form_type" : "pride.gui.widgets.form.Form",
+                "tabbed_form_type" : "pride.gui.widgets.formext.Tabbed_Form"}
+    required_attributes = ("target_object", )
+
+    def create_subcomponents(self):
+        tab_targets = self.tab_targets = []
+        for name in self.target_object.tab_names:
+
+            def callable(self=self, name=name):
+                values = getattr(self.target_object, name)
+                fields = copy.deepcopy(getattr(values, "fields", None))
+
+                try:
+                    row_kwargs = values.row_kwargs
+                except AttributeError:
+                    row_kwargs = dict()
+
+                try:
+                    form_type = values.form_type
+                except AttributeError:
+                    form_type = self.default_form_type
+
+                kwargs = {"target_object" : values, "row_kwargs" : row_kwargs}
+                if fields is not None:
+                    kwargs["fields"] = fields
+
+                if getattr(values, "tab_names", False):
+                    if fields is None:
+                        fields = kwargs["fields"] = []
+                    fields.append([field_info(name,
+                                              field_type=self.tabbed_form_type,
+                                             target_object=values)])
+                form = self.main_window.create(form_type, **kwargs)
+                values.form_reference = form.reference
+                return form
+            callable.tab_text = name
+            tab_targets.append(callable)
+        super(Tabbed_Form, self).create_subcomponents()
+
+
+def test_Tabbed_Form():
+    import pride.gui
+    import pride.gui.main
+
+    class Test_Data(Data):
+
+        tab_names = ("tab1", "tab2", "tab3")
+
+    class Tab1_Contents(Data):
+
+        defaults = {"test_bool" : True, "test_str" : "string", "test_int" : 0}
+        fields = [[field_info(key) for key in sorted(defaults.keys())]]
+        row_kwargs = {0 : {"h_range" : (0, .1)}}
+
+
+    class Tab2_Contents(Data):
+
+        defaults = {"subtab1" : Data(attribute=1, fields=[[field_info("attribute")]]),
+                    "subtab2" : Data(attribute=2, fields=[[field_info("attribute")]])
+                    }
+        tab_names = ("subtab1", "subtab2")
+
+
+    class Tab3_Contents(Data):
+
+        defaults = {"subtab1" : Data(attribute=3, fields=[[field_info("attribute")]]),
+                    "subtab2" : Data(attribute=4, fields=[[field_info("attribute")]]),
+                    "test_attribute" : "tabs and a form"}
+        tab_names = ("subtab1", "subtab2")
+        fields = [[field_info("test_attribute")]]
+
+
+    data = Test_Data(tab1=Tab1_Contents(), tab2=Tab2_Contents(),
+                     tab3=Tab3_Contents())
+    window = pride.objects[pride.gui.enable()]
+    forms = lambda **kwargs: Tabbed_Form(target_object=data, **kwargs)
+    window.create(pride.gui.main.Gui, startup_programs=(forms, ),
+                  user=pride.objects["/User"])
+
+
 def test_Scrollable_Text_Window():
     import pride.gui, pride.gui.main
     window = pride.objects[pride.gui.enable()]
@@ -108,4 +210,5 @@ def test_Scrollable_Text_Window():
                   user=pride.objects["/User"])
 
 if __name__ == "__main__":
-    test_Scrollable_Text_Window()
+    test_Tabbed_Form()
+    #test_Scrollable_Text_Window()

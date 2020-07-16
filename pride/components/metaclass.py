@@ -355,14 +355,16 @@ class Inherited_Attributes(type):
                 for _class in bases:
                     _attribute += getattr(_class, attribute_name, empty_tuple)
                 _attribute += attributes.get(attribute_name, empty_tuple)
-                _attribute = tuple(set(_attribute))
+                assert len(_attribute) == len(set(_attribute)), (_attribute, set(_attribute), _attribute == set(_attribute))
+                _attribute = tuple(_attribute)
 
             elif issubclass(attribute_type, list):
                 _attribute = []
                 for _class in bases:
                     _attribute += getattr(_class, attribute_name, [])
                 _attribute += attributes.get(attribute_name, [])
-                _attribute = list(set(_attribute))
+                assert len(_attribute) == len(set(_attribute)), _attribute
+                _attribute = list(_attribute)
 
             elif issubclass(attribute_type, str):
                 _attribute = attributes.get(attribute_name, getattr(_class, attribute_name, ''))

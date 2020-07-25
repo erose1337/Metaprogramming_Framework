@@ -1,5 +1,6 @@
 import copy
-from math import ceil
+import collections
+tab_info = dict
 
 import pride.components.base
 import pride.gui.widgets.form
@@ -88,7 +89,7 @@ class Scrollable_Text_Window(pride.gui.widgets.form.Scrollable_Window):
     def handle_area_change(self, old_area):
         super(Scrollable_Text_Window, self).handle_area_change(old_area)
         font_size = self.sdl_window.renderer.font_manager.wrapped_object.size
-        self.line_count = int(ceil(self._form.rows[0].h / 17.5))
+        self.line_count = int(round(self._form.rows[0].h / 17.5))
         self.synchronize_scroll_bars()
 
     def handle_y_scroll(self, old_value, new_value):
@@ -103,33 +104,92 @@ class Scrollable_Text_Window(pride.gui.widgets.form.Scrollable_Window):
             slider.pack()
             self.update_text_field()
 
-
+#----------------------------------------
 
 class Data(pride.components.base.Base):
     """ Use: set as the target_object of a Tabbed_Form
-        Attributes named in `tab_names` will have tabs generated.
+        Attributes named in `tabs` will have tabs generated.
         `fields` can be used to control appearance.
-        *should have _either_ tab_names or fields set*
+        *should have _either_ tabs or fields set*
         Iterables such as tuples/lists will be turned into Tabbed_Forms
         row_kwargs can be used to set attributes on rows in the form
-        - row kwargs is a dictionary mapping row numbers to dictionaries """
-    tab_names = tuple()
-    inherited_attributes = {"tab_names" : tuple}
+            - row kwargs is a dictionary mapping row numbers to dictionaries
+        can set a `tab_kwargs` dictionary to customize the created tab"""
+    tabs = tab_info()
+    inherited_attributes = {"tabs" : tab_info}
     field_type = "pride.gui.widgets.form.Form"
+    tab_kwargs = dict()
+
+    def __init__(self, **kwargs):
+        super(Data, self).__init__(**kwargs)
+        self.setup_tabs()
+
+    def setup_tabs(self):
+        for name, _type in self.tabs.items():
+            if not hasattr(self, name):
+                _object = self.create(_type)
+                setattr(self, name, _object)
+            else:
+                self.add(getattr(self, name))
+
+    @classmethod
+    def from_info(cls, cls_name, names, _types, **kwargs):
+        raise NotImplementedError()
+        try:
+            tabs = dict((name, _types[i]) for i, name in enumerate(names))
+        except KeyError:
+            raise
+        attributes = dict()#cls.__dict__.copy()
+        attributes.update({"ordering" : names, "tabs" : tab_info(**tabs)})
+        #import pprint
+        #pprint.pprint(attributes)
+        new_cls = type(cls_name, (cls, ), attributes)
+        print new_cls.__dict__
+        return new_cls#(**kwargs)
 
 
 class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
-    """ Creates one tab per item in target_object.tab_names. """
+    """ Creates one tab per item in target_object.tabs. """
 
-    defaults = {"target_object" : None, "include_new_tab_button" : False,
+    defaults = {"include_new_tab_button" : False,
                 "default_form_type" : "pride.gui.widgets.form.Form",
                 "tabbed_form_type" : "pride.gui.widgets.formext.Tabbed_Form"}
-    required_attributes = ("target_object", )
+    mutable_defaults = {"target_object" : lambda: None}
+    #required_attributes = ("target_object", )
 
     def create_subcomponents(self):
         tab_targets = self.tab_targets = []
-        for name in self.target_object.tab_names:
+        target_object = self.target_object
+        tabs = target_object.tabs
 
+        if getattr(target_object, "ordering", False):
+            names = target_object.ordering
+            assert len(names) == len(tabs.keys())
+        else:
+            names = tabs.keys()
+        print(names)
+        if not names:
+            if target_object.fields:
+                form_type = getattr(target_object, "form_type",
+                                    self.default_form_type)
+                row_kwargs = getattr(target_object, "row_kwargs", dict())
+                fields = copy.deepcopy(getattr(target_object, "fields", None))
+
+                try:
+                    kwargs = target_object.form_kwargs
+                except AttributeError:
+                    kwargs = {"target_object" : target_object,
+                              "row_kwargs" : row_kwargs}
+                else:
+                    kwargs.update({"target_object" : target_object,
+                                   "row_kwargs" : row_kwargs})
+                if fields is not None:
+                    kwargs.setdefault("fields", fields)
+                form = self.main_window.create(form_type, **kwargs)
+                target_object.form_reference = form.reference
+
+        for name in names:
+        #    print("Creating callable for {} {}".format(self.target_object, name))
             def callable(self=self, name=name):
                 values = getattr(self.target_object, name)
                 fields = copy.deepcopy(getattr(values, "fields", None))
@@ -144,11 +204,17 @@ class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
                 except AttributeError:
                     form_type = self.default_form_type
 
-                kwargs = {"target_object" : values, "row_kwargs" : row_kwargs}
+                try:
+                    kwargs = values.form_kwargs
+                except AttributeError:
+                    kwargs = {"target_object" : values,
+                              "row_kwargs" : row_kwargs}
+                else:
+                    kwargs.update({"target_object" : values,
+                                   "row_kwargs" : row_kwargs})
                 if fields is not None:
-                    kwargs["fields"] = fields
-
-                if getattr(values, "tab_names", False):
+                    kwargs.setdefault("fields", fields)
+                if getattr(values, "tabs", False):
                     if fields is None:
                         fields = kwargs["fields"] = []
                     fields.append([field_info(name,
@@ -157,18 +223,22 @@ class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
                 form = self.main_window.create(form_type, **kwargs)
                 values.form_reference = form.reference
                 return form
-            callable.tab_text = name
+
+            values = getattr(target_object, name)
+            try:
+                tab_kwargs = values.tab_kwargs.copy()
+            except AttributeError:
+                tab_kwargs = dict()
+            tab_kwargs.setdefault("button_text", name)
+            callable.tab_kwargs = tab_kwargs
             tab_targets.append(callable)
+
         super(Tabbed_Form, self).create_subcomponents()
 
 
 def test_Tabbed_Form():
     import pride.gui
     import pride.gui.main
-
-    class Test_Data(Data):
-
-        tab_names = ("tab1", "tab2", "tab3")
 
     class Tab1_Contents(Data):
 
@@ -179,19 +249,29 @@ def test_Tabbed_Form():
 
     class Tab2_Contents(Data):
 
-        defaults = {"subtab1" : Data(attribute=1, fields=[[field_info("attribute")]]),
-                    "subtab2" : Data(attribute=2, fields=[[field_info("attribute")]])
-                    }
-        tab_names = ("subtab1", "subtab2")
+        tabs = tab_info(subtab1=lambda: Data(attribute=1,
+                                            fields=[[field_info("attribute")]]),
+                        subtab2=lambda: Data(attribute=2,
+                                            fields=[[field_info("attribute")]]))
+        ordering = ("subtab1", "subtab2")
 
 
     class Tab3_Contents(Data):
 
-        defaults = {"subtab1" : Data(attribute=3, fields=[[field_info("attribute")]]),
-                    "subtab2" : Data(attribute=4, fields=[[field_info("attribute")]]),
-                    "test_attribute" : "tabs and a form"}
-        tab_names = ("subtab1", "subtab2")
+        defaults = {"test_attribute" : "tabs and a form"}
+        tabs = tab_info(subtab1=lambda: Data(attribute=3,
+                                            fields=[[field_info("attribute")]]),
+                        subtab2=lambda: Data(attribute=4,
+                                            fields=[[field_info("attribute")]]))
+        ordering = ("subtab1", "subtab2")
         fields = [[field_info("test_attribute")]]
+
+
+    class Test_Data(Data):
+
+        tabs = tab_info(tab1=Tab1_Contents, tab2=Tab2_Contents,
+                        tab3=Tab3_Contents)
+        ordering = ("tab1", "tab2", "tab3")
 
 
     data = Test_Data(tab1=Tab1_Contents(), tab2=Tab2_Contents(),

@@ -1,5 +1,4 @@
 import copy
-from math import ceil
 
 import pride.gui
 import pride.gui.color
@@ -102,10 +101,10 @@ class Minimal_Theme(Theme):
                                    w + (2 * thickness), h + (2 * thickness)),
                           color=(r, g, b, a - (thickness * fade_scalar)))
 
-        if self.text or self.draw_cursor:
+        text = self.text
+        if text or self.draw_cursor:
             assert self.wrap_text
-            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            text = self.text
+            assert isinstance(text, str), (type(text), text, self.parent)
             # note that it is the responsibility of the theme to control whether or not passwords are displayed
             if text and self.wrapped_object.confidential:
                 text = self._replacement_string
@@ -123,6 +122,7 @@ class Minimal_Theme(Theme):
                 # if the text has newlines, then the texture will have the maximum width
                 # when text rendering is upgraded to use an atlas, this fix should no longer be necessary
                 text += "\n\n"
+            assert w
             self.draw("text", area, text, width=w if self.wrap_text else None,
                       bg_color=self.text_background_color, color=self.text_color,
                       center_text=self.center_text, alias=self.font)
@@ -337,7 +337,7 @@ class Animated_Theme2(Minimal_Theme):
             assert end_area is not None
             assert 0.0 <= midpoint <= 1.0, (midpoint, self.frame_number, self.frame_count)
             (self.x, self.y,
-             self.w, self.h) = [int(ceil(lerp(old_value, end_value, midpoint))) for
+             self.w, self.h) = [int(round(lerp(old_value, end_value, midpoint))) for
                                 old_value, end_value in zip(old_area, end_area)]
             super(Animated_Theme2, self).draw_texture()
             self.frame_number += 1

@@ -1,5 +1,6 @@
 import pride.gui.widgets.form
 from pride.functions.utilities import slide
+field_info = pride.gui.widgets.form.field_info
 
 class Tab_Button_Entry(pride.gui.widgets.form.Callable_Entry):
 
@@ -57,13 +58,23 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         self.create_subcomponents()
 
     def create_subcomponents(self):
-        fields = [[("select_tab", {"button_text" : _object.tab_text,#getattr(_object,
-                                                        #   "tab_text", ''),
-                                   "args" : (_object, ),
-                                   "field_type" : Tab_Button_Field,
-                                   "w_range" : (0, 1.0 / self.tabs_per_row)})
-                   for _object in row] for
-                        row in slide(self.tab_targets, self.tabs_per_row)]
+        fields = []
+        _kwargs = {"field_type" : Tab_Button_Field,
+                   "w_range" : (0, 1.0 / self.tabs_per_row)}
+        entry_kwargs = {"scale_to_text" : True}
+        for row in slide(self.tab_targets, self.tabs_per_row):
+            _row = []
+            for _object in row:
+                tab_kwargs = _kwargs.copy()
+                tab_kwargs["args"] = (_object, )
+                tab_kwargs.update(getattr(_object, "tab_kwargs", dict()))
+                try:
+                    tab_kwargs["entry_kwargs"].update(entry_kwargs)
+                except KeyError:
+                    tab_kwargs["entry_kwargs"] = entry_kwargs.copy()
+                _row.append(field_info("select_tab", **tab_kwargs))
+            fields.append(_row)
+
         offset = 0
         if self.include_new_tab_button:
             offset += 1
@@ -103,8 +114,13 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                 self._set_color(first_tab.entry, first_tab.args[0])
                 first_tab.entry._just_constructed = False
 
+        if not tabs:
+            self.tab_bar.hide()
+
     def new_tab(self):
         tab_bar = self.tab_bar
+        if tab_bar.hidden:
+            tab_bar.show()
         _object = self.main_window.create(self.new_window_type)
         fields = [("select_tab", {"args" : (_object, ),
                                   "button_text" : self.new_window_tab_text,
@@ -165,6 +181,8 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         if not row.children:
             self.tab_bar.rows.remove(row)
             row.delete()
+        if not self.tab_bar.fields_list:
+            self.tab_bar.hide()
 
     def delete(self):
         del self.tab_targets

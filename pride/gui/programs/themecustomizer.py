@@ -24,13 +24,13 @@ class Value_Editor(pride.gui.widgets.tabs.Tabbed_Window):
         for name in self.names:
             def callable(name=name):
                 return create_window(name)
-            callable.tab_text = name
+            callable.tab_kwargs = {"button_text" : name}
             targets.append(callable)
         super(Value_Editor, self).create_subcomponents()
 
     def create_window(self, name):
         window = self.main_window.create(self.new_window_type, fields=[[name]],
-                                         tab_text=name.replace('_', ' '),
+                                         tab_kwargs={"button_text" : name.replace('_', ' ')},
                                          target_object=self.target_object)
         return window
 
@@ -76,8 +76,8 @@ class Profile_Editor(Value_Editor):
             target = _object
         window = self.main_window
         form = window.create(Color_Form, fields=fields, pack_mode="top",
-                             target_object=target, tab_text=name,
-                             **kwargs)
+                             target_object=target,
+                             tab_kwargs={"button_text" : name}, **kwargs)
         return form
 
 
@@ -115,7 +115,7 @@ class Theme_Editor(Value_Editor):
         window = self.main_window.create(self.new_window_type, names=names,
                                          target_object=theme_colors[profile],
                                          tab_bar_title_text="{} profile settings".format(profile),
-                                         tab_text=profile)
+                                         tab_kwargs={"button_text" : profile})
         return window
 
     def save_color_options(self):

@@ -45,7 +45,7 @@ class Database_Viewer(pride.gui.widgets.tabs.Tabbed_Window):
             def callable(db=db, table_name=table_name, schema=schema, **kwargs):
                 return self.create(Table_Viewer, database=db, table_name=table_name,
                                    schema=schema, **kwargs)
-            callable.tab_text = table_name
+            callable.tab_kwargs = {"button_text" : table_name}
             targets.append(callable)
         super(Database_Viewer, self).create_subcomponents()
 

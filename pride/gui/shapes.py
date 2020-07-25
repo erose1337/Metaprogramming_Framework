@@ -73,12 +73,12 @@ class Bounded_Shape(Shape):
             lower = value[0]
             if lower < 0.0 or lower > 1.0:
                 raise ValueError("float w_range must be between 0.0 and 1.0; got {}".format(lower))
-            value = (int(lower * screen_w), value[1])
+            value = (int(round(lower * screen_w)), value[1])
         if isinstance(value[1], float):
             upper = value[1]
             if upper < 0.0 or upper > 1.0:
                 raise ValueError("float h_range must be between 0.0 and 1.0; got {}".format(upper))
-            value = (value[0], int(upper * screen_w))
+            value = (value[0], int(round(upper * screen_w)))
         self._w_range = value
     w_range = property(_get_w_range, _set_w_range)
 
@@ -87,9 +87,9 @@ class Bounded_Shape(Shape):
     def _set_h_range(self, value):
         screen_w, screen_h = self.sdl_window.size
         if isinstance(value[0], float):
-            value = (int(value[0] * screen_h), value[1])
+            value = (int(round(value[0] * screen_h)), value[1])
         if isinstance(value[1], float):
-            value = (value[0], int(value[1] * screen_h))
+            value = (value[0], int(round(value[1] * screen_h)))
         self._h_range = value
     h_range = property(_get_h_range, _set_h_range)
 

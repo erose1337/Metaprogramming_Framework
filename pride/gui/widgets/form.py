@@ -43,7 +43,9 @@ def field_info(field_name, **kwargs):
 class Scrollable_Window(pride.gui.gui.Window):
 
     defaults = {"vertical_slider_position" : "right",
-                "horizontal_slider_position" : "bottom"}
+                "horizontal_slider_position" : "bottom",
+                "main_window_type" : "pride.gui.gui.Container",
+                "slider_type" : "pride.gui.widgets.form.Slider_Field"}
     predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
     autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
     mutable_defaults = {"vertical_slider_entry_kwargs" : lambda: {"orientation" : "stacked"},
@@ -67,22 +69,23 @@ class Scrollable_Window(pride.gui.gui.Window):
 
     def __init__(self, **kwargs):
         super(Scrollable_Window, self).__init__(**kwargs)
-        self.main_window = self.create("pride.gui.gui.Container", pack_mode="main")
+        self.main_window = self.create(self.main_window_type, pack_mode="main")
         position = self.vertical_slider_position
         if position is not None:
             self.vertical_slider = \
-            self.create("pride.gui.widgets.form.Slider_Field", pack_mode=position,
-                        orientation="stacked", w_range=(0, .025), target_object=self,
+            self.create(self.slider_type, pack_mode=position,
+                        orientation="stacked", w_range=(0, .025),
                         name="y_scroll_value", minimum=0, maximum=0,
-                        auto_create_id=False,
+                        auto_create_id=False, target_object=self,
                         entry_kwargs=self.vertical_slider_entry_kwargs)
         position = self.horizontal_slider_position
         if position is not None:
             self.horizontal_slider = \
-            self.create("pride.gui.widgets.form.Slider_Field", pack_mode=position,
-                        orientation="side by side", h_range=(0, .025), target_object=self,
-                        auto_create_id=False, entry_kwargs=self.horizontal_slider_entry_kwargs,
-                        name="x_scroll_value", minimum=0, maximum=0)
+            self.create(self.slider_type, pack_mode=position,
+                        orientation="side by side", h_range=(0, .025),
+                        auto_create_id=False, target_object=self,
+                        name="x_scroll_value", minimum=0, maximum=0,
+                        entry_kwargs=self.horizontal_slider_entry_kwargs,)
 
     def handle_x_scroll(self, old_value, new_value):
         pass
@@ -140,16 +143,16 @@ class Form(Scrollable_Window):
     def handle_tab(self):
         values = self.fields_list
         length = len(values)
+        row_kwargs = self.row_kwargs
         for index, child in enumerate(values):
             child_entry = child.entry
             selected = self.check_if_selected(child, child_entry)
             if selected:
                 # lazily load the next row if there is one
                 if index + 1 == length and len(self.rows) < len(self.fields):
-                    _row = self.fields[len(self.rows)]
-                    row, row_number = self.create_row()
-                    self.create_fields(_row, row, self.target_object)
-                    field = row.children[0]
+                    row_count = len(self.rows)
+                    self.handle_y_scroll(row_count, row_count + 1)
+                    field = self.rows[row_count].children[0]
                 else:
                     index = (index + 1) % length
                     field = values[index]
@@ -257,11 +260,14 @@ class Form(Scrollable_Window):
         max_rows = self.max_rows
         rows = self.rows
         row_count = len(rows)
+        row_number = row_count
+        row_kwargs = self.row_kwargs
         if new_value > (row_count - self.max_rows):
             # lazy load the next row(s)
             for count in range(abs(old_value - new_value)):
                 row_info = self.fields[len(rows)]
-                row, row_number = self.create_row()
+                kwargs = row_kwargs.get(row_number, dict())
+                row, row_number = self.create_row(**kwargs)
                 self.create_fields(row_info, row, self.target_object)
 
         for row_number, row in enumerate(rows):
@@ -440,7 +446,7 @@ class Field(pride.gui.gui.Container):
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
                 "balancer" : None, "_value_initialized" : False,
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True,
-                "display_name" : '', "scale_to_text" : False, "tip_name" : ''}
+                "display_name" : '', "tip_name" : ''}
     mutable_defaults = {"entry_kwargs" : dict, "id_kwargs" : dict}
     predefaults = {"target_object" : None}
     #required_attributes = ("target_object", ) # target_object could be a list that starts out empty
@@ -462,10 +468,14 @@ class Field(pride.gui.gui.Container):
                 try:
                     setattr(self.target_object, self.name, value)
                 except (TypeError, AttributeError) as exception:
+                    if hasattr(self, "target_object") and hasattr(self, "name"):
+                        raise
+
                     assert hasattr(self, "target_object")
                     try: # duck typing might fail for mapping-like objects that don't restrict attribute assignment the way a dict does
                         self.target_object[self.name] = value
                     except TypeError:
+                        #print type(self), self.name, self.value
                         raise exception
                 self.entry.texture_invalid = True # updates text later
                 parent_form = self.parent_form
@@ -539,15 +549,21 @@ class Callable_Entry(Entry):
     def _get_text(self):
         return self.parent_field.button_text
     def _set_text(self, value):
+        field = self.parent_field
         try:
-            value = self.parent_field.button_text
+            value = field.button_text
         except AttributeError:
             if not hasattr(self, "parent_field"):
                 raise
         self.text_initialized = False
         super(Callable_Entry, self)._set_text(value)
-        if self.parent_field is not None:
-            self.parent_field.w_range = self.w_range
+        if field is not None:
+            #backup = getattr(field, "_backup_w_range", None)
+            #if backup is None:
+            #    field._backup_w_range = self.w_range
+            field.w_range = self.w_range
+            field.pack()
+
     text = property(_get_text, _set_text)
 
     def handle_return(self):
@@ -729,6 +745,17 @@ class Integer_Entry(Text_Entry):
         if sign:
             value = str(sign * int(value))
         assert value
+
+        field = self.parent_field
+        if field is not None:
+            _min, _max = field.minimum, field.maximum
+            assert value is not None
+            value = int(value)
+            if _min is not None:
+                value = max(_min, value)
+            if _max is not None:
+                value = min(_max, value)
+            value = str(value)
         super(Integer_Entry, self)._set_text(value)
     text = property(_get_text, _set_text)
 
@@ -907,13 +934,13 @@ class Dropdown_Field(Field):
         kwargs.setdefault("parent_field", self)
         if "fields" not in kwargs:
             kwargs.setdefault("pack_mode", pack_mode)
-            kwargs.setdefault("row_h_range", (.05, 1.0))
+            #kwargs.setdefault("row_h_range", (32, 1.0))
             #kwargs.setdefault("max_rows", 8)
             # open towards the direction that has more room
             if (self.y + self.h) < self.sdl_window.h / 2:
-                kwargs["row_pack_mode"] = "bottom"
-            else:
                 kwargs["row_pack_mode"] = "top"
+            else:
+                kwargs["row_pack_mode"] = "bottom"
 
             new_entry = lambda value: ("select_entry", {"button_text" : str(value),
                                                         "args" : (value, ),
@@ -962,11 +989,15 @@ class Dropdown_Field(Field):
         for row in rows[beginning:end]:
             row.children[0].entry.always_on_top = True
             row.show()
+            #row._backup_h_range = row.h_range
+            #row.h_range = (16, 1.0)
             #row.pack()
         for row in itertools.chain(rows[:beginning], rows[end:]):
             row.children[0].entry.always_on_top = False
             row.hide()
-
+            #if row._backup_h_range is not None:
+            #    row.h_range = row._backup_h_range
+            #    row._backup_h_range = None
         self.menu_open = True
         entry.vertical_slider.maximum = max(0, len(entry.fields) - max_rows)
         entry.vertical_slider.pack()

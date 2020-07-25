@@ -50,7 +50,7 @@ class Database(pride.base.Wrapper):
 
     mutable_defaults = {"in_memory" : dict}
 
-    database_structure = {}
+    schema = {}
     primary_key = {}
 
     def __init__(self, **kwargs):
@@ -66,7 +66,7 @@ class Database(pride.base.Wrapper):
             self.alert("Unable to queue finalizer callback",
                        level=self.verbosity["finalizer_unvailable"])
 
-        for table, structure in self.database_structure.items():
+        for table, structure in self.schema.items():
             self.create_table(table, structure)
 
     def open_database(self, database_name, text_factory=None):
@@ -96,8 +96,8 @@ class Database(pride.base.Wrapper):
         self.in_memory[table_name] = {}
         if self.auto_commit:
             self.commit()
-        if table_name not in self.database_structure:
-            self.database_structure[table_name] = fields
+        if table_name not in self.schema:
+            self.schema[table_name] = fields
             for field in fields:
                 if "PRIMARY_KEY" in field.upper():
                     self.primary_key[table_name] = field.split()[0]
@@ -121,7 +121,7 @@ class Database(pride.base.Wrapper):
             except KeyError:
                 pass
         retrieve_fields = ", ".join(retrieve_fields or (field.split()[0] for
-                                    field in self.database_structure.get(table_name, [])))
+                                    field in self.schema.get(table_name, [])))
         post_string = ''
         if group_by:
             post_string += " GROUP BY {}".format(", ".join(group_by))
@@ -187,7 +187,7 @@ class Database(pride.base.Wrapper):
 
         _arguments = {}
         primary_key = None
-        for item in self.database_structure[table_name]:
+        for item in self.schema[table_name]:
             attribute_name = item.split()[0]
             try:
                 _arguments[attribute_name] = arguments[attribute_name]
@@ -195,9 +195,9 @@ class Database(pride.base.Wrapper):
                 pass
             if "primary_key" in item.lower():
                 primary_key = attribute_name
-        #arguments = [(item, arguments[item]) for item in self.database_structure[table_name]]
+        #arguments = [(item, arguments[item]) for item in self.schema[table_name]]
         assignment_string, _values = create_assignment_string(_arguments)
-        query = "UPDATE {} SET {} {}".format(table_name, assignment_string, condition_string)
+        query = "UPDATE {} SET {} {};".format(table_name, assignment_string, condition_string)
         values = _values + values
         self.alert("Updating data in table {}; {} {}".format(table_name, query, values),
                    level=self.verbosity["update_table"])
@@ -263,6 +263,8 @@ class Database(pride.base.Wrapper):
             field type, and more."""
         self.alert("Retrieving table information for: {}".format(table_name),
                    level=self.verbosity["table_info"])
+        if not table_name:
+            raise ValueError("Empty table_name supplied")
         return self.cursor.execute("PRAGMA table_info({})".format(table_name))
 
     def db_info(self):
@@ -318,7 +320,7 @@ def test_db():
     class Test_Database(Database):
 
         defaults = {"database_name" : "test_database.db"}
-        database_structure = {"Test" : ("test_name TEXT PRIMARY_KEY UNIQUE", "test_data BLOB")}
+        schema = {"Test" : ("test_name TEXT PRIMARY_KEY UNIQUE", "test_data BLOB")}
         primary_key = {"Test" : "test_name"}
 
     test = Test_Database()

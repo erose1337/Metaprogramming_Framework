@@ -345,7 +345,7 @@ class File_System(pride.components.database.Database):
 
     verbosity = {"file_modified" : "vv", "file_created" : "vv"}
 
-    database_structure = {"Files" : ("filename BLOB PRIMARY KEY", "data BLOB",
+    schema = {"Files" : ("filename BLOB PRIMARY KEY", "data BLOB",
                                      "date_created TIMESTAMP", "date_modified TIMESTAMP",
                                      "date_accessed TIMESTAMP", "file_type TEXT",
                                      "tags TEXT"),
@@ -355,10 +355,10 @@ class File_System(pride.components.database.Database):
 
     def __init__(self, **kwargs):
         super(File_System, self).__init__(**kwargs)
-        database_structure = self.database_structure
+        schema = self.schema
         for tag in self.query("Tags"):
             tag = tag[0]
-            if tag not in database_structure:
+            if tag not in schema:
                 self.create_table(tag, ("filename TEXT PRIMARY_KEY", ))
 
     def save_file(self, filename, data, tags=tuple()):

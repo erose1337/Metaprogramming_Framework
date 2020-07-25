@@ -45,7 +45,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
     predefaults = {"current_session" : ('', None)} # session_id and peer name
 
-    database_structure = {"Users" : ("identifier BLOB PRIMARY_KEY",
+    schema = {"Users" : ("identifier BLOB PRIMARY_KEY",
                                      "verifier_hash BLOB", "salt BLOB")}
 
     database_flags = {"primary_key" : {"Users" : "identifier"}}
@@ -57,7 +57,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
     mutable_defaults = {"_rate" : dict, "ip_whitelist" : list, "ip_blacklist" : list,
                         "session_id" : dict}
 
-    inherited_attributes = {"database_structure" : dict, "database_flags" : dict,
+    inherited_attributes = {"schema" : dict, "database_flags" : dict,
                             "remotely_available_procedures" : tuple, "rate_limit" : dict}
 
     def _get_current_user(self):

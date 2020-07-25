@@ -345,11 +345,11 @@ class RPC_Service(pride.components.base.Base):
 
     verbosity = {"validate_failure" : 0, "validate_success" : 0}
 
-    database_structure = {}
+    schema = {}
     databse_flags = {}
     remotely_available_procedures = tuple()
     rate_limit = {}
-    inherited_attributes = {"database_structure" : dict, "database_flags" : dict,
+    inherited_attributes = {"schema" : dict, "database_flags" : dict,
                             "remotely_available_procedures" : tuple, "rate_limit" : dict}
 
     def __init__(self, **kwargs):
@@ -364,7 +364,7 @@ class RPC_Service(pride.components.base.Base):
         else:
             name = self.database_name
         self.database = self.create(self.database_type, database_name=name,
-                                    database_structure=self.database_structure,
+                                    schema=self.schema,
                                     **self.database_flags)
 
     def validate(self, session_id, peername, method_name):

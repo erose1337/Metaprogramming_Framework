@@ -81,20 +81,34 @@ class Table(pride.gui.widgets.formext.Data):
             values = list(db.query(table_name))
 
         fields = self.fields = []
+        row_kwargs = dict()
+        try:
+            row_kwargs.update(self.row_kwargs)
+        except AttributeError:
+            pass
+        row_count = len(fields)
         editable = not self.read_only
         items_per_row = self.items_per_row
         for index, value in enumerate(values):
             entry_id = value[0]
+            try:
+                row_kwargs[row_count].setdefault("h_range", (0, .05))
+            except KeyError:
+                row_kwargs[row_count] = {"h_range" : (0, .05)}
             db_entry = self.create(Db_Entry, db=db, table_name=table_name,
                                    entry_id=value[0], primary_key=primary_key,
                                    column_names=set(names), field_index=index)
             fields.append([field_info("select_entry", args=(entry_id, ),
                                       button_text=entry_id,
                                       entry_kwargs={"scale_to_text" : False})])
+            row_count += 1
             for _names in slide(names, items_per_row):
                 row = [field_info(name, target_object=db_entry,
-                                editable=editable) for name in _names]
+                                editable=editable) for name in _names
+                       if name != primary_key]
                 fields.append(row)
+                row_count += 1
+        self.row_kwargs = row_kwargs
 
     def delete(self):
         del self.fields

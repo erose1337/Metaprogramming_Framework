@@ -344,27 +344,31 @@ class Inherited_Attributes(type):
 
         for attribute_name, attribute_type in inherited_attributes.items():
             if issubclass(attribute_type, dict):
-                _attribute = {}
+                empty_dict = attribute_type()
+                _attribute = attribute_type()
                 for _class in bases:
-                    _attribute.update(getattr(_class, attribute_name, {}))
-                _attribute.update(attributes.get(attribute_name, {}))
+                    _attribute.update(getattr(_class, attribute_name,
+                                              empty_dict))
+                _update = attributes.get(attribute_name, empty_dict)
+                _attribute.update(attributes.get(attribute_name, empty_dict))
 
             elif issubclass(attribute_type, tuple):
-                empty_tuple = tuple()
+                empty_tuple = attribute_type()
                 _attribute = empty_tuple
                 for _class in bases:
                     _attribute += getattr(_class, attribute_name, empty_tuple)
                 _attribute += attributes.get(attribute_name, empty_tuple)
-                assert len(_attribute) == len(set(_attribute)), (_attribute, set(_attribute), _attribute == set(_attribute))
-                _attribute = tuple(_attribute)
+                assert len(_attribute) == len(set(_attribute)), (name, attribute_name,  _attribute, set(_attribute), _attribute == set(_attribute))
+                _attribute = attribute_type(_attribute)
 
             elif issubclass(attribute_type, list):
-                _attribute = []
+                _attribute = attribute_type()
                 for _class in bases:
-                    _attribute += getattr(_class, attribute_name, [])
-                _attribute += attributes.get(attribute_name, [])
+                    _attribute += getattr(_class, attribute_name,
+                                         attribute_type())
+                _attribute += attributes.get(attribute_name, attribute_type)
                 assert len(_attribute) == len(set(_attribute)), _attribute
-                _attribute = list(_attribute)
+                _attribute = attribute_type(_attribute)
 
             elif issubclass(attribute_type, str):
                 _attribute = attributes.get(attribute_name, getattr(_class, attribute_name, ''))

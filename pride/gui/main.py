@@ -77,6 +77,13 @@ class Gui(pride.gui.gui.Application):
     def login_failed(self):
         self.alert("Login failed")
 
+def run_programs(programs, user_ref="/User", **window_kwargs):
+    import pride
+    import pride.gui
+    import pride.gui.main
+    window = pride.objects[pride.gui.enable(**window_kwargs)]
+    window.create(pride.gui.main.Gui, startup_programs=programs,
+                  user=pride.objects[user_ref])
 
 def main(**kwargs):
     window = pride.objects[pride.gui.enable(position=(100, 100))]

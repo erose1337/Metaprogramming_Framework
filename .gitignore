@@ -90,3 +90,8 @@ bin*
 *.app
 
 *.bak
+
+
+build/
+dist/
+pride.egg-info/

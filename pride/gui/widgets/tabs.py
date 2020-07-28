@@ -144,7 +144,8 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
             if len(row.children) < tabs_per_row:
                 break
         else: # there are no non-full rows
-            row, _ = tab_bar.create_row()
+            row = tab_bar.create_row()
+            tab_bar.sort_rows()
 
         for field_info in fields:
             field = tab_bar.create_field(field_info, row)

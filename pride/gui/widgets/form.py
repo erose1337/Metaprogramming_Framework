@@ -1,4 +1,4 @@
-import itertools
+import operator
 import collections
 
 import pride.gui.gui
@@ -11,30 +11,6 @@ DOWN_ARROW = 1073741905
 RIGHT_ARROW = 1073741903
 LEFT_ARROW = 1073741904
 DELETE_KEY = "\x7f"
-
-class Balancer(object):
-
-    def __init__(self, name, balance):
-        self.name = name
-        self.balance = balance
-
-    def get_balance(self):
-        return self.balance
-
-    def spend(self, amount):
-        self.balance -= amount
-
-    def earn(self, amount):
-        self.balance += amount
-
-    def compute_cost(self, field, old, new):
-        try:
-            return field.compute_cost(old, new)
-        except AttributeError:
-            if hasattr(field, "compute_cost"):
-                raise
-            return 0
-
 
 def field_info(field_name, **kwargs):
     return (field_name, kwargs)
@@ -101,14 +77,11 @@ class Form(Scrollable_Window):
                 "text_field_type" : _ + "Text_Field", "toggle_type" : _ + "Toggle",
                 "dropdown_type" : _ + "Dropdown_Field", "row_h_range" : tuple(),
                 "slider_type" : _ + "Slider_Field", "callable_type" : _  + "Callable_Field",
-                "balancer" : None, "read_only" : False,
-                "include_balance_display" : True, "max_rows" : 4,
+                "read_only" : False, "max_rows" : 4,
                 "form_name" : '', "include_delete_button" : False}
-    mutable_defaults = {"fields_list" : list, "rows" : list,
+    mutable_defaults = {"fields_list" : dict, "rows" : collections.OrderedDict,
                         "target_object" : lambda: None,
-                        "balance_display_kwargs" : dict,
                         "row_kwargs" : dict}
-    autoreferences = ("displayer", )
     hotkeys = {("\t", None) : "handle_tab"}
 
     def __init__(self, **kwargs):
@@ -117,7 +90,7 @@ class Form(Scrollable_Window):
 
     def synchronize_fields(self):
         assert not self.deleted
-        for field in self.fields_list:
+        for field in self.fields_list.itervalues():
             field.entry.texture_invalid = True
 
     def check_if_selected(self, child, child_entry):
@@ -137,11 +110,12 @@ class Form(Scrollable_Window):
             _selected = any((entry._selected for entry in
                              getattr(child_entry, "entries", tuple())))
         if not _selected and hasattr(child_entry, "fields_list"):
-            _selected = any(self.check_if_selected(item, item.entry) for item in child_entry.fields_list)
+            _selected = any(self.check_if_selected(item, item.entry) for item in
+                            child_entry.fields_list.itervalues())
         return _selected
 
     def handle_tab(self):
-        values = self.fields_list
+        values = self.fields_list.values()
         length = len(values)
         row_kwargs = self.row_kwargs
         for index, child in enumerate(values):
@@ -178,26 +152,23 @@ class Form(Scrollable_Window):
         if self.target_object is None:
             self.target_object = self # can't use autoreferences because non-Base objects don't have a .reference attribute
 
-        balancer = self.balancer
-        if balancer is not None and self.include_balance_display:
-            self.create_balance_display()
-
         target_object = self.target_object; max_rows = self.max_rows
         row_kwargs = self.row_kwargs
-        for row_number, _row in enumerate(self.fields):
+        for row_number, row_info in enumerate(self.fields):
             if row_number >= max_rows: # lazy loading on the rest of the rows
                 break
             else:
-                try:
-                    row, _row_number = self.create_row(**row_kwargs[row_number])
-                except (KeyError, IndexError):
-                    if row_number in row_kwargs:
-                        raise
-                    row, _row_number = self.create_row()
-                assert row_number == _row_number
-                self.create_fields(_row, row, target_object)
+                row = self.create_row(row_number)
+                self.create_fields(row_number, row_info, row, target_object)
 
+        self.sort_rows()
         self.synchronize_scroll_bars()
+
+    def sort_rows(self):
+        # must sort after creating rows
+        window = self.main_window
+        window.children[:] = sorted(window.children,
+                                    key=operator.attrgetter("row_number"))
 
     def synchronize_scroll_bars(self):
         slider = self.vertical_slider
@@ -206,21 +177,30 @@ class Form(Scrollable_Window):
             slider.update_position_from_value()
             self.pack()
 
-    def create_fields(self, _row, row, target_object):
-        for field_info in _row:
-            self.create_field(field_info, row, target_object)
+    def create_fields(self, row_number, row_info, row, target_object):
+        row_start_index = sum(len(_row) for _row in self.fields[:row_number])
+        for field_index, field_info in enumerate(row_info):
+            field_no = (row_start_index + field_index)
+            self.create_field(field_no, field_info, row, target_object)
 
-    def create_row(self, **kwargs):
+    def create_row(self, row_number):
+        """ Should call `sort_rows` after creating rows """
+        try:
+            kwargs = self.row_kwargs[row_number]
+        except KeyError:
+            kwargs = dict()
         kwargs = dict((key, value) for key, value in kwargs.items())
+        kwargs.setdefault("row_number", row_number)
         kwargs.setdefault("pack_mode", self.row_pack_mode)
         kwargs.setdefault("h_range", self.row_h_range or (0, 1.0))
-        row = self.main_window.create("pride.gui.gui.Container", **kwargs)
-        rows = self.rows
-        rows.append(row)
-        return row, rows.index(row)
 
-    def create_field(self, field_info, row, target_object=None):
-        empty_entries = {"balancer" : self.balancer, "displayer" : self.displayer}
+        window = self.main_window
+        row = window.create("pride.gui.gui.Container", **kwargs)
+        self.rows[row_number] = row
+        return row
+
+    def create_field(self, field_no, field_info, row, target_object=None):
+        empty_entries = dict()
         name, entries = self._unpack(field_info, empty_entries)
         _target_object = entries.setdefault("target_object", self.target_object)
         field_type = self.determine_field_type(_target_object, name, entries)
@@ -231,7 +211,7 @@ class Form(Scrollable_Window):
         # continued presence in .fields is a hanging reference that prevents proper deletion
         del entries["target_object"]
         #entries.clear()
-        self.fields_list.append(field)
+        self.fields_list[field_no] = field
         return field
 
     def create_top_display(self):
@@ -258,19 +238,20 @@ class Form(Scrollable_Window):
     def handle_y_scroll(self, old_value, new_value):
         super(Form, self).handle_y_scroll(old_value, new_value)
         max_rows = self.max_rows
+        new_value = min(new_value, len(self.fields) - max_rows)
         rows = self.rows
         row_count = len(rows)
-        row_number = row_count
-        row_kwargs = self.row_kwargs
-        if new_value > (row_count - self.max_rows):
+        #if new_value > (row_count - self.max_rows):
             # lazy load the next row(s)
-            for count in range(abs(old_value - new_value)):
-                row_info = self.fields[len(rows)]
-                kwargs = row_kwargs.get(row_number, dict())
-                row, row_number = self.create_row(**kwargs)
-                self.create_fields(row_info, row, self.target_object)
+        end_row = min(len(self.fields), new_value + max_rows)
+        for row_number in range(new_value, end_row):
+            if row_number not in self.rows:
+                row = self.create_row(row_number)
+                row_info = self.fields[row_number]
+                self.create_fields(row_number, row_info, row, self.target_object)
+        self.sort_rows()
 
-        for row_number, row in enumerate(rows):
+        for row_number, row in rows.items():
             if row_number >= new_value and row_number < new_value + max_rows:
                 if row.hidden:
                     row.show()
@@ -283,25 +264,6 @@ class Form(Scrollable_Window):
     def handle_delete_button(self):
         self.delete()
 
-    def create_balance_display(self):
-        kwargs = self.balance_display_kwargs.copy()
-        kwargs.setdefault("name", "balance")
-        kwargs.setdefault("target_object", self.balancer)
-        kwargs.setdefault("pack_mode", "top")
-        kwargs.setdefault("h_range", (0, .075))
-        kwargs.setdefault("orientation", "side by side")
-        kwargs.setdefault("display_name", self.balancer.name)
-
-        try:
-            entry_kwargs = kwargs["entry_kwargs"]
-        except KeyError:
-            entry_kwargs = kwargs["entry_kwargs"] = dict()
-        entry_kwargs.setdefault("hoverable", False)
-
-        displayer = self.main_window.create(Text_Display, **kwargs)
-        displayer.editable = False
-        self.displayer = displayer
-
     def _unpack(self, item, empty_entries):
         if isinstance(item, str):
             name = item
@@ -311,8 +273,6 @@ class Form(Scrollable_Window):
             entries = empty_entries
         else:
             name, entries = item
-            entries.setdefault("balancer", self.balancer)
-            entries.setdefault("displayer", self.displayer)
         return name, entries
 
     def determine_field_type(self, target_object, name, entries):
@@ -385,9 +345,8 @@ class Form(Scrollable_Window):
                   [       ("callable", {"button_text" : "Press me!"})         ]
                  ]
 
-        balancer = Balancer("Remaining Balance", 255)
         form_callable = lambda *args, **kwargs:\
-            Form(*args, balancer=balancer, fields=fields, target_object=_object, **kwargs)
+            Form(*args, fields=fields, target_object=_object, **kwargs)
         window.create(pride.gui.main.Gui, user=pride.objects["/User"],
                       startup_programs=(form_callable, ))
         assert _object["text"] == '1'
@@ -444,13 +403,13 @@ class Entry(pride.gui.gui.Button):
 class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked", "entry_type" : Entry,
-                "balancer" : None, "_value_initialized" : False,
+                "_value_initialized" : False,
                 "editable" : True, "pack_mode" : "left", "auto_create_id" : True,
                 "display_name" : '', "tip_name" : ''}
     mutable_defaults = {"entry_kwargs" : dict, "id_kwargs" : dict}
     predefaults = {"target_object" : None}
     #required_attributes = ("target_object", ) # target_object could be a list that starts out empty
-    autoreferences = ("identifier", "displayer", "parent_form")
+    autoreferences = ("identifier", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
     def _get_value(self):
@@ -468,15 +427,13 @@ class Field(pride.gui.gui.Container):
                 try:
                     setattr(self.target_object, self.name, value)
                 except (TypeError, AttributeError) as exception:
-                    if hasattr(self, "target_object") and hasattr(self, "name"):
-                        raise
-
                     assert hasattr(self, "target_object")
                     try: # duck typing might fail for mapping-like objects that don't restrict attribute assignment the way a dict does
                         self.target_object[self.name] = value
                     except TypeError:
-                        #print type(self), self.name, self.value
-                        raise exception
+                        if hasattr(self, "target_object") and hasattr(self, "name"):
+                            raise exception
+
                 self.entry.texture_invalid = True # updates text later
                 parent_form = self.parent_form
                 if parent_form is not None:
@@ -516,25 +473,9 @@ class Field(pride.gui.gui.Container):
     def handle_value_changed(self, old_value, new_value):
         if old_value == new_value:
             return False
-        balancer = self.balancer
-        if balancer is not None:
-            balance = balancer.get_balance()
-            cost = balancer.compute_cost(self, old_value, new_value)
-        if balancer is None or cost <= balance:
-            self.alert("Value changing from {} to {}".format(old_value, new_value),
-                        level=self.verbosity["handle_value_changed"])
-            if balancer is not None:
-                balancer.spend(cost)
-                self.parent_form.synchronize_fields()
-                if self.displayer is not None:
-                    self.displayer.entry.texture_invalid = True
-            return True
-        else:
-            return False
-
-    def compute_cost(self, old_value, new_value):
-        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
-        raise NotImplementedError()
+        self.alert("Value changing from {} to {}".format(old_value, new_value),
+                    level=self.verbosity["handle_value_changed"])
+        return True
 
     def delete(self):
         del self.entry_kwargs
@@ -838,8 +779,7 @@ class _Dropdown_Callable(Callable_Field):
 
 class Dropdown_Entry(Form):
 
-    defaults = {"include_balance_display" : False,
-                "callable_type" : _Dropdown_Callable}
+    defaults = {"callable_type" : _Dropdown_Callable}
     required_attributes = ("fields", )
     hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
                (DOWN_ARROW, None) : "handle_down_arrow",
@@ -849,18 +789,23 @@ class Dropdown_Entry(Form):
     def handle_up_arrow(self):
         parent_field = self.parent_field
         rows = self.rows
-        for index, row in enumerate(rows):
+        for index, row in rows.items():
             if not row.hidden:
-                index = min(index + 1, len(rows) - 1)
+                index = max(index - 1, 0)
+                if index not in rows:
+                    self.handle_y_scroll(index, index)
                 parent_field.close_menu(self.fields_list[index].args[0])
                 break
 
     def handle_down_arrow(self):
         parent_field = self.parent_field
         rows = self.rows
-        for index, row in enumerate(rows):
+        end_row = len(self.fields) - 1
+        for index, row in rows.items():
             if not row.hidden:
-                index = max(index - 1, 0)
+                index = min(index + 1, end_row)
+                if index not in rows:
+                    self.handle_y_scroll(index, index)
                 parent_field.close_menu(self.fields_list[index].args[0])
                 break
 
@@ -868,12 +813,6 @@ class Dropdown_Entry(Form):
 class Text_Field(Field):
 
     defaults = {"entry_type" : Text_Entry}
-
-    def compute_cost(self, old_value, new_value):
-        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
-        old_value = len(old_value)
-        new_value = len(new_value)
-        return new_value - old_value
 
 
 class Text_Display(Text_Field):
@@ -907,18 +846,10 @@ class Spinbox(Field):
     def handle_value_changed(self, old_value, new_value):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
 
-    def compute_cost(self, old_value, new_value):
-        return new_value - old_value
-
 
 class Toggle(Field):
 
     defaults = {"entry_type" : Toggle_Entry}
-
-    def compute_cost(self, old_value, new_value):
-        assert type(old_value) == type(new_value), (type(old_value), type(new_value), old_value, new_value)
-        # True - False == 1; False - True == -1;
-        return new_value - old_value
 
 
 class Dropdown_Field(Field):
@@ -959,7 +890,7 @@ class Dropdown_Field(Field):
     def close_menu(self, value):
         entry = self.entry
         rows = entry.rows
-        for row in rows:
+        for row in rows.values():
             field = row.children[0]
             field.entry.always_on_top = False
             if field.args[0] is not value:
@@ -977,8 +908,10 @@ class Dropdown_Field(Field):
             self.pack()
 
     def open_menu(self, selected_value):
-        entry = self.entry; rows = entry.rows; max_rows = entry.max_rows
-        for end, _row in enumerate(rows):
+        entry = self.entry
+        max_rows = entry.max_rows
+        rows = entry.rows
+        for end, _row in rows.items():
             if _row.children[0].args[0] is selected_value:
                 break
         else:
@@ -986,18 +919,15 @@ class Dropdown_Field(Field):
         end = max(max_rows, end + 1)
         beginning = max(0, end - max_rows)
 
-        for row in rows[beginning:end]:
-            row.children[0].entry.always_on_top = True
-            row.show()
-            #row._backup_h_range = row.h_range
-            #row.h_range = (16, 1.0)
-            #row.pack()
-        for row in itertools.chain(rows[:beginning], rows[end:]):
-            row.children[0].entry.always_on_top = False
-            row.hide()
-            #if row._backup_h_range is not None:
-            #    row.h_range = row._backup_h_range
-            #    row._backup_h_range = None
+        row_items = rows.items()
+        for row_no, row in row_items:
+            if row_no < beginning or row_no > end:
+                row.children[0].entry.always_on_top = False
+                row.hide()
+            else:
+                row.children[0].entry.always_on_top = True
+                row.show()
+
         self.menu_open = True
         entry.vertical_slider.maximum = max(0, len(entry.fields) - max_rows)
         entry.vertical_slider.pack()
@@ -1012,9 +942,6 @@ class Dropdown_Field(Field):
             self.open_menu(value)
         else:
             self.close_menu(value)
-
-    def compute_cost(self, old_value, new_value):
-        return 0
 
 
 class Continuum(pride.gui.gui.Button):
@@ -1107,16 +1034,16 @@ class Continuum(pride.gui.gui.Button):
         assert minimum <= value <= maximum
         before = parent_field.value
         parent_field.value = value
-        if parent_field.value != before: # insufficient balance can cause setting.value to fail
-            if value == maximum:
-                new_size = width
-            elif value == minimum:
-                new_size = 0
-            else:
-                new_size = int(bucket_width * value)
-            bar = self.bar
-            setattr(bar, "{}_range".format(size), (new_size, new_size))
-            bar.pack()
+
+        if value == maximum:
+            new_size = width
+        elif value == minimum:
+            new_size = 0
+        else:
+            new_size = int(bucket_width * value)
+        bar = self.bar
+        setattr(bar, "{}_range".format(size), (new_size, new_size))
+        bar.pack()
 
     def mousemotion(self, x, y, x_change, y_change, mouse):
         if self.held:
@@ -1302,9 +1229,6 @@ class Slider_Field(Field):
         else:
             self.show()
     maximum = property(_get_maximum, _set_maximum)
-
-    def compute_cost(self, old_value, new_value):
-        return new_value - old_value
 
     def handle_transition_animation_end(self):
         super(Slider_Field, self).handle_transition_animation_end()

@@ -67,13 +67,16 @@ class Profile_Editor(Value_Editor):
             orientation = "side by side"
             field_info = pride.gui.widgets.form.field_info
             fields = [
-                      [field_info(name, entry_kwargs=dict(orientation=orientation))]
+                      [field_info(name,
+                       entry_kwargs=dict(orientation=orientation),
+                       minimum=0)]
                      ]
             target = self.target_object
             if orientation == "stacked":
                 kwargs["w_range"] = (0, .25)
         else:
             target = _object
+
         window = self.main_window
         form = window.create(Color_Form, fields=fields, pack_mode="top",
                              target_object=target,

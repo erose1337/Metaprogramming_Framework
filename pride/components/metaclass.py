@@ -419,6 +419,8 @@ def _create_pointers_to_base_object(pointers):
         def _setter(self, value, _pointer_name=pointer_name):
             if value:
                 setattr(self, _pointer_name, value.reference)
+            else:
+                setattr(self, _pointer_name, value)
         def _deler(self, _pointer_name=pointer_name):
             delattr(self, _pointer_name)
         yield pointer_id, property(_getter, _setter, _deler)

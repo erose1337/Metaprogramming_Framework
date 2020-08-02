@@ -997,6 +997,8 @@ class Continuum(pride.gui.gui.Button):
 
     def left_click(self, mouse):
         super(Continuum, self).left_click(mouse)
+        if not self.parent_field.editable:
+            return
         # partition available space into n buckets
         # make notch w equal to bucket_width in size
         # find which bucket was clicked and assign that value

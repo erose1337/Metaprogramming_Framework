@@ -88,12 +88,20 @@ class File_Player(pride.gui.widgets.form.Form):
         super(File_Player, self).handle_value_changed(field, old, new)
 
     def handle_play(self):
-        self.show_status("Playing {}".format(self.filename))
-        player = self.player
-        player.play()
+        filename = self.filename
+        _dir, _file = os.path.split(filename)
+        should_play = True
+        if os.path.exists(_dir):
+            if not os.path.exists(filename):
+                self.show_status("No file named '{}'".format(filename))
+                should_play = False
+        if should_play:
+            self.show_status("Playing {}".format(self.filename))
+            player = self.player
+            player.play()
 
-        self.enable_slider_synchronization()
-        self.enable_sliders()
+            self.enable_slider_synchronization()
+            self.enable_sliders()
 
     def enable_slider_synchronization(self):
         inst = pride.Instruction(self.reference, "synchronize_slider")

@@ -17,7 +17,10 @@ class File_Player(pride.gui.widgets.form.Form):
                             (field_info("filename"),
                              field_info("volume", minimum=0, maximum=100)),
                             (field_info("track_position", minimum=0,
-                                        maximum=100, auto_create_id=False), ),
+                                        maximum=100, auto_create_id=False,
+                            entry_kwargs={"include_minmax_buttons" : False,
+                                          "include_incdec_buttons" : False,
+                                          "hide_text" : True}), ),
                             (field_info("handle_play", button_text="|>",
                                         entry_kwargs={"scale_to_text" : False}),
                              field_info("handle_stop", button_text="[]",
@@ -29,9 +32,13 @@ class File_Player(pride.gui.widgets.form.Form):
                              field_info("handle_next", button_text=">>",
                                         entry_kwargs={"scale_to_text" : False}))
                             ],
-                "h_range" : (0, .25),
                 "_synchronize_instruction" : None}
-    mutable_defaults = {"player" : vlc.MediaPlayer}
+    mutable_defaults = {"player" : vlc.MediaPlayer,
+                        "row_kwargs" : lambda: {0 : {"h_range" : (0, .1)},
+                                                1 : {"h_range" : (0, .05)},
+                                                2 : {"h_range" : (0, .05)}
+                                               }
+                       }
     verbosity = {"vlc_error" : "v"}
 
     def _get_track_position(self):

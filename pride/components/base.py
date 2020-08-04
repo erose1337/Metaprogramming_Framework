@@ -239,10 +239,12 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
 
     # parser modifiers are attribute : options pairs, where options
     # is a dictionary. The keys may include any keyword arguments
-    # that are used by argparse.ArgumentParser.add_argument. Most
-    # relevent are the "types" and "nargs" options. types may be used
-    # to specify that the argument should be positional, -s short style,
-    # or --long long style flags. nargs indicates the number of expected
+    # that (mostly) are used by argparse.ArgumentParser.add_argument. Most
+    # relevent are the "types" and "nargs" options.
+    # `types` is processed by the metaclass rather than argparse.ArgumentParser
+    # `types` is a tuple that specifies that the argument should be `"positional"`,
+    # -s short style, or --long long style flags. e.g. ("short", "long")
+    # nargs indicates the number of expected
     # arguments for the flag in question. Note that attributes default to
     # using --long style flags.
     # exit_on_help determines whether or not to quit when the --help flag

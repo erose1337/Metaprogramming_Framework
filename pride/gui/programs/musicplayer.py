@@ -3,7 +3,7 @@
 
 # directory viewer
 import os
-os.environ["VLC_VERBOSE"] = str("-1")
+#os.environ["VLC_VERBOSE"] = str("-1")
 
 import vlc
 
@@ -13,14 +13,19 @@ field_info = pride.gui.widgets.form.field_info
 
 class File_Player(pride.gui.widgets.form.Form):
 
-    defaults = {"fields" : [
+    defaults = {"filename" : '', "play_when_opened" : False,
+                "_volume_requested" : None, "volume" : 100,
+                "fields" : [
                             (field_info("filename"),
                              field_info("volume", minimum=0, maximum=100)),
                             (field_info("track_position", minimum=0,
                                         maximum=1000, auto_create_id=False,
                             entry_kwargs={"include_minmax_buttons" : False,
                                           "include_incdec_buttons" : False,
-                                          "hide_text" : True}), ),
+                                          "hide_text" : True}),
+                             field_info("time_info", editable=False,
+                                        auto_create_id=False,
+                                        w_range=(0, .2)),),
                             (field_info("handle_play", button_text="|>",
                                         entry_kwargs={"scale_to_text" : False}),
                              field_info("handle_stop", button_text="[]",
@@ -40,6 +45,7 @@ class File_Player(pride.gui.widgets.form.Form):
                                                }
                        }
     verbosity = {"vlc_error" : "v"}
+    parser_args = ("filename", "volume")
 
     def _get_track_position(self):
         output = int(round(1000 * self.player.get_position()))
@@ -57,12 +63,45 @@ class File_Player(pride.gui.widgets.form.Form):
             output = 0
         return output
     def _set_volume(self, value):
+        value = min(100, max(0, value))
         self.player.audio_set_volume(value)
+        # vlc cannot adjust volume while not playing/paused
+        after = self.volume
+        if after != value: # defer setting volume until play begins/resumes
+            self._volume_requested = value
     volume = property(_get_volume, _set_volume)
+
+    def _get_time_info(self):
+        player = self.player
+        progress = self._format_time(player.get_time())
+        total = self._format_time(player.get_length())
+        return "{}/{}".format(progress, total)
+    time_info = property(_get_time_info)
+
+    def _format_time(self, ms):
+        progressf = []
+        seconds = int(round(ms / 1000.0))
+        if seconds < 0:
+            seconds = 0
+        minutes = int(round(seconds / 60.0))
+        hours = int(round(minutes / 60.0))
+        progressf.append(hours)
+        progressf.append(minutes % 60)
+        progressf.append(seconds % 60)
+        if not hours:
+            if not minutes:
+                output = str(seconds)
+            else:
+                output = ':'.join(str(item) for item in progressf[1:])
+        else:
+            output = ':'.join(str(item) for item in progressf)
+        return output
 
     def __init__(self, **kwargs):
         super(File_Player, self).__init__(**kwargs)
         self.player.set_mrl(self.filename)
+        if self.play_when_opened:
+            self.handle_play()
 
     def create_subcomponents(self):
         super(File_Player, self).create_subcomponents()
@@ -99,6 +138,10 @@ class File_Player(pride.gui.widgets.form.Form):
             self.show_status("Playing {}".format(self.filename))
             player = self.player
             player.play()
+
+            if self._volume_requested is not None:
+                self.volume = self._volume_requested
+                self._volume_requested = None
 
             self.enable_slider_synchronization()
             self.enable_sliders()
@@ -141,6 +184,9 @@ class File_Player(pride.gui.widgets.form.Form):
         if self._slider_synchronization_enabled:
             self._synchronize_instruction.execute(priority=1)
 
+        time_info = fields[3]
+        time_info.entry.texture_invalid = True
+
     def handle_stop(self):
         self.show_status("Stopping {}".format(self.filename))
         self.player.stop()
@@ -171,7 +217,8 @@ class File_Player(pride.gui.widgets.form.Form):
 def test_File_Player():
     import pride.gui.main
     program = lambda **kwargs: File_Player(filename="/home/e/Music/test.mp3",
-                                           **kwargs)
+                                           parse_args=True,
+                                           play_when_opened=True, **kwargs)
     pride.gui.main.run_programs([program], position=(0, 60))
 
 if __name__ == "__main__":

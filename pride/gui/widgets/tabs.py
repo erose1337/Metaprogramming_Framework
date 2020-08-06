@@ -52,12 +52,45 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                 "new_window_tab_text" : "New Window", "include_label" : False,
                 "tab_bar_title_text" : '', "tabs_per_row" : 16}
     autoreferences = ("tab_bar", )
+    mutable_defaults = {"default_tab_kwargs" : dict, "tab_bar_kwargs" : dict,
+                        "default_row_kwargs" : dict,
+                        "new_tab_button_kwargs" : dict}
 
     def __init__(self, **kwargs):
         super(Tabbed_Window, self).__init__(**kwargs)
+        _kwargs = self.default_tab_kwargs
+        default_kwargs = {"button_text" : self.new_window_tab_text,
+                          "theme_profile" : "placeholder",
+                          "field_type" : Tab_Button_Field}
+        for key, value in default_kwargs.items():
+            _kwargs.setdefault(key, value)
+
+        try:
+            entry_kwargs = _kwargs["entry_kwargs"]
+        except KeyError:
+            _kwargs["entry_kwargs"] = {"theme_profile" : "placeholder",
+                                       "scale_to_text" : True,
+                                       "use_lazy_loading" : False}
+        else:
+            entry_kwargs.setdefault("theme_profile", "placeholder")
+            entry_kwargs.setdefault("scale_to_text", True)
+            entry_kwargs.setdefault("use_lazy_loading", False)
+
         self.create_subcomponents()
 
     def create_subcomponents(self):
+        fields = self.create_tab_fields()
+        offset = 0
+        if self.include_new_tab_button:
+            offset += 1
+            self.create_new_tab_button_fields(fields)
+        if self.include_label:
+            offset += 1
+            self.create_label_fields(fields)
+
+        self.create_tab_bar(fields, offset)
+
+    def create_tab_fields(self):
         fields = []
         _kwargs = {"field_type" : Tab_Button_Field,
                    "w_range" : (0, 1.0 / self.tabs_per_row)}
@@ -74,33 +107,43 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                     tab_kwargs["entry_kwargs"] = entry_kwargs.copy()
                 _row.append(field_info("select_tab", **tab_kwargs))
             fields.append(_row)
+        return fields
 
-        offset = 0
-        if self.include_new_tab_button:
-            offset += 1
-            entry = ("new_tab", {"button_text" : '+', "scale_to_text" : True})
-            if fields:
-                fields[0].insert(0, entry)
-            else:
-                fields.append([entry])
-        if self.include_label:
-            offset += 1
-            entry = ("tab_bar_label", {"hoverable" : False,
-                                       "field_type" : "pride.gui.gui.Window",
-                                       "pack_mode" : "left",
-                                       "text" : self.tab_bar_label,
-                                       "scale_to_text" : True
-                                       })
-            if fields:
-                fields[0].insert(0, entry)
-            else:
-                fields.append([entry])
-        kwargs = {"orientation" : "stacked", "include_minmax_buttons" : False}
-        self.tab_bar = self.create(pride.gui.widgets.form.Form, pack_mode="top",
-                                   fields=fields, target_object=self,
-                                   form_name=self.tab_bar_title_text,
-                                   vertical_slider_entry_kwargs=kwargs,
-                                   h_range=(0, .05), max_rows=1)
+    def create_new_tab_button_fields(self, fields):
+        new_tab_kwargs = self.new_tab_button_kwargs
+        new_tab_kwargs.setdefault("button_text", '+')
+        new_tab_kwargs.setdefault("scale_to_text", True)
+        entry = ("new_tab", new_tab_kwargs)
+        if fields:
+            fields[0].insert(0, entry)
+        else:
+            fields.append([entry])
+
+    def create_label_fields(self, fields):
+        entry = ("tab_bar_label", {"hoverable" : False,
+                                   "field_type" : "pride.gui.gui.Window",
+                                   "pack_mode" : "left",
+                                   "text" : self.tab_bar_label,
+                                   "scale_to_text" : True
+                                   })
+        if fields:
+            fields[0].insert(0, entry)
+        else:
+            fields.append([entry])
+
+    def create_tab_bar(self, fields, offset):
+        window = self#.main_window
+        entry_kwargs = {"orientation" : "stacked",
+                        "include_minmax_buttons" : False}
+        kwargs = {"pack_mode" : "top",
+                  "fields" : fields, "target_object" : self,
+                  "form_name" : self.tab_bar_title_text,
+                  "vertical_slider_entry_kwargs" : entry_kwargs,
+                  "h_range" : (0, .05), "max_rows" : 1}
+        kwargs.update(self.tab_bar_kwargs)
+        kwargs["row_kwargs"] = dict((x, self.default_row_kwargs.copy()) for
+                                    x in range(len(fields)))
+        self.tab_bar = window.create(pride.gui.widgets.form.Form, **kwargs)
         tabs = self.tab_bar.fields_list
         for tab_no, target in enumerate(self.tab_targets):
             target.tab_reference = tabs[tab_no].reference
@@ -121,37 +164,45 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         tab_bar = self.tab_bar
         if tab_bar.hidden:
             tab_bar.show()
-        _object = self.main_window.create(self.new_window_type)
-        fields = [("select_tab", {"args" : (_object, ),
-                                  "button_text" : self.new_window_tab_text,
-                                  "theme_profile" : "placeholder",
-                                  "entry_kwargs" : {"theme_profile" : "placeholder",
-                                                    "scale_to_text" : True,
-                                                    "use_lazy_loading" : False},
-                                  "field_type" : Tab_Button_Field})]
+        _object = self.main_window.create(self.new_window_type,
+                                          parent_form=tab_bar)
+        kwargs = self.default_tab_kwargs.copy()
+        kwargs.setdefault("args", (_object, ))
+        fields = [("select_tab", kwargs)]
+
         offset = -1
         if self.include_tab_delete_button:
             offset -= 1
-            fields.append(("delete_tab", {"args" : (_object, ),
-                                          "button_text" : 'x',
-                                          "theme_profile" : "placeholder",
-                                          "entry_kwargs" : {"theme_profile" : "placeholder",
-                                                            "scale_to_text" : True}})
-                         )
+            del_kwargs = {"args" : (_object, ),
+                          "button_text" : 'x',
+                          "theme_profile" : "placeholder",
+                          "entry_kwargs" : {"theme_profile" : "placeholder",
+                                            "scale_to_text" : True}}
+            fields.append(("delete_tab", del_kwargs))
         # find the first row that is not full
         tabs_per_row = self.tabs_per_row
-        for row in tab_bar.rows:
+        for row in sorted(tab_bar.rows.values()):
             if len(row.children) < tabs_per_row:
                 break
         else: # there are no non-full rows
-            row = tab_bar.create_row()
-            tab_bar.sort_rows()
+            row_no = len(tab_bar.rows)
+            try:
+                _row_kwargs = tab_bar.row_kwargs[row_no]
+            except KeyError:
+                _row_kwargs = self.default_row_kwargs.copy()
+                tab_bar.row_kwargs[row_no] = _row_kwargs
 
-        for field_info in fields:
-            field = tab_bar.create_field(field_info, row)
+            row = tab_bar.create_row(len(tab_bar.rows))
+            tab_bar.sort_rows()
+            tab_bar.synchronize_scroll_bars()
+
+        fields_count = len(tab_bar.fields_list)
+        for offset, field_info in enumerate(fields):
+            field_no = fields_count + offset
+            field = tab_bar.create_field(field_no, field_info, row)
             if field.name == "select_tab":
                 self._set_color(field.entry, field.args[0])
-
+        tab_bar.fields.append([])
         _object.tab_reference = tab_bar.fields_list[offset].reference
 
     def select_tab(self, tab, _object):
@@ -174,14 +225,16 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
 
     def delete_tab(self, _object):
         _object.delete()
-        fields = [field for field in self.tab_bar.fields_list if
+        fields = [field for field in self.tab_bar.fields_list.values() if
                   getattr(field, "args", False) and field.args[0] == _object]
         for field in fields: # will be delete button and tab button
             field.delete()   # delete would modify fields_list during iteration and cause bugs
         row = field.parent
         if not row.children:
-            self.tab_bar.rows.remove(row)
+            del self.tab_bar.rows[row.row_number]
             row.delete()
+            self.tab_bar.sort_rows()
+
         if not self.tab_bar.fields_list:
             self.tab_bar.hide()
 

@@ -95,3 +95,9 @@ bin*
 build/
 dist/
 pride.egg-info/
+
+_prideshell.temp
+
+
+pride/notes.md
+pride/todo.txt

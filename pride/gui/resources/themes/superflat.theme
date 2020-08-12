@@ -1,0 +1,110 @@
+Theme Profiles
+==============
+
+alert
+-----
+
+      - background: (129, 57, 8, 200)
+      - glow: (255, 255, 255, 235)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 255)
+      - shadow_thickness: 5
+      - text: (45, 45, 45, 255)
+      - text_background: (0, 0, 85, 255)
+
+
+blank
+-----
+
+      - background: (0, 0, 0, 0)
+      - glow: (0, 0, 0, 0)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 0)
+      - shadow_thickness: 0
+      - text: (0, 0, 0, 0)
+      - text_background: (0, 0, 0, 0)
+
+
+borderless
+----------
+
+      - background: (180, 180, 180, 200)
+      - glow: (255, 255, 255, 235)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 255)
+      - shadow_thickness: 0
+      - text: (45, 45, 45, 255)
+      - text_background: (0, 0, 0, 255)
+
+
+default
+-------
+
+      - background: (97, 94, 92, 39)
+      - glow: (255, 255, 255, 235)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 0)
+      - shadow_thickness: 3
+      - text: (195, 195, 255, 255)
+      - text_background: (0, 0, 0, 255)
+
+
+hover
+-----
+
+      - background: (59, 170, 255, 0)
+      - glow: (118, 136, 113, 255)
+      - glow_thickness: 8
+      - shadow: (88, 146, 195, 255)
+      - shadow_thickness: 0
+      - text: (228, 233, 255, 255)
+      - text_background: (48, 80, 122, 67)
+
+
+indicator
+---------
+
+      - background: (255, 255, 255, 32)
+      - glow: (148, 255, 255, 79)
+      - glow_thickness: 4
+      - shadow: (0, 0, 0, 255)
+      - shadow_thickness: 0
+      - text: (200, 202, 198, 255)
+      - text_background: (0, 0, 0, 255)
+
+
+inert
+-----
+
+      - background: (85, 85, 185, 75)
+      - glow: (255, 255, 255, 235)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 255)
+      - shadow_thickness: 5
+      - text: (45, 45, 45, 255)
+      - text_background: (0, 0, 0, 255)
+
+
+interactive
+-----------
+
+      - background: (0, 0, 0, 0)
+      - glow: (0, 155, 255, 255)
+      - glow_thickness: 0
+      - shadow: (48, 111, 186, 255)
+      - shadow_thickness: 0
+      - text: (218, 194, 218, 255)
+      - text_background: (0, 0, 0, 255)
+
+
+placeholder
+-----------
+
+      - background: (0, 0, 0, 0)
+      - glow: (255, 255, 255, 235)
+      - glow_thickness: 0
+      - shadow: (0, 0, 0, 255)
+      - shadow_thickness: 5
+      - text: (45, 45, 45, 255)
+      - text_background: (0, 0, 0, 255)
+

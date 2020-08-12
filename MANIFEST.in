@@ -1,0 +1,3 @@
+recursive-include pride/gui/ *.dll
+recursive-include pride/gui/ *.so
+recursive-include pride/gui/ *.lib

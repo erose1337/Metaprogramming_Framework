@@ -15,7 +15,6 @@ DELETE_KEY = "\x7f"
 def field_info(field_name, **kwargs):
     return (field_name, kwargs)
 
-
 class Scrollable_Window(pride.gui.gui.Window):
 
     defaults = {"vertical_slider_position" : "right",
@@ -81,7 +80,8 @@ class Form(Scrollable_Window):
                 "form_name" : '', "include_delete_button" : False}
     mutable_defaults = {"fields_list" : dict, "rows" : collections.OrderedDict,
                         "target_object" : lambda: None,
-                        "row_kwargs" : dict}
+                        "default_row_kwargs" : dict, # defaults for each new row
+                        "row_kwargs" : dict} # row_number : row_kwargs pairs
     hotkeys = {("\t", None) : "handle_tab"}
 
     def __init__(self, **kwargs):
@@ -117,7 +117,6 @@ class Form(Scrollable_Window):
     def handle_tab(self):
         values = self.fields_list.values()
         length = len(values)
-        row_kwargs = self.row_kwargs
         for index, child in enumerate(values):
             child_entry = child.entry
             selected = self.check_if_selected(child, child_entry)
@@ -153,7 +152,6 @@ class Form(Scrollable_Window):
             self.target_object = self # can't use autoreferences because non-Base objects don't have a .reference attribute
 
         target_object = self.target_object; max_rows = self.max_rows
-        row_kwargs = self.row_kwargs
         for row_number, row_info in enumerate(self.fields):
             if row_number >= max_rows: # lazy loading on the rest of the rows
                 break
@@ -165,17 +163,26 @@ class Form(Scrollable_Window):
         self.synchronize_scroll_bars()
 
     def sort_rows(self):
+        #return
         # must sort after creating rows
+        # .children may happen to contain window objects other than the fields
+        # e.g. the mouse click animation
         window = self.main_window
-        window.children[:] = sorted(window.children,
-                                    key=operator.attrgetter("row_number"))
+        window.children[:] = sorted((child for child in window.children if
+                                     hasattr(child, "row_number")),
+                                    key=operator.attrgetter("row_number")) +\
+                             [child for child in window.children if not
+                              hasattr(child, "row_number")]
 
     def synchronize_scroll_bars(self):
         slider = self.vertical_slider
         if slider is not None:
+            #print("new maximum", len(self.fields), self.max_rows, len(self.fields) - self.max_rows)
             slider.maximum = max(0, len(self.fields) - self.max_rows)
             slider.update_position_from_value()
             self.pack()
+        else:
+            self.alert("No slider")
 
     def create_fields(self, row_number, row_info, row, target_object):
         row_start_index = sum(len(_row) for _row in self.fields[:row_number])
@@ -188,7 +195,7 @@ class Form(Scrollable_Window):
         try:
             kwargs = self.row_kwargs[row_number]
         except KeyError:
-            kwargs = dict()
+            kwargs = self.default_row_kwargs.copy()
         kwargs = dict((key, value) for key, value in kwargs.items())
         kwargs.setdefault("row_number", row_number)
         kwargs.setdefault("pack_mode", self.row_pack_mode)
@@ -250,9 +257,13 @@ class Form(Scrollable_Window):
                 row_info = self.fields[row_number]
                 self.create_fields(row_number, row_info, row, self.target_object)
         self.sort_rows()
+        self.set_row_visibility(new_value)
 
-        for row_number, row in rows.items():
-            if row_number >= new_value and row_number < new_value + max_rows:
+    def set_row_visibility(self, new_row_no):
+        print("Showing rows {} - {}".format(new_row_no, new_row_no + self.max_rows))
+        for row_number, row in self.rows.items():
+            if (row_number >= new_row_no and
+                row_number < new_row_no + self.max_rows):
                 if row.hidden:
                     row.show()
                     row.pack()

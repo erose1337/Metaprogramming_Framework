@@ -157,17 +157,29 @@ class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
     mutable_defaults = {"target_object" : lambda: None}
     #required_attributes = ("target_object", )
 
+    def setup_tabs(self):
+        for name, _type in self.tabs.items():
+            if not hasattr(self, name):
+                _object = self.create(_type)
+                setattr(self, name, _object)
+            else:
+                self.add(getattr(self, name))
+
     def create_subcomponents(self):
+        self.setup_tabs()
+
         tab_targets = self.tab_targets = []
-        target_object = self.target_object
+        target_object = self.target_object or self
         tabs = target_object.tabs
 
         if getattr(target_object, "ordering", False):
             names = target_object.ordering
-            assert len(names) == len(tabs.keys())
+            #print("Using ordering {}".format(names))
+            assert len(names) == len(tabs.keys()), (target_object, names, tabs)
         else:
             names = tabs.keys()
-        print(names)
+            #print("Using unordered {}".format(names))
+        #print(target_object, names)
         if not names:
             if target_object.fields:
                 form_type = getattr(target_object, "form_type",
@@ -185,13 +197,14 @@ class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
                                    "row_kwargs" : row_kwargs})
                 if fields is not None:
                     kwargs.setdefault("fields", fields)
+                kwargs.setdefault("tabbed_form_ref", self.reference)
                 form = self.main_window.create(form_type, **kwargs)
                 target_object.form_reference = form.reference
 
         for name in names:
-        #    print("Creating callable for {} {}".format(self.target_object, name))
-            def callable(self=self, name=name):
-                values = getattr(self.target_object, name)
+            #print("Creating callable for {} {}".format(self.target_object, name))
+            def callable(self=self, name=name, target_object=target_object):
+                values = getattr(target_object, name)
                 fields = copy.deepcopy(getattr(values, "fields", None))
 
                 try:

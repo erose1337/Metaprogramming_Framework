@@ -89,8 +89,12 @@ class Table(pride.gui.widgets.formext.Data):
         row_count = len(fields)
         editable = not self.read_only
         items_per_row = self.items_per_row
+        #rows_per_value = self.rows_per_value =  (items_per_row / len(values)) + 1
+        #print len(values), items_per_row, rows_per_value
+        #rows_position = self.rows_position = dict()
         for index, value in enumerate(values):
             entry_id = value[0]
+            #rows_position[entry_id] = (index * rows_per_value)
             try:
                 row_kwargs[row_count].setdefault("h_range", (0, .05))
             except KeyError:
@@ -117,7 +121,18 @@ class Table(pride.gui.widgets.formext.Data):
     def select_entry(self, name):
         message = "Selected: {}".format(name)
         self.alert(message)
-        pride.objects[self.form_reference].show_status(message)
+        form = pride.objects[self.form_reference]
+        form.show_status(message)
+
+        #rows = form.rows
+        #index = self.rows_position[name]
+        #for offset in range(1, self.rows_per_value + 1):
+        #    row = rows[index + offset]
+        #    if row.hidden:
+        #        row.show()
+        #    else:
+        #        row.hide()
+        #form.handle_y_scroll(index, index + offset + 1)
 
 
 class Database_Data(pride.gui.widgets.formext.Data):

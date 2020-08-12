@@ -15,6 +15,7 @@ class File_Player(pride.gui.widgets.form.Form):
 
     defaults = {"filename" : '', "play_when_opened" : False,
                 "_volume_requested" : None, "volume" : 100,
+                "h_range" : (0, .25),
                 "fields" : [
                             (field_info("filename"),
                              field_info("volume", minimum=0, maximum=100)),
@@ -25,7 +26,7 @@ class File_Player(pride.gui.widgets.form.Form):
                                           "hide_text" : True}),
                              field_info("time_info", editable=False,
                                         auto_create_id=False,
-                                        w_range=(0, .2)),),
+                                        w_range=(0, .15)),),
                             (field_info("handle_play", button_text="|>",
                                         entry_kwargs={"scale_to_text" : False}),
                              field_info("handle_stop", button_text="[]",
@@ -38,12 +39,7 @@ class File_Player(pride.gui.widgets.form.Form):
                                         entry_kwargs={"scale_to_text" : False}))
                             ],
                 "_synchronize_instruction" : None}
-    mutable_defaults = {"player" : vlc.MediaPlayer,
-                        "row_kwargs" : lambda: {0 : {"h_range" : (0, .1)},
-                                                1 : {"h_range" : (0, .05)},
-                                                2 : {"h_range" : (0, .05)}
-                                               }
-                       }
+    mutable_defaults = {"player" : vlc.MediaPlayer}
     verbosity = {"vlc_error" : "v"}
     parser_args = ("filename", "volume")
 

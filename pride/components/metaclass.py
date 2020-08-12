@@ -4,12 +4,13 @@ import argparse
 import types
 import functools
 import ast
-from copy import copy
+from copy import copy, deepcopy
 
 import cython
 
 import autodocumentation
 import pride
+import pride.components
 import pride.site_config as site_config
 from pride.functions.utilities import resolve_string
 
@@ -272,25 +273,32 @@ class Parser(object):
         parser = self.parser
         new_argv = Parser.sys_argv
         sys.argv = new_argv
+        help_index = None
         try:
             arguments, unused = parser.parse_known_args()
         except SystemExit as error:
             if self.exit_on_help:
                 raise SystemExit()
             try:
-                index = new_argv.index("-h")
+                help_index = new_argv.index("-h")
             except ValueError:
                 try:
-                    index = new_argv.index("--help")
+                    help_index = new_argv.index("--help")
                 except ValueError:
                     raise error
-
-            removed_help = new_argv.pop(index)
+                else:
+                    help_token = "--help"
+            else:
+                help_token = "-h"
+            removed_help = new_argv.pop(help_index)
             arguments, unused = parser.parse_known_args()
-            new_argv.insert(index, removed_help)
+            new_argv.insert(help_index, removed_help)
+            print
 
         if unused:
             new_argv = sys.argv = copy(Parser.sys_argv)
+            if help_index is not None:
+                new_argv.remove(help_token)
             for unused_name in unused:
                 index = new_argv.index(unused_name)
                 new_argv.pop(index)
@@ -347,9 +355,8 @@ class Inherited_Attributes(type):
                 empty_dict = attribute_type()
                 _attribute = attribute_type()
                 for _class in bases:
-                    _attribute.update(getattr(_class, attribute_name,
-                                              empty_dict))
-                _update = attributes.get(attribute_name, empty_dict)
+                    _attribute.update(deepcopy(getattr(_class, attribute_name,
+                                                       empty_dict)))
                 _attribute.update(attributes.get(attribute_name, empty_dict))
 
             elif issubclass(attribute_type, tuple):
@@ -385,7 +392,8 @@ class Defaults(Inherited_Attributes):
                             "site_config_support" : tuple,
                             "post_initializer" : str, "allowed_values" : dict,
                             "auto_verbosity_ignore" : tuple,
-                            "autoreferences" : tuple, "parser_args" : tuple}
+                            "autoreferences" : tuple, "parser_args" : tuple,
+                            "subcomponent_kwargs" : pride.components.Config}
 
 
 class Site_Configuration(type):

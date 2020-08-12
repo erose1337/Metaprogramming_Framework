@@ -1,5 +1,6 @@
 """ Contains The root inheritance objects that provides many features of the package. """
 
+import copy
 import operator
 import itertools
 import sys
@@ -292,6 +293,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     #           component.do_thing2()
     autoreferences = tuple()
 
+    subcomponent_kwargs = dict()
+
     def _get_parent(self):
         return objects[self.parent_name] if self.parent_name else None
     parent = property(_get_parent)
@@ -331,6 +334,14 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                                                 self.defaults.items()):
             setattr(self, attribute, value)
 
+        if self.subcomponent_kwargs:
+            for name, value in self.subcomponent_kwargs.items():
+                attribute = "{}_kwargs".format(name)
+                value = copy.deepcopy(value)
+                setattr(self, attribute, value)
+                if attribute in kwargs:
+                    new_value = kwargs.pop(attribute)
+                    _update_dict(value, new_value)
         if kwargs:
             for key, value in kwargs.items():
                 setattr(self, key, value)
@@ -351,7 +362,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 except AttributeError:
                     if hasattr(self, attribute):
                         raise
-                    import pprint
+                    import pprint # note: subcomponent_kwargs above pops from kwargs
                     pprint.pprint(kwargs)
                     raise ArgumentError("{}: Required attribute '{}' not assigned".format(self.reference, attribute))
 

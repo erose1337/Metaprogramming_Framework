@@ -1,10 +1,10 @@
 # for subcomponent_kwargs
 # cannot be in base.py because a reference to Config is needed in metaclass
-def _update_dict(d1, d2):
+def deep_update(d1, d2):
     for key, value in d2.items():
         if isinstance(value, dict):
             try:
-                _update_dict(d1[key], value)
+                deep_update(d1[key], value)
             except KeyError:
                 if key in d1:
                     raise
@@ -22,7 +22,7 @@ class Config(dict):
     def update(self, E=None, **kwargs):
         if E is not None:
             if hasattr(E, "keys"):
-                _update_dict(self, E)
+                deep_update(self, E)
             else:
                 for k, v in E: # if E is a list of tuples, it overwrites
                     self[k] = value   # and does not update nested dicts

@@ -292,7 +292,7 @@ API = {"Base" : (("delete", ), tuple()),
        "Form" : (tuple(), ("max_rows", "horizontal_slider_position",
                            "vertical_slider_position")),
        "Field" : (tuple(), tuple("name", "orientation", "editable",
-                                 "location", "}
+                                 "location"))}
 
 def flatten_interface(interfaces):
     methods = []

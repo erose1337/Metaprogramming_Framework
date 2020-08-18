@@ -37,7 +37,7 @@ class Algebra_Test(pride.gui.widgets.form.Scrollable_Window):
         self.create("pride.gui.widgets.form.Form", h_range=(0, .05),
                     fields=[[("visualize_apply", {"button_text" : "Apply"}),
                              ("shuffle_vector", {"button_text" : "Shuffle vector"})]],
-                    pack_mode="top", target_object=self)
+                    location="top", target_object=self)
 
         fields = [[(coord, {"editable" : False, "auto_create_id" : False,
                             "target_object" : row}) for coord in self.coords]
@@ -46,21 +46,21 @@ class Algebra_Test(pride.gui.widgets.form.Scrollable_Window):
                                     form_name="Matrix", max_rows=5)
         self.matrix_form = m
 
-        vector_fields = [[(coord, {"editable" : False, "pack_mode" : "top",
+        vector_fields = [[(coord, {"editable" : False, "location" : "top",
                                    "orientation" : "stacked"}) for coord in self.coords]]
-        v = self.create(pride.gui.widgets.form.Form, pack_mode="right",
+        v = self.create(pride.gui.widgets.form.Form, location="right",
                         w_range=(0, .25), fields=vector_fields, form_name="Vector",
                         target_object=self.vector, max_rows=5)
         self.vector_form = v
-        self.spacer = self.create("pride.gui.gui.Container", pack_mode="right")
+        self.spacer = self.create("pride.gui.gui.Container", location="right")
 
     def visualize_apply(self):
         vector_form = self.vector_form
-        vector_form.pack_mode = "top"
+        vector_form.location = "top"
         vector_form.w_range = (0, .5)
         vector_form.h_range = (0, .2)
         for field in self.vector_form.fields_list:
-            field.pack_mode = "left"
+            field.location = "left"
         self.vector_form.pack()
         pride.Instruction(self.reference, "visualize_dot_product").execute(priority=3)
 

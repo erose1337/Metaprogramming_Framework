@@ -47,15 +47,15 @@ class Library(pride.gui.widgets.formext2.Tabbed_Form):
 
     defaults = {"include_new_tab_button" : True, "new_window_type" : Playlist,
                 "tabs_per_row" : 1}
-    subcomponent_kwargs = Config(top_bar={"pack_mode" : "left",
+    subcomponent_kwargs = Config(top_bar={"location" : "left",
                                           "w_range" : (0, .2),
                                           "h_range" : (0, 1.0)},
                                  new_tab_button2={"w_range" : (0, 1.0),
                                                   "h_range" : (0, .1),
-                                                  "pack_mode" : "top"},
+                                                  "location" : "top"},
                                  tab={"entry_kwargs" :
                                         {"scale_to_text" : False}},
-                                 tab_bar={"pack_mode" : "top",
+                                 tab_bar={"location" : "top",
                                           "max_rows" : 8},
                                  tab_bar_row={"h_range" : (0, .1)})
 

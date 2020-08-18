@@ -77,7 +77,7 @@ class File_Menu(pride.gui.gui.Container):
     
     defaults = {"startup_components" : (New_Button, Open_Button,
                                         Close_Button),
-                "pack_mode" : "drop_down_menu"}
+                "location" : "drop_down_menu"}
     
     def __init__(self, **kwargs):
         super(File_Menu, self).__init__(**kwargs)
@@ -94,7 +94,7 @@ class File_Menu(pride.gui.gui.Container):
         
 class File_Button(pride.gui.gui.Button):
     
-    defaults = {"text" : "File", "pack_mode" : "left", 
+    defaults = {"text" : "File", "location" : "left", 
                 "_file_menu" : None}
     
     verbosity = {"file_menu_create" : 'vv', "file_menu_delete" : 'vv'}
@@ -175,7 +175,7 @@ class Cyvasse(pride.gui.boardgame.Board_Game):
     defaults = {"row_count" : 16, "column_count" : 16}
 
     def setup_game(self): 
-        self.application_window.create(Unit_Palette, pack_mode="left", team="white")
-        self.application_window.create(Unit_Palette, pack_mode="right", team="black")        
+        self.application_window.create(Unit_Palette, location="left", team="white")
+        self.application_window.create(Unit_Palette, location="right", team="black")        
       #  self.pack()
         

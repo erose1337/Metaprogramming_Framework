@@ -59,20 +59,20 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                 "new_tab_button_type" : "pride.gui.widgets.form.Form"}
     autoreferences = ("tab_bar", "top_bar")
 
-    subcomponent_kwargs = Config(top_bar={"pack_mode" : "top",
+    subcomponent_kwargs = Config(top_bar={"location" : "top",
                                           "h_range" : (0, .05)},
-                                 tab_bar={"pack_mode" : "left",
+                                 tab_bar={"location" : "left",
                                           "entry_kwargs" : {"orientation" :
                                                                       "stacked",
                                                      "include_minmax_buttons" :
                                                                          False},
                                           "form_name" : '', "max_rows" : 1},
-                                 new_tab_button= {"pack_mode" : "left",
+                                 new_tab_button= {"location" : "left",
                                                   "button_text" : '+',
                                                   "entry_kwargs" :
                                                          {"scale_to_text" : False},
                                                   "w_range" : (0, .05)},
-                                 new_tab_button2={"pack_mode" : "left",
+                                 new_tab_button2={"location" : "left",
                                                   "w_range" : (0, .05)},
                                  tab={"button_text" : "New Window",
                                       "theme_profile" : "placeholder",
@@ -134,13 +134,13 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
     def create_label_fields(self, fields):
         entry = ("tab_bar_label", {"hoverable" : False,
                                    "field_type" : "pride.gui.gui.Window",
-                                   "pack_mode" : "left",
+                                   "location" : "left",
                                    "text" : self.tab_bar_label,
                                    "scale_to_text" : True
                                    })
         fields = [[entry]]
         self.top_bar.create("pride.gui.widgets.form.Form", fields=fields,
-                            pack_mode="left")
+                            location="left")
 
     def create_tab_bar(self, fields, offset):
         kwargs = self.tab_bar_kwargs.copy()
@@ -251,7 +251,7 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
         if not row.children:
             del self.tab_bar.rows[row.row_number]
             row.delete()
-            self.tab_bar.sort_rows()
+            #self.tab_bar.sort_rows()
 
         if not self.tab_bar.fields_list:
             self.tab_bar.hide()

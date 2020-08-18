@@ -15,7 +15,7 @@ class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
         if getattr(self, "fields", False):
             self.main_window.create(self.form_type, fields=self.fields,
                                     parent_form=self, target_object=self,
-                                    pack_mode="main")
+                                    location="main")
 
         tab_targets = self.tab_targets = []
         for name, _type, tab_kwargs in self.tabs:

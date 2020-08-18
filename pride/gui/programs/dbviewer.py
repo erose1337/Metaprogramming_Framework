@@ -7,7 +7,7 @@ import pride.functions.persistence
 
 class Table_Viewer(pride.gui.gui.Window):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"location" : "top"}
 
     def __init__(self, **kwargs):
         super(Table_Viewer, self).__init__(**kwargs)
@@ -23,7 +23,7 @@ class Table_Viewer(pride.gui.gui.Window):
                                                            "auto_create_id" : False})] for
                         dbfield in dbfields]
             self.create("pride.gui.widgets.form.Form",
-                        fields=fields, target_object=self, pack_mode="top")
+                        fields=fields, target_object=self, location="top")
 
 
 class Database_Viewer(pride.gui.widgets.tabs.Tabbed_Window):

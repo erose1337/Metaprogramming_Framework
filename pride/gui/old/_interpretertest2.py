@@ -16,7 +16,7 @@ class Quadword(pride.gui.grid.Square):
     defaults = {"base_size" : 8, "square_colors" : ((55, 55, 65, 255), (55, 55, 65, 255)),
                 "square_outline_colors" : ((125, 125, 125, 255), (125, 125, 125, 255)),
                 "h_range" : (0, 320), "w_range" : (0, 320),
-                "pack_mode" : "left"}
+                "location" : "left"}
                 
     def setup_grid(self):
         super(Quadword, self).setup_grid()

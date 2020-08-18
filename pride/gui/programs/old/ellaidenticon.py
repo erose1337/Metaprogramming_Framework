@@ -2,12 +2,12 @@ import pride.gui.gui
 
 class Cell(pride.gui.gui.Container):
 
-    defaults = {"pack_mode" : "left"}
+    defaults = {"location" : "left"}
 
 
 class Identicon_Dark(pride.gui.gui.Window):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"location" : "top"}
 
     def __init__(self, **kwargs):
         super(Identicon_Dark, self).__init__(**kwargs)
@@ -16,13 +16,13 @@ class Identicon_Dark(pride.gui.gui.Window):
     def create_subcomponents(self):
         container = "pride.gui.gui.Container"
         create = self.create
-        create(container, pack_mode="top", h_range=(0, .05), theme_profile="borderless")
-        create(container, pack_mode="left", w_range=(0, .05), theme_profile="borderless")
-        create(container, pack_mode="right", w_range=(0, .05), theme_profile="borderless")
-        create(container, pack_mode="bottom", h_range=(0, .05), theme_profile="borderless")
-        main = create(container, pack_mode="main", theme_profile="borderless")
+        create(container, location="top", h_range=(0, .05), theme_profile="borderless")
+        create(container, location="left", w_range=(0, .05), theme_profile="borderless")
+        create(container, location="right", w_range=(0, .05), theme_profile="borderless")
+        create(container, location="bottom", h_range=(0, .05), theme_profile="borderless")
+        main = create(container, location="main", theme_profile="borderless")
 
-        create = main.create; kwargs = {"pack_mode" : "top", "theme_profile" : "borderless"}
+        create = main.create; kwargs = {"location" : "top", "theme_profile" : "borderless"}
         row1 = create(container, **kwargs); row2 = create(container, **kwargs)
         row3 = create(container, **kwargs); row4 = create(container, **kwargs)
         row5 = create(container, **kwargs)

@@ -202,12 +202,12 @@ class Scrollable_Window(pride.gui.gui.Window):
 
     def create_subcomponents(self):
         self.main_window = self.create(pride.gui.gui.Container,
-                                       pack_mode="main")
+                                       location="main")
         position = self.vertical_slider_position
         slider_type = "pride.gui.fields.Slider_Field"
         if position is not None:
             self.vertical_slider = \
-            self.create(slider_type, pack_mode=position,
+            self.create(slider_type, location=position,
                         orientation="stacked", w_range=(0, .025),
                         name="y_scroll_value", minimum=0, maximum=0,
                         auto_create_id=False, target_object=self,
@@ -215,7 +215,7 @@ class Scrollable_Window(pride.gui.gui.Window):
         position = self.horizontal_slider_position
         if position is not None:
             self.horizontal_slider = \
-            self.create(slider_type, pack_mode=position,
+            self.create(slider_type, location=position,
                         orientation="side by side", h_range=(0, .025),
                         auto_create_id=False, target_object=self,
                         name="x_scroll_value", minimum=0, maximum=0,
@@ -284,14 +284,39 @@ class Visible_Row(pride.gui.gui.Container):
         self.unload_row(tuple())
         super(Visible_Row, self).delete()
 
+API = {"Base" : (("delete", ), tuple()),
+       "Shape" : (tuple(), ("h_range", "w_range")),
+       "Organized_Object" : (tuple(), ("location", )),
+       "Window_Object" : (tuple(), ("center_text", "hoverable", "wrap_text",
+                                    "theme_name", "theme_profile", "text")),
+       "Form" : (tuple(), ("max_rows", "horizontal_slider_position",
+                           "vertical_slider_position")),
+       "Field" : (tuple(), tuple("name", "orientation", "editable",
+                                 "location", "}
+
+def flatten_interface(interfaces):
+    methods = []
+    attributes = []
+    for api_name in interfaces:
+        interface_methods, interface_attributes = API[api_name]
+        methods.extend(interface_methods)
+        attributes.extend(interface_attributes)
+    return (methods, attributes)
+
 
 class Form(Scrollable_Window):
 
     defaults = {"target_object" : None, "max_rows" : 4,
                 "horizontal_slider_position" : None}
-    subcomponent_kwargs = {"row" : Config(pack_mode="top",
+    subcomponent_kwargs = {"row" : Config(location="top",
                                           h_range=(0, 1.0))}
-    mutable_defaults = {"rows" : dict, "visible_rows" : list}
+    mutable_defaults = {"rows" : dict, "visible_rows" : list,
+                        "interfaces" :
+                          lambda: {"Form" : ("Base",
+                                             "Shape",
+                                             "Organized_Object",
+                                             "Window_Object"),
+                                   "Row" : (
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
 
@@ -299,9 +324,7 @@ class Form(Scrollable_Window):
         if self.target_object is None:
             self.target_object = self
 
-        form_kwargs = self.layout[-1]
-        for key, value in form_kwargs.iteritems():
-            setattr(self, key, value)
+        self.filter_layout()
 
         super(Form, self).create_subcomponents()
 
@@ -321,6 +344,67 @@ class Form(Scrollable_Window):
             self.selected_entry = self.rows[0].fields[0].entry
 
         self.synchronize_scroll_bars()
+
+    def filter_layout(self):
+        (interface_methods,
+        interface_attributes) = flatten_interface(self.interfaces)
+
+        # if a key is in the form.__dict__,
+        #    then it must be listed in the interface to be accessible
+        # otherwise, it is assumed to be uncontrolled data defined by the layout
+        form_kwargs = self.layout[-1]
+        api_controlled_values = self.__dict__.keys()
+        uncontrolled = []
+        for key, value in form_kwargs.iteritems():
+            if key in api_controlled_values:
+                if key not in interface_attributes:
+                    message  = "Layout attempted to set non-interface attribute"
+                    message += " '{}' to {}".format(key, value)
+                    raise ValueError(message)
+            else:
+                uncontrolled.append(key)
+
+        (row_iface_methods,
+         row_iface_attrs) = flatten_interface(self.row_interface)
+        (field_iface_methods,
+         field_iface_attrs) = flatten_interface(self.field_interface)
+
+        target_object = self.target_object
+        for row_no, fields, row_kwargs in self.layout[0].values():
+            for key, value in row_kwargs.iteritems():
+                if key not in interface_attributes:
+                    message  = "Row {}: ".format(row_no)
+                    message += "Layout attempted to set non-interface attribute"
+                    message += " '{}' to {}".format(key, value)
+                    raise ValueError(message)
+            for f_name, field_kwargs in fields:
+                if f_name not in interface_attributes:
+                    if f_name not in uncontrolled:
+                        message  = "Row {}, Field {}: ".format(row_no, f_name)
+                        message += "Layout attempted to create field for non-"
+                        message += "interface attribute '{}'".format(f_name)
+                        raise ValueError(message)
+
+                if not hasattr(target_object, f_name):
+                    if f_name not in uncontrolled:
+                        message = "Target has no attribute '{}'".format(f_name)
+                        raise ValueError(message)
+
+                for key, value in field_kwargs.iteritems():
+                    if key not in interface_attributes:
+                        message  = "Row {}, Field {}: ".format(row_no, f_name)
+                        message += "Layout attempted to set non-interface "
+                        message += "attribute '{}' to {}".format(key, value)
+                        raise ValueError(message)
+
+                if hasattr(target_object, f_name):
+                    is_callable = hasattr(getattr(target_object, f_name),
+                                        "__call__")
+                    if is_callable and f_name not in interface_methods:
+                        message  = "Row {}, Field {}: ".format(row_no, f_name)
+                        message += "Layout attempted to use non-interface "
+                        message += "method '{}'".format(f_name)
+                        raise ValueError(message)
 
     def unload_rows(self, new_row_indices):
         for row in self.visible_rows:
@@ -536,6 +620,7 @@ def test_Form():
                      row_info(5, field_info("test_bool")),
                      test_bool=True, test_text="Text", test_int=0,
                      test_slider=50, test_dropdown=0)
+
 
     class Test_Form(Form):
 

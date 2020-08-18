@@ -12,7 +12,7 @@ except ImportError:
 
 class Value_Editor(pride.gui.widgets.tabs.Tabbed_Window):
 
-    defaults = {"include_new_tab_button" : False, "pack_mode" : "top",
+    defaults = {"include_new_tab_button" : False, "location" : "top",
                 "include_delete_button" : False, "names" : tuple(),
                 "new_window_type" : "pride.gui.widgets.form.Form"}
     mutable_defaults = {"target_object" : dict}
@@ -78,7 +78,7 @@ class Profile_Editor(Value_Editor):
             target = _object
 
         window = self.main_window
-        form = window.create(Color_Form, fields=fields, pack_mode="top",
+        form = window.create(Color_Form, fields=fields, location="top",
                              target_object=target,
                              tab_kwargs={"button_text" : name}, **kwargs)
         return form
@@ -94,14 +94,14 @@ class Theme_Editor(Value_Editor):
         theme = self.target_object
         self.names = sorted(theme.theme_colors.keys())
         self.create("pride.gui.widgets.form.Form", target_object=self,
-                    pack_mode="top", h_range=(0, .05),
+                    location="top", h_range=(0, .05),
                     fields=[[("delete_color_options", {"button_text" : 'x',
                                                        "scale_to_text" : True,
-                                                       "pack_mode" : "right"}),
+                                                       "location" : "right"}),
                              ("save_color_options", {"button_text" : "Export color options",
-                                                     "pack_mode" : "right"}),
+                                                     "location" : "right"}),
                              ("load_color_options", {"button_text" : "Import color options",
-                                                     "pack_mode" : "right"})
+                                                     "location" : "right"})
                            ]])
 
         targets = self.tab_targets = []
@@ -124,7 +124,7 @@ class Theme_Editor(Value_Editor):
     def save_color_options(self):
         if self.file_saver is None:
             self.file_saver = self.create("pride.gui.programs.fileexplorer.File_Saver",
-                                          pack_mode="top", data=self.serialize_color_options())
+                                          location="top", data=self.serialize_color_options())
 
     def serialize_color_options(self):
         self.show_status("Serializing color options...")
@@ -149,7 +149,7 @@ class Theme_Editor(Value_Editor):
     def load_color_options(self):
         if self.file_selector is None:
             self.file_selector = self.create("pride.gui.programs.fileexplorer.File_Selector",
-                                            pack_mode="top", callback=self._load_color_options)
+                                            location="top", callback=self._load_color_options)
 
     def _load_color_options(self, filename):
         self.show_status("Importing color options from {}...".format(filename),

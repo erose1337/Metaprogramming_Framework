@@ -29,9 +29,9 @@ class Grid(pride.gui.gui.Window):
         outline_color = itertools.cycle(self.square_outline_colors)
 
         for row in range(self.rows):
-            container = self.create(self.row_container_type, pack_mode="left")
+            container = self.create(self.row_container_type, location="left")
             for column in range(self.columns):
-                button = container.create(self.column_button_type, pack_mode="top",
+                button = container.create(self.column_button_type, location="top",
                                           color=next(outline_color), background_color=next(background_color),
                                           grid_position=(row, column))
 
@@ -65,9 +65,9 @@ class Grid(pride.gui.gui.Window):
             child.delete()
         assert self.rows
         for row in range(self.rows):
-            container = self.create(self.row_container_type, pack_mode="left")
+            container = self.create(self.row_container_type, location="left")
             for column in range(self.columns):
-                button = container.create(self.column_button_type, pack_mode="top",
+                button = container.create(self.column_button_type, location="top",
                                           grid_position=(row, column))
 
         self._container_type = type(container).__name__

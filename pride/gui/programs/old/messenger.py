@@ -22,7 +22,7 @@ class Contact_Button(pride.gui.gui.Button):
 
 class Popup_Menu(pride.gui.gui.Window):
 
-    defaults = {"pack_mode" : "popup_menu", "background_color" : (15, 65, 15, 225),
+    defaults = {"location" : "popup_menu", "background_color" : (15, 65, 15, 225),
                 "h_range" : (0, 300), "w_range" : (0, 400)}
 
     def __init__(self, **kwargs):
@@ -107,8 +107,8 @@ class Messenger(pride.gui.gui.Application):
                                            getpass.getpass(self.password_prompt.format(self.reference)))
         self.children.remove(self.client)
 
-        self.contacts = self.application_window.create(Contacts, pack_mode="left")
-        self.application_window.create("pride.gui.widgetlibrary.Dialog_Box", pack_mode="right",
+        self.contacts = self.application_window.create(Contacts, location="left")
+        self.application_window.create("pride.gui.widgetlibrary.Dialog_Box", location="right",
                                        callback=(self.reference, "send_message"))
 
     def set_current_contact(self, contact):

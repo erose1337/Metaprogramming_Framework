@@ -9,19 +9,19 @@ class Proxy_Button(pride.gui.gui.Button):
 
 class Toggle(pride.gui.gui.Button):
 
-    defaults = {"state" : False, "pack_mode" : "left",
+    defaults = {"state" : False, "location" : "left",
                 "indicator_type" : "pride.gui.widgetlibrary.Status_Indicator",
                 "label" : ''}
     autoreferences = ("indicator", )
 
     def __init__(self, **kwargs):
         super(Toggle, self).__init__(**kwargs)
-        label = self.create("pride.gui.gui.Container", text=self.label, pack_mode="top",
+        label = self.create("pride.gui.gui.Container", text=self.label, location="top",
                             scale_to_text=False, h_range=(0, .03),
                             theme_profile="default")
-        button = self.create(Proxy_Button, pack_mode="left", tip_bar_text=self.tip_bar_text)
+        button = self.create(Proxy_Button, location="left", tip_bar_text=self.tip_bar_text)
         indicator = self.indicator = self.create(self.indicator_type, w_range=(0, .03),
-                                                 pack_mode="left")
+                                                 location="left")
 
         if self.state:
             indicator.enable_indicator()

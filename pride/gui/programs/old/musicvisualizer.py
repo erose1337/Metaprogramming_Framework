@@ -21,7 +21,7 @@ class Note_Theme(pride.gui.gui.Minimal_Theme):
 class Note_Visualizer(pride.gui.gui.Container):
 
     defaults = {"theme_type" : Note_Theme, "theme_profile" : "unselected",
-                "pack_mode" : "left"}
+                "location" : "left"}
 
     def left_click(self, mouse):
         super(Note_Visualizer, self).left_click(mouse)

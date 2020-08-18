@@ -55,7 +55,7 @@ class Method_Button(gui.Button):
 
 class Delete_Button(Method_Button):
 
-    defaults = {"pack_mode" : "right", "text" : "x", "method" : "delete",
+    defaults = {"location" : "right", "text" : "x", "method" : "delete",
                 "scale_to_text" : True}
 
 
@@ -82,9 +82,9 @@ class Objects_Explorer(pride.gui.gui.Application):
 
     def __init__(self, **kwargs):
         super(Objects_Explorer, self).__init__(**kwargs)
-        references = self.application_window.create("pride.gui.gui.Container", pack_mode="left",
+        references = self.application_window.create("pride.gui.gui.Container", location="left",
                                                              scroll_bars_enabled=True)
-        viewer = self.object_attributes_viewer = self.application_window.create("pride.gui.gui.Container", pack_mode="right")
+        viewer = self.object_attributes_viewer = self.application_window.create("pride.gui.gui.Container", location="right")
         viewer.current_object = viewer.create("pride.gui.pyobjecttest.Object_Button", objects["/Python"]).reference
 
         for key, item in pride.objects.items():
@@ -95,7 +95,7 @@ class Objects_Explorer(pride.gui.gui.Application):
 
 class Icon(pride.gui.gui.Button):
 
-    defaults = {"h_range" : (0, 40), "w_range" : (0, 40), "pack_mode" : "left"}
+    defaults = {"h_range" : (0, 40), "w_range" : (0, 40), "location" : "left"}
     required_attributes = ("popup_type", )
 
     def left_click(self, mouse):
@@ -131,12 +131,12 @@ class Homescreen(gui.Application):
 
 class Task_Bar(gui.Container):
 
-    defaults = {"pack_mode" : "top", "h_range" : (0, 20)}
+    defaults = {"location" : "top", "h_range" : (0, 20)}
     #predefaults= {"bound" : (0, 20)}
 
-    #def _set_pack_mode(self, value):
-    #    super(Task_Bar, self)._set_pack_mode(value)
-    #    if self.pack_mode in ("right", "left", "left"):
+    #def _set_location(self, value):
+    #    super(Task_Bar, self)._set_location(value)
+    #    if self.location in ("right", "left", "left"):
     #        self._backup_w_range = self.w_range
     #        self.w_range = self.bound
     #        self.h_range = self._backup_h_range
@@ -147,7 +147,7 @@ class Task_Bar(gui.Container):
     #            self.w_range = self._backup_w_range
     #        except AttributeError:
     #            pass
-    #pack_mode = property(gui.Container._get_pack_mode, _set_pack_mode)
+    #location = property(gui.Container._get_location, _set_location)
 
     def __init__(self, **kwargs):
         super(Task_Bar, self).__init__(**kwargs)
@@ -162,7 +162,7 @@ class Task_Bar(gui.Container):
 
 class Text_Box(gui.Container):
 
-    defaults = {"h" : 16, "pack_mode" : "left", "allow_text_edit" : True}
+    defaults = {"h" : 16, "location" : "left", "allow_text_edit" : True}
     hotkeys = {('\n', None) : "handle_return"}
 
     def select(self):
@@ -189,7 +189,7 @@ class Text_Box(gui.Container):
 
 class Date_Time_Button(gui.Button):
 
-    defaults = {"pack_mode" : "left", "refresh_interval" : 59.9}
+    defaults = {"location" : "left", "refresh_interval" : 59.9}
 
     def __init__(self, **kwargs):
         super(Date_Time_Button, self).__init__(**kwargs)
@@ -210,8 +210,8 @@ class Color_Palette(gui.Window):
 
     def __init__(self, **kwargs):
         super(Color_Palette, self).__init__(**kwargs)
-        color_button = self.create("pride.gui.gui.Button", pack_mode="left")
-        slider_container = self.create("pride.gui.gui.Container", pack_mode="left")
+        color_button = self.create("pride.gui.gui.Button", location="left")
+        slider_container = self.create("pride.gui.gui.Container", location="left")
 
         button_name = color_button.reference
         for color in ('r', 'g', 'b'):
@@ -221,21 +221,21 @@ class Color_Palette(gui.Window):
 
 class Scroll_Bar(gui.Container):
 
-    defaults = {"pack_mode" : "right", "amount" : 5,
+    defaults = {"location" : "right", "amount" : 5,
                 "target" : '', "amount" : 0}
     required_attributes = ("target", "amount")
 
     def __init__(self, **kwargs):
         super(Scroll_Bar, self).__init__(**kwargs)
         kwargs = {"target" : self.target, "amount" : self.amount}
-        if self.pack_mode in ("right", "left"): # horizontal packs on the left side
+        if self.location in ("right", "left"): # horizontal packs on the left side
             self.w_range = (0, 8)
-            kwargs["pack_mode"] = "top"
+            kwargs["location"] = "top"
             self.create(Increment_Button, **kwargs)
             self.create(Decrement_Button, **kwargs)
         else:
             self.h_range = (0, 8)
-            kwargs["pack_mode"] = "left"
+            kwargs["location"] = "left"
             self.create(Increment_Button, **kwargs)
             self.create(Decrement_Button, **kwargs)
 
@@ -257,7 +257,7 @@ class Scroll_Indicator(gui.Button):
     defaults = {"movable" : True, "text" : ''}
 
     def pack(self, modifiers=None):
-        if self.pack_mode in ("right", "left"):
+        if self.location in ("right", "left"):
             width = int(self.parent.w * .8)
             self.w_range = (width, width)
         else:
@@ -273,7 +273,7 @@ class Scroll_Indicator(gui.Button):
 
 class Indicator(gui.Button):
 
-    defaults = {"pack_mode" : "left", "theme_profile" : "default"}
+    defaults = {"location" : "left", "theme_profile" : "default"}
 
     def __init__(self, **kwargs):
         super(Indicator, self).__init__(**kwargs)
@@ -288,7 +288,7 @@ class Indicator(gui.Button):
 
 class Done_Button(gui.Button):
 
-    defaults = {"w_range" : (0, 20), "h_range" : (0, 20), "pack_mode" : "right"}
+    defaults = {"w_range" : (0, 20), "h_range" : (0, 20), "location" : "right"}
     def left_click(self, mouse):
         callback_owner, method = self.callback
         getattr(pride.objects[callback_owner], method)()
@@ -319,9 +319,9 @@ class Dialog_Box(gui.Container):
     def __init__(self, **kwargs):
         super(Dialog_Box, self).__init__(**kwargs)
         self.create("pride.gui.widgetlibrary.Text_Box", text=self.text,
-                    allow_text_edit=False, pack_mode="top")
+                    allow_text_edit=False, location="top")
         self.user_text = self.create("pride.gui.widgetlibrary.Prompt",
-                                     use_done_button=True, pack_mode="bottom",
+                                     use_done_button=True, location="bottom",
                                      h_range=(0, 80), callback=(self.reference, "handle_input"))
 
     def handle_input(self, user_input):
@@ -345,7 +345,7 @@ class Palette(pride.gui.gui.Window):
     def __init__(self, **kwargs):
         super(Palette, self).__init__(**kwargs)
         for button_type in self.button_types:
-            self.create(Palette_Button, button_type=button_type, pack_mode="top")
+            self.create(Palette_Button, button_type=button_type, location="top")
 
 
 class Number_Display(pride.gui.gui.Button):
@@ -362,21 +362,21 @@ class Number_Display(pride.gui.gui.Button):
 
 class Form(pride.gui.gui.Window):
 
-    defaults = {"pack_mode" : "top", "available_points" : 0,
+    defaults = {"location" : "top", "available_points" : 0,
                 "field_object_type" : "pride.gui.widgetlibrary.Number_Display"}
 
     mutable_defaults = {"entries" : dict}
 
     def __init__(self, **kwargs):
         super(Form, self).__init__(**kwargs)
-        name_column = self.create("pride.gui.gui.Container", pack_mode="left")
-        value_column = self.create("pride.gui.gui.Container", pack_mode="left")
+        name_column = self.create("pride.gui.gui.Container", location="left")
+        value_column = self.create("pride.gui.gui.Container", location="left")
 
         entries = self.entries
         for entry in sorted(entries.keys()):
-            box = name_column.create("pride.gui.widgetlibrary.Text_Box", text=entry, allow_text_edit=False, pack_mode="top")
-            value_box = value_column.create(self.field_object_type, numeric_value=entries[entry], pack_mode="top")
-            value_box.create("pride.gui.widgetlibrary.Scroll_Bar", target=(value_box.reference, "numeric_value"), pack_mode="right", amount=1)
+            box = name_column.create("pride.gui.widgetlibrary.Text_Box", text=entry, allow_text_edit=False, location="top")
+            value_box = value_column.create(self.field_object_type, numeric_value=entries[entry], location="top")
+            value_box.create("pride.gui.widgetlibrary.Scroll_Bar", target=(value_box.reference, "numeric_value"), location="right", amount=1)
 
 
 class Dropdown_Box(pride.gui.gui.Container):
@@ -425,7 +425,7 @@ class Dropdown_Box(pride.gui.gui.Container):
 
 class Dropdown_Box_Entry(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : "top", "selection_value" : None}
+    defaults = {"location" : "top", "selection_value" : None}
                 #"background_color" : FIELD_BACKGROUND_COLOR}
 
     def left_click(self, mouse, _deselect=False):
@@ -471,14 +471,14 @@ class Dropdown_Field(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Dropdown_Field, self).__init__(**kwargs)
         if self.orientation == "side by side":
-            pack_mode = "left"
+            location = "left"
         else:
-            pack_mode = "top"
+            location = "top"
         if not self.callback:
             self.callback = (self.reference, "on_dropdown_selection")
-        self.create("pride.gui.gui.Container", text=self.field_name, pack_mode=pack_mode)
+        self.create("pride.gui.gui.Container", text=self.field_name, location=location)
         self.dropdown_box = self.create("pride.gui.widgetlibrary.Dropdown_Box",
-                                        pack_mode=pack_mode, callback=self.callback,
+                                        location=location, callback=self.callback,
                                         entry_types=self.entry_types,
                                         initial_value=self.initial_value).reference
 
@@ -493,10 +493,10 @@ class Spin_Field_Entry(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Spin_Field_Entry, self).__init__(**kwargs)
         self.create(pride.gui.widgetlibrary.Method_Button, target=self.reference,
-                    method="increment_value", pack_mode="right", w_range=(0, 20),
+                    method="increment_value", location="right", w_range=(0, 20),
                     text='+')
         self.create(pride.gui.widgetlibrary.Method_Button, target=self.reference,
-                    method="decrement_value", pack_mode="right", w_range=(0, 20),
+                    method="decrement_value", location="right", w_range=(0, 20),
                     text='-')
 
     def increment_value(self):
@@ -524,8 +524,8 @@ class Spin_Field(pride.gui.gui.Container):
         if not getattr(self, "on_increment", False) or not getattr(self, "on_decrement", False):
             raise ValueError("on_increment/on_decrement not supplied to Spin_Field")
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
-                             pack_mode="top", tip_bar_text=self.tip_bar_text)
-        kwargs = {"pack_mode" : "top", "on_increment" : self.on_increment,
+                             location="top", tip_bar_text=self.tip_bar_text)
+        kwargs = {"location" : "top", "on_increment" : self.on_increment,
                   "on_decrement" : self.on_decrement, "write_field_method" : self.write_field_method}
         if self.initial_value:
             kwargs["text"] = str(self.initial_value)
@@ -586,14 +586,14 @@ class Field(pride.gui.gui.Container):
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)
         if self.orientation == "side by side":
-            pack_mode = "left"
+            location = "left"
             scale_to_text = True
         else:
-            pack_mode = "top"
+            location = "top"
             scale_to_text = False
         prompt = self.create("pride.gui.gui.Container", text="{}:".format(self.field_name),
-                             scale_to_text=scale_to_text, pack_mode=pack_mode)
-        self.entry = self.create(self.field_entry_type, pack_mode=pack_mode, text=str(self.initial_value),
+                             scale_to_text=scale_to_text, location=location)
+        self.entry = self.create(self.field_entry_type, location=location, text=str(self.initial_value),
                                  write_field_method=lambda value: self.write_field_method(self.field_name, value),
                                  tip_bar_text=self.tip_bar_text,
                                  return_method=self.return_method)
@@ -608,18 +608,18 @@ class Field(pride.gui.gui.Container):
 
 class Status_Indicator(pride.gui.gui.Container):
 
-    defaults = {"w_range" : (0, .03), "pack_mode" : "left",
+    defaults = {"w_range" : (0, .03), "location" : "left",
                 "theme_profile" : "blank", "clickable" : False}
     #mutable_defaults = {"meaning" : lambda: {True: '', False : ''}}
 
     def __init__(self, **kwargs):
         super(Status_Indicator, self).__init__(**kwargs)
-        self.create("pride.gui.gui.Container", pack_mode="top",
+        self.create("pride.gui.gui.Container", location="top",
                     theme_profile="placeholder", clickable=False)
-        self.status_light = self.create("pride.gui.gui.Container", pack_mode="top",
+        self.status_light = self.create("pride.gui.gui.Container", location="top",
                                         theme_profile="placeholder",
                                         clickable=False).reference
-        self.create("pride.gui.gui.Container", pack_mode="top",
+        self.create("pride.gui.gui.Container", location="top",
                     theme_profile="placeholder", clickable=False)
 
     def enable_indicator(self):
@@ -636,7 +636,7 @@ class Status_Indicator(pride.gui.gui.Container):
 
 class Popup_Notification(pride.gui.gui.Container):
 
-    defaults = {"h_range" : (0, .10), "pack_mode" : "bottom", "colors_setup" : False,
+    defaults = {"h_range" : (0, .10), "location" : "bottom", "colors_setup" : False,
                 "fade_duration" : 1.0}
 
     def __init__(self, **kwargs):
@@ -706,16 +706,16 @@ class Popup_Notification(pride.gui.gui.Container):
 
 class Page_Control_Bar(pride.gui.gui.Container):
 
-    defaults = {"h_range" : (0, 40), "pack_mode" : "top", "label" : '',
+    defaults = {"h_range" : (0, 40), "location" : "top", "label" : '',
                 "page_type" : "pride.gui.gui.Container", "index" : 0}
     mutable_defaults = {"pages" : list}
 
     def __init__(self, **kwargs):
         super(Page_Control_Bar, self).__init__(**kwargs)
         self.create(Method_Button, target=self.reference, method="page_left",
-                    pack_mode="left", w_range=(0, .10), text='<')
+                    location="left", w_range=(0, .10), text='<')
         self.create(Method_Button, target=self.reference, method="page_right",
-                    pack_mode="right", w_range=(0, .10), text='>')
+                    location="right", w_range=(0, .10), text='>')
 
     def page_left(self):
         if self.pages:

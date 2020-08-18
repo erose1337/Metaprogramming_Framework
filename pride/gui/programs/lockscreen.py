@@ -3,7 +3,7 @@ import pride.gui.gui
 class Status_Display(pride.gui.gui.Button):
 
     defaults = {"center_text" : False, "scale_to_text" : False,
-                "pack_mode" : "left"}
+                "location" : "left"}
 
     def write_to(self, text):
         self.text += text
@@ -18,9 +18,9 @@ class Login_Screen(pride.gui.gui.Window):
     def __init__(self, **kwargs):
         super(Login_Screen, self).__init__(**kwargs)
         self.user.prompt_flag = self.user.prompt_for_creds = False
-        self.create("pride.gui.gui.Container", pack_mode="top") # top spacer
-        field_space = self.create("pride.gui.gui.Container", pack_mode="top")
-        field_space.create("pride.gui.gui.Container", pack_mode="left",
+        self.create("pride.gui.gui.Container", location="top") # top spacer
+        field_space = self.create("pride.gui.gui.Container", location="top")
+        field_space.create("pride.gui.gui.Container", location="left",
                            w_range=(0, .10)) # left spacer
         fields = [
                   [("username", {"entry_kwargs" : {"tip_bar_text" : "Enter your user name here"},
@@ -39,12 +39,12 @@ class Login_Screen(pride.gui.gui.Window):
                  ]
 
         field_space.create("pride.gui.widgets.form.Form", target_object=self.user,
-                           fields=fields, w_range=(0, .5), pack_mode="left",
+                           fields=fields, w_range=(0, .5), location="left",
                            max_rows=5)
         display = self.status_display = field_space.create(Status_Display)
         text = "Log in to {}@({}:{})\n".format(self.service_name, *self.host_info)
         display.write_to(text)
-        self.create("pride.gui.gui.Container", pack_mode="top") # bottom spacer
+        self.create("pride.gui.gui.Container", location="top") # bottom spacer
 
     def register(self):
         pass

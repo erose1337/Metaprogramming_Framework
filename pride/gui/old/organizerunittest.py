@@ -15,20 +15,20 @@ class Organizer_Unit_Test(pride.gui.gui.Window):
         
         container = self.container_type
                 
-        top = self.create(container, pack_mode="top")
-        left = self.create(container, pack_mode="left")
-        right = self.create(container, pack_mode="right")
-        bottom = self.create(container, pack_mode="bottom")
-        main = self.create(container, pack_mode="main")
+        top = self.create(container, location="top")
+        left = self.create(container, location="left")
+        right = self.create(container, location="right")
+        bottom = self.create(container, location="bottom")
+        main = self.create(container, location="main")
         
         top_level = (top, left, right, bottom, main)
         destinations = ("top", "left", "right", "bottom", "main")
         for place in top_level:            
             for destination in destinations:           
-                next_place = place.create(container, pack_mode=destination)
+                next_place = place.create(container, location=destination)
                 
                 for destination2 in destinations:
-                    final_layer = next_place.create(container, pack_mode=destination2)
+                    final_layer = next_place.create(container, location=destination2)
                 final_layer.create("pride.gui.grid.Grid", grid_size=(4, 4), 
                                    square_colors=((55, 55, 55, 255), (225, 225, 225, 255)))
         

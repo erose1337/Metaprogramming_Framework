@@ -34,7 +34,7 @@ class Gameboard_Square(pride.gui.gui.Button):
 
                 piece.toggle_highlight_available_moves()
                 piece.color = getattr(chess_game, piece.team + "_color")
-                piece.pack_mode = None
+                piece.location = None
                 piece.current_square.remove(piece)
                 if self.current_piece:
                     captured_piece = pride.objects[self.current_piece]
@@ -43,7 +43,7 @@ class Gameboard_Square(pride.gui.gui.Button):
                    # import objectfinder
                    # print objectfinder.find_locations(captured_piece)
                 self.add(piece)
-                piece.pack_mode = "top"
+                piece.location = "top"
 
                 self.pack()
 
@@ -145,7 +145,7 @@ class Board_Game(pride.gui.gui.Application):
     def __init__(self, **kwargs):
         super(Board_Game, self).__init__(**kwargs)
         self.application_window.create("pride.gui.grid.Grid", rows=self.row_count, columns=self.column_count,
-                                       column_button_type=Gameboard_Square, pack_mode="main",
+                                       column_button_type=Gameboard_Square, location="main",
                                        square_colors=(self.white_square_color, self.black_square_color),
                                        square_outline_colors=(self.white_square_outline_color, self.black_square_outline_color))
         self.setup_game()

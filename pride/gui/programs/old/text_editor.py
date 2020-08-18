@@ -4,21 +4,21 @@ import pride.gui.widgetlibrary
 class File_Button(pride.gui.widgetlibrary.Popup_Button):
 
     defaults = {"_popup_type" : "pride.gui.programs.text_editor.File_Menu",
-                "text" : "File", "pack_mode" : "left"}
+                "text" : "File", "location" : "left"}
 
 
 class Edit_Button(pride.gui.gui.Button):
 
     defaults = pride.gui.gui.Button.defaults.copy()
     defaults.update({"text" : "Edit",
-                     "pack_mode" : "left"})
+                     "location" : "left"})
 
 
 class Options_Button(pride.gui.gui.Button):
 
     defaults = pride.gui.gui.Button.defaults.copy()
     defaults.update({"text" : "options",
-                     "pack_mode" : "left"})
+                     "location" : "left"})
 
 
 class File_Menu(pride.gui.gui.Container):
@@ -62,7 +62,7 @@ class Save_Button(pride.gui.gui.Button):
 class Text_File(pride.gui.widgetlibrary.Text_Box):
 
     defaults = {"allow_text_edit" : True,
-                "pack_mode" : "main"}
+                "location" : "main"}
 
 
 class Text_Editor(pride.gui.gui.Application):
@@ -71,7 +71,7 @@ class Text_Editor(pride.gui.gui.Application):
 
     def __init__(self, **kwargs):
         super(Text_Editor, self).__init__(**kwargs)
-        self.application_window.create("pride.gui.widgetlibrary.Task_Bar", pack_mode="top",
+        self.application_window.create("pride.gui.widgetlibrary.Task_Bar", location="top",
                                         startup_components=("pride.gui.programs.text_editor.File_Button",
                                                             "pride.gui.programs.text_editor.Edit_Button",
                                                             "pride.gui.programs.text_editor.Options_Button"))

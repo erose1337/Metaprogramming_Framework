@@ -34,10 +34,10 @@ class Tree_Viewer(pride.gui.gui.Application):
                  ("delete", {"button_text" : 'x', "scale_to_text" : True})
                 ]
                ]
-        self.top = window.create(pride.gui.widgets.form.Form, pack_mode="top",
+        self.top = window.create(pride.gui.widgets.form.Form, location="top",
                                  target_object=self, h_range=(0, .1),
                                  fields=fields)
-        self.bottom = window.create("pride.gui.gui.Container", pack_mode="top")
+        self.bottom = window.create("pride.gui.gui.Container", location="top")
 
     def view_node(self, identifier=None): # "view" button does not use identifier and uses self.current_node
         if identifier is None:

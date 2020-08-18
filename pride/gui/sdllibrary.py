@@ -153,7 +153,7 @@ class SDL_Window(SDL_Component):
         #self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
         self.drawing_instructions[0] = []
 
-        self.tip_bar = self.create(self.tip_bar_type, pack_mode=self.tip_bar_location,
+        self.tip_bar = self.create(self.tip_bar_type, location=self.tip_bar_location,
                                    h_range=self.tip_bar_h_range, center_text=False,
                                    tip_bar_text="Tip Bar: Provides details, hints, and status information")
         if self.showing:

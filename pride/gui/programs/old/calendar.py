@@ -62,38 +62,38 @@ class Calendar(pride.gui.gui.Window):
         if extra:
             number_of_rows += 1
 
-        top_bar = self.create("pride.gui.gui.Container", pack_mode="top", h_range=(50, 50),
+        top_bar = self.create("pride.gui.gui.Container", location="top", h_range=(50, 50),
                               color=outline_color)
-        day_bar = self.create("pride.gui.gui.Container", pack_mode="top", h_range=(30, 30),
+        day_bar = self.create("pride.gui.gui.Container", location="top", h_range=(30, 30),
                               color=outline_color)
         grid = self.create("pride.gui.grid.Grid", columns=number_of_rows, rows=7,
                            square_colors=(background_color, background_color),
                            square_outline_colors=(outline_color, outline_color),
                            color=outline_color)
 
-        top_bar.create(Previous_Month_Button, pack_mode="left", text='<',
+        top_bar.create(Previous_Month_Button, location="left", text='<',
                        w_range=(40, 40), background_color=background_color,
                        color=outline_color, text_color=text_color)
-        top_bar.create(Next_Month_Button, pack_mode="left", text='>',
+        top_bar.create(Next_Month_Button, location="left", text='>',
                        w_range=(40, 40), background_color=background_color,
                        color=outline_color, text_color=text_color)
-        top_bar.create("pride.gui.gui.Button", pack_mode="main",
+        top_bar.create("pride.gui.gui.Button", location="main",
                        text="{} {}".format(month, year), background_color=background_color,
                        color=outline_color, text_color=text_color)
-        top_bar.create(Month_Display_Button, pack_mode="right", w_range=(60, 60),
+        top_bar.create(Month_Display_Button, location="right", w_range=(60, 60),
                        background_color=background_color, color=outline_color,
                        text="Month", text_color=text_color)
-        top_bar.create(Week_Display_Button, pack_mode="right", w_range=(50, 50),
+        top_bar.create(Week_Display_Button, location="right", w_range=(50, 50),
                        background_color=background_color, color=outline_color,
                        text="Week", text_color=text_color)
-        top_bar.create(Day_Display_Button, pack_mode="right", w_range=(40, 40),
+        top_bar.create(Day_Display_Button, location="right", w_range=(40, 40),
                        background_color=background_color, color=outline_color,
                        text="Day", text_color=text_color)
 
         days = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
         for index, day in enumerate(days):
             button = day_bar.create("pride.gui.gui.Button", text=day,
-                                    pack_mode="left", text_color=text_color,
+                                    location="left", text_color=text_color,
                                     background_color=background_color, color=outline_color)
 
         prior_month = MONTHS[MONTHS.index(month) - 1]
@@ -156,50 +156,50 @@ class Calendar(pride.gui.gui.Window):
                       "color" : outline_color,
                       "text_color" : text_color}
         top_bar = self.create("pride.gui.gui.Container", h_range=(50, 50),
-                              pack_mode="top", **color_info)
+                              location="top", **color_info)
         previous_week_button = top_bar.create(Previous_Week_Button, text='<',
-                                              pack_mode="left", w_range=(40, 40),
+                                              location="left", w_range=(40, 40),
                                               **color_info)
-        next_week_button = top_bar.create(Next_Week_Button, text='>', pack_mode="left",
+        next_week_button = top_bar.create(Next_Week_Button, text='>', location="left",
                                           w_range=(40, 40), **color_info)
         week_displayer = top_bar.create("pride.gui.gui.Button", text=week_text,
-                                        pack_mode="main", **color_info)
-        month_view = top_bar.create(Month_Display_Button, text="Month", pack_mode="right",
+                                        location="main", **color_info)
+        month_view = top_bar.create(Month_Display_Button, text="Month", location="right",
                                     w_range=(50, 50), **color_info)
-        week_view = top_bar.create(Week_Display_Button, text="Week", pack_mode="right",
+        week_view = top_bar.create(Week_Display_Button, text="Week", location="right",
                                    w_range=(40, 40), **color_info)
-        day_view = top_bar.create(Day_Display_Button, text="Day", pack_mode="right",
+        day_view = top_bar.create(Day_Display_Button, text="Day", location="right",
                                   w_range=(30, 30), **color_info)
 
 
         weekday_bar = self.create("pride.gui.gui.Container", h_range=(25, 25),
-                                  pack_mode="top", **color_info)
+                                  location="top", **color_info)
         spacer = weekday_bar.create("pride.gui.gui.Container", w_range=(50, 50),
-                                    pack_mode="left", **color_info)
+                                    location="left", **color_info)
 
-        all_day_bar = self.create("pride.gui.gui.Container", pack_mode="top",
+        all_day_bar = self.create("pride.gui.gui.Container", location="top",
                                   h_range=(50, 50), **color_info)
-        all_day_bar.create("pride.gui.gui.Button", pack_mode="left", text="all day",
+        all_day_bar.create("pride.gui.gui.Button", location="left", text="all day",
                            w_range=(50, 50), center_text=False, **color_info)
         all_day_bar.create("pride.gui.gui.Container", w_range=(10, 10),
-                           pack_mode="right", **color_info)
+                           location="right", **color_info)
         hour_bars = [self.create("pride.gui.gui.Container", h_range=(25, 25),
-                                 pack_mode="top", **color_info) for count in range(24)]
+                                 location="top", **color_info) for count in range(24)]
 
         for weekday in DAYS_OF_THE_WEEK:
-            weekday_bar.create("pride.gui.gui.Button", text=weekday[:3], pack_mode="left",
+            weekday_bar.create("pride.gui.gui.Button", text=weekday[:3], location="left",
                                center_text=False, **color_info)
-            all_day_bar.create("pride.gui.gui.Container", pack_mode="left", **color_info)
-        spacer = weekday_bar.create("pride.gui.gui.Container", pack_mode="right",
+            all_day_bar.create("pride.gui.gui.Container", location="left", **color_info)
+        spacer = weekday_bar.create("pride.gui.gui.Container", location="right",
                                     w_range=(10, 10), **color_info)
 
         for count, hour_bar in enumerate(hour_bars):
             hour_bar.create("pride.gui.gui.Button", text=to_hour(count), center_text=False,
-                            w_range=(50, 50), pack_mode="left", **color_info)
-            hour_bar.create("pride.gui.gui.Container", pack_mode="right",
+                            w_range=(50, 50), location="left", **color_info)
+            hour_bar.create("pride.gui.gui.Container", location="right",
                             w_range=(10, 10), **color_info)
             for weekday in DAYS_OF_THE_WEEK:
-                hour_bar.create("pride.gui.gui.Container", pack_mode="left",
+                hour_bar.create("pride.gui.gui.Container", location="left",
                                 **color_info)
 
 

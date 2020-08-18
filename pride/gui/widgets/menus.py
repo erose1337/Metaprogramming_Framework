@@ -44,7 +44,7 @@ class Option_Button(pride.gui.gui.Button):
 
 class Recursive_Menu(pride.gui.gui.Application):
 
-    defaults = {"row_type" : "pride.gui.gui.Container", "row_pack_mode" : "top",
+    defaults = {"row_type" : "pride.gui.gui.Container", "row_location" : "top",
                 "tree" : None, "initial_options" : tuple(), "menu_name" : '',
                 "option_type" : Option_Button, "startup_components" : tuple(),
                 "current_button" : ''}
@@ -52,11 +52,11 @@ class Recursive_Menu(pride.gui.gui.Application):
 
     def __init__(self, **kwargs):
         super(Recursive_Menu, self).__init__(**kwargs)
-        top_bar = self.create("pride.gui.gui.Container", h_range=(0, .10), pack_mode="top")
+        top_bar = self.create("pride.gui.gui.Container", h_range=(0, .10), location="top")
         top_bar.create("pride.gui.widgetlibrary.Method_Button", target=self.reference,
-                       method="handle_back", text='<', scale_to_text=True, pack_mode="left")
+                       method="handle_back", text='<', scale_to_text=True, location="left")
         self._name = top_bar.create("pride.gui.gui.Container", text=self.menu_name,
-                                    pack_mode="left").reference
+                                    location="left").reference
         self.create_menu(self.initial_options)
 
     def create_menu(self, options):
@@ -68,16 +68,16 @@ class Recursive_Menu(pride.gui.gui.Application):
 #            return self.create_menu(self.initial_options)
 
         row_type = self.row_type
-        row_pack_mode = self.row_pack_mode
+        row_location = self.row_location
         option_type = self.option_type
         length = int(ceil(sqrt(len(options))))
         rows = self.rows = []
         window = self.application_window
         for options in slide(options, length):
-            row = window.create(row_type, pack_mode=row_pack_mode)
+            row = window.create(row_type, location=row_location)
             self.rows.append(row.reference)
             for option_name in options:
-                row.create(option_type, text=option_name, pack_mode="left")
+                row.create(option_type, text=option_name, location="left")
 
     def select_option(self, button, option_name):
         try:

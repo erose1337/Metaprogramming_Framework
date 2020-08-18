@@ -7,7 +7,7 @@ class Iterable(pride.gui.gui.Container):
         super(Iterable, self).__init__(**kwargs)
         self.create("pride.gui.widgetlibrary.Task_Bar")
         for item in _list:
-            self.create(Object_Button, item, pack_mode=self.pack_mode)
+            self.create(Object_Button, item, location=self.location)
             
             
 class Dictionary(pride.gui.gui.Container):
@@ -15,8 +15,8 @@ class Dictionary(pride.gui.gui.Container):
     def __init__(self, _dict, **kwargs):
         super(Dictionary, self).__init__(**kwargs)
         self.create("pride.gui.widgetlibrary.Task_Bar")
-        left = self.create("pride.gui.gui.Container", pack_mode="left")
-        right = self.create("pride.gui.gui.Container", pack_mode="right")
+        left = self.create("pride.gui.gui.Container", location="left")
+        right = self.create("pride.gui.gui.Container", location="right")
         for key, value in _dict.items():
             left.create("pride.gui.gui.Button", text=key)
             right.create(Object_Button, value)

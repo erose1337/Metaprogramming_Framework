@@ -17,7 +17,7 @@ class Prompt(pride.gui.widgets.form.Form):
                                              "button_text" : "No"})
                              ]
                            ],
-                "pack_mode" : "top", "h_range" : (.25, .25),
+                "location" : "top", "h_range" : (.25, .25),
                 "include_delete_button" : True
                 }
 
@@ -78,7 +78,7 @@ class File_Saver(pride.gui.widgets.form.Form):
 class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
 
     defaults = {"current_node" : '~/', "selected_file" : '',
-                "node_label" : "Directory Explorer", "pack_mode" : "top"}
+                "node_label" : "Directory Explorer", "location" : "top"}
 
     @staticmethod
     def epoch_to_english(_time):

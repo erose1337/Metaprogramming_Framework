@@ -3,7 +3,7 @@ import pride.gui.widgetlibrary
         
 class Prompt(pride.gui.widgetlibrary.Text_Box):
     
-    defaults = {"pack_mode" : "main", "prompt" : "\n>>> ", "program" : '',
+    defaults = {"location" : "main", "prompt" : "\n>>> ", "program" : '',
                 "end_of_field" : len("\n>>> "), "text" : '', "scroll_bars_enabled" : True}                  
  
     required_attributes = ("program", )

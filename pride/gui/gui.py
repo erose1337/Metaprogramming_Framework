@@ -81,23 +81,23 @@ class Organizer(base.Base):
                   "right" : []}
         old_area = dict()
         for child in children:
-            pack_mode = child.pack_mode
-            if pack_mode is None or child.hidden:
+            location = child.location
+            if location is None or child.hidden:
                 continue
-            if pack_mode == 'z':
+            if location == 'z':
                 old_area[child] = child.area
                 child.z = z
                 continue
-            if pack_mode == "fill":
+            if location == "fill":
                 old_area[child] = child.area
                 child.z = z
                 child.area = area
                 continue
             else:
                 try:
-                    _lists[pack_mode].append(child)
+                    _lists[location].append(child)
                 except KeyError:
-                    raise NotImplementedError("Unsupported pack mode '{}' on {}".format(pack_mode, child))
+                    raise NotImplementedError("Unsupported pack mode '{}' on {}".format(location, child))
                 old_area[child] = child.area
 
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
@@ -243,11 +243,11 @@ class Organizer(base.Base):
 
 class Organized_Object(pride.gui.shapes.Bounded_Shape):
     """ A `Bounded_Shape` that can be organized into place via the `pack` method.
-        `Organized_Object`s have a `pack_mode` attribute that determines the placement of the object within its parent."""
+        `Organized_Object`s have a `location` attribute that determines the placement of the object within its parent."""
 
-    defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "pack_mode" : '',
+    defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "location" : '',
                 "_pack_requested" : False, "_in_pack_queue" : False}
-    allowed_values = {"pack_mode" : ("left", "right", "top", "bottom", "main",
+    allowed_values = {"location" : ("left", "right", "top", "bottom", "main",
                                      'z', "fill", None)}
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
@@ -766,7 +766,7 @@ class Animated_Object(_Window_Object):
 
 class _Mouse_Click(Animated_Object):
 
-    defaults = {"clickable" : False, "pack_mode" : "fill"}
+    defaults = {"clickable" : False, "location" : "fill"}
 
     def handle_transition_animation_end(self):
         #self.delete()
@@ -778,17 +778,17 @@ Window_Object = Animated_Object # can upgrade everything in-place by changing th
 
 class Window(Window_Object):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"location" : "top"}
 
 
 class Container(Window_Object):
 
-    defaults = {"pack_mode" : "top"}
+    defaults = {"location" : "top"}
 
 
 class Button(Window_Object):
 
-    defaults = {"pack_mode" : "top", "theme_profile" : "interactive",
+    defaults = {"location" : "top", "theme_profile" : "interactive",
                 "hoverable" : True}
 
 
@@ -814,4 +814,4 @@ class Application(Window):
 
 class Placeholder(Container):
 
-    defaults = {"pack_mode" : "left", "theme_profile" : "placeholder"}
+    defaults = {"location" : "left", "theme_profile" : "placeholder"}

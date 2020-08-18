@@ -4,7 +4,7 @@ import pride.gui.themes
 
 class Node(pride.gui.gui.Button):
 
-    defaults = {"pack_mode" : 'z', "display_name" : ''}
+    defaults = {"location" : 'z', "display_name" : ''}
 
 
 class Network_Visualizer_Theme(pride.gui.themes.Minimal_Theme):
@@ -28,7 +28,7 @@ class Network_Visualizer_Theme(pride.gui.themes.Minimal_Theme):
 
 class Network_Visualizer(pride.gui.gui.Window):
 
-    defaults = {"pack_mode" : "top", #"theme_type" : Network_Visualizer_Theme,
+    defaults = {"location" : "top", #"theme_type" : Network_Visualizer_Theme,
                 "node_info" : tuple(), "node_type" : Node}
     mutable_defaults = {"nodes" : list}
 

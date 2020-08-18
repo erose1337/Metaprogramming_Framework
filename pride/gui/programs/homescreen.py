@@ -6,7 +6,7 @@ import pride.gui.widgets.tabs
 
 class Listing(pride.gui.gui.Container):
 
-    defaults = {"pack_mode" : "right"}
+    defaults = {"location" : "right"}
 
 
 class Pinned_Listing(Listing): pass
@@ -57,7 +57,7 @@ class Pride_Shell_Button(pride.gui.gui.Button):
 class OS_Program_Button(pride.gui.gui.Button):
 
     defaults = {"program" : "pride.gui.programs.Program_Button: program unspecified",
-                "pack_mode" : "left", "scale_to_text" : True}
+                "location" : "left", "scale_to_text" : True}
 
     def left_click(self, mouse):
         os.system(self.program)
@@ -97,9 +97,9 @@ class Content_Launcher(pride.gui.gui.Window):
         #           |           |             |
         #--power/restart/sleep/logout---------------------
         self.launcher_screen = launcher_screen = self.create("pride.gui.gui.Container")
-        top = launcher_screen.create("pride.gui.gui.Container", pack_mode="top")
+        top = launcher_screen.create("pride.gui.gui.Container", location="top")
         bottom = launcher_screen.create("pride.gui.gui.Container", h_range=(.025, .05),
-                             pack_mode="top")
+                             location="top")
         programs_column = top.create(Programs_Listing, launcher_window=self)
         places_column = top.create(Places_Listing, launcher_window=self)
         settings_column = top.create(Settings_Listing, launcher_window=self)

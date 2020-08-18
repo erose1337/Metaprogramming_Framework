@@ -21,7 +21,7 @@ class Gameboard_Square(pride.gui.gui.Button):
 
                 piece.toggle_highlight_available_moves()
                 piece.color = getattr(chess_game, piece.team + "_color")
-                piece.pack_mode = None
+                piece.location = None
                 piece.current_square.remove(piece)
                 if self.current_piece:
                     captured_piece = pride.objects[self.current_piece]
@@ -30,7 +30,7 @@ class Gameboard_Square(pride.gui.gui.Button):
                    # import objectfinder
                    # print objectfinder.find_locations(captured_piece)
                 self.add(piece)
-                piece.pack_mode = "top"
+                piece.location = "top"
 
                 self.pack()
 
@@ -64,7 +64,7 @@ class Gameboard_Square(pride.gui.boardgame.Gameboard_Square):
 
                 piece.toggle_highlight_available_moves()
                 piece.color = getattr(chess_game, piece.team + "_color")
-                piece.pack_mode = None
+                piece.location = None
                 piece.current_square.remove(piece)
                 if self.current_piece:
                     captured_piece = pride.objects[self.current_piece]
@@ -73,7 +73,7 @@ class Gameboard_Square(pride.gui.boardgame.Gameboard_Square):
                    # import objectfinder
                    # print objectfinder.find_locations(captured_piece)
                 self.add(piece)
-                piece.pack_mode = "top"
+                piece.location = "top"
 
                 self.pack()
 
@@ -88,6 +88,6 @@ def Game_Piece_Palette(pride.gui.gui.Window):
 
     def __init__(self, **kwargs):
         for classification_tier in self.unit_types:
-            container = self.create("pride.gui.gui.Container", pack_mode="top")
+            container = self.create("pride.gui.gui.Container", location="top")
             for unit_type in classification_tier:
-                container.create(Placement_Button, unit_type=unit_type, pack_mode="left")
+                container.create(Placement_Button, unit_type=unit_type, location="left")

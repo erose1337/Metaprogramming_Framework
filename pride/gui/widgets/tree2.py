@@ -39,10 +39,10 @@ class Tree_Viewer(pride.gui.gui.Application):
                ]
         fields += self.generate_nodes()
         self.navbar = window.create(pride.gui.widgets.form.Form,
-                                    pack_mode="top", target_object=self,
+                                    location="top", target_object=self,
                                     h_range=(0, .1), fields=fields)
         self.viewer_area = window.create("pride.gui.gui.Container",
-                                         pack_mode="top")
+                                         location="top")
 
     def generate_nodes(self):
         """ Returns a list of field_infos """

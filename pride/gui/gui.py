@@ -16,6 +16,9 @@ import sdl2
 
 lerp = pride.gui.lerp
 
+THEME_TYPE = {"Minimal" : "pride.gui.themes.Minimal_Theme",
+              "Animated" : "pride.gui.themes.Animated_Theme2"}
+
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Python/SDL_Window/Renderer/SpriteFactory",
                    renderer="/Python/SDL_Window/Renderer"):
@@ -284,14 +287,14 @@ class _Window_Object(Organized_Object):
             Exception TypeError: "'NoneType' object is not callable" in <bound method Window.__del__ of <sdl2.ext.window.Window object at 0xXXXXXXX> ignore
             Except AttributeError: "'NoneType' object has no attribute 'SDL_DestroyTexture'" in ignored
         A: Your window object still exists somewhere and needs to be deleted properly. Make sure there are no scheduled instructions and/or attributes using your object"""
-    defaults = {"outline_width" : 1, "center_text" : True, "hoverable" : False,
+    defaults = {"center_text" : True, "hoverable" : False,
                 "held" : False, "allow_text_edit" : False, "wrap_text" : True,
-                "_ignore_click" : False, "hidden" : False, "movable" : False,
-                "text" : '', "scroll_bars_enabled" : False, "_hover_backup_theme_profile" : '',
-                "_scroll_bar_h" : None, "_scroll_bar_w" : None, "hovering" : False,
-                "theme_type" : "pride.gui.themes.Minimal_Theme",
+                "_ignore_click" : False, "hidden" : False,
+                "text" : '', "_hover_backup_theme_profile" : '',
+                "hovering" : False,
                 "_selected" : False, "confidential" : False,
-                "_cached" : False, "tip_bar_text" : '', "font" : "Aero",
+                "tip_bar_text" : '', "font" : "Aero",
+                "theme_name" : "Minimal",
                 "theme_profile" : "default", "clickable" : True}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
@@ -439,11 +442,11 @@ class _Window_Object(Organized_Object):
     sdl_window = property(_get_sdl_window, _set_sdl_window)
 
     def __init__(self, **kwargs):
-        #self.colors = self.theme_type.theme_colors.copy()#DEFAULT_COLORS.copy()
         super(_Window_Object, self).__init__(**kwargs)
         self.texture_invalid = True
 
-        self.theme = self.create(self.theme_type, wrapped_object=self)
+        theme_type = THEME_TYPE[self.theme_name]
+        self.theme = self.create(theme_type, wrapped_object=self)
 
         self._children.remove(self.theme)
         window = self.sdl_window
@@ -620,7 +623,8 @@ class _Window_Object(Organized_Object):
 
     def on_load(self, state):
         super(_Window_Object, self).on_load(state)
-        self.theme = pride.functions.utilities.resolve_string(self.theme_type).load(self.theme)
+        theme_type = THEME_TYPE[self.theme_name]
+        self.theme = pride.functions.utilities.resolve_string(theme_type).load(self.theme)
         self.theme.wraps(self)
         self._draw_operations = []
         self._children = list(super(_Window_Object, self).children)
@@ -642,10 +646,8 @@ class _Window_Object(Organized_Object):
 class Animated_Object(_Window_Object):
 
     defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
-                "theme_type" : "pride.gui.themes.Animated_Theme2",
                 "animation_enabled" : True, "click_animation_enabled" : True,
-                "click_radius" : 2,
-                "_mouse_click_type" : "pride.gui.gui._Mouse_Click"}
+                "click_radius" : 2, "theme_name" : "Animated"}
     predefaults = {"animating" : False, "_old_theme" : None,
                    "_colors_backup" : None, "_start_animation_enabled" : False,
                    "_transition_state" : 0}
@@ -673,7 +675,7 @@ class Animated_Object(_Window_Object):
         if self.click_animation_enabled:
             x, y = mouse.x, mouse.y
             radius = self.click_radius
-            rect = self.create(self._mouse_click_type)
+            rect = self.create("pride.gui.gui._Mouse_Click")
             rect.area = (x - radius, y - radius, radius, radius)
 
     def show(self, parent_call=False):
@@ -793,12 +795,12 @@ class Button(Window_Object):
 class Application(Window):
     """ Applications have an application_window attribute.
         This extra window allows the background to be customized (e.g. rotating stars)"""
-    defaults = {"application_window_type" : "pride.gui.gui.Window"}
+
     autoreferences = ("application_window", )
 
     def __init__(self, **kwargs):
         super(Application, self).__init__(**kwargs)
-        self.application_window = self.create(self.application_window_type)
+        self.application_window = self.create("pride.gui.gui.Window")
 
     def __getstate__(self):
         state = super(Application, self).__getstate__()
@@ -813,74 +815,3 @@ class Application(Window):
 class Placeholder(Container):
 
     defaults = {"pack_mode" : "left", "theme_profile" : "placeholder"}
-
-
-class Texture_Atlas(pride.components.base.Base):
-
-    defaults = {'x' : 0, 'y' : 0, 'w' : 4096, 'h' : 4096, 'z' : -1,
-                "size" : (4096, 4096), "subsections" : tuple(),
-                "placeholder_type" : Placeholder, "pack_mode" : "main",
-                "sdl_window" : None}
-
-    predefaults = {"_pack_scheduled" : False}#{"sdl_window" : ''}
-    required_attributes = ("sdl_window", )
-
-    def _get_area(self):
-        return self.x, self.y, self.w, self.h
-    area = property(_get_area)
-
-    def _get_position(self):
-        return self.x, self.y
-    position = property(_get_position)
-
-    def __init__(self, *args, **kwargs):
-        super(Texture_Atlas, self).__init__(*args, **kwargs)
-        # top-left: screen;      top-right: vertical placeholders
-        #         bottom-top: square placeholders
-        #         bottom-bottom: horizontal placeholders
-        placeholder_type = self.placeholder_type
-        sdl_window = self.sdl_window
-
-        screen_w, screen_h = self.screen_size = pride.objects[sdl_window].size
-
-        top = self.create(placeholder_type, pack_mode="top",
-                          sdl_window=sdl_window, h_range=(screen_h, screen_h))
-        bottom = self.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
-
-        #top_left = top.create(placeholder_type, w_range=(screen_w, screen_w),
-        #                      pack_mode="left", sdl_window=sdl_window)
-        #top_right = top.create(placeholder_type, pack_mode="left", sdl_window=sdl_window)
-
-        #bottom_top = bottom.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
-        #bottom_bottom = bottom.create(placeholder_type, pack_mode="top", sdl_window=sdl_window)
-        #self.subsections = (top_left, top_right, bottom_top, bottom_bottom)
-
-    def add_to_atlas(self, window_object):
-        subsection, pack_mode = self.determine_subsection(window_object)
-        placeholder = subsection.create(self.placeholder_type, pack_mode=pack_mode,
-                                        sdl_window=self.sdl_window,
-                                        w_range=(window_object.w, window_object.w),
-                                        h_range=(window_object.h, window_object.h))
-        window_object._texture_atlas_reference = placeholder.reference
-        #placeholder.pack()
-        return placeholder.position
-
-    def remove_from_atlas(self, window_object):
-        pride.objects[window_object._texture_atlas_reference].delete()
-        del window_object._texture_atlas_reference
-
-    def determine_subsection(self, window_object):
-        # determine approximate "square-ness" of (w, h)
-        #   - if w / h > 2:
-        #       item is horizontal
-        #   - if h / w > 2:
-        #       item is vertical
-        #   - else item fits well enough in a square
-        # also returns which way to pack the item into the according subsection
-        w, h = window_object.size
-        if h and w / h > 2:
-            return self.subsections[3], "top" # horizontal -> bottom: bottom
-        elif w and h / w > 2:
-            return self.subsections[1], "left" # vertical -> top: right
-        else:
-            return self.subsections[2], "left" # square -> bottom: top

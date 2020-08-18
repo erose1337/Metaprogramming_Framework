@@ -205,8 +205,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # they can be overridden when initialized an object via keyword arguments
     # PITFALL: do not use mutable objects as a default. use mutable_defaults instead
     defaults = {"dont_save" : False, "parse_args" : False,
-                "replace_reference_on_load" : True,
-                "startup_components" : tuple()}
+                "replace_reference_on_load" : True}
 
     # if certain attributes must be passed explicitly, including them in the
     # required_attributes class attribute will automatically raise an
@@ -373,12 +372,6 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
 
         if self.parent:
             self.parent.add(self)
-
-        if self.startup_components:
-            for component_type in self.startup_components:
-                component = self.create(component_type)
-                setattr(self, component.__class__.__name__.lower(),
-                        component.reference)
 
         try:
             self.alert("Initialized", level=self.verbosity["initialized"])

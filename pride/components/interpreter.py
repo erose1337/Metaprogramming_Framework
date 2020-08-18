@@ -220,6 +220,10 @@ class Python(base.Base):
 
     def __init__(self, **kwargs):
         super(Python, self).__init__(**kwargs)
+        for component_type in self.startup_components:
+            component = self.create(component_type)
+            setattr(self, component.__class__.__name__.lower(),
+                    component.reference)
         try:
             self.rpc_server = self.create(self.rpc_server_type)
         except socket.error as exception:

@@ -257,7 +257,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     # key : values pairs; if getattr(self, key) not in values, raises ValueError in __init__
     allowed_values = {}
 
-    # stores name:type pairs; type must be either: Base, a subclass of Base, or the function `any` (which is interpreted to mean any Base object)
+    # stores names
     # the instance attribute indicated by 'name' is configured to store/dereference objects/references of the specified type
     # Solves the following problem/automates the following pattern:
     #   # (the problem)

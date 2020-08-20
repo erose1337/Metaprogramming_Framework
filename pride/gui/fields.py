@@ -15,7 +15,6 @@ DELETE_KEY = "\x7f"
 ENTRY_TYPE = {"Field" : "pride.gui.fields.Entry",
               "Callable_Field" : "pride.gui.fields.Callable_Entry",
               "Text_Field" : "pride.gui.fields.Text_Entry",
-              "Text_Display" : "pride.gui.fields.Text_Entry",
               "Dropdown_Field" : "pride.gui.fields.Dropdown_Entry",
               "Spinbox" : "pride.gui.fields.Spinbox_Entry",
               "Toggle" : "pride.gui.fields.Toggle_Entry",
@@ -60,7 +59,7 @@ class Entry(pride.gui.gui.Button):
         if field.parent_form is not None:
             field.parent_form.handle_entry_selected(self, _needs_select=False)
         if self.show_status_when_selected:
-            name = field.tip_name or getattr(field, "button_text", '') or field.display_name or field.name
+            name = getattr(field, "button_text", '') or field.display_name or field.name
             self.show_status("Selected: {}".format(name))
 
 
@@ -68,11 +67,10 @@ class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked",
                 "_value_initialized" : False,
-                "editable" : True, "location" : "left", "auto_create_id" : True,
-                "display_name" : '', "tip_name" : ''}
+                "editable" : True, "location" : "left", "has_label" : True,
+                "display_name" : ''}
     mutable_defaults = {"entry_kwargs" : dict, "id_kwargs" : dict}
     predefaults = {"target_object" : None}
-    #required_attributes = ("target_object", ) # target_object could be a list that starts out empty
     autoreferences = ("identifier", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
 
@@ -106,9 +104,9 @@ class Field(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)
-        self.create_id_and_entry()
+        self.create_subcomponents()
 
-    def create_id_and_entry(self):
+    def create_subcomponents(self):
         id_kwargs = self.id_kwargs
         orientation = self.orientation
         if orientation == "stacked":
@@ -119,8 +117,7 @@ class Field(pride.gui.gui.Container):
             assert orientation == "side by side"
             location = "left"
         assert self.identifier is None
-        if self.auto_create_id:
-            self.create_id(location, **id_kwargs)
+        self.create_id(location, **id_kwargs)
         self.create_entry(location)
 
     def create_id(self, location, **id_kwargs):
@@ -128,6 +125,8 @@ class Field(pride.gui.gui.Container):
         self.identifier = self.create(pride.gui.gui.Container, location=location,
                                       text=self.display_name or self.name,
                                       **id_kwargs)
+        if not self.has_label:
+            self.identifier.hide()
 
     def create_entry(self, location):
         kwargs = self.entry_kwargs
@@ -185,7 +184,7 @@ class Callable_Entry(Entry):
 class Callable_Field(Field):
 
     defaults = {"orientation" : "side by side",
-                "auto_create_id" : False, "button_text" : '', "args" : tuple()}
+                "has_label" : False, "button_text" : '', "args" : tuple()}
     mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : True},
                         "kwargs" : dict}
 
@@ -310,10 +309,6 @@ class Text_Entry(Entry):
 class Text_Field(Field): pass # entry_type defined in ENTRY_TYPE
 
 
-class Text_Display(Text_Field):
-
-    defaults = {"editable" : False, "auto_create_id" : True}
-
 
 class Increment_Button(pride.gui.gui.Button):
 
@@ -435,12 +430,72 @@ class Toggle_Entry(Entry):
 
 from pride.gui.form2 import Form, layout, row_info, field_info
 
-class Dropdown_Entry(Callable_Entry):
+class Dropdown_Form(Form):
 
     defaults = {"menu_open" : True}
-    autoreferences = ("dropdown_form", )
+    interfaces = {"Form" : ("Base",
+                            "Shape",
+                            "Organized_Object",
+                            "Window_Object"),
+                  "Row" : ("Base",
+                           "Shape",
+                           "Organized_Object",
+                           "Window_Object"),
+                  "Field" : ("Field", "Dropdown")}
+
     hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
                (DOWN_ARROW, None) : "handle_down_arrow"}
+
+    def select_entry(self, value, index):
+        if self.menu_open:
+            self.close_menu(value, index)
+        else:
+            self.open_menu()
+
+    def open_menu(self):
+        self.vertical_slider.show()
+        self.pack()
+        self.load_rows()
+        self.menu_open = True
+
+    def close_menu(self, value, index):
+        dropdown_entry = self.parent
+        dropdown_entry.value = value
+        dropdown_entry.current_value_index = index
+
+        if index not in (row.current_row_number for row in self.visible_rows):
+            self.y_scroll_value = index
+
+        for row in self.visible_rows:
+            if row.current_row_number != index:
+                row.hide()
+                row.pack()
+
+        self.menu_open = False
+        self.vertical_slider.hide()
+        self.pack()
+
+    def handle_up_arrow(self):
+        if not self.menu_open:
+            self.open_menu()
+        before = self.y_scroll_value
+        modulus = (len(self.layout[0]) - self.max_rows)  + 1
+        self.y_scroll_value = (self.y_scroll_value - 1) % modulus
+        self.synchronize_scroll_bars()
+
+    def handle_down_arrow(self):
+        if not self.menu_open:
+            self.open_menu()
+
+        before = self.y_scroll_value
+        modulus = (len(self.layout[0]) - self.max_rows) + 1
+        self.y_scroll_value = (self.y_scroll_value + 1) % modulus
+        self.synchronize_scroll_bars()
+
+
+class Dropdown_Entry(Callable_Entry):
+
+    autoreferences = ("dropdown_form", )
 
     def __init__(self, **kwargs):
         super(Dropdown_Entry, self).__init__(**kwargs)
@@ -456,60 +511,13 @@ class Dropdown_Entry(Callable_Entry):
                 i, value in enumerate(self.parent_field.values))
 
         _layout = layout(*rows)
-        self.dropdown_form = self.create(Form, layout=_layout)
+        self.dropdown_form = self.create(Dropdown_Form, layout=_layout)
         self.select_entry(self.parent_field.values[0], 0)
-
-    def select_entry(self, value, index):
-        if self.menu_open:
-            self.close_menu(value, index)
-        else:
-            self.open_menu()
-
-    def open_menu(self):
-        form = self.dropdown_form
-        form.vertical_slider.show()
-        form.pack()
-        form.load_rows()
-        self.menu_open = True
-
-    def close_menu(self, value, index):
-        form = self.dropdown_form
-        self.value = value
-        self.current_value_index = index
-        if index not in (row.current_row_number for row in form.visible_rows):
-            form.y_scroll_value = index
-
-        for row in form.visible_rows:
-            if row.current_row_number != index:
-                row.hide()
-                row.pack()
-
-        self.menu_open = False
-        form.vertical_slider.hide()
-        form.pack()
-
-    def handle_up_arrow(self):
-        if not self.menu_open:
-            self.open_menu()
-        form = self.dropdown_form
-        before = form.y_scroll_value
-        modulus = (len(form.layout[0]) - form.max_rows)  + 1
-        form.y_scroll_value = (form.y_scroll_value - 1) % modulus
-        form.synchronize_scroll_bars()
-
-    def handle_down_arrow(self):
-        if not self.menu_open:
-            self.open_menu()
-        form = self.dropdown_form
-        before = form.y_scroll_value
-        modulus = (len(form.layout[0]) - form.max_rows) + 1
-        form.y_scroll_value = (form.y_scroll_value + 1) % modulus
-        form.synchronize_scroll_bars()
 
 
 class Dropdown_Field(Callable_Field):
 
-    defaults = {"auto_create_id" : True,
+    defaults = {"has_label" : True,
                 "orientation" : "side by side"}
 
 
@@ -669,9 +677,9 @@ class _Endcap_Entry(Text_Entry):
         slider_field.update_position_from_value()
 
 
-class _Endcap(Text_Display):
+class _Endcap(Text_Entry):
 
-    defaults = {"auto_create_id" : False}
+    defaults = {"editable" : False, "has_label" : False}
 
 
 class Slider_Entry(Entry):

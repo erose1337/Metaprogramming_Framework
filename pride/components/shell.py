@@ -247,7 +247,7 @@ class Program(pride.components.base.Base):
         pride.objects[self.command_line].add_program(self.name, (self.reference, "handle_input"))
 
 
-class Python_Shell(Program):
+class Program_Shell(Program):
 
     defaults = {"name" : "python", "shell_connection" : "/User/Shell"}
 

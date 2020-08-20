@@ -199,7 +199,7 @@ class SSL_Socket(pride.components.network.Tcp_Socket):
         try:
             self.on_select()
         except socket.error as error:
-            pride.objects["/Python/Network"].error_handler.dispatch(self, error,
+            pride.objects["/Program/Network"].error_handler.dispatch(self, error,
                       pride.components.network.ERROR_CODES[error.errno].lower())
 
 

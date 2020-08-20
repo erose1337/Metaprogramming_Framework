@@ -51,7 +51,7 @@ class Pride_Shell_Button(pride.gui.gui.Button):
     defaults = {"text" : "pride shell", "h_range" : (.025, .1)}
 
     def left_click(self, mouse):
-        self.parent.launcher_window.launch_program("pride.gui.shell.Python_Shell")
+        self.parent.launcher_window.launch_program("pride.gui.shell.Program_Shell")
 
 
 class OS_Program_Button(pride.gui.gui.Button):

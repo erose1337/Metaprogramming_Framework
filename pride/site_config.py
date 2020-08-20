@@ -151,7 +151,7 @@ def open_firefox():
         return selenium.webdriver.Firefox()
 
 def create(instance_type, *args, **kwargs):
-    return objects["/Python"].create(instance_type, *args, **kwargs)
+    return objects["/Program"].create(instance_type, *args, **kwargs)
 
 def delete(reference):
     objects[reference].delete()

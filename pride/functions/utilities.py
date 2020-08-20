@@ -268,7 +268,7 @@ def resolve_string(module_name):
        Alternatively, resolves a reference from the objects dictionary, and
        potentially loads a specified attribute i.e.:
 
-        resolve_string("/Python") == objects["/Python"]
+        resolve_string("/Program") == objects["/Program"]
         resolve_string("/User/Shell.logged_in") == objects["/User/Shell"].logged_in
 
        Can also be used to import modules:
@@ -333,8 +333,8 @@ def test_pack_unpack():
 
 def test_isancestor_isdescendant():
     import pride
-    descendant = pride.objects["/Python/Rpc_Server/Rpc_Socket"]
-    ancestor = pride.objects["/Python"]
+    descendant = pride.objects["/Program/Rpc_Server/Rpc_Socket"]
+    ancestor = pride.objects["/Program"]
     assert isancestor(ancestor, descendant)
     assert isdescendant(descendant, ancestor)
 

@@ -24,7 +24,7 @@ def rebuild_object(saved_data):
     #user = pride.objects["/User"]
     #attributes = user.load_data(saved_data)
     #repo_id = user.generate_tag(user.username)
-    #version_control = pride.objects["/Python/Version_Control"]
+    #version_control = pride.objects["/Program/Version_Control"]
     #_required_modules = []
     #module_info = attributes.pop("_required_modules")
     #class_name = saved_data["_required_modules"].pop()
@@ -85,7 +85,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         - A reference attribute, which provides access to the object from any context.
             - References are human readable strings indicating the name of an object.
             - References are mapped to objects in the pride.objects dictionary.
-            - An example reference looks like "/Python/File_System".
+            - An example reference looks like "/Program/File_System".
             - Initial objects have no number appended to the end. The 0 is implied.
                 - Explicit is better then implicit, but for some objects, it
                   makes no sense to have multiple copies, so enumerating them
@@ -562,7 +562,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 attribute_type[key] = "saved"
 
         #required_modules = pride.functions.module_utilities.get_all_modules_for_class(type(self))
-        #version_control = objects["/Python/Version_Control"]
+        #version_control = objects["/Program/Version_Control"]
         #user = objects["/User"]
         #hash_function = user.generate_tag
         #repo_id = hash_function(user.username)

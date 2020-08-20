@@ -256,11 +256,11 @@ class File(base.Wrapper):
             self.delete()
         else:
             raise ValueError("File type '{}' does not exist on file system".format(self.file_type))
-        pride.objects["/Python/File_System"].delete_file(self.filename)
+        pride.objects["/Program/File_System"].delete_file(self.filename)
 
 
 class Database_File(File):
-    """ A file that persists in the /Python/File_System when saved or flushed.
+    """ A file that persists in the /Program/File_System when saved or flushed.
         Standard read/write/seek operations take place with a file like object
         of type file_type. Data is manipulated in memory and is only saved to the
         database when flush or save is called.
@@ -273,7 +273,7 @@ class Database_File(File):
 
     def __init__(self, filename='', mode='', **kwargs):
         super(Database_File, self).__init__(filename, mode, **kwargs)
-        data, tags = pride.objects["/Python/File_System"]._open_file(self.filename, self.mode, self.tags)
+        data, tags = pride.objects["/Program/File_System"]._open_file(self.filename, self.mode, self.tags)
 
         filename = {"filename" : self.filename}
         if tags != self.tags:
@@ -305,15 +305,15 @@ class Database_File(File):
         self.delete()
 
     def save(self):
-        """ Saves file contents and metadata to /Python-File_System. """
+        """ Saves file contents and metadata to /Program-File_System. """
         file = self.file
         backup_position = file.tell()
         file.seek(0)
-        pride.objects["/Python/File_System"].save_file(self.filename, file.read(), self.tags)
+        pride.objects["/Program/File_System"].save_file(self.filename, file.read(), self.tags)
         file.seek(backup_position)
 
     def delete_from_filesystem(self):
-        pride.objects["/Python/File_System"].delete_file(self.filename)
+        pride.objects["/Program/File_System"].delete_file(self.filename)
         self.delete()
 
 
@@ -324,18 +324,18 @@ class Encrypted_File(Database_File):
 
   #  def __init__(self, **kwargs):
   #      super(Encrypted_File, self).__init__(**kwargs)
-  #      data = pride.objects["/Python/Encryption_Service"]
+  #      data = pride.objects["/Program/Encryption_Service"]
 
     def save(self):
         file = self.file
         position = file.tell()
         file.seek(0)
-        data = pride.objects["/Python/Encryption_Service"].encrypt(file.read(), self.crypto_provider)
-        pride.objects["/Python/File_System"].save_file(self.get_filename(), data, self.tags)
+        data = pride.objects["/Program/Encryption_Service"].encrypt(file.read(), self.crypto_provider)
+        pride.objects["/Program/File_System"].save_file(self.get_filename(), data, self.tags)
         file.seek(position)
 
     def get_filename(self):
-        user = pride.objects["/Python/Session"] if self.crypto_provider == "session" else pride.objects["/User"]
+        user = pride.objects["/Program/Session"] if self.crypto_provider == "session" else pride.objects["/User"]
         return user.generate_tag(user.file_system_key + user.salt + self.filename)
 
 

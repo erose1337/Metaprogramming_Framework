@@ -4,7 +4,7 @@ import pride.functions.persistence
 class Persistent_Storage(pride.components.database.Database):
     """ Usage:
 
-        storage = pride.objects["/Python/Persistent_Storage"]
+        storage = pride.objects["/Program/Persistent_Storage"]
 
         storage["my_persistent_data"] = data
         or

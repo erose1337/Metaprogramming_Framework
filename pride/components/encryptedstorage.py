@@ -49,7 +49,7 @@ class Encryption_Service(pride.components.base.Base):
         elif crypto_provider == "pride":
             return pride.objects["/User"].encrypt(data)
         elif crypto_provider == "session":
-            return pride.objects["/Python/Session"].encrypt(data)
+            return pride.objects["/Program/Session"].encrypt(data)
         else:
             raise ValueError("Invalid crypto_provider: '{}'; Supported: ('{}', '{}', '{}')".format(crypto_provider, "OS", "pride", "session"))
             
@@ -59,13 +59,13 @@ class Encryption_Service(pride.components.base.Base):
         elif crypto_provider == "pride":
             return pride.objects["/User"].decrypt(data)
         elif crypto_provider == "session":
-            return pride.objects["/Python/Session"].decrypt(data)
+            return pride.objects["/Program/Session"].decrypt(data)
         else:
             raise ValueError("Invalid crypto_provider: '{}'; Allowed: ('{}', '{}', '{}')".format(crypto_provider, "OS", "pride", "session"))
             
 def test_Encryption_Service():
     data = "Message!" * 2    
-    storage = pride.objects["/Python/Encryption_Service"]    
+    storage = pride.objects["/Program/Encryption_Service"]    
     for provider in ("pride", "OS", "session"):
         encrypted_memory = storage.encrypt(data, provider)
         assert storage.decrypt(encrypted_memory, provider) == data

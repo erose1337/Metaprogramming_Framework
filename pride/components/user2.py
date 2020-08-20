@@ -35,18 +35,18 @@ def decrypt_identity(cryptogram, encryption_key, mac_key):
     identifier, private_key, public_key, secret = load_data(serialized_data)
     return private_key, public_key, secret
 
-def store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, storage="/Python/Persistent_Storage"):
+def store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, storage="/Program/Persistent_Storage"):
     """ usage: store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret,
-                              storage="/Python/Persistent_Storage") => None
+                              storage="/Program/Persistent_Storage") => None
 
         Encrypts the identifier/key pair/secret information and stores it in the object specified as storage.
         The storage object must support __getitem__ and __setitem__"""
     cryptogram = encrypt_identity(identifier, (private_key, public_key), secret, encryption_key, mac_key)
     pride.objects[storage]["/Users/{}".format(identifier)] = cryptogram
 
-def load_identity(identifier, encryption_key, mac_key, storage="/Python/Persistent_Storage"):
+def load_identity(identifier, encryption_key, mac_key, storage="/Program/Persistent_Storage"):
     """ usage: load_identity(identifier, encryption_key, mac_key,
-                             storage="/Python/Persistent_Storage") => private_key, public_key, secret
+                             storage="/Program/Persistent_Storage") => private_key, public_key, secret
 
         Returns serialized private key, serialized public key, and secret bytes.
         Raises KeyError if identifier is not found."""
@@ -68,7 +68,7 @@ class User(pride.components.base.Base):
                 "public_key" : None, "private_key" : None, "password" : '',
                 "logged_in" : False,
 
-                "storage_reference" : "/Python/Persistent_Storage",
+                "storage_reference" : "/Program/Persistent_Storage",
                 "password_prompt" : "{}: Please enter the password for '{}': ",
                 "auto_register" : False, "auto_login" : True, "prompt_flag" : True,
                 "prompt_for_creds" : True}
@@ -283,7 +283,7 @@ class User(pride.components.base.Base):
                    token = user.generate_strong_login_token(client_program, username, password_size)
 
             Generates a cryptographically strong password, derived from the identity secret material.
-            This password is only available on the machine that /Python/Persistent_Storage resides on."""
+            This password is only available on the machine that /Program/Persistent_Storage resides on."""
         kdf = pride.functions.security.hkdf_expand(self.kdf_hash_algorithm, password_size,
                                                    info=client_program + ':' + username)
         return kdf.derive(self.secret)
@@ -328,8 +328,8 @@ def test_User():
     user.hash(tagged)
 
     user.generate_tag(tagged)
-    user.generate_strong_password("/Python/Data_Transfer_Service", "test_User_unit_test")
-    user.generate_portable_password("/Python/Data_Transfer_Service", "test_User_unit_test")
+    user.generate_strong_password("/Program/Data_Transfer_Service", "test_User_unit_test")
+    user.generate_portable_password("/Program/Data_Transfer_Service", "test_User_unit_test")
 
     message = "sign here: "
     signature = user.private_key.sign(message)

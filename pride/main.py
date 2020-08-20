@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-""" Launcher script for the Python Runtime and Integrated Development Environment.
-    This script starts a python session, and the first positional argument supplied is
-    interpreted as the filepath of the python script to execute. ."""
+""" The first positional argument supplied is
+    interpreted as the filepath of the python script to execute."""
 from __future__ import unicode_literals
 from platform import python_version_tuple
 import socket # to catch socket.error
@@ -13,8 +12,8 @@ def main():
     import pride.components.interpreter
     running = True
     while running:
-        assert "/Python" not in pride.objects
-        python = pride.components.interpreter.Python(parse_args=True)
+        assert "/Program" not in pride.objects
+        python = pride.components.interpreter.Program(parse_args=True)
 
         try:
             python.start_machine()

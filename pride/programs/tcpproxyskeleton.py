@@ -31,5 +31,5 @@ class _Server(pride.components.network.Server):
     defaults = {"port" : 4000, "Tcp_Socket_type" : Server_Socket}
 
 if __name__ == "__main__":
-    _server = pride.objects["/Python"].create(_Server)
-    _client = pride.objects["/Python"].create(Client_Socket, ip=insert IP here) # IP is of the form "w.x.y.z"
+    _server = pride.objects["/Program"].create(_Server)
+    _client = pride.objects["/Program"].create(Client_Socket, ip=insert IP here) # IP is of the form "w.x.y.z"

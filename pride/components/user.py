@@ -30,7 +30,7 @@ except ImportError:
                     # login/key derivation can be bypassed by supplying keys directly
                     # note that encryption key, salt, and mac key must be supplied to
                     # skip the login/key derivation process
-                    # filesystem_key is used to access nonindexable files in /Python/File_System
+                    # filesystem_key is used to access nonindexable files in /Program/File_System
                     "encryption_key" : bytes(), "salt" : bytes(), "mac_key" : bytes(),
                     "file_system_key" : bytes(),
 
@@ -43,7 +43,7 @@ except ImportError:
                     "hkdf_file_system_info_string" : "{} File_System key",
                     "password_prompt" : "{}: Please provide the pass phrase or word: ",
 
-                    # the salt and verifier file are stored in the /Python/File_System
+                    # the salt and verifier file are stored in the /Program/File_System
                     # nonindexable files have the filename hashed upon storing/search
                     "salt_filetype" : "pride.components.fileio.Database_File",
                     "verifier_filetype" : "pride.components.fileio.Database_File",

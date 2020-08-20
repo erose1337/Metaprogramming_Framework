@@ -21,7 +21,7 @@ def file_operation(filename, mode, method, file_type="open", offset=None, data=N
             return _file.read(data)
 
 class Background_Refresh(pride.components.scheduler.Process):
-    """ Usage: pride.objects['/Python/Background_Refresh'].add(client_object)
+    """ Usage: pride.objects['/Program/Background_Refresh'].add(client_object)
 
         Calls client.refresh for all clients in Background_Refresh.children.
 
@@ -43,11 +43,11 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
         machines. However, any Data Transfer Service that forwards the data towards
         its destination will be able to view and/or manipulate the data. """
 
-    defaults = {"target_service" : "/Python/Data_Transfer_Service"}
+    defaults = {"target_service" : "/Program/Data_Transfer_Service"}
     verbosity = {"send_to" : "vvv"}
 
     def __init__(self, **kwargs):
-        pride.objects["/Python/Background_Refresh"].callbacks.append((self, "refresh"))
+        pride.objects["/Program/Background_Refresh"].callbacks.append((self, "refresh"))
         super(Data_Transfer_Client, self).__init__(**kwargs)
 
     @pride.components.authentication3.remote_procedure_call(callback_name="receive")
@@ -72,7 +72,7 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
         self.send_to('', '')
 
     def delete(self):
-        pride.objects["/Python/Background_Refresh"].callbacks.remove((self, "refresh"))
+        pride.objects["/Program/Background_Refresh"].callbacks.remove((self, "refresh"))
         super(Data_Transfer_Client, self).delete()
 
 

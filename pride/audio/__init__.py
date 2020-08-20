@@ -34,10 +34,10 @@ else:
 def enable():
     """ Creates an instance of pride.audio.audiolibrary.Audio_Manager if
         one does not already exist. """
-    if "/Python/Audio_Manager" not in pride.objects:
-        pride.objects["/Python"].create("pride.audio.audiolibrary.Audio_Manager")
+    if "/Program/Audio_Manager" not in pride.objects:
+        pride.objects["/Program"].create("pride.audio.audiolibrary.Audio_Manager")
     else:
-        raise ValueError("/Python/Audio_Manager already exists")
+        raise ValueError("/Program/Audio_Manager already exists")
 
 def mix_signals(audio_data, bit_width):
     _data = []
@@ -59,8 +59,8 @@ class Audio_Transfer(pride.components.datatransfer.Data_Transfer_Client):
         Audio data received from clients is output through the specified
         audio output (default: Speakers). """
 
-    defaults = {"audio_input" : "/Python/Audio_Manager/Audio_Input",
-                "audio_output" : "/Python/Audio_Manager/Audio_Output",
+    defaults = {"audio_input" : "/Program/Audio_Manager/Audio_Input",
+                "audio_output" : "/Program/Audio_Manager/Audio_Output",
                 "receivers" : tuple()}
 
     required_attributes = ("receivers", )

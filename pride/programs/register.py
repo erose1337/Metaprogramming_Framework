@@ -18,7 +18,7 @@ class Service_Registration(pride.components.base.Base):
         super(Service_Registration, self).__init__(**kwargs)
         username = self.username or pride.objects["/User"].username
         password = self.password or pride.objects["/User"].password
-        client = pride.objects["/Python"].create(self.authentication_client_name,
+        client = pride.objects["/Program"].create(self.authentication_client_name,
                                                   auto_login=False,
                                                   username=username, password=password,
                                                   _register_callback=sys.exit)#lambda status: sys.exit())

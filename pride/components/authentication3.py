@@ -281,7 +281,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                  "not_registered" : 0, "change_credentials" : 0, "invalid_password" : 0,
                  "registering_locally" : 0}
 
-    defaults = {"target_service" : "/Python/Authenticated_Service",
+    defaults = {"target_service" : "/Program/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
                 "password_prompt" : "{}: Please provide the pass phrase or word for {}@{}: ",
                 "auto_login" : True, "auto_register" : False,
@@ -333,7 +333,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         super(Authenticated_Client, self).__init__(**kwargs)
         self.password_prompt = self.password_prompt.format(self.reference, self.target_service, self.ip)
 
-        registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+        registered_users = pride.objects["/Program/Persistent_Storage"]["registered_users"]
         user_info = (self.target_service, self.ip, self.username)
         if user_info not in registered_users and self.auto_register:
             self.alert("Auto registering with {}@{} as {}".format(*user_info), level=self.verbosity["auto_register"])
@@ -370,9 +370,9 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         self.alert(self.registration_success_message.format(self.target_service, self.ip, self.username),
                    level=self.verbosity["register_success"])
 
-        registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+        registered_users = pride.objects["/Program/Persistent_Storage"]["registered_users"]
         registered_users.append((self.target_service, self.ip, self.username))
-        pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users
+        pride.objects["/Program/Persistent_Storage"]["registered_users"] = registered_users
 
         if self.auto_login:
             self.login()
@@ -429,7 +429,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         self.alert("{}".format(server_response, level=self.verbosity['login_failure']))
 
         if self.ip in ("localhost", "127.0.0.1"):
-            registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+            registered_users = pride.objects["/Program/Persistent_Storage"]["registered_users"]
             user_info = (self.target_service, self.ip, self.username)
             if user_info not in registered_users:
                 if pride.components.shell.get_permission("{}: Attempt to register?: ".format(self.reference)):
@@ -475,9 +475,9 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         self._new_credentials = None
 
         if success:
-            registered_users = pride.objects["/Python/Persistent_Storage"]["registered_users"]
+            registered_users = pride.objects["/Program/Persistent_Storage"]["registered_users"]
             registered_users.remove((self.target_service, self.ip, old_credentials[0]))
-            pride.objects["/Python/Persistent_Storage"]["registered_users"] = registered_users
+            pride.objects["/Program/Persistent_Storage"]["registered_users"] = registered_users
 
             self.register_success()
         else:

@@ -34,7 +34,7 @@ class Shell(pride.components.authentication3.Authenticated_Client):
     """ Handles keystrokes and sends python source to the Interpreter to
         be executed. This requires authentication via username/password."""
     defaults = {"username" : None, "password" : None, "startup_definitions" : '',
-                "target_service" : "/Python/Interpreter", "stdout" : None}
+                "target_service" : "/Program/Interpreter", "stdout" : None}
 
     verbosity = {"login" : 0, "execute_source" : "vv"}
 
@@ -90,7 +90,7 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         The source code and return value of all requests are logged. """
 
     defaults = {"help_string" : 'Type "help", "copyright", "credits" or "license" for more information.',
-                "login_message" : "Welcome {} from {}\nPython {} on {}\n{}\n",
+                "login_message" : "Welcome {} from {}\Python {} on {}\n{}\n",
                 "_logger_type" : "StringIO.StringIO", "allow_registration" : False}
 
     mutable_defaults = {"user_namespaces" : dict, "user_session" : dict}
@@ -178,7 +178,7 @@ class Interpreter(pride.components.authentication3.Authenticated_Service):
         return attributes
 
 
-class Python(base.Base):
+class Program(base.Base):
     """ The "main" class. Provides an entry point to the environment.
         Instantiating this component and calling the start_machine method
         starts the execution of the Processor component.
@@ -219,7 +219,7 @@ class Python(base.Base):
     verbosity = {"shutdown" : 0, "restart" : 0, "os_environ_set" : 'v'}
 
     def __init__(self, **kwargs):
-        super(Python, self).__init__(**kwargs)
+        super(Program, self).__init__(**kwargs)
         for component_type in self.startup_components:
             component = self.create(component_type)
             setattr(self, component.__class__.__name__.lower(),
@@ -264,15 +264,15 @@ class Python(base.Base):
 
     def get_machine_credentials(self):
         try:
-            machine_id, machine_password = pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"]
+            machine_id, machine_password = pride.objects["/Program/Persistent_Storage"]["_MACHINE_CREDENTIALS"]
         except KeyError:
             machine_id, machine_password = os.urandom(32), os.urandom(32)
-            pride.objects["/Python/Persistent_Storage"]["_MACHINE_CREDENTIALS"] = (machine_id, machine_password)
+            pride.objects["/Program/Persistent_Storage"]["_MACHINE_CREDENTIALS"] = (machine_id, machine_password)
         return base64.standard_b64encode(machine_id), machine_password
 
     def setup_os_environ(self):
-        """ This method is called automatically in Python.__init__; os.environ can
-            be customized on startup via modifying Python.defaults["environment_setup"].
+        """ This method is called automatically in Program.__init__; os.environ can
+            be customized on startup via modifying Program.defaults["environment_setup"].
             This can be useful for modifying system path only for the duration of the applications run time.
             Currently this is only used to point to this files directory for SDL2 dll files. """
         modes = {"=" : "equals",

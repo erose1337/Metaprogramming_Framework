@@ -71,7 +71,7 @@ class Session(pride.components.base.Base):
         _call = component, method = instruction.component_name, instruction.method
         request = DEFAULT_SERIALIZER.dumps(self.id, component, method,
                                            DEFAULT_SERIALIZER.dumps((instruction.args, instruction.kwargs)))
-        host = pride.objects["/Python/Rpc_Connection_Manager"].get_host(self.host_info)
+        host = pride.objects["/Program/Rpc_Connection_Manager"].get_host(self.host_info)
         # we have to insert at the beginning things will happen inline, and
         # must append to the end when network round trips with callbacks are used
         self._callbacks.append((_call, callback))
@@ -251,7 +251,7 @@ class Rpc_Socket(Packet_Socket):
 
     def __init__(self, **kwargs):
         super(Rpc_Socket, self).__init__(**kwargs)
-        self.rpc_workers = itertools.cycle(objects["/Python"].objects["Rpc_Worker"])
+        self.rpc_workers = itertools.cycle(objects["/Program"].objects["Rpc_Worker"])
 
     def on_ssl_authentication(self):
         if self.idle_after:
@@ -425,7 +425,7 @@ class RPC_Service(pride.components.base.Base):
 
 class RPC_Client(pride.components.base.Base):
 
-    defaults = {"target_service" : "/Python/RPC_Service", "ip" : "localhost", "port" : 40022}
+    defaults = {"target_service" : "/Program/RPC_Service", "ip" : "localhost", "port" : 40022}
     mutable_defaults = {"_delayed_requests" : list}
     predefaults = {"bypass_network_stack" : True}
     verbosity = {"delayed_request_sent" : "vv"}

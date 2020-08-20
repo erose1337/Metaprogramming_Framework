@@ -19,18 +19,18 @@ class Outline(pride.gui.gui.Button):
 
 
 
-class Python_Datatype_Button(pride.gui.gui.Button):
+class Program_Datatype_Button(pride.gui.gui.Button):
 
     def __init__(self, value, **kwargs):
-        super(Python_Datatype_Button, self).__init__(**kwargs)
+        super(Program_Datatype_Button, self).__init__(**kwargs)
         self.value = value
         self.text = str(value)
 
 
-class int_Button(Python_Datatype_Button): pass
+class int_Button(Program_Datatype_Button): pass
 
 
-class str_Button(Python_Datatype_Button): pass
+class str_Button(Program_Datatype_Button): pass
 
 
 class List(pride.gui.gui.Container):

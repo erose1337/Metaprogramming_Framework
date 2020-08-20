@@ -97,7 +97,7 @@ class SDL_Window(SDL_Component):
 
     defaults = {"showing" : True,
                 'x' : 0, 'y' : 0, 'z' : 0, 'w' : 1024, 'h' : 768,#pride.gui.SCREEN_SIZE[0], 'h' : pride.gui.SCREEN_SIZE[1],
-                "priority" : .038, "name" : "/Python",
+                "priority" : .038, "name" : "/Program",
                 "tip_bar_type" : "pride.gui.gui.Container", "tip_bar_h_range" : (0, .05),
                 "tip_bar_location" : "bottom",
                 "texture_access_flag" : sdl2.SDL_TEXTUREACCESS_TARGET,

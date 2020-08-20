@@ -3,8 +3,8 @@ import pride.audio
 
 class Messenger(pride.components.datatransfer.Data_Transfer_Client):
     
-    defaults = {"audio_input_device" : "/Python/Audio_Manager/Audio_Input",
-                "audio_output_device" : "/Python/Audio_Manager/Audio_Output"}
+    defaults = {"audio_input_device" : "/Program/Audio_Manager/Audio_Input",
+                "audio_output_device" : "/Program/Audio_Manager/Audio_Output"}
                 
     mutable_defaults = {"send_audio_to" : list}
      

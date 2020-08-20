@@ -74,7 +74,7 @@ class Socket_Error_Handler(pride.components.base.Base):
         else:
             sock.timeout_count -= 1
             sock.alert("Waiting...", level=sock.verbosity["timeout_reset"])
-            objects["/Python/Network"].connecting.add(sock)
+            objects["/Program/Network"].connecting.add(sock)
 
 
 class Socket(base.Wrapper):
@@ -156,7 +156,7 @@ class Socket(base.Wrapper):
         else:
             self.setblocking(self.blocking)
         try:
-            objects["/Python/Network"].add(self)
+            objects["/Program/Network"].add(self)
         except KeyError:
             self.alert("Network component does not exist",
                        level=self.verbosity["network_nonexistant"])
@@ -239,7 +239,7 @@ class Socket(base.Wrapper):
                 self._started_connecting_at = pride.functions.utilities.timestamp()
                 #self.latency = pride.components.datastructures.Latency(size=10)
                 self._connecting = True
-                objects["/Python/Network"].connecting.add(self)
+                objects["/Program/Network"].connecting.add(self)
             else:
                 raise
         else:
@@ -262,7 +262,7 @@ class Socket(base.Wrapper):
 
     def close(self):
         self.alert("Closing", level=self.verbosity["close"])
-        objects["/Python/Network"].remove(self)
+        objects["/Program/Network"].remove(self)
         if self.shutdown_on_close and self.connected:
             self.wrapped_object.shutdown(self.shutdown_flag)
         self.wrapped_object.close()
@@ -285,7 +285,7 @@ class Socket(base.Wrapper):
         self.settimeout(self.timeout)
 
         try:
-            pride.objects["/Python/Network"].add(self)
+            pride.objects["/Program/Network"].add(self)
         except KeyError:
             self.alert("Network unavailable")
 
@@ -378,7 +378,7 @@ class Server(Tcp_Socket):
             self.delete()
             raise
         self.listen(self.backlog)
-        pride.objects["/Python/Network_Connection_Manager"].servers[(self.interface, self.port)] = self.reference
+        pride.objects["/Program/Network_Connection_Manager"].servers[(self.interface, self.port)] = self.reference
 
     def on_select(self):
         try:

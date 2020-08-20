@@ -71,9 +71,9 @@ class Black_Box_Service(pride.components.authentication3.Authenticated_Service):
 
 class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
 
-    defaults = {"target_service" : "/Python/Black_Box_Service",
+    defaults = {"target_service" : "/Program/Black_Box_Service",
                 "mouse_support" : False, "refresh_interval" : .95,
-                "audio_support" : False, "audio_source" : "/Python/Audio_Manager/Audio_Input",
+                "audio_support" : False, "audio_source" : "/Program/Audio_Manager/Audio_Input",
                 "microphone_on" : False, "sdl_window" : None,
                 "response_methods" : ("handle_response_draw", )}
     required_attributes = ("sdl_window", )
@@ -140,7 +140,7 @@ def test_black_box_service():
         pride.objects["/User"].create("pride.components.shell.Command_Line")
     window = pride.gui.enable()
     #pride.audio.enable()
-    service = pride.objects["/Python"].create(Black_Box_Service)
+    service = pride.objects["/Program"].create(Black_Box_Service)
     client = Black_Box_Client(username="localhost", sdl_window=window, mouse_support=True, audio_support=False)
 
 if __name__ == "__main__":

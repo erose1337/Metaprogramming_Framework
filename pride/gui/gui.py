@@ -20,8 +20,8 @@ THEME_TYPE = {"Minimal" : "pride.gui.themes.Minimal_Theme",
               "Animated" : "pride.gui.themes.Animated_Theme2"}
 
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
-                   factory="/Python/SDL_Window/Renderer/SpriteFactory",
-                   renderer="/Python/SDL_Window/Renderer"):
+                   factory="/Program/SDL_Window/Renderer/SpriteFactory",
+                   renderer="/Program/SDL_Window/Renderer"):
     return objects[factory].create_texture_sprite(objects[renderer].wrapped_object,
                                                   size, access=access)
 

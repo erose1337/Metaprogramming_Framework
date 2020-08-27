@@ -29,3 +29,32 @@ class Config(dict):
         for key, value in kwargs.items():
             self[key] = value
 # end code for subcomponent_kwargs
+
+
+class Interface(tuple):
+
+    def __init__(self, args=tuple()):
+        super(Interface, self).__init__()
+        try:
+            methods = args[0]
+        except IndexError:
+            methods = tuple()
+            attrs = tuple()
+        else:
+            try:
+                attrs = args[1]
+            except IndexError:
+                attrs = tuple()
+        self.methods = methods
+        self.attrs = attrs
+
+    def __getitem__(self, key):
+        if key == 0:
+            return self.methods
+        elif key == 1:
+            return self.attrs
+        else:
+            raise IndexError()
+
+    def __iadd__(self, rhs):
+        return Interface((self[0] + rhs[0], self[1] + rhs[1]))

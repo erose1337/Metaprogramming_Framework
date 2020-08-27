@@ -161,7 +161,7 @@ def test_compile_filename():
     out2 = compile_filename("_form2test.txt")
     assert out1 == out2, '\n' + pprint.pformat((out1, out2))
 
-from pride.components import deep_update, Config
+from pride.components import deep_update
 import pride.gui.gui
 import pride.gui.widgets
 import pride.gui.widgets.form
@@ -248,9 +248,9 @@ class Row(pride.gui.gui.Container):
 class Form(pride.gui.widgets.form.Scrollable_Window):
 
     defaults = {"target_object" : None}
-    subcomponent_kwargs = {"row" : Config(location="top",
-                                          h_range=(0, 1.0),
-                                        row_type="pride.gui.widgets.form2.Row")}
+    subcomponent_kwargs = {"row" : {"location" : "top",
+                                    "h_range"  : (0, 1.0),
+                                    "row_type" : "pride.gui.widgets.form2.Row"}}
     mutable_defaults = {"rows" : dict}
 
     def create_subcomponents(self):

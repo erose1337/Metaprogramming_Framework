@@ -361,11 +361,11 @@ class Inherited_Attributes(type):
 
             elif issubclass(attribute_type, tuple):
                 empty_tuple = attribute_type()
-                _attribute = empty_tuple
+                _attribute = attribute_type()
                 for _class in bases:
                     _attribute += getattr(_class, attribute_name, empty_tuple)
                 _attribute += attributes.get(attribute_name, empty_tuple)
-                assert len(_attribute) == len(set(_attribute)), (name, attribute_name,  _attribute, set(_attribute), _attribute == set(_attribute))
+                #assert len(_attribute) == len(set(_attribute)), (name, attribute_name,  _attribute, set(_attribute), _attribute == set(_attribute))
                 _attribute = attribute_type(_attribute)
 
             elif issubclass(attribute_type, list):
@@ -393,7 +393,8 @@ class Defaults(Inherited_Attributes):
                             "post_initializer" : str, "allowed_values" : dict,
                             "auto_verbosity_ignore" : tuple,
                             "autoreferences" : tuple, "parser_args" : tuple,
-                            "subcomponent_kwargs" : pride.components.Config}
+                            "subcomponent_kwargs" : pride.components.Config,
+                            "interface" : pride.components.Interface}
 
 
 class Site_Configuration(type):
@@ -438,7 +439,8 @@ class Autodereferencer(type):
 
     def __new__(cls, name, bases, attributes):
         try:
-            for pointer_name, _property in _create_pointers_to_base_object(attributes["autoreferences"]):
+            for (pointer_name,
+                 _property) in _create_pointers_to_base_object(attributes["autoreferences"]):
                 attributes[pointer_name] = _property
         except KeyError:
             if "pointers" in attributes:

@@ -245,12 +245,13 @@ class Organized_Object(pride.gui.shapes.Bounded_Shape):
     """ A `Bounded_Shape` that can be organized into place via the `pack` method.
         `Organized_Object`s have a `location` attribute that determines the placement of the object within its parent."""
 
-    defaults = {'x' : 0, 'y' : 0, "size" : (0, 0), "location" : '',
+    defaults = {"location" : '',
                 "_pack_requested" : False, "_in_pack_queue" : False}
     allowed_values = {"location" : ("left", "right", "top", "bottom", "main",
                                      'z', "fill", None)}
     mutable_defaults = {"_children" : list}
     verbosity = {"packed" : "packed"}
+    interface = (tuple(), ("location", ))
 
     def pack(self):
         """ usage: window_object.pack()
@@ -312,6 +313,9 @@ class _Window_Object(Organized_Object):
     hotkeys = dict()
     inherited_attributes = {"hotkeys" : dict}
     autoreferences = ("_sdl_window", )
+    interface = (tuple(), ("center_text", "hoverable", "wrap_text",
+                           "theme_name", "theme_profile", "text",
+                           "scale_to_text"))
 
     def _get_always_on_top(self):
         return self._always_on_top

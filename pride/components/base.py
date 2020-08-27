@@ -16,6 +16,7 @@ import pride.functions.utilities as utilities
 import pride.functions.contextmanagers
 import pride.functions.module_utilities
 from pride.errors import *
+from pride.components import deep_update
 
 __all__ = ["DeleteError", "AddError", "load", "Base", "Reactor", "Wrapper", "Proxy"]
 
@@ -330,7 +331,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 setattr(self, attribute, value_type())
 
         for attribute, value in itertools.chain(self.predefaults.items(),
-                                                self.defaults.items()):
+                                                self.defaults.items(),
+                                                kwargs.items()):
             setattr(self, attribute, value)
 
         if self.subcomponent_kwargs:
@@ -340,10 +342,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 setattr(self, attribute, value)
                 if attribute in kwargs:
                     new_value = kwargs.pop(attribute)
-                    _update_dict(value, new_value)
-        if kwargs:
-            for key, value in kwargs.items():
-                setattr(self, key, value)
+                    deep_update(value, new_value)
 
         if self.parse_args:
             command_line_args = self.parser.get_options()

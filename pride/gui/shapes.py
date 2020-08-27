@@ -5,6 +5,8 @@ import sdl2.ext # for Color
 class Shape(pride.components.base.Base):
 
     coordinates = ('x', 'y', 'w', 'h', 'z')
+    interface = (("delete", ),
+                 ('x', 'y', 'w', 'h', 'z', "position", "size", "area"))
 
     def __init__(self, **kwargs):
         for coordinate in self.coordinates:
@@ -92,6 +94,8 @@ class Bounded_Shape(Shape):
             value = (value[0], int(round(value[1] * screen_h)))
         self._h_range = value
     h_range = property(_get_h_range, _set_h_range)
+
+    interface = (tuple(), ("h_range", "w_range"))
 
     def __init__(self, **kwargs):
         assert not isinstance(kwargs["sdl_window"], str), kwargs

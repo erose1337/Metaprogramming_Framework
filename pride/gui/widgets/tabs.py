@@ -1,5 +1,4 @@
 import pride.gui.widgets.form
-from pride.components import Config
 from pride.functions.utilities import slide
 field_info = pride.gui.widgets.form.field_info
 
@@ -59,34 +58,34 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                 "new_tab_button_type" : "pride.gui.widgets.form.Form"}
     autoreferences = ("tab_bar", "top_bar")
 
-    subcomponent_kwargs = Config(top_bar={"location" : "top",
-                                          "h_range" : (0, .05)},
-                                 tab_bar={"location" : "left",
-                                          "entry_kwargs" : {"orientation" :
+    subcomponent_kwargs = {"top_bar" : {"location" : "top",
+                                        "h_range" : (0, .05)},
+                           "tab_bar" : {"location" : "left",
+                                        "entry_kwargs" : {"orientation" :
                                                                       "stacked",
                                                      "include_minmax_buttons" :
                                                                          False},
-                                          "form_name" : '', "max_rows" : 1},
-                                 new_tab_button= {"location" : "left",
-                                                  "button_text" : '+',
-                                                  "entry_kwargs" :
-                                                         {"scale_to_text" : False},
-                                                  "w_range" : (0, .05)},
-                                 new_tab_button2={"location" : "left",
-                                                  "w_range" : (0, .05)},
-                                 tab={"button_text" : "New Window",
-                                      "theme_profile" : "placeholder",
-                                      "field_type" :
-                                      "pride.gui.widgets.tabs.Tab_Button_Field",
-                                      "entry_kwargs" : {"scale_to_text" : True,
-                                                    "use_lazy_loading" : True}},
-                                tab_bar_row=dict(),
-                                tab_delete_button=
-                                {"button_text" : 'x',
-                                 "theme_profile" : "placeholder",
-                                 "entry_kwargs" :
+                                        "form_name" : '', "max_rows" : 1},
+                           "new_tab_button" : {"location" : "left",
+                                               "button_text" : '+',
+                                               "entry_kwargs" :
+                                                      {"scale_to_text" : False},
+                                               "w_range" : (0, .05)},
+                           "new_tab_button2" : {"location" : "left",
+                                                "w_range" : (0, .05)},
+                           "tab" : {"button_text" : "New Window",
+                                    "theme_profile" : "placeholder",
+                                    "field_type" :
+                                    "pride.gui.widgets.tabs.Tab_Button_Field",
+                                    "entry_kwargs" : {"scale_to_text" : True,
+                                                  "use_lazy_loading" : True}},
+                          "tab_bar_row" : dict(),
+                          "tab_delete_button" :
+                              {"button_text" : 'x',
+                               "theme_profile" : "placeholder",
+                               "entry_kwargs" :
                                                {"theme_profile" : "placeholder",
-                                                "scale_to_text" : True}})
+                                                "scale_to_text" : True}}}
 
     def __init__(self, **kwargs):
         super(Tabbed_Window, self).__init__(**kwargs)
@@ -126,7 +125,7 @@ class Tabbed_Window(pride.gui.widgets.form.Scrollable_Window):
                 tab_kwargs = _kwargs.copy()
                 tab_kwargs.setdefault("w_range", (0, 1.0 / self.tabs_per_row))
                 tab_kwargs["args"] = (_object, )
-                tab_kwargs.update(getattr(_object, "tab_kwargs", Config()))
+                tab_kwargs.update(getattr(_object, "tab_kwargs", dict()))
                 _row.append(field_info("select_tab", **tab_kwargs))
             fields.append(_row)
         return fields

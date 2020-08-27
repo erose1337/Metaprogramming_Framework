@@ -168,8 +168,9 @@ def test_compile_filename():
     out2 = compile_filename("_form2test.txt")
     assert out1 == out2, '\n' + pprint.pformat((out1, out2))
 
-from pride.components import deep_update, Config
 import pride.gui.gui
+from pride.components import deep_update
+from pride.functions.utilities import resolve_string
 
 class Scrollable_Window(pride.gui.gui.Window):
 
@@ -212,14 +213,14 @@ class Scrollable_Window(pride.gui.gui.Window):
             self.create(slider_type, location=position,
                         orientation="stacked", w_range=(0, .025),
                         name="y_scroll_value", minimum=0, maximum=0,
-                        auto_create_id=False, target_object=self,
+                        has_label=False, target_object=self,
                         entry_kwargs=self.vertical_slider_entry_kwargs)
         position = self.horizontal_slider_location
         if position is not None:
             self.horizontal_slider = \
             self.create(slider_type, location=position,
                         orientation="side by side", h_range=(0, .025),
-                        auto_create_id=False, target_object=self,
+                        has_label=False, target_object=self,
                         name="x_scroll_value", minimum=0, maximum=0,
                         entry_kwargs=self.horizontal_slider_entry_kwargs,)
 
@@ -229,10 +230,6 @@ class Scrollable_Window(pride.gui.gui.Window):
     def handle_y_scroll(self, old_value, new_value):
         pass
 
-# should not be an attribute of Form;
-# otherwise it could be overwritten via kwargs when the Form is instantiated
-# if the kwargs are controlled by an adversary (i.e. a malicious layout file)
-# the field_type argument could be used to call any function
 
 FIELD_TYPES = {"Dropdown" : "pride.gui.fields.Dropdown_Field",
                "Slider" : "pride.gui.fields.Slider_Field",
@@ -241,7 +238,7 @@ FIELD_TYPES = {"Dropdown" : "pride.gui.fields.Dropdown_Field",
                "Text_Field" : "pride.gui.fields.Text_Field",
                "Text_Display" : "pride.gui.fields.Text_Display",
                "Callable" : "pride.gui.fields.Callable_Field",
-               "Dropdown_Callable" : "pride.gui.fields._Dropdown_Callable"}
+               "Dropdown_Callable" : "pride.gui.fields.Dropdown_Callable"}
 
 
 class Row(pride.gui.gui.Container):
@@ -286,49 +283,43 @@ class Visible_Row(pride.gui.gui.Container):
         self.unload_row(tuple())
         super(Visible_Row, self).delete()
 
-API = {"Base" : (("delete", ), tuple()),
-       "Shape" : (tuple(), ("h_range", "w_range")),
-       "Organized_Object" : (tuple(), ("location", )),
-       "Window_Object" : (tuple(), ("center_text", "hoverable", "wrap_text",
-                                    "theme_name", "theme_profile", "text",
-                                    "scale_to_text")),
-       "Form" : (tuple(), ("max_rows", "horizontal_slider_location",
-                           "vertical_slider_location")),
-       "Entry" : (tuple(), ("location", "show_status_when_selected",)),
-       "Field" : (tuple(), ("name", "orientation", "editable",
-                            "location", "has_label", "display_name",
-                            "button_text", "args",
-                            "include_incdec_buttons", "minimum", "maximum",
-                            "include_minmax_buttons", "hide_text",
-                            "values")),
-       "Dropdown" : (("select_entry", ), ("select_entry", ))}
 
-def flatten_interface(interfaces):
-    methods = []
-    attributes = []
-    for api_name in interfaces:
-        interface_methods, interface_attributes = API[api_name]
-        methods.extend(interface_methods)
-        attributes.extend(interface_attributes)
-    return (methods, attributes)
+def raise_error(row_no, text, *format_args):
+    message  = "Row {}\n".format(row_no)
+    message += '-' * min(79,
+                         len("ValueError: ") + len(message))
+    message += '\n'
+    message += text.format(*format_args)
+    raise ValueError(message)
+
+def raise_error2(row_no, f_name, text, *format_args):
+    message  = "Row {}; Field: {}\n".format(row_no, f_name)
+    message += '-' * min(79,
+                         len("ValueError: ") + len(message))
+    message += '\n'
+    message += text.format(*format_args)
+    raise ValueError(message)
 
 
 class Form(Scrollable_Window):
 
     defaults = {"target_object" : None, "max_rows" : 4,
                 "horizontal_slider_location" : None}
-    subcomponent_kwargs = {"row" : Config(location="top",
-                                          h_range=(0, 1.0))}
+    subcomponent_kwargs = {"row" : {"location" : "top",
+                                    "h_range" : (0, 1.0)}}
     mutable_defaults = {"rows" : dict, "visible_rows" : list}
-    interfaces = {"Form" : ("Base",
-                            "Shape",
-                            "Organized_Object",
-                            "Window_Object"),
-                  "Row" : ("Base",
-                           "Shape",
-                           "Organized_Object",
-                           "Window_Object"),
-                  "Field" : ("Field", )}
+    interface = (tuple(), ("max_rows", "horizontal_slider_location",
+                           "vertical_slider_location"))
+
+    #interfaces = {"Form" : ("Base",
+    #                        "Shape",
+    #                        "Organized_Object",
+    #                        "Window_Object"),
+    #              "Row" : ("Base",
+    #                       "Shape",
+    #                       "Organized_Object",
+    #                       "Window_Object"),
+    #              "Field" : ("Field", )}
 
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
@@ -361,8 +352,7 @@ class Form(Scrollable_Window):
         self.synchronize_scroll_bars()
 
     def filter_layout(self):
-        (form_iface_methods,
-         form_iface_attrs) = flatten_interface(self.interfaces["Form"])
+        form_iface_methods, form_iface_attrs = self.interface
 
         # if a key is in the form.__dict__,
         #    then it must be listed in the interface to be accessible
@@ -378,66 +368,57 @@ class Form(Scrollable_Window):
                     raise ValueError(message)
             else:
                 form_vars.append(key)
+        for key in form_vars:
+            setattr(self, key, form_kwargs[key])
 
         (row_iface_methods, # this methods tuple should be empty
-         row_iface_attrs) = flatten_interface(self.interfaces["Row"])
-        (field_iface_methods, # this methods tuple should be empty
-         field_iface_attrs) = flatten_interface(self.interfaces["Field"])
+         row_iface_attrs) = Row.interface
 
         target_object = self.target_object
         for row_no, fields, row_kwargs in self.layout[0].values():
             for key, value in row_kwargs.iteritems():
                 if key not in row_iface_attrs:
-                    message  = "Row {}\n".format(row_no)
-                    message += '-' * min(79,
-                                         len("ValueError: ") + len(message))
-                    message += '\n'
-                    message += "Layout attempted to set non-interface attribute"
-                    message += " '{}' to {}".format(key, value)
-                    raise ValueError(message)
+                    raise_error(row_no,
+                   "Layout attempted to set non-interface attribute '{}' to {}",
+                                key, value)
+
             for f_name, field_kwargs in fields:
+                f_type = self.determine_field_type(self.target_object, f_name,
+                                                   field_kwargs)
+                if f_type not in FIELD_TYPES.values():
+                    raise_error2(row_no, f_name,
+                                 "Invalid field_type: '{}'".format(f_name))
+                f_type = resolve_string(f_type)
+                (field_iface_methods,
+                field_iface_attrs) = f_type.interface
                 if (f_name not in field_iface_attrs and
                     f_name not in field_iface_methods):
                     if f_name not in form_vars:
-                        print f_name, field_iface_attrs, field_iface_methods
-                        message  = "Row {}, Field {}\n".format(row_no, f_name)
-                        message += '-' * min(79,
-                                             len("ValueError: ") + len(message))
-                        message += '\n'
-                        message += "Layout attempted to create field for non-"
-                        message += "interface attribute '{}'".format(f_name)
-                        raise ValueError(message)
+                        raise_error2(row_no, f_name,
+            "Layout attempted to create field for non-interface attribute '{}'",
+                                     f_name)
+
 
                 if not hasattr(target_object, f_name):
-                    if f_name not in form_vars:
-                        message  = "Row {}, Field {}\n".format(row_no, f_name)
-                        message += '-' * min(79,
-                                             len("ValueError: ") + len(message))
-                        message += '\n'
-                        message += "Target has no attribute '{}'\n".format(f_name)
-                        raise ValueError(message)
+                    assert f_name not in form_vars
+                    raise_error2(row_no, f_name,
+                                 "Target has no attribute '{}'\n",
+                                 f_name)
 
                 for key, value in field_kwargs.iteritems():
                     if key not in field_iface_attrs:
-                        message  = "Row {}, Field {}\n".format(row_no, f_name)
-                        message += '-' * min(79,
-                                             len("ValueError: ") + len(message))
-                        message += '\n'
-                        message += "Layout attempted to set non-interface "
-                        message += "attribute '{}' to {}".format(key, value)
-                        raise ValueError(message)
+                        raise_error2(row_no, f_name,
+                   "Layout attempted to set non-interface attribute '{}' to {}",
+                                     key, value)
+
 
                 if hasattr(target_object, f_name):
                     is_callable = hasattr(getattr(target_object, f_name),
                                         "__call__")
                     if is_callable and f_name not in form_iface_methods:
-                        message  = "Row {}, Field {}\n".format(row_no, f_name)
-                        message += '-' * min(79,
-                                             len("ValueError: ") + len(message))
-                        message += '\n'
-                        message += "Layout attempted to use non-interface "
-                        message += "method '{}'".format(f_name)
-                        raise ValueError(message)
+                        raise_error2(row_no, f_name,
+                            "Layout attempted to use non-interface method '{}'",
+                                     f_name)
 
     def unload_rows(self, new_row_indices):
         for row in self.visible_rows:
@@ -646,8 +627,8 @@ def test_Form():
                                          orientation="stacked",
                                          values=(0, 1, 2, 3, 5, 8, 13, 21,
                                                  34, 55, 89, 144)),
-                            #  field_info("test_callable",
-                            #             button_text="Test Callable"),
+                              field_info("delete",
+                                         button_text="Delete (Test Callable)"),
                               h_range=(0, .3)),
                      row_info(2), row_info(3), row_info(4),
                      row_info(5, field_info("test_bool")),

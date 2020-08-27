@@ -19,16 +19,17 @@ ENTRY_TYPE = {"Field" : "pride.gui.fields.Entry",
               "Spinbox" : "pride.gui.fields.Spinbox_Entry",
               "Toggle" : "pride.gui.fields.Toggle_Entry",
               "Slider_Field" : "pride.gui.fields.Slider_Entry",
-              "_Endcap" : "pride.gui.fields._Endcap_Entry"}
-
+              "_Endcap" : "pride.gui.fields._Endcap_Entry",
+              "Dropdown_Callable" : "pride.gui.fields.Callable_Entry"}
 
 
 class Entry(pride.gui.gui.Button):
 
     defaults = {"location" : "right", "confidential" : False,
                 "show_status_when_selected" : True}
-    predefaults = {"parent_field" : None, "text_initialized" : False}
+    predefaults = {"text_initialized" : False}
     autoreferences = ("parent_field", )
+    interface = (tuple(), ("location", "show_status_when_selected",))
 
     def _get_text(self):
         return str(self.parent_field.value)
@@ -54,6 +55,7 @@ class Entry(pride.gui.gui.Button):
     text = property(_get_text, _set_text)
 
     def select(self):
+        self.alert("Selected")
         super(Entry, self).select()
         field = self.parent_field
         if field.parent_form is not None:
@@ -66,13 +68,16 @@ class Entry(pride.gui.gui.Button):
 class Field(pride.gui.gui.Container):
 
     defaults = {"name" : '', "orientation" : "stacked",
-                "_value_initialized" : False,
+                "_value_initialized" : False, "field_type" : None,
                 "editable" : True, "location" : "left", "has_label" : True,
                 "display_name" : ''}
-    mutable_defaults = {"entry_kwargs" : dict, "id_kwargs" : dict}
+    subcomponent_kwargs = {"entry" : dict(), "label" : dict()}
     predefaults = {"target_object" : None}
     autoreferences = ("identifier", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
+    interface = (tuple(), ("name", "orientation", "field_type", "editable",
+                           "location", "has_label", "display_name",
+                           "entry_kwargs"))
 
     def _get_value(self):
         try:
@@ -107,24 +112,25 @@ class Field(pride.gui.gui.Container):
         self.create_subcomponents()
 
     def create_subcomponents(self):
-        id_kwargs = self.id_kwargs
+        label_kwargs = self.label_kwargs
         orientation = self.orientation
         if orientation == "stacked":
             location = "top"
-            id_kwargs.setdefault("scale_to_text", False)
-            id_kwargs.setdefault("h_range", (0, .05))
+            label_kwargs.setdefault("scale_to_text", False)
+            label_kwargs.setdefault("h_range", (0, .05))
         else:
             assert orientation == "side by side"
             location = "left"
         assert self.identifier is None
-        self.create_id(location, **id_kwargs)
+        self.create_label(location, **label_kwargs)
         self.create_entry(location)
+        assert hasattr(self, "parent_form")
 
-    def create_id(self, location, **id_kwargs):
-        id_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
-        self.identifier = self.create(pride.gui.gui.Container, location=location,
-                                      text=self.display_name or self.name,
-                                      **id_kwargs)
+    def create_label(self, location, **label_kwargs):
+        label_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
+        label_kwargs.setdefault("location", location)
+        label_kwargs.setdefault("text", self.display_name or self.name)
+        self.identifier = self.create(pride.gui.gui.Container, **label_kwargs)
         if not self.has_label:
             self.identifier.hide()
 
@@ -185,8 +191,9 @@ class Callable_Field(Field):
 
     defaults = {"orientation" : "side by side",
                 "has_label" : False, "button_text" : '', "args" : tuple()}
-    mutable_defaults = {"entry_kwargs" : lambda: {"scale_to_text" : True},
-                        "kwargs" : dict}
+    mutable_defaults = {"kwargs" : dict}
+    subcomponent_kwargs = {"entry" : {"scale_to_text" : True}}
+    interface = (tuple(), ("button_text", "args", "kwargs"))
 
     def create_entry(self, location):
         super(Callable_Field, self).create_entry(location)
@@ -430,21 +437,21 @@ class Toggle_Entry(Entry):
 
 from pride.gui.form2 import Form, layout, row_info, field_info
 
+class Dropdown_Callable(Callable_Field):
+
+    interface = (("select_entry", ), ("select_entry", ))
+
+    def select_entry(self, value, index):
+        form = self.parent_form
+        form.select_entry(value, index)
+
+
 class Dropdown_Form(Form):
 
     defaults = {"menu_open" : True}
-    interfaces = {"Form" : ("Base",
-                            "Shape",
-                            "Organized_Object",
-                            "Window_Object"),
-                  "Row" : ("Base",
-                           "Shape",
-                           "Organized_Object",
-                           "Window_Object"),
-                  "Field" : ("Field", "Dropdown")}
-
     hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
                (DOWN_ARROW, None) : "handle_down_arrow"}
+    interface = (("select_entry", ), ("select_entry", ))
 
     def select_entry(self, value, index):
         if self.menu_open:
@@ -506,29 +513,30 @@ class Dropdown_Entry(Callable_Entry):
         rows = (row_info(i,
                          field_info("select_entry",
                                     button_text=str(value),
-                                    args=(value, i), target_object=self,
+                                    args=(value, i),
+                                    field_type="Dropdown_Callable",
                                     entry_kwargs={"scale_to_text" : False})) for
                 i, value in enumerate(self.parent_field.values))
 
         _layout = layout(*rows)
-        self.dropdown_form = self.create(Dropdown_Form, layout=_layout)
-        self.select_entry(self.parent_field.values[0], 0)
+        form = self.dropdown_form = self.create(Dropdown_Form, layout=_layout)
+        form.select_entry(self.parent_field.values[0], 0)
 
 
 class Dropdown_Field(Callable_Field):
 
-    defaults = {"has_label" : True,
+    defaults = {"has_label" : True, "values" : tuple(),
                 "orientation" : "side by side"}
+    interface = (tuple(), ("values", ))
 
 
 class Spinbox(Field):
 
-    defaults = {"include_incdec_buttons" : False,
-                "minimum" : None, "maximum" : None}
+    defaults = {"minimum" : None, "maximum" : None}
                 # can only use either minimum or maximum but not both by default
                 # must specify Spinbox type explicitly if min and max are used.
-    mutable_defaults = {"entry_kwargs" : lambda: {"location" : "left"}}
-    allowed_values = {"include_incdec_buttons" : (False, )} # not actually part of the interface
+    subcomponent_kwargs = {"entry" : {"location" : "left"}}
+    interface = (tuple(), ("minimum", "maximum"))
 
     def create_entry(self, location):
         container = self.create(pride.gui.gui.Container, location=location)
@@ -543,7 +551,6 @@ class Spinbox(Field):
             self.inc_button = subcontainer.create(Increment_Button, **kwargs)
             assert kwargs == {"target_entry" : entry, "location" : "top"}
             self.dec_button = subcontainer.create(Decrement_Button, **kwargs)
-            self.include_incdec_buttons = True # this is used by Form tab selection feature
 
     def handle_value_changed(self, old_value, new_value):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
@@ -677,7 +684,7 @@ class _Endcap_Entry(Text_Entry):
         slider_field.update_position_from_value()
 
 
-class _Endcap(Text_Entry):
+class _Endcap(Text_Field):
 
     defaults = {"editable" : False, "has_label" : False}
 
@@ -692,7 +699,8 @@ class Slider_Entry(Entry):
                (DOWN_ARROW, None) : "handle_down_arrow",
                (LEFT_ARROW, None) : "handle_left_arrow",
                (RIGHT_ARROW, None) : "handle_right_arrow"}
-
+    interface = (tuple(), ("include_incdec_buttons", "include_minmax_buttons",
+                           "hide_text"))
     def _get_text(self):
         if self.hide_text:
             #super(Slider_Entry, self)._get_text()
@@ -742,18 +750,24 @@ class Slider_Entry(Entry):
             include_minmax = self.include_minmax_buttons
             include_incdec = self.include_incdec_buttons
             if include_minmax and include_incdec:
-                left = self.create(pride.gui.gui.Container, location=location, **kwargs)
+                left = self.create(pride.gui.gui.Container, location=location,
+                                   **kwargs)
                 self.left = left
             else:
                 left = None
 
             if include_minmax:
                 if left is not None:
-                    self.min_button = left.create(_Endcap, location=location, name="minimum",
-                                                target_object=parent_field, **kwargs)
+                    self.min_button = left.create(_Endcap, location=location,
+                                                  name="minimum",
+                                                  target_object=parent_field,
+                                                  **kwargs)
                 else:
-                    self.min_button = self.left = self.create(_Endcap, location=location, name="minimum",
-                                                            target_object=parent_field, **kwargs)
+                    self.min_button = self.left = self.create(_Endcap,
+                                                              location=location,
+                                                              name="minimum",
+                                                     target_object=parent_field,
+                                                              **kwargs)
             if include_incdec:
                 if left is not None:
                     self.dec_button = left.create(Callable_Field,
@@ -784,9 +798,10 @@ class Slider_Entry(Entry):
                     self.inc_button = self.right.create(Callable_Field,
                                                         name="increment_value",
                                                         location=location,
-                                                        parent_field=parent_field,
+                                                      parent_field=parent_field,
                                                         target_object=self,
-                                                        button_text='+', **kwargs)
+                                                        button_text='+',
+                                                        **kwargs)
                 else:
                     self.inc_button = self.right =\
                     self.create(Callable_Field, name="increment_value",
@@ -818,6 +833,7 @@ class Slider_Entry(Entry):
 class Slider_Field(Field):
 
     predefaults = {"_minimum" : 0, "_maximum" : 0}
+    interface = (tuple(), ("minimum", "maximum"))
 
     def _get_minimum(self):
         return self._minimum

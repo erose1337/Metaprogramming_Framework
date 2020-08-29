@@ -311,16 +311,6 @@ class Form(Scrollable_Window):
     interface = (tuple(), ("max_rows", "horizontal_slider_location",
                            "vertical_slider_location"))
 
-    #interfaces = {"Form" : ("Base",
-    #                        "Shape",
-    #                        "Organized_Object",
-    #                        "Window_Object"),
-    #              "Row" : ("Base",
-    #                       "Shape",
-    #                       "Organized_Object",
-    #                       "Window_Object"),
-    #              "Field" : ("Field", )}
-
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
 
@@ -371,7 +361,7 @@ class Form(Scrollable_Window):
         for key in form_vars:
             setattr(self, key, form_kwargs[key])
 
-        (row_iface_methods, # this methods tuple should be empty
+        (_, # this methods tuple should be empty
          row_iface_attrs) = Row.interface
 
         target_object = self.target_object
@@ -389,10 +379,10 @@ class Form(Scrollable_Window):
                     raise_error2(row_no, f_name,
                                  "Invalid field_type: '{}'".format(f_name))
                 f_type = resolve_string(f_type)
-                (field_iface_methods,
-                field_iface_attrs) = f_type.interface
+                (_,
+                 field_iface_attrs) = f_type.interface
                 if (f_name not in field_iface_attrs and
-                    f_name not in field_iface_methods):
+                    f_name not in form_iface_methods):
                     if f_name not in form_vars:
                         raise_error2(row_no, f_name,
             "Layout attempted to create field for non-interface attribute '{}'",
@@ -437,10 +427,9 @@ class Form(Scrollable_Window):
         for offset in range(amount):
             row_no = start + offset
             try:
-                row = rows[row_no]
+                row = self.load_row(row_no)
             except KeyError:
-                self.create_row(self.layout[0][row_no])
-                row = rows[row_no]
+                break
             visible_row = visible_rows[offset]
             row.show()
             visible_row.load_row(row)
@@ -451,6 +440,13 @@ class Form(Scrollable_Window):
             for offset in range(excess):
                 row_no = start + amount + offset
                 visible_rows[row_no].hide()
+
+    def load_row(self, row_no):
+        try:
+            return self.rows[row_no]
+        except KeyError:
+            self.create_row(self.layout[0][row_no])
+            return self.rows[row_no]
 
     def create_row(self, _row_info):
         kwargs = copy.deepcopy(self.row_kwargs)

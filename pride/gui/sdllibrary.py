@@ -740,11 +740,10 @@ class SDL_User_Input(pride.components.base.Base):
             key = chr(key_value)
         except ValueError:
             if not modifier:
-                reference, method = self.get_hotkey(instance, (key_value, None))
-                if reference is not None:
-                    getattr(pride.objects[reference], method)()
-            else:
-                return # key was a modifier key
+                modifier = None
+            reference, method = self.get_hotkey(instance, (key_value, modifier))
+            if reference is not None:
+                getattr(pride.objects[reference], method)()
         else:
             if key == "\r":
                 key = "\n"
@@ -758,6 +757,7 @@ class SDL_User_Input(pride.components.base.Base):
             elif modifier:
                 key_press[1] = modifier
             #if ord(key) < 32 or ord(key) == 127 or key_press[1] is not None: # delete is 127
+
             reference, method = self.get_hotkey(instance, tuple(key_press))
             if reference is not None and method is not None:
                 getattr(pride.objects[reference], method)()

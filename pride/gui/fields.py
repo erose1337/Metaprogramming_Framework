@@ -11,6 +11,7 @@ DOWN_ARROW = 1073741905
 RIGHT_ARROW = 1073741903
 LEFT_ARROW = 1073741904
 DELETE_KEY = "\x7f"
+SHIFT = 1
 
 ENTRY_TYPE = {"Field" : "pride.gui.fields.Entry",
               "Callable_Field" : "pride.gui.fields.Callable_Entry",
@@ -55,7 +56,6 @@ class Entry(pride.gui.gui.Button):
     text = property(_get_text, _set_text)
 
     def select(self):
-        self.alert("Selected")
         super(Entry, self).select()
         field = self.parent_field
         if field.parent_form is not None:
@@ -178,7 +178,6 @@ class Callable_Entry(Entry):
     text = property(_get_text, _set_text)
 
     def handle_return(self):
-        print("Callable_Entry handle_return")
         parent_field = self.parent_field
         parent_field.value(*parent_field.args, **parent_field.kwargs)
 
@@ -339,6 +338,9 @@ class Decrement_Button(pride.gui.gui.Button):
 
 class Spinbox_Entry(Text_Entry):
 
+    hotkeys = {(UP_ARROW, None) : "increment_value",
+               (DOWN_ARROW, None) : "decrement_value"}
+
     def _get_text(self):
         return super(Spinbox_Entry, self)._get_text()
     def _set_text(self, value):
@@ -376,7 +378,7 @@ class Spinbox_Entry(Text_Entry):
         super(Spinbox_Entry, self)._set_text(value)
     text = property(_get_text, _set_text)
 
-    def increment_value(self, amount):
+    def increment_value(self, amount=1):
         parent_field = self.parent_field
         _min, _max = parent_field.minimum, parent_field.maximum
         value = int(parent_field.value or '0') + amount
@@ -386,7 +388,7 @@ class Spinbox_Entry(Text_Entry):
             value = max(_min, value)
         parent_field.value = value
 
-    def decrement_value(self, amount):
+    def decrement_value(self, amount=1):
         self.increment_value(-amount)
 
 
@@ -437,6 +439,8 @@ class Toggle_Entry(Entry):
 
 from pride.gui.form2 import Form, layout, row_info, field_info
 
+
+
 class Dropdown_Callable(Callable_Field):
 
     interface = (("select_entry", ), ("select_entry", ))
@@ -448,10 +452,16 @@ class Dropdown_Callable(Callable_Field):
 
 class Dropdown_Form(Form):
 
-    defaults = {"menu_open" : True}
+    defaults = {"menu_open" : True, "currently_selected" : 0}
     hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
                (DOWN_ARROW, None) : "handle_down_arrow"}
     interface = (("select_entry", ), ("select_entry", ))
+
+    def handle_tab(self):
+        entry = self.parent
+        form = entry.parent_field.parent_form
+        form.handle_entry_selected(entry)
+        form.handle_tab()
 
     def select_entry(self, value, index):
         if self.menu_open:
@@ -460,6 +470,7 @@ class Dropdown_Form(Form):
             self.open_menu()
 
     def open_menu(self):
+        self.synchronize_scroll_bars()
         self.vertical_slider.show()
         self.pack()
         self.load_rows()
@@ -476,7 +487,7 @@ class Dropdown_Form(Form):
         for row in self.visible_rows:
             if row.current_row_number != index:
                 row.hide()
-                row.pack()
+        #        row.pack()
 
         self.menu_open = False
         self.vertical_slider.hide()
@@ -485,19 +496,36 @@ class Dropdown_Form(Form):
     def handle_up_arrow(self):
         if not self.menu_open:
             self.open_menu()
-        before = self.y_scroll_value
-        modulus = (len(self.layout[0]) - self.max_rows)  + 1
+        old_row = self.rows[self.currently_selected]
+        old_entry = old_row.fields[0].entry
+        old_entry.hover_ends()
+
+        modulus = len(self.layout[0])
+        self.currently_selected -= 1
+        self.currently_selected %= modulus
         self.y_scroll_value = (self.y_scroll_value - 1) % modulus
-        self.synchronize_scroll_bars()
+
+        new_row = self.load_row(self.currently_selected)
+        new_entry = new_row.fields[0].entry
+        new_entry.on_hover()
+        self.handle_entry_selected(new_entry, scroll=True)
 
     def handle_down_arrow(self):
         if not self.menu_open:
             self.open_menu()
+        old_row = self.rows[self.currently_selected]
+        old_entry = old_row.fields[0].entry
+        old_entry.hover_ends()
 
-        before = self.y_scroll_value
-        modulus = (len(self.layout[0]) - self.max_rows) + 1
+        modulus = len(self.layout[0])
+        self.currently_selected += 1
+        self.currently_selected %= modulus
         self.y_scroll_value = (self.y_scroll_value + 1) % modulus
-        self.synchronize_scroll_bars()
+
+        next_row = self.load_row(self.currently_selected)
+        next_entry = next_row.fields[0].entry
+        next_entry.on_hover()
+        self.handle_entry_selected(next_entry, scroll=True)
 
 
 class Dropdown_Entry(Callable_Entry):
@@ -510,17 +538,28 @@ class Dropdown_Entry(Callable_Entry):
         self.create_subcomponents()
 
     def create_subcomponents(self):
+        values = self.parent_field.values
+        self.value_index = dict((value, i) for i, value in enumerate(values))
         rows = (row_info(i,
                          field_info("select_entry",
                                     button_text=str(value),
                                     args=(value, i),
-                                    field_type="Dropdown_Callable",
                                     entry_kwargs={"scale_to_text" : False})) for
-                i, value in enumerate(self.parent_field.values))
+                i, value in enumerate(values))
 
         _layout = layout(*rows)
         form = self.dropdown_form = self.create(Dropdown_Form, layout=_layout)
         form.select_entry(self.parent_field.values[0], 0)
+
+    def handle_return(self):
+        form = self.dropdown_form
+        self.sdl_window.user_input.select_active_item(form)
+        if form.menu_open:
+            value = self.value
+            form.close_menu(value, self.value_index[value])
+        else:
+            form.open_menu()
+        #    form.synchronize_scroll_bars()
 
 
 class Dropdown_Field(Callable_Field):
@@ -698,7 +737,9 @@ class Slider_Entry(Entry):
     hotkeys = {(UP_ARROW, None) : "handle_up_arrow",
                (DOWN_ARROW, None) : "handle_down_arrow",
                (LEFT_ARROW, None) : "handle_left_arrow",
-               (RIGHT_ARROW, None) : "handle_right_arrow"}
+               (RIGHT_ARROW, None) : "handle_right_arrow",
+               (LEFT_ARROW, SHIFT) : "minimize_value",
+               (RIGHT_ARROW, SHIFT) : "maximize_value"}
     interface = (tuple(), ("include_incdec_buttons", "include_minmax_buttons",
                            "hide_text"))
     def _get_text(self):
@@ -828,6 +869,16 @@ class Slider_Entry(Entry):
         parent_field = self.parent_field
         parent_field.value = max(parent_field.value - 1, parent_field.minimum)
         parent_field.update_position_from_value()
+
+    def minimize_value(self):
+        field = self.parent_field
+        field.value = field.minimum
+        field.update_position_from_value()
+
+    def maximize_value(self):
+        field = self.parent_field
+        field.value = field.maximum
+        field.update_position_from_value()
 
 
 class Slider_Field(Field):

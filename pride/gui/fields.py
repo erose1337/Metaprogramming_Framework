@@ -21,7 +21,8 @@ ENTRY_TYPE = {"Field" : "pride.gui.fields.Entry",
               "Toggle" : "pride.gui.fields.Toggle_Entry",
               "Slider_Field" : "pride.gui.fields.Slider_Entry",
               "_Endcap" : "pride.gui.fields._Endcap_Entry",
-              "Dropdown_Callable" : "pride.gui.fields.Callable_Entry"}
+              "Dropdown_Callable" : "pride.gui.fields.Callable_Entry",
+              "Tab" : "pride.gui.tabs.Tab_Entry"}
 
 
 class Entry(pride.gui.gui.Button):
@@ -61,7 +62,9 @@ class Entry(pride.gui.gui.Button):
         if field.parent_form is not None:
             field.parent_form.handle_entry_selected(self, _needs_select=False)
         if self.show_status_when_selected:
-            name = getattr(field, "button_text", '') or field.display_name or field.name
+            name = (getattr(field, "button_text", '') or
+                    field.display_name or
+                    field.name)
             self.show_status("Selected: {}".format(name))
 
 
@@ -73,7 +76,7 @@ class Field(pride.gui.gui.Container):
                 "display_name" : ''}
     subcomponent_kwargs = {"entry" : dict(), "label" : dict()}
     predefaults = {"target_object" : None}
-    autoreferences = ("identifier", "parent_form")
+    autoreferences = ("label", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
     interface = (tuple(), ("name", "orientation", "field_type", "editable",
                            "location", "has_label", "display_name",
@@ -121,7 +124,7 @@ class Field(pride.gui.gui.Container):
         else:
             assert orientation == "side by side"
             location = "left"
-        assert self.identifier is None
+        assert self.label is None
         self.create_label(location, **label_kwargs)
         self.create_entry(location)
         assert hasattr(self, "parent_form")
@@ -130,9 +133,9 @@ class Field(pride.gui.gui.Container):
         label_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
         label_kwargs.setdefault("location", location)
         label_kwargs.setdefault("text", self.display_name or self.name)
-        self.identifier = self.create(pride.gui.gui.Container, **label_kwargs)
+        self.label = self.create(pride.gui.gui.Container, **label_kwargs)
         if not self.has_label:
-            self.identifier.hide()
+            self.label.hide()
 
     def create_entry(self, location):
         kwargs = self.entry_kwargs
@@ -172,6 +175,8 @@ class Callable_Entry(Entry):
             #backup = getattr(field, "_backup_w_range", None)
             #if backup is None:
             #    field._backup_w_range = self.w_range
+
+            # re-sizing the tab based on text length
             field.w_range = self.w_range
             field.pack()
 
@@ -904,6 +909,10 @@ class Slider_Field(Field):
             self.hide()
         else:
             self.show()
+        try:
+            self.entry.max_button.entry.texture_invalid = True
+        except AttributeError:
+            pass
     maximum = property(_get_maximum, _set_maximum)
 
     def handle_transition_animation_end(self):

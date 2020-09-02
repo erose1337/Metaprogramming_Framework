@@ -145,7 +145,7 @@ def test_compile_file():
                     field_info("test_dropdown", values=(1, '2')))
     out1 = layout(row0, row1, w_range=(0, .25))
 
-    with open("_form2test.txt", 'w+') as _file:
+    with open("_formtest.txt", 'w+') as _file:
         _file.write(TEST_LAYOUT)
         _file.seek(0)
         out2 = compile_file(_file)
@@ -162,26 +162,39 @@ def test_compile_filename():
                     field_info("test_dropdown", values=(1, '2')))
     out1 = layout(row0, row1, w_range=(0, .25))
 
-    with open("_form2test.txt", 'w') as _file:
+    with open("_formtest.txt", 'w') as _file:
         _file.write(TEST_LAYOUT)
         _file.seek(0)
-    out2 = compile_filename("_form2test.txt")
+    out2 = compile_filename("_formtest.txt")
     assert out1 == out2, '\n' + pprint.pformat((out1, out2))
 
+import itertools
 import pride.gui.gui
 from pride.components import deep_update
 from pride.functions.utilities import resolve_string
 
 class Scrollable_Window(pride.gui.gui.Window):
 
-    defaults = {"vertical_slider_location" : "right",
-                "horizontal_slider_location" : "bottom"}
     predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
     autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
-    mutable_defaults = {"vertical_slider_entry_kwargs" : lambda: {"orientation" : "stacked"},
-                        "horizontal_slider_entry_kwargs" : dict}
-    interface = (tuple(), ("horizontal_slider_location",
-                           "vertical_slider_location"))
+    subcomponent_types = {"vertical_slider" : "pride.gui.fields.Slider_Field",
+                          "horizontal_slider" : "pride.gui.fields.Slider_Field"}
+    subcomponent_kwargs = {"vertical_slider" :
+                                 {"location" : "right",
+                                 "orientation" : "stacked",
+                                 "w_range" : (0, .025),
+                                 "name" : "y_scroll_value",
+                                 "minimum" : 0, "maximum" : 0,
+                                 "has_label" : False,
+                                 "entry_kwargs" : {"orientation" : "stacked"}},
+                           "horizontal_slider" : {"h_range" : (0, .025),
+                                                  "has_label" : False,
+                                                  "name" : "x_scroll_value",
+                                                  "minimum" : 0, "maximum" : 0,
+                                                  "location" : "bottom",
+                                                "orientation" : "side by side"}}
+    interface = (tuple(), ("horizontal_slider_kwargs",
+                           "vertical_slider_kwargs"))
 
     def _get_y_scroll_value(self):
         return self._y_scroll_value
@@ -206,23 +219,18 @@ class Scrollable_Window(pride.gui.gui.Window):
     def create_subcomponents(self):
         self.main_window = self.create(pride.gui.gui.Container,
                                        location="main")
-        position = self.vertical_slider_location
-        slider_type = "pride.gui.fields.Slider_Field"
+        kwargs = self.vertical_slider_kwargs
+        position = kwargs["location"]
         if position is not None:
-            self.vertical_slider = \
-            self.create(slider_type, location=position,
-                        orientation="stacked", w_range=(0, .025),
-                        name="y_scroll_value", minimum=0, maximum=0,
-                        has_label=False, target_object=self,
-                        entry_kwargs=self.vertical_slider_entry_kwargs)
-        position = self.horizontal_slider_location
+            slider_type = self.subcomponent_types["vertical_slider"]
+            self.vertical_slider = self.create(slider_type, target_object=self,
+                                               **kwargs)
+        kwargs = self.horizontal_slider_kwargs
+        position = kwargs["location"]
         if position is not None:
-            self.horizontal_slider = \
-            self.create(slider_type, location=position,
-                        orientation="side by side", h_range=(0, .025),
-                        has_label=False, target_object=self,
-                        name="x_scroll_value", minimum=0, maximum=0,
-                        entry_kwargs=self.horizontal_slider_entry_kwargs,)
+            slider_type = self.subcomponent_types["horizontal_slider"]
+            self.horizontal_slider = self.create(slider_type,
+                                                 target_object=self, **kwargs)
 
     def handle_x_scroll(self, old_value, new_value):
         pass
@@ -238,7 +246,8 @@ FIELD_TYPES = {"Dropdown" : "pride.gui.fields.Dropdown_Field",
                "Text_Field" : "pride.gui.fields.Text_Field",
                "Text_Display" : "pride.gui.fields.Text_Display",
                "Callable" : "pride.gui.fields.Callable_Field",
-               "Dropdown_Callable" : "pride.gui.fields.Dropdown_Callable"}
+               "Dropdown_Callable" : "pride.gui.fields.Dropdown_Callable",
+               "Tab" : "pride.gui.tabs.Tab"}
 
 
 class Row(pride.gui.gui.Container):
@@ -247,6 +256,8 @@ class Row(pride.gui.gui.Container):
 
     def delete(self):
         del self.fields[:]
+        #if self is getattr(self.parent, "_current_row", None):
+
         super(Row, self).delete()
 
 
@@ -270,35 +281,18 @@ class Visible_Row(pride.gui.gui.Container):
 
     def unload_row(self, new_row_indices):
         old_row = self._current_row
-        if old_row is not None:
+        self._current_row = None
+        self._current_row_old_name = None
+        self._current_row_number = None
+        if old_row is not None and not old_row.deleted:
             old_row.parent_name = self._current_row_old_name
             self.remove(old_row)
-            self._current_row = None
-            self._current_row_old_name = None
-            self._current_row_number = None
             if old_row.row_number not in new_row_indices:
                 old_row.hide()
 
     def delete(self):
         self.unload_row(tuple())
         super(Visible_Row, self).delete()
-
-
-def raise_error(row_no, text, *format_args):
-    message  = "Row {}\n".format(row_no)
-    message += '-' * min(79,
-                         len("ValueError: ") + len(message))
-    message += '\n'
-    message += text.format(*format_args)
-    raise ValueError(message)
-
-def raise_error2(row_no, f_name, text, *format_args):
-    message  = "Row {}; Field: {}\n".format(row_no, f_name)
-    message += '-' * min(79,
-                         len("ValueError: ") + len(message))
-    message += '\n'
-    message += text.format(*format_args)
-    raise ValueError(message)
 
 
 class Form(Scrollable_Window):
@@ -314,6 +308,12 @@ class Form(Scrollable_Window):
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
 
+    def _get_fields(self):
+        rows = self.rows
+        return itertools.chain(rows[x].fields for x in sorted(rows.keys())
+                               if x in rows)
+    fields = property(_get_fields)
+
     def create_subcomponents(self):
         if self.target_object is None:
             self.target_object = self
@@ -326,17 +326,23 @@ class Form(Scrollable_Window):
 
         _row_info = self.layout[0]
         max_rows = self.max_rows
-        amount = min(max_rows, len(_row_info))
+        amount = max_rows
         # make a fixed number of visible rows
         # set the rows to represent the data of a given range of row_infos
         window = self.main_window
         self.visible_rows = [window.create(Visible_Row) for
                              count in range(amount)]
+        visible_rows = self.visible_rows
         for row_no in range(amount):
-            self.create_row(_row_info[row_no])
-        self.load_rows()
+            try:
+                self.create_row(_row_info[row_no])
+            except KeyError:
+                if row_no in _row_info:
+                    raise
+                break
 
-        if self.selected_entry is None:
+        self.load_rows()
+        if self.selected_entry is None and self.rows:
             self.selected_entry = self.rows[0].fields[0].entry
 
         self.synchronize_scroll_bars()
@@ -368,7 +374,7 @@ class Form(Scrollable_Window):
         for row_no, fields, row_kwargs in self.layout[0].values():
             for key, value in row_kwargs.iteritems():
                 if key not in row_iface_attrs:
-                    raise_error(row_no,
+                    self.raise_error(row_no,
                    "Layout attempted to set non-interface attribute '{}' to {}",
                                 key, value)
 
@@ -376,7 +382,7 @@ class Form(Scrollable_Window):
                 f_type = self.determine_field_type(self.target_object, f_name,
                                                    field_kwargs)
                 if f_type not in FIELD_TYPES.values():
-                    raise_error2(row_no, f_name,
+                    self.raise_error2(row_no, f_name,
                                  "Invalid field_type: '{}'".format(f_name))
                 f_type = resolve_string(f_type)
                 (_,
@@ -384,20 +390,20 @@ class Form(Scrollable_Window):
                 if (f_name not in field_iface_attrs and
                     f_name not in form_iface_methods):
                     if f_name not in form_vars:
-                        raise_error2(row_no, f_name,
+                        self.raise_error2(row_no, f_name,
             "Layout attempted to create field for non-interface attribute '{}'",
                                      f_name)
 
 
                 if not hasattr(target_object, f_name):
                     assert f_name not in form_vars
-                    raise_error2(row_no, f_name,
+                    self.raise_error2(row_no, f_name,
                                  "Target has no attribute '{}'\n",
                                  f_name)
 
                 for key, value in field_kwargs.iteritems():
                     if key not in field_iface_attrs:
-                        raise_error2(row_no, f_name,
+                        self.raise_error2(row_no, f_name,
                    "Layout attempted to set non-interface attribute '{}' to {}",
                                      key, value)
 
@@ -406,9 +412,27 @@ class Form(Scrollable_Window):
                     is_callable = hasattr(getattr(target_object, f_name),
                                         "__call__")
                     if is_callable and f_name not in form_iface_methods:
-                        raise_error2(row_no, f_name,
+                        self.raise_error2(row_no, f_name,
                             "Layout attempted to use non-interface method '{}'",
                                      f_name)
+
+    def raise_error(self, row_no, text, *format_args):
+        message  = "\n{}\n".format(self)
+        message += "Row {}\n".format(row_no)
+        message += '-' * min(79,
+                            len("ValueError: ") + len(message))
+        message += '\n'
+        message += text.format(*format_args)
+        raise ValueError(message)
+
+    def raise_error2(self, row_no, f_name, text, *format_args):
+        message  = "\n{}\n".format(self)
+        message += "Row {}; Field: {}\n".format(row_no, f_name)
+        message += '-' * min(79,
+                            len("ValueError: ") + len(message))
+        message += '\n'
+        message += text.format(*format_args)
+        raise ValueError(message)
 
     def unload_rows(self, new_row_indices):
         for row in self.visible_rows:
@@ -451,17 +475,18 @@ class Form(Scrollable_Window):
     def create_row(self, _row_info):
         kwargs = copy.deepcopy(self.row_kwargs)
         row_no, row_kwargs = _row_info[0], _row_info[-1]
-        deep_update(kwargs, _row_info[-1])
-        kwargs.setdefault("row_number", _row_info[0])
+        deep_update(kwargs, row_kwargs)
+        kwargs.setdefault("row_number", row_no)
 
         window = self.main_window
-        row = window.create("pride.gui.form2.Row", **kwargs)
+        row = window.create("pride.gui.form.Row", **kwargs)
         self.rows[row_no] = row
         _field_infos = _row_info[1:-1][0]
         for _field_info in _field_infos:
             self.create_field(_field_info, row)
         row.hide()
         window.remove(row)
+        return row
 
     def create_field(self, _field_info, row):
         field_name, field_kwargs = _field_info
@@ -471,8 +496,11 @@ class Form(Scrollable_Window):
                                                field_kwargs)
         field_kwargs.setdefault("target_object", self.target_object)
         field = row.create(field_type, name=field_name, parent_form=self,
+                           field_no=sum(len(_row.fields) for
+                                        _row in self.rows.values()),
                            **field_kwargs)
         row.fields.append(field)
+        return field
 
     def determine_field_type(self, target_object, name, entries):
         field_type = entries.get("field_type", None)
@@ -504,7 +532,10 @@ class Form(Scrollable_Window):
             message = "Unable to determine field_type for {}"
             raise ValueError(message.format((target_object, name, value, entries)))
         if field_type not in FIELD_TYPES:
-            message = "Requested field_type '{}' is unavailable"
+            message = self.reference + '\n'
+            message += "Field: {}\n".format(name)
+            message += ('-' * min(79, len(message))) + '\n'
+            message += "Requested field_type '{}' is unavailable"
             raise ValueError(message.format(field_type))
         return FIELD_TYPES[field_type]
 
@@ -601,9 +632,6 @@ class Form(Scrollable_Window):
                 self.handle_y_scroll(y_value, row_no)
             self.synchronize_scroll_bars()
 
-    def set_row_theme(self, index, profile_name):
-        self.rows[index].theme_profile = profile_name
-
     def delete(self):
         self.rows.clear()
         del self.target_object
@@ -630,7 +658,7 @@ def test_Form():
                      row_info(5, field_info("test_bool")),
                      test_bool=True, test_text="Text", test_int=0,
                      test_slider=50, test_dropdown=0)
-
+    #_layout = layout()
 
     class Test_Form(Form):
 

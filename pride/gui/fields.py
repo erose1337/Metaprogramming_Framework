@@ -74,7 +74,7 @@ class Field(pride.gui.gui.Container):
                 "_value_initialized" : False, "field_type" : None,
                 "editable" : True, "location" : "left", "has_label" : True,
                 "display_name" : ''}
-    subcomponent_kwargs = {"entry" : dict(), "label" : dict()}
+    subcomponents = {"entry" : dict(), "label" : dict()}
     predefaults = {"target_object" : None}
     autoreferences = ("label", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -196,7 +196,7 @@ class Callable_Field(Field):
     defaults = {"orientation" : "side by side",
                 "has_label" : False, "button_text" : '', "args" : tuple()}
     mutable_defaults = {"kwargs" : dict}
-    subcomponent_kwargs = {"entry" : {"scale_to_text" : True}}
+    subcomponents = {"entry" : {"scale_to_text" : True}}
     interface = (tuple(), ("button_text", "args", "kwargs"))
 
     def create_entry(self, location):
@@ -442,7 +442,7 @@ class Toggle_Entry(Entry):
             self.status_light.disable_indicator()
 
 
-from pride.gui.form2 import Form, layout, row_info, field_info
+from pride.gui.form import Form, layout, row_info, field_info
 
 
 
@@ -579,7 +579,7 @@ class Spinbox(Field):
     defaults = {"minimum" : None, "maximum" : None}
                 # can only use either minimum or maximum but not both by default
                 # must specify Spinbox type explicitly if min and max are used.
-    subcomponent_kwargs = {"entry" : {"location" : "left"}}
+    subcomponents = {"entry" : {"location" : "left"}}
     interface = (tuple(), ("minimum", "maximum"))
 
     def create_entry(self, location):

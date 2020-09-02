@@ -1,4 +1,4 @@
-# for subcomponent_kwargs
+# for subcomponents
 # cannot be in base.py because a reference to Config is needed in metaclass
 def deep_update(d1, d2):
     for key, value in d2.items():
@@ -17,7 +17,7 @@ class Config(dict):
         nested dictionaries are updated instead of replaced.
         Is otherwise identical to a normal `dict`
 
-        Used by the `subcomponent_kwargs` mechanism. """
+        Used by the `subcomponents` mechanism. """
 
     def update(self, E=None, **kwargs):
         if E is not None:
@@ -27,8 +27,9 @@ class Config(dict):
                 for k, v in E: # if E is a list of tuples, it overwrites
                     self[k] = value   # and does not update nested dicts
         for key, value in kwargs.items():
-            self[key] = value
-# end code for subcomponent_kwargs
+            self[key] = value        
+
+# end code for subcomponents
 
 
 class Interface(tuple):

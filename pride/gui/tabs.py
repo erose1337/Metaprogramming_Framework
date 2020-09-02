@@ -49,13 +49,13 @@ class Tab(pride.gui.fields.Callable_Field):
 
     defaults = {"entry_type" : Tab_Entry, "editable" : True,
                 "include_delete_button" : True}
-    subcomponent_kwargs = {"tab_delete_button" :
-                              {"button_text" : 'x',
-                               "theme_profile" : "placeholder",
-                               "name" : "delete_tab",
-                               "entry_kwargs" :
-                                               {"theme_profile" : "placeholder",
-                                                "scale_to_text" : True}}}
+    subcomponents = {"tab_delete_button" :
+                          {"type" : "pride.gui.fields.Callable_Field",
+                           "button_text" : 'x',
+                           "theme_profile" : "placeholder",
+                           "name" : "delete_tab",
+                           "entry_kwargs" : {"theme_profile" : "placeholder",
+                                             "scale_to_text" : True}}}
 
     def create_subcomponents(self):
         super(Tab, self).create_subcomponents()
@@ -130,7 +130,7 @@ class Tabbed_Window(pride.gui.form.Scrollable_Window):
                 "new_tab_button_type" : "pride.gui.fields.Callable_Field"}
     autoreferences = ("tab_bar", "top_bar")
     interface = (("new_tab", ), ("new_tab", ))
-    subcomponent_kwargs = {"top_bar" : {"location" : "top",
+    subcomponents = {"top_bar" : {"location" : "top",
                                         "h_range" : (0, .05)},
                            "tab_bar" : {"location" : "left",
                                         "entry_kwargs" : {"orientation" :

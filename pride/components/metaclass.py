@@ -393,7 +393,7 @@ class Defaults(Inherited_Attributes):
                             "post_initializer" : str, "allowed_values" : dict,
                             "auto_verbosity_ignore" : tuple,
                             "autoreferences" : tuple, "parser_args" : tuple,
-                            "subcomponent_kwargs" : pride.components.Config,
+                            "subcomponents" : pride.components.Config,
                             "interface" : pride.components.Interface}
 
 

@@ -179,7 +179,7 @@ class Scrollable_Window(pride.gui.gui.Window):
     autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
     subcomponent_types = {"vertical_slider" : "pride.gui.fields.Slider_Field",
                           "horizontal_slider" : "pride.gui.fields.Slider_Field"}
-    subcomponent_kwargs = {"vertical_slider" :
+    subcomponents = {"vertical_slider" :
                                  {"location" : "right",
                                  "orientation" : "stacked",
                                  "w_range" : (0, .025),
@@ -299,7 +299,7 @@ class Form(Scrollable_Window):
 
     defaults = {"target_object" : None, "max_rows" : 4,
                 "horizontal_slider_location" : None}
-    subcomponent_kwargs = {"row" : {"location" : "top",
+    subcomponents = {"row" : {"location" : "top",
                                     "h_range" : (0, 1.0)}}
     mutable_defaults = {"rows" : dict, "visible_rows" : list}
     interface = (tuple(), ("max_rows", "horizontal_slider_location",

@@ -293,7 +293,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
     #           component.do_thing2()
     autoreferences = tuple()
 
-    subcomponent_kwargs = dict()
+    subcomponents = dict()
 
     def _get_parent(self):
         return objects[self.parent_name] if self.parent_name else None
@@ -335,8 +335,8 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                                                 kwargs.items()):
             setattr(self, attribute, value)
 
-        if self.subcomponent_kwargs:
-            for name, value in self.subcomponent_kwargs.items():
+        if self.subcomponents:
+            for name, value in self.subcomponents.items():
                 attribute = "{}_kwargs".format(name)
                 value = copy.deepcopy(value)
                 setattr(self, attribute, value)
@@ -360,7 +360,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 except AttributeError:
                     if hasattr(self, attribute):
                         raise
-                    import pprint # note: subcomponent_kwargs above pops from kwargs
+                    import pprint # note: subcomponents above pops from kwargs
                     pprint.pprint(kwargs)
                     raise ArgumentError("{}: Required attribute '{}' not assigned".format(self.reference, attribute))
 

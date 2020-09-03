@@ -63,9 +63,10 @@ class Tab(pride.gui.fields.Callable_Field):
             tabbed_window = self.parent
             while not hasattr(tabbed_window, "delete_tab"):
                 tabbed_window = tabbed_window.parent
-            self.create("pride.gui.fields.Callable_Field",
+            kwargs = self.tab_delete_button_kwargs
+            self.create(kwargs["type"],
                         target_object=tabbed_window, args=(self, ),
-                        **self.tab_delete_button_kwargs)
+                        **kwargs)
 
 
 class Tab_Bar(pride.gui.form.Form):

@@ -297,13 +297,12 @@ class Visible_Row(pride.gui.gui.Container):
 
 class Form(Scrollable_Window):
 
-    defaults = {"target_object" : None, "max_rows" : 4,
-                "horizontal_slider_location" : None}
+    defaults = {"target_object" : None, "max_rows" : 4}
     subcomponents = {"row" : {"location" : "top",
-                                    "h_range" : (0, 1.0)}}
+                              "h_range" : (0, 1.0)},
+                     "horizontal_slider" : {"location" : None}}
     mutable_defaults = {"rows" : dict, "visible_rows" : list}
-    interface = (tuple(), ("max_rows", "horizontal_slider_location",
-                           "vertical_slider_location"))
+    interface = (tuple(), ("max_rows", ))
 
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
@@ -318,7 +317,6 @@ class Form(Scrollable_Window):
         if self.target_object is None:
             self.target_object = self
 
-        self.filter_layout()
         for key, value in self.layout[-1].iteritems():
             setattr(self, key, value)
 
@@ -346,93 +344,6 @@ class Form(Scrollable_Window):
             self.selected_entry = self.rows[0].fields[0].entry
 
         self.synchronize_scroll_bars()
-
-    def filter_layout(self):
-        form_iface_methods, form_iface_attrs = self.interface
-
-        # if a key is in the form.__dict__,
-        #    then it must be listed in the interface to be accessible
-        # otherwise, it is assumed to be a form variable defined by the layout
-        form_kwargs = self.layout[-1]
-        api_controlled_values = self.__dict__.keys()
-        form_vars = []
-        for key, value in form_kwargs.iteritems():
-            if key in api_controlled_values:
-                if key not in form_iface_attrs:
-                    message  = "Layout attempted to set non-interface attribute"
-                    message += " '{}' to {}".format(key, value)
-                    raise ValueError(message)
-            else:
-                form_vars.append(key)
-        for key in form_vars:
-            setattr(self, key, form_kwargs[key])
-
-        (_, # this methods tuple should be empty
-         row_iface_attrs) = Row.interface
-
-        target_object = self.target_object
-        for row_no, fields, row_kwargs in self.layout[0].values():
-            for key, value in row_kwargs.iteritems():
-                if key not in row_iface_attrs:
-                    self.raise_error(row_no,
-                   "Layout attempted to set non-interface attribute '{}' to {}",
-                                key, value)
-
-            for f_name, field_kwargs in fields:
-                f_type = self.determine_field_type(self.target_object, f_name,
-                                                   field_kwargs)
-                if f_type not in FIELD_TYPES.values():
-                    self.raise_error2(row_no, f_name,
-                                 "Invalid field_type: '{}'".format(f_name))
-                f_type = resolve_string(f_type)
-                (_,
-                 field_iface_attrs) = f_type.interface
-                if (f_name not in field_iface_attrs and
-                    f_name not in form_iface_methods):
-                    if f_name not in form_vars:
-                        self.raise_error2(row_no, f_name,
-            "Layout attempted to create field for non-interface attribute '{}'",
-                                     f_name)
-
-
-                if not hasattr(target_object, f_name):
-                    assert f_name not in form_vars
-                    self.raise_error2(row_no, f_name,
-                                 "Target has no attribute '{}'\n",
-                                 f_name)
-
-                for key, value in field_kwargs.iteritems():
-                    if key not in field_iface_attrs:
-                        self.raise_error2(row_no, f_name,
-                   "Layout attempted to set non-interface attribute '{}' to {}",
-                                     key, value)
-
-
-                if hasattr(target_object, f_name):
-                    is_callable = hasattr(getattr(target_object, f_name),
-                                        "__call__")
-                    if is_callable and f_name not in form_iface_methods:
-                        self.raise_error2(row_no, f_name,
-                            "Layout attempted to use non-interface method '{}'",
-                                     f_name)
-
-    def raise_error(self, row_no, text, *format_args):
-        message  = "\n{}\n".format(self)
-        message += "Row {}\n".format(row_no)
-        message += '-' * min(79,
-                            len("ValueError: ") + len(message))
-        message += '\n'
-        message += text.format(*format_args)
-        raise ValueError(message)
-
-    def raise_error2(self, row_no, f_name, text, *format_args):
-        message  = "\n{}\n".format(self)
-        message += "Row {}; Field: {}\n".format(row_no, f_name)
-        message += '-' * min(79,
-                            len("ValueError: ") + len(message))
-        message += '\n'
-        message += text.format(*format_args)
-        raise ValueError(message)
 
     def unload_rows(self, new_row_indices):
         for row in self.visible_rows:
@@ -640,6 +551,7 @@ class Form(Scrollable_Window):
 
 def test_Form():
     import pride.gui.main
+    import os
     _layout = layout(row_info(0,
                               field_info("test_bool"),
                               field_info("test_text"),
@@ -650,7 +562,9 @@ def test_Form():
                               field_info("test_dropdown",
                                          orientation="stacked",
                                          values=(0, 1, 2, 3, 5, 8, 13, 21,
-                                                 34, 55, 89, 144)),
+                                                 34, 55, 89, 144),
+                                         entry_kwargs={"text" : "dict()",
+                                                       "type" : "pride.gui.fields.Entry"}),
                               field_info("delete",
                                          button_text="Delete (Test Callable)"),
                               h_range=(0, .3)),

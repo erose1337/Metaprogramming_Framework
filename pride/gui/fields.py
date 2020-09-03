@@ -29,7 +29,7 @@ class Entry(pride.gui.gui.Button):
 
     defaults = {"location" : "right", "confidential" : False,
                 "show_status_when_selected" : True}
-    predefaults = {"text_initialized" : False}
+    predefaults = {"text_initialized" : False, "parent_field" : None}
     autoreferences = ("parent_field", )
     interface = (tuple(), ("location", "show_status_when_selected",))
 
@@ -74,7 +74,8 @@ class Field(pride.gui.gui.Container):
                 "_value_initialized" : False, "field_type" : None,
                 "editable" : True, "location" : "left", "has_label" : True,
                 "display_name" : ''}
-    subcomponents = {"entry" : dict(), "label" : dict()}
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Entry"},
+                     "label" : {"type" : "pride.gui.gui.Container"}}
     predefaults = {"target_object" : None}
     autoreferences = ("label", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -133,7 +134,7 @@ class Field(pride.gui.gui.Container):
         label_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
         label_kwargs.setdefault("location", location)
         label_kwargs.setdefault("text", self.display_name or self.name)
-        self.label = self.create(pride.gui.gui.Container, **label_kwargs)
+        self.label = self.create(label_kwargs["type"], **label_kwargs)
         if not self.has_label:
             self.label.hide()
 

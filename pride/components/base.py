@@ -330,12 +330,19 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             if attribute not in kwargs:
                 setattr(self, attribute, value_type())
 
+        subcomponents = self.subcomponents
         for attribute, value in itertools.chain(self.predefaults.items(),
                                                 self.defaults.items(),
                                                 kwargs.items()):
-            setattr(self, attribute, value)
+            if attribute in kwargs:
+                if (attribute[-len("_kwargs"):] == "_kwargs" and
+                    attribute.rsplit('_', 1)[0] in subcomponents):
+                    continue
+                setattr(self, attribute, kwargs.pop(attribute))
+            else:
+                setattr(self, attribute, value)
 
-        if self.subcomponents:
+        if subcomponents:
             for name, value in self.subcomponents.items():
                 attribute = "{}_kwargs".format(name)
                 value = copy.deepcopy(value)

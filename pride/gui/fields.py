@@ -13,6 +13,28 @@ LEFT_ARROW = 1073741904
 DELETE_KEY = "\x7f"
 SHIFT = 1
 
+ENTRIES = ("pride.gui.fields.Entry",
+           "pride.gui.fields.Callable_Entry",
+           "pride.gui.fields.Text_Entry",
+           "pride.gui.fields.Dropdown_Entry",
+           "pride.gui.fields.Spinbox_Entry",
+           "pride.gui.fields.Toggle_Entry",
+           "pride.gui.fields.Slider_Entry",
+           "pride.gui.fields._Endcap_Entry",
+           "pride.gui.fields.Callable_Entry",
+           "pride.gui.tabs.Tab_Entry")
+
+FIELDS = ("pride.gui.fields.Field",
+          "pride.gui.fields.Callable_Field",
+          "pride.gui.fields.Text_Field",
+          "pride.gui.fields.Dropdown_Field",
+          "pride.gui.fields.Spinbox",
+          "pride.gui.fields.Toggle",
+          "pride.gui.fields.Slider_Field",
+          "pride.gui.fields._Endcap",
+          "pride.gui.fields.Dropdown_Callable",
+          "pride.gui.tabs.Tab")
+
 ENTRY_TYPE = {"Field" : "pride.gui.fields.Entry",
               "Callable_Field" : "pride.gui.fields.Callable_Entry",
               "Text_Field" : "pride.gui.fields.Text_Entry",
@@ -141,7 +163,7 @@ class Field(pride.gui.gui.Container):
     def create_entry(self, location):
         kwargs = self.entry_kwargs
         kwargs.setdefault("location", location)
-        entry_type = ENTRY_TYPE[self.__class__.__name__]
+        entry_type = self.entry_type
         self.entry = self.create(entry_type, parent_field=self, **kwargs)
 
     def handle_value_changed(self, old_value, new_value):
@@ -197,7 +219,8 @@ class Callable_Field(Field):
     defaults = {"orientation" : "side by side",
                 "has_label" : False, "button_text" : '', "args" : tuple()}
     mutable_defaults = {"kwargs" : dict}
-    subcomponents = {"entry" : {"scale_to_text" : True}}
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Callable_Entry",
+                                "scale_to_text" : True}}
     interface = (tuple(), ("button_text", "args", "kwargs"))
 
     def create_entry(self, location):
@@ -318,7 +341,9 @@ class Text_Entry(Entry):
         self.disable_cursor(False)
 
 
-class Text_Field(Field): pass # entry_type defined in ENTRY_TYPE
+class Text_Field(Field):
+
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Text_Entry"}}
 
 
 
@@ -573,6 +598,7 @@ class Dropdown_Field(Callable_Field):
     defaults = {"has_label" : True, "values" : tuple(),
                 "orientation" : "side by side"}
     interface = (tuple(), ("values", ))
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Dropdown_Entry"}}
 
 
 class Spinbox(Field):
@@ -580,17 +606,19 @@ class Spinbox(Field):
     defaults = {"minimum" : None, "maximum" : None}
                 # can only use either minimum or maximum but not both by default
                 # must specify Spinbox type explicitly if min and max are used.
-    subcomponents = {"entry" : {"location" : "left"}}
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Spinbox_Entry",
+                                "location" : "left"}}
     interface = (tuple(), ("minimum", "maximum"))
 
     def create_entry(self, location):
         container = self.create(pride.gui.gui.Container, location=location)
-        entry_type = ENTRY_TYPE[self.__class__.__name__]
+        entry_type = self.entry_type
         entry = self.entry = container.create(entry_type, parent_field=self,
                                               tip_bar_text=self.tip_bar_text,
                                                **self.entry_kwargs)
         if self.editable:
-            subcontainer = container.create(pride.gui.gui.Container, location="left",
+            subcontainer = container.create(pride.gui.gui.Container,
+                                            location="left",
                                             w_range=(0, .05))
             kwargs = {"target_entry" : entry, "location" : "top"}
             self.inc_button = subcontainer.create(Increment_Button, **kwargs)
@@ -601,7 +629,9 @@ class Spinbox(Field):
         return super(Spinbox, self).handle_value_changed(int(old_value), int(new_value))
 
 
-class Toggle(Field): pass # entry_type defined in ENTRY_TYPE
+class Toggle(Field):
+
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Toggle_Entry"}}
 
 
 class Continuum(pride.gui.gui.Button):
@@ -732,6 +762,7 @@ class _Endcap_Entry(Text_Entry):
 class _Endcap(Text_Field):
 
     defaults = {"editable" : False, "has_label" : False}
+    subcomponents = {"entry" : {"type" : "pride.gui.fields._Endcap_Entry"}}
 
 
 class Slider_Entry(Entry):
@@ -891,6 +922,7 @@ class Slider_Field(Field):
 
     predefaults = {"_minimum" : 0, "_maximum" : 0}
     interface = (tuple(), ("minimum", "maximum"))
+    subcomponents = {"entry" : {"type" : "pride.gui.fields.Slider_Entry"}}
 
     def _get_minimum(self):
         return self._minimum

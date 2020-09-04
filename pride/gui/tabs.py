@@ -47,15 +47,15 @@ class Tab_Entry(pride.gui.fields.Callable_Entry):
 
 class Tab(pride.gui.fields.Callable_Field):
 
-    defaults = {"entry_type" : Tab_Entry, "editable" : True,
-                "include_delete_button" : True}
+    defaults = {"editable" : True, "include_delete_button" : True}
     subcomponents = {"tab_delete_button" :
                           {"type" : "pride.gui.fields.Callable_Field",
                            "button_text" : 'x',
                            "theme_profile" : "placeholder",
                            "name" : "delete_tab",
                            "entry_kwargs" : {"theme_profile" : "placeholder",
-                                             "scale_to_text" : True}}}
+                                             "scale_to_text" : True}},
+                     "entry" : {"type" : "pride.gui.tabs.Tab_Entry"}}
 
     def create_subcomponents(self):
         super(Tab, self).create_subcomponents()
@@ -123,36 +123,36 @@ class Tab_Bar(pride.gui.form.Form):
 class Tabbed_Window(pride.gui.form.Scrollable_Window):
 
     defaults = {"include_new_tab_button" : True, "tab_targets" : tuple(),
-                "new_window_type" : "pride.gui.gui.Container",
-                "tab_bar_label" : '',
-                "include_label" : False,
-                "tabs_per_row" : 8,
-                "top_bar_type" : "pride.gui.gui.Container",
-                "new_tab_button_type" : "pride.gui.fields.Callable_Field"}
+                "tab_bar_label" : '', "include_label" : False,
+                "tabs_per_row" : 8}
     autoreferences = ("tab_bar", "top_bar")
     interface = (("new_tab", ), ("new_tab", ))
-    subcomponents = {"top_bar" : {"location" : "top",
-                                        "h_range" : (0, .05)},
-                           "tab_bar" : {"location" : "left",
-                                        "entry_kwargs" : {"orientation" :
-                                                                      "stacked",
-                                                     "include_minmax_buttons" :
-                                                                         False},
-                                        "form_name" : '', "max_rows" : 1,
-                                        "vertical_slider_kwargs" :
+    subcomponents = {"top_bar" : {"type" : "pride.gui.gui.Container",
+                                  "location" : "top",
+                                  "h_range" : (0, .05)},
+                     "tab_bar" : {"type" : "pride.gui.tabs.Tab_Bar",
+                                  "location" : "left",
+                                  "entry_kwargs" :
+                                             {"orientation" : "stacked",
+                                              "include_minmax_buttons" : False},
+                                  "max_rows" : 1,
+                                  "vertical_slider_kwargs" :
                                             {"include_minmax_buttons" : False}},
-                           "new_tab_button" : {"location" : "left",
-                                               "button_text" : '+',
-                                               "name" : "new_tab",
-                                               "entry_kwargs" :
-                                                      {"scale_to_text" : False,
+                     "new_tab_button" :
+                                    {"type" : "pride.gui.fields.Callable_Field",
+                                     "location" : "left",
+                                     "button_text" : '+',
+                                     "name" : "new_tab",
+                                     "entry_kwargs" : {"scale_to_text" : False,
                                                        "w_range" : (0, .05)}},
-                           "tab" : {"button_text" : "New Window",
-                                    "theme_profile" : "placeholder",
-                                    "field_type" : "Tab",
-                                    "entry_kwargs" : {"scale_to_text" : True,
-                                                  "use_lazy_loading" : True}},
-                          "tab_bar_row" : dict()}
+                     "tab" : {"type" : None,
+                              "button_text" : "New Window",
+                              "theme_profile" : "placeholder",
+                              "field_type" : "pride.gui.tabs.Tab",
+                              "entry_kwargs" : {"scale_to_text" : True,
+                                                "use_lazy_loading" : True}},
+                    "tab_bar_row" : {"type" : None},
+                    "new_window" : {"type" : "pride.gui.gui.Container"}}
 
     def create_subcomponents(self):
         super(Tabbed_Window, self).create_subcomponents()
@@ -179,7 +179,6 @@ class Tabbed_Window(pride.gui.form.Scrollable_Window):
     def create_tab_layout(self):
         rows = []
         _kwargs = self.tab_kwargs
-        tab_bar_row_kwargs = self.tab_bar_row_kwargs
         for row_no, row in enumerate(slide(self.tab_targets,
                                            self.tabs_per_row)):
             fields = []
@@ -191,7 +190,7 @@ class Tabbed_Window(pride.gui.form.Scrollable_Window):
                 fields.append(field_info("select_tab", **tab_kwargs))
 
             rows.append(row_info(row_no, *fields,
-                                 **tab_bar_row_kwargs))
+                                 **self.tab_bar_row_kwargs))
         return layout(*rows)
 
     def create_tab_bar_label(self):
@@ -209,7 +208,7 @@ class Tabbed_Window(pride.gui.form.Scrollable_Window):
         kwargs["layout"] = _layout
         kwargs["target_object"] = self
         window = self.top_bar
-        self.tab_bar = window.create(Tab_Bar, **kwargs)
+        self.tab_bar = window.create(self.tab_bar_type, **kwargs)
 
         tabs = self.tab_bar.fields
         for tab_no, target in enumerate(self.tab_targets):

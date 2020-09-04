@@ -177,22 +177,23 @@ class Scrollable_Window(pride.gui.gui.Window):
 
     predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
     autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
-    subcomponent_types = {"vertical_slider" : "pride.gui.fields.Slider_Field",
-                          "horizontal_slider" : "pride.gui.fields.Slider_Field"}
     subcomponents = {"vertical_slider" :
-                                 {"location" : "right",
-                                 "orientation" : "stacked",
-                                 "w_range" : (0, .025),
-                                 "name" : "y_scroll_value",
-                                 "minimum" : 0, "maximum" : 0,
-                                 "has_label" : False,
-                                 "entry_kwargs" : {"orientation" : "stacked"}},
-                           "horizontal_slider" : {"h_range" : (0, .025),
-                                                  "has_label" : False,
-                                                  "name" : "x_scroll_value",
-                                                  "minimum" : 0, "maximum" : 0,
-                                                  "location" : "bottom",
-                                                "orientation" : "side by side"}}
+                                 {"type" : "pride.gui.fields.Slider_Field",
+                                  "location" : "right",
+                                  "orientation" : "stacked",
+                                  "w_range" : (0, .025),
+                                  "name" : "y_scroll_value",
+                                  "minimum" : 0, "maximum" : 0,
+                                  "has_label" : False,
+                                  "entry_kwargs" : {"orientation" : "stacked"}},
+                     "horizontal_slider" :
+                                      {"type" : "pride.gui.fields.Slider_Field",
+                                       "h_range" : (0, .025),
+                                       "has_label" : False,
+                                       "name" : "x_scroll_value",
+                                       "minimum" : 0, "maximum" : 0,
+                                       "location" : "bottom",
+                                       "orientation" : "side by side"}}
     interface = (tuple(), ("horizontal_slider_kwargs",
                            "vertical_slider_kwargs"))
 
@@ -222,13 +223,13 @@ class Scrollable_Window(pride.gui.gui.Window):
         kwargs = self.vertical_slider_kwargs
         position = kwargs["location"]
         if position is not None:
-            slider_type = self.subcomponent_types["vertical_slider"]
+            slider_type = self.vertical_slider_type
             self.vertical_slider = self.create(slider_type, target_object=self,
                                                **kwargs)
         kwargs = self.horizontal_slider_kwargs
         position = kwargs["location"]
         if position is not None:
-            slider_type = self.subcomponent_types["horizontal_slider"]
+            slider_type = self.horizontal_slider_type
             self.horizontal_slider = self.create(slider_type,
                                                  target_object=self, **kwargs)
 
@@ -298,7 +299,8 @@ class Visible_Row(pride.gui.gui.Container):
 class Form(Scrollable_Window):
 
     defaults = {"target_object" : None, "max_rows" : 4}
-    subcomponents = {"row" : {"location" : "top",
+    subcomponents = {"row" : {"type" : "pride.gui.form.Row",
+                              "location" : "top",
                               "h_range" : (0, 1.0)},
                      "horizontal_slider" : {"location" : None}}
     mutable_defaults = {"rows" : dict, "visible_rows" : list}
@@ -385,12 +387,14 @@ class Form(Scrollable_Window):
 
     def create_row(self, _row_info):
         kwargs = copy.deepcopy(self.row_kwargs)
+        row_type = kwargs["type"]
+
         row_no, row_kwargs = _row_info[0], _row_info[-1]
         deep_update(kwargs, row_kwargs)
         kwargs.setdefault("row_number", row_no)
 
         window = self.main_window
-        row = window.create("pride.gui.form.Row", **kwargs)
+        row = window.create(row_type, **kwargs)
         self.rows[row_no] = row
         _field_infos = _row_info[1:-1][0]
         for _field_info in _field_infos:
@@ -413,8 +417,8 @@ class Form(Scrollable_Window):
         row.fields.append(field)
         return field
 
-    def determine_field_type(self, target_object, name, entries):
-        field_type = entries.get("field_type", None)
+    def determine_field_type(self, target_object, name, field_kwargs):
+        field_type = field_kwargs.get("field_type", None)
         if field_type is None:
             try:
                 value = getattr(target_object, name)
@@ -425,30 +429,28 @@ class Form(Scrollable_Window):
                     raise exception
             #if hasattr(value, "field_type"):
             #    field_type = value.field_type
-            if "values" in entries: # check for dropdowns before checking value
-                field_type = "Dropdown"
-            elif "minimum" in entries and "maximum" in entries: # check here before checking for int/float
-                field_type = "Slider"
-            elif isinstance(value, bool): # must compare for bool before comparing for int; bool is a subclass of int
-                field_type = "Toggle"
+
+            # check for dropdowns before checking value
+            if "values" in field_kwargs:
+                field_type = "pride.gui.fields.Dropdown_Field"
+            # check for Slider before checking for int/float
+            elif "minimum" in field_kwargs and "maximum" in field_kwargs:
+                field_type = "pride.gui.fields.Slider_Field"
+            # must compare for bool before comparing for int; bool is a subclass of int
+            elif isinstance(value, bool):
+                field_type = "pride.gui.fields.Toggle"
             elif isinstance(value, int) or isinstance(value, float):
-                field_type = "Spinbox"
+                field_type = "pride.gui.fields.Spinbox"
             elif isinstance(value, str):
-                field_type = "Text_Field"
+                field_type = "pride.gui.fields.Text_Field"
             elif hasattr(value, "__call__"):
-                field_type = "Callable"
+                field_type = "pride.gui.fields.Callable_Field"
             #elif isinstance(value, tuple) or isinstance(value, list):
             #    field_type = "pride.gui.widgets.formext.Tabbed_Form"
         if field_type is None:
             message = "Unable to determine field_type for {}"
-            raise ValueError(message.format((target_object, name, value, entries)))
-        if field_type not in FIELD_TYPES:
-            message = self.reference + '\n'
-            message += "Field: {}\n".format(name)
-            message += ('-' * min(79, len(message))) + '\n'
-            message += "Requested field_type '{}' is unavailable"
-            raise ValueError(message.format(field_type))
-        return FIELD_TYPES[field_type]
+            raise ValueError(message.format((target_object, name, value, field_kwargs)))
+        return field_type
 
     def handle_value_changed(self, field, old, new):
         pass
@@ -551,7 +553,7 @@ class Form(Scrollable_Window):
 
 def test_Form():
     import pride.gui.main
-    import os
+
     _layout = layout(row_info(0,
                               field_info("test_bool"),
                               field_info("test_text"),
@@ -562,9 +564,7 @@ def test_Form():
                               field_info("test_dropdown",
                                          orientation="stacked",
                                          values=(0, 1, 2, 3, 5, 8, 13, 21,
-                                                 34, 55, 89, 144),
-                                         entry_kwargs={"text" : "dict()",
-                                                       "type" : "pride.gui.fields.Entry"}),
+                                                 34, 55, 89, 144)),
                               field_info("delete",
                                          button_text="Delete (Test Callable)"),
                               h_range=(0, .3)),

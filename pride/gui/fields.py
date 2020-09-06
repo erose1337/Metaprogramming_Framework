@@ -1,6 +1,7 @@
 import collections
 
 import pride.gui.gui
+import pride.gui.themes
 import pride.functions.utilities
 from pride.components import Component
 
@@ -955,3 +956,36 @@ class Slider_Field(Field):
 
     def update_position_from_value(self):
         self.entry.continuum.update_position_from_value()
+
+
+class Image_Theme(pride.gui.themes.Theme):
+
+    def draw_texture(self):
+        area = self.area
+        thickness = self.shadow_thickness + self.glow_thickness
+        area = (area[0] + (thickness / 2), area[1] + (thickness / 2),
+                area[2] - thickness, area[3] - thickness)
+        self.draw("fill", area, color=self.background_color)
+        self.draw("copy", self.image_texture, dstrect=area)
+
+
+class Image_Entry(Entry):
+
+    defaults = {"_enforce_flag" : "SDL", "color" : (0, 0, 0, 255),
+                "theme_type" : "pride.gui.fields.Image_Theme",
+                "animation_enabled" : False}
+    allowed_values = {"theme_type" : ("pride.gui.fields.Image_Theme", )}
+
+    def __init__(self, **kwargs):
+        super(Image_Entry, self).__init__(**kwargs)
+        image_surface = sdl2.ext.load_image(self.parent_field.value,
+                                            enforce=self._enforce_flag)
+        sprite_factory = self.sdl_window.renderer.sprite_factory
+        image_texture = sprite_factory.from_surface(image_surface)
+        sdl2.SDL_SetTextureAlphaMod(image_texture.texture, self.color[-1])
+        self.image_texture = image_texture
+
+
+class Image_Field(Field):
+
+    subcomponents = {"entry" : Component("pride.gui.fields.Image_Entry")}

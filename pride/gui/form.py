@@ -240,17 +240,6 @@ class Scrollable_Window(pride.gui.gui.Window):
         pass
 
 
-FIELD_TYPES = {"Dropdown" : "pride.gui.fields.Dropdown_Field",
-               "Slider" : "pride.gui.fields.Slider_Field",
-               "Toggle" : "pride.gui.fields.Toggle",
-               "Spinbox" : "pride.gui.fields.Spinbox",
-               "Text_Field" : "pride.gui.fields.Text_Field",
-               "Text_Display" : "pride.gui.fields.Text_Display",
-               "Callable" : "pride.gui.fields.Callable_Field",
-               "Dropdown_Callable" : "pride.gui.fields.Dropdown_Callable",
-               "Tab" : "pride.gui.tabs.Tab"}
-
-
 class Row(pride.gui.gui.Container):
 
     mutable_defaults = {"fields" : list}
@@ -568,10 +557,14 @@ def test_Form():
                               field_info("delete",
                                          button_text="Delete (Test Callable)"),
                               h_range=(0, .3)),
-                     row_info(2), row_info(3), row_info(4),
+                     row_info(2,
+                              field_info("test_image",
+                                    field_type="pride.gui.fields.Image_Field")),
+                     row_info(3), row_info(4),
                      row_info(5, field_info("test_bool")),
                      test_bool=True, test_text="Text", test_int=0,
-                     test_slider=50, test_dropdown=0)
+                     test_slider=50, test_dropdown=0,
+                     test_image="/home/e/projects/pride/pride/gui/resources/images/testimage.png")
     #_layout = layout()
 
     class Test_Form(Form):

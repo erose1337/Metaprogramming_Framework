@@ -17,7 +17,9 @@ class Image(pride.gui.gui.Window_Object):
 
     def __init__(self, **kwargs):
         super(Image, self).__init__(**kwargs)
-        image_surface = sdl2.ext.load_image(self.filename, enforce=self._enforce_flag)
-        image_texture = self.sdl_window.renderer.sprite_factory.from_surface(image_surface)
+        image_surface = sdl2.ext.load_image(self.filename,
+                                            enforce=self._enforce_flag)
+        sprite_factory = self.sdl_window.renderer.sprite_factory
+        image_texture = sprite_factory.from_surface(image_surface)
         sdl2.SDL_SetTextureAlphaMod(image_texture.texture, self.color[-1])
         self.image_texture = image_texture

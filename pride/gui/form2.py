@@ -90,8 +90,7 @@ class Remote_Form(Form):
                               "pride.gui.fields.Text_Field",
                               "pride.gui.fields.Text_Display",
                               "pride.gui.fields.Callable_Field",
-                              "pride.gui.fields.Dropdown_Callable",
-                              "pride.gui.tabs.Tab"):
+                              "pride.gui.fields.Dropdown_Callable"):
             self.raise_error("Requested field_type '{}' is unavailable",
                              row=row_no, field=f_name,
                              args=(field_type, ))

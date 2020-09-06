@@ -16,9 +16,6 @@ import sdl2
 
 lerp = pride.gui.lerp
 
-THEME_TYPE = {"Minimal" : "pride.gui.themes.Minimal_Theme",
-              "Animated" : "pride.gui.themes.Animated_Theme2"}
-
 def create_texture(size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                    factory="/Program/SDL_Window/Renderer/SpriteFactory",
                    renderer="/Program/SDL_Window/Renderer"):
@@ -295,7 +292,7 @@ class _Window_Object(Organized_Object):
                 "hovering" : False,
                 "_selected" : False, "confidential" : False,
                 "tip_bar_text" : '', "font" : "Aero",
-                "theme_name" : "Minimal",
+                "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "theme_profile" : "default", "clickable" : True}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
@@ -314,8 +311,11 @@ class _Window_Object(Organized_Object):
     inherited_attributes = {"hotkeys" : dict}
     autoreferences = ("_sdl_window", )
     interface = (tuple(), ("center_text", "hoverable", "wrap_text",
-                           "theme_name", "theme_profile", "text",
+                           "theme_profile", "text",
                            "scale_to_text"))
+    allowed_values = {"theme_type" : ("pride.gui.themes.Theme",
+                                      "pride.gui.themes.Minimal_Theme",
+                                      "pride.gui.themes.Animated_Theme2")}
 
     def _get_always_on_top(self):
         return self._always_on_top
@@ -449,8 +449,7 @@ class _Window_Object(Organized_Object):
         super(_Window_Object, self).__init__(**kwargs)
         self.texture_invalid = True
 
-        theme_type = THEME_TYPE[self.theme_name]
-        self.theme = self.create(theme_type, wrapped_object=self)
+        self.theme = self.create(self.theme_type, wrapped_object=self)
 
         self._children.remove(self.theme)
         window = self.sdl_window
@@ -627,7 +626,7 @@ class _Window_Object(Organized_Object):
 
     def on_load(self, state):
         super(_Window_Object, self).on_load(state)
-        theme_type = THEME_TYPE[self.theme_name]
+        theme_type = self.theme_type
         self.theme = pride.functions.utilities.resolve_string(theme_type).load(self.theme)
         self.theme.wraps(self)
         self._draw_operations = []
@@ -651,7 +650,8 @@ class Animated_Object(_Window_Object):
 
     defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
                 "animation_enabled" : True, "click_animation_enabled" : True,
-                "click_radius" : 2, "theme_name" : "Animated"}
+                "click_radius" : 2,
+                "theme_type" : "pride.gui.themes.Animated_Theme2"}
     predefaults = {"animating" : False, "_old_theme" : None,
                    "_colors_backup" : None, "_start_animation_enabled" : False,
                    "_transition_state" : 0}

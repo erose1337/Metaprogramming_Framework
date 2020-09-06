@@ -136,7 +136,6 @@ class Field(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)
-        assert not self.deleted
         self.create_subcomponents()
 
     def create_subcomponents(self):

@@ -303,7 +303,7 @@ class Form(Scrollable_Window):
                                        location="top",
                                        h_range=(0, 1.0)),
                      "horizontal_slider" : Component(location=None)}
-    mutable_defaults = {"rows" : dict, "visible_rows" : list}
+    mutable_defaults = {"rows" : dict, "visible_rows" : list, "layout" : layout}
     interface = (tuple(), ("max_rows", ))
 
     hotkeys = {("\t", None) : "handle_tab"}

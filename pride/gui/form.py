@@ -170,7 +170,7 @@ def test_compile_filename():
 
 import itertools
 import pride.gui.gui
-from pride.components import deep_update
+from pride.components import deep_update, Component
 from pride.functions.utilities import resolve_string
 
 class Scrollable_Window(pride.gui.gui.Window):
@@ -178,22 +178,22 @@ class Scrollable_Window(pride.gui.gui.Window):
     predefaults = {"_x_scroll_value" : 0, "_y_scroll_value" : 0}
     autoreferences = ("main_window", "vertical_slider", "horizontal_slider")
     subcomponents = {"vertical_slider" :
-                                 {"type" : "pride.gui.fields.Slider_Field",
-                                  "location" : "right",
-                                  "orientation" : "stacked",
-                                  "w_range" : (0, .025),
-                                  "name" : "y_scroll_value",
-                                  "minimum" : 0, "maximum" : 0,
-                                  "has_label" : False,
-                                  "entry_kwargs" : {"orientation" : "stacked"}},
+                        Component("pride.gui.fields.Slider_Field",
+                                  location="right",
+                                  orientation="stacked",
+                                  w_range=(0, .025),
+                                  name="y_scroll_value",
+                                  minimum=0, maximum=0,
+                                  has_label=False,
+                                  entry_kwargs={"orientation" : "stacked"}),
                      "horizontal_slider" :
-                                      {"type" : "pride.gui.fields.Slider_Field",
-                                       "h_range" : (0, .025),
-                                       "has_label" : False,
-                                       "name" : "x_scroll_value",
-                                       "minimum" : 0, "maximum" : 0,
-                                       "location" : "bottom",
-                                       "orientation" : "side by side"}}
+                                     Component("pride.gui.fields.Slider_Field",
+                                               h_range=(0, .025),
+                                               has_label=False,
+                                               name="x_scroll_value",
+                                               minimum=0, maximum=0,
+                                               location="bottom",
+                                               orientation="side by side")}
     interface = (tuple(), ("horizontal_slider_kwargs",
                            "vertical_slider_kwargs"))
 
@@ -299,10 +299,10 @@ class Visible_Row(pride.gui.gui.Container):
 class Form(Scrollable_Window):
 
     defaults = {"target_object" : None, "max_rows" : 4}
-    subcomponents = {"row" : {"type" : "pride.gui.form.Row",
-                              "location" : "top",
-                              "h_range" : (0, 1.0)},
-                     "horizontal_slider" : {"location" : None}}
+    subcomponents = {"row" : Component("pride.gui.form.Row",
+                                       location="top",
+                                       h_range=(0, 1.0)),
+                     "horizontal_slider" : Component(location=None)}
     mutable_defaults = {"rows" : dict, "visible_rows" : list}
     interface = (tuple(), ("max_rows", ))
 
@@ -387,7 +387,7 @@ class Form(Scrollable_Window):
 
     def create_row(self, _row_info):
         kwargs = copy.deepcopy(self.row_kwargs)
-        row_type = kwargs["type"]
+        row_type = self.row_type
 
         row_no, row_kwargs = _row_info[0], _row_info[-1]
         deep_update(kwargs, row_kwargs)

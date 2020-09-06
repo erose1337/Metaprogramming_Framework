@@ -1,10 +1,16 @@
+import pprint
+
+import pride.gui.fields
 from pride.functions.utilities import resolve_string
 from pride.gui.form import Form
+from pride.components import Component
 
 class Remote_Form(Form):
 
     def deep_filter(self, key, value, _type,
                     layout_name=None, row_no=None, field_name=None):
+        print key, value, _type
+        print value is None or value ==_type
         if key not in _type.interface[1]:
             self.raise_error("'{}' not in {} interface",
                              layout_name, row_no, field_name,
@@ -16,15 +22,13 @@ class Remote_Form(Form):
         else:
 
             if _kwargs == "kwargs" and component in _type.subcomponents:
-                sub_type = _type.subcomponents[component]["type"]
+                sub_type = _type.subcomponents[component].type
                 if (sub_type not in pride.gui.fields.ENTRIES and
                     sub_type not in pride.gui.fields.FIELDS):
                     self.raise_error("Invalid type '{}'".format(sub_type),
                                      layout_name, row_no, field_name)
                 sub_type = resolve_string(sub_type)
                 for subkey, subvalue in value.items():
-                    if subkey == "type":
-                        continue
                     self.deep_filter(subkey, subvalue, sub_type,
                                      layout_name, row_no, field_name)
 
@@ -49,11 +53,11 @@ class Remote_Form(Form):
 
     def create_row(self, _row_info):
         untrusted_kwargs = _row_info[-1]
-        row_type = self.row_kwargs["type"]
+        row_type = self.row_type
         if row_type not in ("pride.gui.form.Row", ):
             self.raise_error("Invalid row_type '{}'".format(row_type))
 
-        row_type = pride.functions.utilities.resolve_string(row_type)
+        row_type = resolve_string(row_type)
         for key, value in untrusted_kwargs.items():
             self.deep_filter(key, value, row_type,
                              row_no=_row_info[0])

@@ -22,12 +22,30 @@ class Config(dict):
     def update(self, E=None, **kwargs):
         if E is not None:
             if hasattr(E, "keys"):
-                deep_update(self, E)
+                for key, value in E.items():
+                    try:
+                        old_value = self[key]
+                    except KeyError:
+                        self[key] = value
+                    else:
+                        old_value.type = value.type
+                        deep_update(old_value.kwargs, value.kwargs)
             else:
+                raise NotImplementedError() # should never happen
                 for k, v in E: # if E is a list of tuples, it overwrites
                     self[k] = value   # and does not update nested dicts
+        if kwargs:
+            raise NotImplementedError() # should never happen
         for key, value in kwargs.items():
-            self[key] = value        
+            self[key] = value
+
+
+class Component(object):
+
+    def __init__(self, _type=None, **kwargs):
+        self.type = _type
+        self.kwargs = kwargs
+
 
 # end code for subcomponents
 

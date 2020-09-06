@@ -343,16 +343,12 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 setattr(self, attribute, value)
 
         if subcomponents:
-            for name, value in self.subcomponents.items():
-                value = copy.deepcopy(value)
+            for name, component in self.subcomponents.items():
+                value = copy.deepcopy(component.kwargs)
+                _type = component.type
                 attribute = "{}_kwargs".format(name)
                 setattr(self, attribute, value)
-                try:
-                    setattr(self, "{}_type".format(name), value["type"])
-                except KeyError:
-                    message  = "\n{}.subcomponents['{}'] is missing the "
-                    message += "required 'type' entry"
-                    raise ValueError(message.format(self, name))
+                setattr(self, "{}_type".format(name), _type)
 
                 if attribute in kwargs:
                     new_value = kwargs.pop(attribute)

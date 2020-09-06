@@ -2,6 +2,7 @@ import collections
 
 import pride.gui.gui
 import pride.functions.utilities
+from pride.components import Component
 
 import sdl2
 
@@ -96,8 +97,8 @@ class Field(pride.gui.gui.Container):
                 "_value_initialized" : False, "field_type" : None,
                 "editable" : True, "location" : "left", "has_label" : True,
                 "display_name" : ''}
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Entry"},
-                     "label" : {"type" : "pride.gui.gui.Container"}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Entry"),
+                     "label" : Component("pride.gui.gui.Container")}
     predefaults = {"target_object" : None}
     autoreferences = ("label", "parent_form")
     allowed_values = {"orientation" : ("stacked", "side by side")}
@@ -135,6 +136,7 @@ class Field(pride.gui.gui.Container):
 
     def __init__(self, **kwargs):
         super(Field, self).__init__(**kwargs)
+        assert not self.deleted
         self.create_subcomponents()
 
     def create_subcomponents(self):
@@ -156,7 +158,7 @@ class Field(pride.gui.gui.Container):
         label_kwargs.setdefault("tip_bar_text", self.tip_bar_text)
         label_kwargs.setdefault("location", location)
         label_kwargs.setdefault("text", self.display_name or self.name)
-        self.label = self.create(label_kwargs["type"], **label_kwargs)
+        self.label = self.create(self.label_type, **label_kwargs)
         if not self.has_label:
             self.label.hide()
 
@@ -219,8 +221,8 @@ class Callable_Field(Field):
     defaults = {"orientation" : "side by side",
                 "has_label" : False, "button_text" : '', "args" : tuple()}
     mutable_defaults = {"kwargs" : dict}
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Callable_Entry",
-                                "scale_to_text" : True}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Callable_Entry",
+                                         scale_to_text=True)}
     interface = (tuple(), ("button_text", "args", "kwargs"))
 
     def create_entry(self, location):
@@ -343,7 +345,7 @@ class Text_Entry(Entry):
 
 class Text_Field(Field):
 
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Text_Entry"}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Text_Entry")}
 
 
 
@@ -598,7 +600,7 @@ class Dropdown_Field(Callable_Field):
     defaults = {"has_label" : True, "values" : tuple(),
                 "orientation" : "side by side"}
     interface = (tuple(), ("values", ))
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Dropdown_Entry"}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Dropdown_Entry")}
 
 
 class Spinbox(Field):
@@ -606,8 +608,8 @@ class Spinbox(Field):
     defaults = {"minimum" : None, "maximum" : None}
                 # can only use either minimum or maximum but not both by default
                 # must specify Spinbox type explicitly if min and max are used.
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Spinbox_Entry",
-                                "location" : "left"}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Spinbox_Entry",
+                                         location="left")}
     interface = (tuple(), ("minimum", "maximum"))
 
     def create_entry(self, location):
@@ -631,7 +633,7 @@ class Spinbox(Field):
 
 class Toggle(Field):
 
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Toggle_Entry"}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Toggle_Entry")}
 
 
 class Continuum(pride.gui.gui.Button):
@@ -762,7 +764,7 @@ class _Endcap_Entry(Text_Entry):
 class _Endcap(Text_Field):
 
     defaults = {"editable" : False, "has_label" : False}
-    subcomponents = {"entry" : {"type" : "pride.gui.fields._Endcap_Entry"}}
+    subcomponents = {"entry" : Component("pride.gui.fields._Endcap_Entry")}
 
 
 class Slider_Entry(Entry):
@@ -922,7 +924,7 @@ class Slider_Field(Field):
 
     predefaults = {"_minimum" : 0, "_maximum" : 0}
     interface = (tuple(), ("minimum", "maximum"))
-    subcomponents = {"entry" : {"type" : "pride.gui.fields.Slider_Entry"}}
+    subcomponents = {"entry" : Component("pride.gui.fields.Slider_Entry")}
 
     def _get_minimum(self):
         return self._minimum

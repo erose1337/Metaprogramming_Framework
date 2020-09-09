@@ -193,7 +193,9 @@ class Scrollable_Window(pride.gui.gui.Window):
                                                name="x_scroll_value",
                                                minimum=0, maximum=0,
                                                location="bottom",
-                                               orientation="side by side")}
+                                               orientation="side by side"),
+                     "main_window" : Component("pride.gui.gui.Container",
+                                               location="main")}
     interface = (tuple(), ("horizontal_slider_kwargs",
                            "vertical_slider_kwargs"))
 
@@ -218,8 +220,8 @@ class Scrollable_Window(pride.gui.gui.Window):
         self.create_subcomponents()
 
     def create_subcomponents(self):
-        self.main_window = self.create(pride.gui.gui.Container,
-                                       location="main")
+        self.main_window = self.create(self.main_window_type,
+                                       **self.main_window_kwargs)
         kwargs = self.vertical_slider_kwargs
         position = kwargs["location"]
         if position is not None:
@@ -399,7 +401,8 @@ class Form(Scrollable_Window):
                                                field_name,
                                                field_kwargs)
         field_kwargs.setdefault("target_object", self.target_object)
-        field = row.create(field_type, name=field_name, parent_form=self,
+        field_kwargs["name"] = field_name
+        field = row.create(field_type, parent_form=self,
                            field_no=sum(len(_row.fields) for
                                         _row in self.rows.values()),
                            **field_kwargs)

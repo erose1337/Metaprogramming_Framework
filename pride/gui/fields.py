@@ -755,7 +755,6 @@ class _Endcap_Entry(Text_Entry):
         super(_Endcap_Entry, self).left_click(mouse)
         parent_field = self.parent_field
         slider_field = parent_field.target_object
-        assert parent_field.name in ("minimum", "maximum")
         value = getattr(slider_field, parent_field.name)
         slider_field.value = value
         slider_field.update_position_from_value()

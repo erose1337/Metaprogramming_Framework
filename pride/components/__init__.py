@@ -28,7 +28,8 @@ class Config(dict):
                     except KeyError:
                         self[key] = value
                     else:
-                        old_value.type = value.type
+                        if value.type is not None:
+                            old_value.type = value.type
                         deep_update(old_value.kwargs, value.kwargs)
             else:
                 raise NotImplementedError() # should never happen

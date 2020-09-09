@@ -39,7 +39,6 @@ class Tab_Button_Entry(pride.gui.fields.Callable_Entry):
         else:
             self.parent_field.kwargs["mode"] = 0
         super(Tab_Button_Entry, self).left_click(mouse)
-        print mouse.clicks
 
 
 class Tab_Button(pride.gui.fields.Callable_Field):

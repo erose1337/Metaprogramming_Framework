@@ -49,10 +49,11 @@ class Tab_Button(pride.gui.fields.Callable_Field):
 class Tab_Bar(pride.gui.form.Form):
 
     defaults = {"include_new_tab_button" : True, "tab_info" : tuple(),
-                "pack_mode" : "top", "h_range" : (0, .05)}
+                "pack_mode" : "top", "h_range" : (0, .075), "max_tabs" : 8}
+    mutable_defaults = {"open_tabs" : list, "tabs" : list}
     subcomponents = {"vertical_slider" : Component(location=None),
                      "horizontal_slider" :
-                                     Component("pride.gui.fields.Slider_Field"),
+                                     Component(location="bottom"),
                      "new_tab_button" :
                           Component(field_type="pride.gui.tabs2.New_Tab_Button",
                                     name="create_new_tab", button_text='+',
@@ -97,9 +98,38 @@ class Tab_Bar(pride.gui.form.Form):
         tab = self.create_field(tab_field, self.rows[0])
         tab.entry.theme_profile = "indicator"
         window_object.tab_reference = tab.reference
+        self.open_tabs.append(tab)
+        self.tabs.append(tab)
 
         if mode == 0:
-            self.hide_other_tabs(tab)
+            self.deselect_other_tabs(tab)
+
+        if len(self.tabs) > self.max_tabs:
+            self.x_scroll_value += 1
+
+    def handle_x_scroll(self, old, new):
+        tabs = self.tabs
+        max_tabs = self.max_tabs
+        value = new
+        end = min(len(tabs), value + max_tabs)
+
+        opened = []
+        for tab in tabs[value:end]:
+            tab.show()
+            tab.pack()
+            opened.append(tab)
+        for tab in (tab for tab in tabs if tab not in opened):
+            tab.hide()
+
+        self.synchronize_scroll_bars()
+
+    def synchronize_scroll_bars(self):
+        slider = self.horizontal_slider
+        if slider is not None:
+            slider.maximum = max(0, len(self.tabs) - self.max_tabs)
+            slider.update_position_from_value()
+            slider.entry.texture_invalid = True
+            self.pack()
 
     def select_tab(self, window_object, mode=0):
         tab = pride.objects[window_object.tab_reference]
@@ -107,7 +137,7 @@ class Tab_Bar(pride.gui.form.Form):
         if mode == 0:
             # open only the selected tab
             # hide all other open tabs
-            self.hide_other_tabs(tab)
+            self.deselect_other_tabs(tab)
         else:
             if mode != 1:
                 raise ValueError("Invalid mode {} not in (0, 1)".format(mode))
@@ -118,8 +148,8 @@ class Tab_Bar(pride.gui.form.Form):
         else:
             self._deselect_tab(tab, window_object)
 
-    def hide_other_tabs(self, tab):
-        for other_tab in self.rows[0].fields:
+    def deselect_other_tabs(self, tab):
+        for other_tab in self.open_tabs[:]: # open_tabs is modified in the loop
             if other_tab is tab or other_tab.name != "select_tab":
                 continue
             self._deselect_tab(other_tab, other_tab.args[0])
@@ -130,6 +160,7 @@ class Tab_Bar(pride.gui.form.Form):
         if window_object.hidden:
             window_object.show()
         self.pack()
+        self.open_tabs.append(tab)
 
     def _deselect_tab(self, tab, window_object):
         tab.selected = False
@@ -137,6 +168,12 @@ class Tab_Bar(pride.gui.form.Form):
         if not window_object.hidden:
             window_object.hide()
         self.pack()
+        self.open_tabs.remove(tab)
+
+    def delete(self):
+        del self.open_tabs
+        del self.tabs
+        super(Tab_Bar, self).delete()
 
 
 class Tabbed_Window(pride.gui.form.Scrollable_Window):

@@ -43,13 +43,34 @@ class Tab_Button_Entry(pride.gui.fields.Callable_Entry):
 
 class Tab_Button(pride.gui.fields.Callable_Field):
 
-    subcomponents = {"entry" : Component("pride.gui.tabs2.Tab_Button_Entry")}
+    defaults = {"include_delete_button" : True}
+    subcomponents = {"entry" : Component("pride.gui.tabs2.Tab_Button_Entry"),
+                     "delete_button" :
+                      Component("pride.gui.fields.Callable_Field",
+                                name="delete", button_text='x',
+                                location="right",
+                                entry_kwargs={"theme_profile" : "placeholder"})}
+
+    def create_subcomponents(self):
+        super(Tab_Button, self).create_subcomponents()
+        if self.include_delete_button:
+            self.create(self.delete_button_type, target_object=self,
+                        **self.delete_button_kwargs)
+
+    def delete(self):
+        window_object = self.args[0]
+        tab_bar = self.parent_form
+        if self.selected:
+            tab_bar._deselect_tab(self, window_object)
+        tab_bar.tabs.remove(self)
+        window_object.delete()
+        super(Tab_Button, self).delete()
 
 
 class Tab_Bar(pride.gui.form.Form):
 
     defaults = {"include_new_tab_button" : True, "tab_info" : tuple(),
-                "pack_mode" : "top", "h_range" : (0, .075), "max_tabs" : 8}
+                "pack_mode" : "top", "h_range" : (0, .075), "max_tabs" : 9}
     mutable_defaults = {"open_tabs" : list, "tabs" : list}
     subcomponents = {"vertical_slider" : Component(location=None),
                      "horizontal_slider" :

@@ -69,6 +69,7 @@ def restore_attributes(new_self, attributes):
     return new_self
 
 def load(saved_object):
+    raise NotImplementedError()
     new_self, attributes = rebuild_object(saved_object)
     return restore_attributes(new_self, attributes)
 
@@ -548,6 +549,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             returned.
 
             This method and load are being reimplemented"""
+        raise NotImplementedError()
         self.alert("Saving", level=self.verbosity["save"])
         attributes = self.__getstate__()
         self_objects = attributes.pop("objects", {})
@@ -605,6 +607,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
             __init__ method does (i.e. opening a file or database).
 
             NOTE: Currently being reimplemented"""
+        raise NotImplementedError()
         [setattr(self, key, value) for key, value in attributes.items()]
 
         if self.replace_reference_on_load:
@@ -634,6 +637,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 - Classes that instantiate base objects as a class attribute
                   will produce an additional object each time the class is
                   updated. Solution: instantiate base objects in __init__ """
+        raise NotImplementedError()
         self.alert("Beginning Update ({})...".format(id(self)), level=self.verbosity["update"])
         _already_updated = _already_updated or [self.reference]
         class_base = utilities.updated_class(type(self))

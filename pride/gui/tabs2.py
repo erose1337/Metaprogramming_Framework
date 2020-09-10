@@ -2,7 +2,7 @@ import copy
 
 import pride.gui.form
 import pride.gui.fields
-from pride.components import Component
+from pride.components import Component, deep_update
 from pride.gui.form import row_info, field_info
 
 import sdl2
@@ -11,6 +11,21 @@ def add_field_to_row(_row_info, _field_info):
     return row_info(_row_info[0],
                     *(_row_info[1] + (_field_info, )),
                     **_row_info[2])
+
+def tab_info(object_or_lazy_loaded, **kwargs):
+    kwargs["field_type"] = "pride.gui.tabs2.Tab_Button"
+    needs_load = kwargs.setdefault("needs_load", True)
+    if needs_load:
+        _type, kwargs2 = object_or_lazy_loaded
+        def create_object(window, _type=_type, kwargs2=kwargs2):
+            return window.create(_type, **kwargs2)
+        kwargs["args"] = (create_object, )
+    else:
+        kwargs["args"] = (object_or_lazy_loaded, )
+    return field_info("select_tab", **kwargs)
+
+def lazy_loaded(_type, **kwargs):
+    return (_type, kwargs)
 
 
 class New_Tab_Button_Entry(pride.gui.fields.Callable_Entry):
@@ -33,6 +48,21 @@ class New_Tab_Button(pride.gui.fields.Callable_Field):
 class Tab_Button_Entry(pride.gui.fields.Callable_Entry):
 
     def left_click(self, mouse):
+        tab = self.parent_field
+        tab_bar = tab.parent_form
+        tabbed_window = tab_bar.parent
+        if tab.needs_load:
+            window_object = tab.args[0](tabbed_window.main_window)
+            window_object.tab_reference = tab.reference
+            tab.args = (window_object, )
+            tab.selected = tab.needs_load = False
+            window_object.hide()
+        else:
+            window_object = tab.args[0]
+            if getattr(window_object, "tab_reference", None) is None:
+                window_object.tab_reference = tab.reference
+                tab.selected = False
+
         shift_is_held = sdl2.SDL_GetModState()
         if sdl2.KMOD_SHIFT & shift_is_held:
             self.parent_field.kwargs["mode"] = 1
@@ -43,7 +73,7 @@ class Tab_Button_Entry(pride.gui.fields.Callable_Entry):
 
 class Tab_Button(pride.gui.fields.Callable_Field):
 
-    defaults = {"include_delete_button" : True}
+    defaults = {"include_delete_button" : False}
     subcomponents = {"entry" : Component("pride.gui.tabs2.Tab_Button_Entry"),
                      "delete_button" :
                       Component("pride.gui.fields.Callable_Field",
@@ -98,10 +128,11 @@ class Tab_Bar(pride.gui.form.Form):
                                      **self.new_tab_button_kwargs)
             self.add_field(_field_info)
 
-        for _field_info, _object in self.tab_info:
-            _field_info["args"] = (_object, )
+        for _field_info in self.tab_info:
             self.add_field(_field_info)
         super(Tab_Bar, self).create_subcomponents()
+        self.tabs = [field for field in self.rows[0].fields if
+                     field.name == "select_tab"]
 
     def add_field(self, _field_info):
         _row_info = self.layout[0][0]
@@ -115,6 +146,8 @@ class Tab_Bar(pride.gui.form.Form):
         tab_kwargs = copy.deepcopy(self.tab_kwargs)
         tab_kwargs["args"] = (window_object, )
         tab_kwargs["selected"] = True
+        tab_kwargs["include_delete_button"] = True
+        tab_kwargs["needs_load"] = False
         tab_field = field_info("select_tab", **tab_kwargs)
         self.add_field(tab_field)
 
@@ -182,6 +215,7 @@ class Tab_Bar(pride.gui.form.Form):
         tab.entry.theme_profile = "indicator"
         if window_object.hidden:
             window_object.show()
+            window_object.pack()
         self.pack()
         self.open_tabs.append(tab)
 
@@ -191,6 +225,7 @@ class Tab_Bar(pride.gui.form.Form):
         if not window_object.hidden:
             window_object.hide()
         self.pack()
+        self.parent.pack()
         self.open_tabs.remove(tab)
 
     def delete(self):
@@ -212,12 +247,50 @@ class Tabbed_Window(pride.gui.form.Scrollable_Window):
     def create_tab_bar(self):
         self.tab_bar = self.create(self.tab_bar_type, **self.tab_bar_kwargs)
 
+    @classmethod
+    def from_tab_info(cls, *tab_infos, **kwargs):
+        tab_bar_kwargs = kwargs.setdefault("tab_bar_kwargs", dict())
+        tab_bar_kwargs.setdefault("tab_info", tuple())
+        tab_bar_kwargs["tab_info"] += tab_infos
+        def callable(cls=cls, _kwargs=kwargs, **kwargs2):
+            deep_update(_kwargs, kwargs2)
+            return cls(**_kwargs)
+        return callable
+
 
 def test_Tab_Bar():
     import pride.gui
     import pride.gui.main
     window = pride.objects[pride.gui.enable(x=52, y=52)]
-    window.create(pride.gui.main.Gui, startup_programs=(Tabbed_Window, ),
+
+    # there are 3 separate types of tabs:
+    # - a tab associated with a pre-existing window object
+    #       - tab_info(window_object, **tab_kwargs)
+    # - a tab associated with a not-yet created window object
+    #       - tab_info(lazy_loaded(type, **window_object_kwargs), **tab_kwargs)
+    # - a new tab button that creates a given type of window
+    #       - class ...(Tabbed_Window):
+    #           subcomponents = {"tab_bar" : Component(new_window_type=type)}
+    other = window.create("pride.gui.gui.Container", text="other space")
+    other.hide()
+    pre_existing = tab_info(other, button_text="Other tab", needs_load=False)
+
+    lazily_loaded = tab_info(lazy_loaded("pride.gui.gui.Container",
+                                         text="Test space"),
+                             button_text="Test tab")
+
+    # cannot pass instances in via subcomponents
+    # values in subcomponents are deep copied
+    # the following will not work ----------------------------------------------
+    #class Test_Window(Tabbed_Window):
+    #
+    #    subcomponents = {"tab_bar" : Component(tab_info=(pre_existing,
+    #                                                     lazily_loaded))}
+    # --- end non working example ----------------------------------------------
+    # use from_tab_info kwargs to customize subcomponents as necessary
+    program = Tabbed_Window.from_tab_info(pre_existing, lazily_loaded)
+
+    window.create(pride.gui.main.Gui, startup_programs=(program, ),
                   user=pride.objects["/User"])
 
 if __name__ == "__main__":

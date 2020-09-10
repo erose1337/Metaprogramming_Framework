@@ -63,6 +63,7 @@ class Tab_Button(pride.gui.fields.Callable_Field):
         if self.selected:
             tab_bar._deselect_tab(self, window_object)
         tab_bar.tabs.remove(self)
+        tab_bar.x_scroll_value = max(0, tab_bar.x_scroll_value - 1)
         window_object.delete()
         super(Tab_Button, self).delete()
 
@@ -70,11 +71,12 @@ class Tab_Button(pride.gui.fields.Callable_Field):
 class Tab_Bar(pride.gui.form.Form):
 
     defaults = {"include_new_tab_button" : True, "tab_info" : tuple(),
-                "pack_mode" : "top", "h_range" : (0, .075), "max_tabs" : 9}
+                "pack_mode" : "top", "h_range" : (0, .06), "max_tabs" : 9}
     mutable_defaults = {"open_tabs" : list, "tabs" : list}
     subcomponents = {"vertical_slider" : Component(location=None),
                      "horizontal_slider" :
-                                     Component(location="bottom"),
+                                     Component(location="bottom",
+                                               h_range=(0, .0175)),
                      "new_tab_button" :
                           Component(field_type="pride.gui.tabs2.New_Tab_Button",
                                     name="create_new_tab", button_text='+',
@@ -131,7 +133,7 @@ class Tab_Bar(pride.gui.form.Form):
     def handle_x_scroll(self, old, new):
         tabs = self.tabs
         max_tabs = self.max_tabs
-        value = new
+        value = max(0, min(self.horizontal_slider.maximum, new))
         end = min(len(tabs), value + max_tabs)
 
         opened = []

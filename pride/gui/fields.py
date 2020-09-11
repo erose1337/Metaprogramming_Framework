@@ -15,40 +15,6 @@ LEFT_ARROW = 1073741904
 DELETE_KEY = "\x7f"
 SHIFT = 1
 
-ENTRIES = ("pride.gui.fields.Entry",
-           "pride.gui.fields.Callable_Entry",
-           "pride.gui.fields.Text_Entry",
-           "pride.gui.fields.Dropdown_Entry",
-           "pride.gui.fields.Spinbox_Entry",
-           "pride.gui.fields.Toggle_Entry",
-           "pride.gui.fields.Slider_Entry",
-           "pride.gui.fields._Endcap_Entry",
-           "pride.gui.fields.Callable_Entry",
-           "pride.gui.tabs.Tab_Entry")
-
-FIELDS = ("pride.gui.fields.Field",
-          "pride.gui.fields.Callable_Field",
-          "pride.gui.fields.Text_Field",
-          "pride.gui.fields.Dropdown_Field",
-          "pride.gui.fields.Spinbox",
-          "pride.gui.fields.Toggle",
-          "pride.gui.fields.Slider_Field",
-          "pride.gui.fields._Endcap",
-          "pride.gui.fields.Dropdown_Callable",
-          "pride.gui.tabs.Tab")
-
-ENTRY_TYPE = {"Field" : "pride.gui.fields.Entry",
-              "Callable_Field" : "pride.gui.fields.Callable_Entry",
-              "Text_Field" : "pride.gui.fields.Text_Entry",
-              "Dropdown_Field" : "pride.gui.fields.Dropdown_Entry",
-              "Spinbox" : "pride.gui.fields.Spinbox_Entry",
-              "Toggle" : "pride.gui.fields.Toggle_Entry",
-              "Slider_Field" : "pride.gui.fields.Slider_Entry",
-              "_Endcap" : "pride.gui.fields._Endcap_Entry",
-              "Dropdown_Callable" : "pride.gui.fields.Callable_Entry",
-              "Tab" : "pride.gui.tabs.Tab_Entry"}
-
-
 class Entry(pride.gui.gui.Button):
 
     defaults = {"location" : "right", "confidential" : False,

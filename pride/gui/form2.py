@@ -5,6 +5,26 @@ from pride.functions.utilities import resolve_string
 from pride.gui.form import Form
 from pride.components import Component
 
+ENTRIES = ("pride.gui.fields.Entry",
+           "pride.gui.fields.Callable_Entry",
+           "pride.gui.fields.Text_Entry",
+           "pride.gui.fields.Dropdown_Entry",
+           "pride.gui.fields.Spinbox_Entry",
+           "pride.gui.fields.Toggle_Entry",
+           "pride.gui.fields.Slider_Entry",
+           "pride.gui.fields._Endcap_Entry",
+           "pride.gui.fields.Callable_Entry")
+
+FIELDS = ("pride.gui.fields.Field",
+          "pride.gui.fields.Callable_Field",
+          "pride.gui.fields.Text_Field",
+          "pride.gui.fields.Dropdown_Field",
+          "pride.gui.fields.Spinbox",
+          "pride.gui.fields.Toggle",
+          "pride.gui.fields.Slider_Field",
+          "pride.gui.fields._Endcap",
+          "pride.gui.fields.Dropdown_Callable")
+
 class Remote_Form(Form):
 
     def deep_filter(self, key, value, _type,
@@ -23,8 +43,7 @@ class Remote_Form(Form):
 
             if _kwargs == "kwargs" and component in _type.subcomponents:
                 sub_type = _type.subcomponents[component].type
-                if (sub_type not in pride.gui.fields.ENTRIES and
-                    sub_type not in pride.gui.fields.FIELDS):
+                if (sub_type not in ENTRIES and sub_type not in FIELDS):
                     self.raise_error("Invalid type '{}'".format(sub_type),
                                      layout_name, row_no, field_name)
                 sub_type = resolve_string(sub_type)

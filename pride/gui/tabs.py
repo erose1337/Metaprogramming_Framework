@@ -1,311 +1,297 @@
-import operator # for itemgetter
+import copy
 
 import pride.gui.form
-
 import pride.gui.fields
-from pride.functions.utilities import slide
-from pride.gui.form import layout, row_info, field_info
-from pride.components import Component
+from pride.components import Component, deep_update
+from pride.gui.form import row_info, field_info
+
+import sdl2
+
+def add_field_to_row(_row_info, _field_info):
+    return row_info(_row_info[0],
+                    *(_row_info[1] + (_field_info, )),
+                    **_row_info[2])
+
+def tab_info(object_or_lazy_loaded, **kwargs):
+    kwargs["field_type"] = "pride.gui.tabs.Tab_Button"
+    needs_load = kwargs.setdefault("needs_load", True)
+    if needs_load:
+        _type, kwargs2 = object_or_lazy_loaded
+        def create_object(window, _type=_type, kwargs2=kwargs2):
+            return window.create(_type, **kwargs2)
+        kwargs["args"] = (create_object, )
+    else:
+        kwargs["args"] = (object_or_lazy_loaded, )
+    return field_info("select_tab", **kwargs)
+
+def lazy_loaded(_type, **kwargs):
+    return (_type, kwargs)
 
 
-class Tab_Entry(pride.gui.fields.Callable_Entry):
-
-    defaults = {"_end_hover_set_profile" : '', "_already_constructed" : False,
-                "use_lazy_loading" : True, "_just_constructed" : False}
+class New_Tab_Button_Entry(pride.gui.fields.Callable_Entry):
 
     def left_click(self, mouse):
-        parent_field = self.parent_field
-        if self.use_lazy_loading and not self._already_constructed:
-            self.lazy_load_object()
-
-        parent_field.value(self, *parent_field.args, **parent_field.kwargs)
-        _object = self.parent_field.args[0]
-        if _object.hidden:
-            self._end_hover_set_profile = "interactive"
+        shift_is_held = sdl2.SDL_GetModState()
+        if sdl2.KMOD_SHIFT & shift_is_held:
+            self.parent_field.kwargs["mode"] = 1
         else:
-            self._end_hover_set_profile = "indicator"
-
-    def lazy_load_object(self):
-        parent_field = self.parent_field
-        callable = parent_field.args[0]
-        tab_ref = callable.tab_reference
-        assert not self._already_constructed
-        _object = callable()
-        _object.tab_reference = tab_ref
-        parent_field.args = (_object, ) + parent_field.args[1:]
-        self._just_constructed = self._already_constructed = True
-
-    def handle_return(self):
-        parent_field = self.parent_field
-        parent_field.value(self, *parent_field.args, **parent_field.kwargs)
-
-    def hover_ends(self):
-        super(Tab_Entry, self).hover_ends()
-        new_profile = self._end_hover_set_profile
-        if new_profile:
-            self.theme_profile = new_profile
-            self._end_hover_set_profile = ''
+            self.parent_field.kwargs["mode"] = 0
+        super(New_Tab_Button_Entry, self).left_click(mouse)
 
 
-class Tab(pride.gui.fields.Callable_Field):
+class New_Tab_Button(pride.gui.fields.Callable_Field):
 
-    defaults = {"editable" : True, "include_delete_button" : True}
-    subcomponents = {"tab_delete_button" :
-                        Component("pride.gui.fields.Callable_Field",
-                                  button_text='x',
-                                  theme_profile="placeholder",
-                                  name="delete_tab",
-                                  entry_kwargs={"theme_profile" : "placeholder",
-                                                "scale_to_text" : True}),
-                     "entry" : Component("pride.gui.tabs.Tab_Entry")}
+    subcomponents = {"entry" :
+                              Component("pride.gui.tabs.New_Tab_Button_Entry")}
+
+
+class Tab_Button_Entry(pride.gui.fields.Callable_Entry):
+
+    def left_click(self, mouse):
+        tab = self.parent_field
+        tab_bar = tab.parent_form
+        tabbed_window = tab_bar.parent
+        if tab.needs_load:
+            window_object = tab.args[0](tabbed_window.main_window)
+            window_object.tab_reference = tab.reference
+            tab.args = (window_object, )
+            tab.selected = tab.needs_load = False
+            window_object.hide()
+        else:
+            window_object = tab.args[0]
+            if getattr(window_object, "tab_reference", None) is None:
+                window_object.tab_reference = tab.reference
+                tab.selected = False
+
+        shift_is_held = sdl2.SDL_GetModState()
+        if sdl2.KMOD_SHIFT & shift_is_held:
+            self.parent_field.kwargs["mode"] = 1
+        else:
+            self.parent_field.kwargs["mode"] = 0
+        super(Tab_Button_Entry, self).left_click(mouse)
+
+
+class Tab_Button(pride.gui.fields.Callable_Field):
+
+    defaults = {"include_delete_button" : False}
+    subcomponents = {"entry" : Component("pride.gui.tabs.Tab_Button_Entry"),
+                     "delete_button" :
+                      Component("pride.gui.fields.Callable_Field",
+                                name="delete", button_text='x',
+                                location="right",
+                                entry_kwargs={"theme_profile" : "placeholder"})}
 
     def create_subcomponents(self):
-        super(Tab, self).create_subcomponents()
+        super(Tab_Button, self).create_subcomponents()
         if self.include_delete_button:
-            tabbed_window = self.parent
-            while not hasattr(tabbed_window, "delete_tab"):
-                tabbed_window = tabbed_window.parent
-            kwargs = self.tab_delete_button_kwargs
-            self.create(self.tab_delete_button_type,
-                        target_object=tabbed_window, args=(self, ),
-                        **kwargs)
+            self.create(self.delete_button_type, target_object=self,
+                        **self.delete_button_kwargs)
+
+    def delete(self):
+        window_object = self.args[0]
+        tab_bar = self.parent_form
+        if self.selected:
+            tab_bar._deselect_tab(self, window_object)
+        tab_bar.tabs.remove(self)
+        tab_bar.x_scroll_value = max(0, tab_bar.x_scroll_value - 1)
+        window_object.delete()
+        super(Tab_Button, self).delete()
 
 
 class Tab_Bar(pride.gui.form.Form):
 
-    interface = (("select_tab", ), ("select_tab", ))
+    defaults = {"include_new_tab_button" : True, "tab_info" : tuple(),
+                "pack_mode" : "top", "h_range" : (0, .06), "max_tabs" : 9}
+    mutable_defaults = {"open_tabs" : list, "tabs" : list}
+    subcomponents = {"vertical_slider" : Component(location=None),
+                     "horizontal_slider" :
+                                     Component(location="bottom",
+                                               h_range=(0, .0175)),
+                     "new_tab_button" :
+                          Component(field_type="pride.gui.tabs.New_Tab_Button",
+                                    name="create_new_tab", button_text='+',
+                                    location="right"),
+                     "tab" : Component(field_type="pride.gui.tabs.Tab_Button",
+                                       location="left",
+                                       button_text="New Window"),
+                     "new_window" : Component("pride.gui.gui.Container",
+                                              location="bottom")}
 
-    def select_tab(self, tab, _object):
-        tabbed_window = self.target_object
-        tabbed_window.select_tab(tab, _object)
+    def create_subcomponents(self):
+        try:
+            row = self.layout[0][0]
+        except KeyError:
+            row = self.layout[0][0] = row_info(0)
 
-    def add_field(self, _field_info, row):
-        row_no = row.row_number
-        _layout = self.layout
-        _row_info = _layout[0][row_no]
-        _layout[0][row_no] = row_info(row_no,
-                                      *(_row_info[1] + (_field_info, )),
-                                      **_row_info[2])
-        return self.create_field(_field_info, row)
+        if self.include_new_tab_button:
+            _field_info = field_info("create_new_tab",
+                                     **self.new_tab_button_kwargs)
+            self.add_field(_field_info)
 
-    def delete_field(self, field, row):
-        row_no = row.row_number
-        row_offset = row.fields.index(field)
+        for _field_info in self.tab_info:
+            self.add_field(_field_info)
+        super(Tab_Bar, self).create_subcomponents()
+        self.tabs = [field for field in self.rows[0].fields if
+                     field.name == "select_tab"]
+        self.x_scroll_value = max(0, len(self.tabs) - self.max_tabs)
 
-        _layout = self.layout
-        _row_info = _layout[0][row_no]
-        _field_info = _row_info[1][row_offset]
-        del _field_info[1]["target_object"]
+    def add_field(self, _field_info):
+        _row_info = self.layout[0][0]
+        self.layout[0][0] = add_field_to_row(_row_info, _field_info)
 
-        row.fields.remove(field)
-        field.delete()
+    def create_new_tab(self, mode=0):
+        window = self.parent.main_window
+        window_object = window.create(self.new_window_type,
+                                      **self.new_window_kwargs)
 
-        _layout[0][row_no] = row_info(row_no,
-                                      *(info for i, info in
-                                        enumerate(_row_info[1]) if
-                                        i != row_offset),
-                                      **_row_info[2])
+        tab_kwargs = copy.deepcopy(self.tab_kwargs)
+        tab_kwargs["args"] = (window_object, )
+        tab_kwargs["selected"] = True
+        tab_kwargs["include_delete_button"] = True
+        tab_kwargs["needs_load"] = False
+        tab_field = field_info("select_tab", **tab_kwargs)
+        self.add_field(tab_field)
 
-    def delete_row(self, row):
-        row_no = row.row_number
-        del self.rows[row.row_number]
-        row.delete()
-        del self.layout[0][row_no]
-        if row_no == self.y_scroll_value:
-            self.y_scroll_value = max(0, self.y_scroll_value - 1)
+        tab = self.create_field(tab_field, self.rows[0])
+        tab.entry.theme_profile = "indicator"
+        window_object.tab_reference = tab.reference
+        self.open_tabs.append(tab)
+        self.tabs.append(tab)
+
+        if mode == 0:
+            self.deselect_other_tabs(tab)
+
+        self.x_scroll_value = max(0, len(self.tabs) - self.max_tabs)
+
+    def handle_x_scroll(self, old, new):
+        tabs = self.tabs
+        max_tabs = self.max_tabs
+        value = max(0, min(self.horizontal_slider.maximum, new))
+        end = min(len(tabs), value + max_tabs)
+
+        opened = []
+        for tab in tabs[value:end + 1]:
+            tab.show()
+            tab.pack()
+            opened.append(tab)
+        for tab in (tab for tab in tabs if tab not in opened):
+            tab.hide()
+
         self.synchronize_scroll_bars()
 
-    def add_row(self, _row_info):
-        row_no = _row_info[0]
-        #assert row_no not in self.layout[0]
-        self.layout[0][row_no] = _row_info
-        return self.create_row(_row_info)
+    def synchronize_scroll_bars(self):
+        slider = self.horizontal_slider
+        if slider is not None:
+            slider.maximum = max(0, len(self.tabs) - self.max_tabs)
+            slider.update_position_from_value()
+            slider.entry.texture_invalid = True
+            self.pack()
+
+    def select_tab(self, window_object, mode=0):
+        tab = pride.objects[window_object.tab_reference]
+        tab.selected = not tab.selected
+        if mode == 0:
+            # open only the selected tab
+            # hide all other open tabs
+            self.deselect_other_tabs(tab)
+        else:
+            if mode != 1:
+                raise ValueError("Invalid mode {} not in (0, 1)".format(mode))
+            # open the selected tab in addition to others
+
+        if tab.selected:
+            self._select_tab(tab, window_object)
+        else:
+            self._deselect_tab(tab, window_object)
+
+    def deselect_other_tabs(self, tab):
+        for other_tab in self.open_tabs[:]: # open_tabs is modified in the loop
+            if other_tab is tab or other_tab.name != "select_tab":
+                continue
+            self._deselect_tab(other_tab, other_tab.args[0])
+
+    def _select_tab(self, tab, window_object):
+        tab.selected = True
+        tab.entry.theme_profile = "indicator"
+        if window_object.hidden:
+            window_object.show()
+            window_object.pack()
+        self.pack()
+        self.open_tabs.append(tab)
+
+    def _deselect_tab(self, tab, window_object):
+        tab.selected = False
+        tab.entry.theme_profile = "interactive"
+        if not window_object.hidden:
+            window_object.hide()
+        self.pack()
+        self.parent.pack()
+        self.open_tabs.remove(tab)
+
+    def delete(self):
+        del self.open_tabs
+        del self.tabs
+        super(Tab_Bar, self).delete()
 
 
 class Tabbed_Window(pride.gui.form.Scrollable_Window):
 
-    defaults = {"include_new_tab_button" : True, "tab_targets" : tuple(),
-                "tab_bar_label" : '', "include_label" : False,
-                "tabs_per_row" : 8}
-    autoreferences = ("tab_bar", "top_bar")
-    interface = (("new_tab", "select_tab"), tuple())
-    subcomponents = {"top_bar" : Component("pride.gui.gui.Container",
-                                           location="top",
-                                           h_range=(0, .05)),
-                     "tab_bar" : Component("pride.gui.tabs.Tab_Bar",
-                                           location="left",
-                                           entry_kwargs=
-                                              {"orientation" : "stacked",
-                                               "include_minmax_buttons" : False},
-                                           max_rows=1,
-                                           vertical_slider_kwargs=
-                                            {"include_minmax_buttons" : False}),
-                     "new_tab_button" :
-                           Component("pride.gui.fields.Callable_Field",
-                                     location="left",
-                                     button_text='+',
-                                     name="new_tab",
-                                     entry_kwargs={"scale_to_text" : False,
-                                                   "w_range" : (0, .05)}),
-                     "tab" : Component(button_text="New Window",
-                                       theme_profile="placeholder",
-                                       field_type="pride.gui.tabs.Tab",
-                                       entry_kwargs=
-                                                   {"scale_to_text" : True}),
-                    "tab_bar_row" : Component(),
-                    "new_window" : Component("pride.gui.gui.Container")}
+    subcomponents = {"vertical_slider" : Component(location=None),
+                     "horizontal_slider" : Component(location=None),
+                     "tab_bar" : Component("pride.gui.tabs.Tab_Bar")}
 
     def create_subcomponents(self):
         super(Tabbed_Window, self).create_subcomponents()
-        self.create_topbar()
+        self.create_tab_bar()
 
-        if self.include_new_tab_button:
-            self.create_new_tab_button()
+    def create_tab_bar(self):
+        self.tab_bar = self.create(self.tab_bar_type, **self.tab_bar_kwargs)
 
-        _layout = self.create_tab_layout()
-        offset = 0
-        if self.include_label:
-            offset += 1
-            self.create_tab_bar_label()
-        self.create_tab_bar(_layout, offset)
-
-    def create_topbar(self):
-        kwargs = self.top_bar_kwargs
-        self.top_bar = self.create(self.top_bar_type, **kwargs)
-
-    def create_new_tab_button(self):
-        self.top_bar.create(self.new_tab_button_type,
-                            target_object=self, **self.new_tab_button_kwargs)
-
-    def create_tab_layout(self):
-        rows = []
-        _kwargs = self.tab_kwargs
-        for row_no, row in enumerate(slide(self.tab_targets,
-                                           self.tabs_per_row)):
-            fields = []
-            for _object in row:
-                tab_kwargs = _kwargs.copy()
-                tab_kwargs.setdefault("w_range", (0, 1.0 / self.tabs_per_row))
-                tab_kwargs["args"] = (_object, )
-                tab_kwargs.update(getattr(_object, "tab_kwargs", dict()))
-                fields.append(field_info("select_tab", **tab_kwargs))
-
-            rows.append(row_info(row_no, *fields,
-                                 **self.tab_bar_row_kwargs))
-        return layout(*rows)
-
-    def create_tab_bar_label(self):
-        _layout = layout(row_info(0,
-                                  field_info("tab_bar_label",
-                                             hoverable=False, editable=False,
-                                             location="left",
-                                             text=self.tab_bar_label,
-                                             scale_to_text=True)))
-        self.top_bar.create("pride.gui.form.Form", layout=_layout,
-                            location="left")
-
-    def create_tab_bar(self, _layout, offset):
-        kwargs = self.tab_bar_kwargs
-        kwargs["layout"] = _layout
-        kwargs["target_object"] = self
-        window = self.top_bar
-        self.tab_bar = window.create(self.tab_bar_type, **kwargs)
-
-        tabs = self.tab_bar.fields
-        for tab_no, target in enumerate(self.tab_targets):
-            target.tab_reference = tabs[tab_no].reference
-
-        if self.tab_targets:
-            first_tab = tabs[offset]
-            try:
-                self._set_color(first_tab.entry, self.tab_targets[0])
-            except AttributeError:
-                first_tab.entry.lazy_load_object()
-                self._set_color(first_tab.entry, first_tab.args[0])
-                first_tab.entry._just_constructed = False
-
-        if not tabs:
-            self.tab_bar.hide()
-
-    def new_tab(self):
-        tab_bar = self.tab_bar
-        if tab_bar.hidden:
-            tab_bar.show()
-        _object = self.main_window.create(self.new_window_type,
-                                          parent_form=tab_bar)
-        kwargs = self.tab_kwargs.copy()
-        kwargs["entry_kwargs"]["use_lazy_loading"] = False
-        kwargs["target_object"] = self
-        kwargs["args"] = (_object, )
-        _field_info = field_info("select_tab", **kwargs)
-
-        # find the first row that is not full
-        tabs_per_row = self.tabs_per_row
-        for row in sorted(tab_bar.rows.values()):
-            if len(row.children) < tabs_per_row:
-                break
-        else: # there are no non-full rows
-            row_no = len(tab_bar.rows)
-            row_kwargs = self.tab_bar_row_kwargs.copy()
-            _row_info = row_info(row_no, **row_kwargs)
-            row = tab_bar.add_row(_row_info)
-
-        field = tab_bar.add_field(_field_info, row)
-        self._set_color(field.entry, field.args[0])
-
-        _object.tab_reference = field.reference
-
-        tab_bar.load_rows()
-        tab_bar.synchronize_scroll_bars()
-
-    def select_tab(self, tab, _object):
-        #if not hasattr(_object, "hidden"):
-        #    if tab.use_lazy_loading and not tab._already_constructed:
-        #        tab.lazy_load_object()
-        #        _object = tab.parent_field.args[0]
-
-        if not tab._just_constructed:
-            if _object.hidden:
-                _object.show()
-            else:
-                _object.hide()
-            _object.pack()
-        else:
-            tab._just_constructed = False
-        self._set_color(tab, _object)
-        #self.sdl_window.schedule_postdraw_operation(lambda: self._set_color(tab, _object), self)
-
-    def _set_color(self, tab, _object):
-        if _object.hidden:
-            tab.theme_profile = "interactive"
-        else:
-            tab.theme_profile = "indicator"
-
-    def delete_tab(self, tab):
-        row = tab.parent
-        tab_bar = self.tab_bar
-        tab_bar.delete_field(tab, row)
-
-        _object = tab.args[0]
-        _object.delete()
-
-        if not row.children:
-            tab_bar.delete_row(row)
-
-        if not tab_bar.fields:
-            tab_bar.hide()
-
-    def delete(self):
-        super(Tabbed_Window, self).delete()
-        del self.tab_targets
+    @classmethod
+    def from_tab_info(cls, *tab_infos, **kwargs):
+        tab_bar_kwargs = kwargs.setdefault("tab_bar_kwargs", dict())
+        tab_bar_kwargs.setdefault("tab_info", tuple())
+        tab_bar_kwargs["tab_info"] += tab_infos
+        def callable(cls=cls, _kwargs=kwargs, **kwargs2):
+            deep_update(_kwargs, kwargs2)
+            return cls(**_kwargs)
+        return callable
 
 
-def test_Tabbed_Window():
+def test_Tab_Bar():
     import pride.gui
     import pride.gui.main
     window = pride.objects[pride.gui.enable(x=52, y=52)]
-    window.create(pride.gui.main.Gui, startup_programs=(Tabbed_Window, ),
+
+    # there are 3 separate types of tabs:
+    # - a tab associated with a pre-existing window object
+    #       - tab_info(window_object, **tab_kwargs)
+    # - a tab associated with a not-yet created window object
+    #       - tab_info(lazy_loaded(type, **window_object_kwargs), **tab_kwargs)
+    # - a new tab button that creates a given type of window
+    #       - class ...(Tabbed_Window):
+    #           subcomponents = {"tab_bar" : Component(new_window_type=type)}
+    other = window.create("pride.gui.gui.Container", text="other space")
+    other.hide()
+    pre_existing = tab_info(other, button_text="Other tab", needs_load=False)
+
+    lazily_loaded = tab_info(lazy_loaded("pride.gui.gui.Container",
+                                         text="Test space"),
+                             button_text="Test tab")
+
+    # cannot pass instances in via subcomponents
+    # values in subcomponents are deep copied
+    # the following will not work ----------------------------------------------
+    #class Test_Window(Tabbed_Window):
+    #
+    #    subcomponents = {"tab_bar" : Component(tab_info=(pre_existing,
+    #                                                     lazily_loaded))}
+    # --- end non working example ----------------------------------------------
+    # use from_tab_info kwargs to customize subcomponents as necessary
+    program = Tabbed_Window.from_tab_info(pre_existing, lazily_loaded)
+
+    window.create(pride.gui.main.Gui, startup_programs=(program, ),
                   user=pride.objects["/User"])
 
 if __name__ == "__main__":
-    test_Tabbed_Window()
+    test_Tab_Bar()

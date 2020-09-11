@@ -7,27 +7,31 @@ import os
 
 import vlc
 
-import pride.gui.widgets.form
-field_info = pride.gui.widgets.form.field_info
+import pride.gui.form
+from pride.gui.form import field_info, row_info, layout
+field_info = pride.gui.form.field_info
 
 
-class File_Player(pride.gui.widgets.form.Form):
+class File_Player(pride.gui.form.Form):
 
     defaults = {"filename" : '', "play_when_opened" : False,
                 "_volume_requested" : None, "volume" : 100,
                 "h_range" : (0, .25),
-                "fields" : [
-                            (field_info("filename"),
-                             field_info("volume", minimum=0, maximum=100)),
-                            (field_info("track_position", minimum=0,
-                                        maximum=1000, auto_create_id=False,
-                            entry_kwargs={"include_minmax_buttons" : False,
-                                          "include_incdec_buttons" : False,
-                                          "hide_text" : True}),
-                             field_info("time_info", editable=False,
-                                        auto_create_id=False,
-                                        w_range=(0, .15)),),
-                            (field_info("handle_play", button_text="|>",
+                "layout" :
+                    layout(row_info(0,
+                               field_info("filename"),
+                               field_info("volume", minimum=0, maximum=100)),
+                           row_info(1,
+                               field_info("track_position", minimum=0,
+                                          maximum=1000, auto_create_id=False,
+                                 entry_kwargs={"include_minmax_buttons" : False,
+                                               "include_incdec_buttons" : False,
+                                               "hide_text" : True}),
+                               field_info("time_info", editable=False,
+                                          auto_create_id=False,
+                                          w_range=(0, .15))),
+                           row_info(2,
+                             field_info("handle_play", button_text="|>",
                                         entry_kwargs={"scale_to_text" : False}),
                              field_info("handle_stop", button_text="[]",
                                         entry_kwargs={"scale_to_text" : False}),
@@ -37,7 +41,7 @@ class File_Player(pride.gui.widgets.form.Form):
                                         entry_kwargs={"scale_to_text" : False}),
                              field_info("handle_next", button_text=">>",
                                         entry_kwargs={"scale_to_text" : False}))
-                            ],
+                            ),
                 "_synchronize_instruction" : None}
     mutable_defaults = {"player" : vlc.MediaPlayer}
     verbosity = {"vlc_error" : "v"}
@@ -104,14 +108,12 @@ class File_Player(pride.gui.widgets.form.Form):
         self.disable_sliders()
 
     def disable_sliders(self):
-        fields = self.fields_list
-        fields[1].editable = False
-        fields[2].editable = False
+        self.rows[0].fields[1].editable = False
+        self.rows[1].fields[0].editable = False
 
     def enable_sliders(self):
-        fields = self.fields_list
-        fields[1].editable = True
-        fields[2].editable = True
+        self.rows[0].fields[1].editable = True
+        self.rows[1].fields[0].editable = True
 
     def handle_value_changed(self, field, old, new):
         if field.name == "filename":
@@ -169,18 +171,19 @@ class File_Player(pride.gui.widgets.form.Form):
             self.disable_slider_synchronization()
             self.disable_sliders()
 
-        fields = self.fields_list
-        volume_bar = fields[1]
+        rows = self.rows
+        volume_bar = rows[0].fields[1]
         volume_bar.entry.texture_invalid = True
         volume_bar.update_position_from_value()
 
-        seek_bar = fields[2]
+        fields = self.rows[1].fields
+        seek_bar = fields[0]
         seek_bar.entry.texture_invalid = True
         seek_bar.update_position_from_value()
         if self._slider_synchronization_enabled:
             self._synchronize_instruction.execute(priority=1)
 
-        time_info = fields[3]
+        time_info = fields[1]
         time_info.entry.texture_invalid = True
 
     def handle_stop(self):

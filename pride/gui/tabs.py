@@ -78,7 +78,7 @@ class Tab_Button(pride.gui.fields.Callable_Field):
                      "delete_button" :
                       Component("pride.gui.fields.Callable_Field",
                                 name="delete", button_text='x',
-                                location="right",
+                                location="right", theme_profile="placeholder",
                                 entry_kwargs={"theme_profile" : "placeholder"})}
 
     def create_subcomponents(self):

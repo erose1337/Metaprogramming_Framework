@@ -67,7 +67,7 @@ class Field(pride.gui.gui.Container):
     subcomponents = {"entry" : Component("pride.gui.fields.Entry"),
                      "label" : Component("pride.gui.gui.Container")}
     predefaults = {"target_object" : None}
-    autoreferences = ("label", "parent_form")
+    autoreferences = ("label", "parent_form", "entry")
     allowed_values = {"orientation" : ("stacked", "side by side")}
     interface = (tuple(), ("name", "orientation", "field_type", "editable",
                            "location", "has_label", "display_name",

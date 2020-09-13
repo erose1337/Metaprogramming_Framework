@@ -66,13 +66,20 @@ AUDIO_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "audio")
 DATA_DIRECTORY = os.path.join(os.path.expanduser('~'), "pride")
 DATABASE_DIRECTORY = os.path.join(DATA_DIRECTORY, "database")
 LOG_DIRECTORY = os.path.join(DATA_DIRECTORY, "log")
+RESOURCE_DIRECTORY = os.path.join(DATA_DIRECTORY, "resource")
 
 ensure_folder_exists(DATA_DIRECTORY)
 ensure_folder_exists(DATABASE_DIRECTORY)
 ensure_folder_exists(LOG_DIRECTORY)
+ensure_folder_exists(RESOURCE_DIRECTORY)
 
 FUNCTIONS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "functions")
 GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")
+GUI_RESOURCES_DIRECTORY = os.path.join(GUI_DIRECTORY, "resources")
+THEMES_DIRECTORY = os.path.join(GUI_RESOURCES_DIRECTORY, "themes")
+FONTS_DIRECTORY = os.path.join(GUI_RESOURCES_DIRECTORY, "fonts")
+IMAGES_DIRECTORY = os.path.join(GUI_RESOURCES_DIRECTORY, "images")
+
 if "win" in platform.platform():
     PYSDL2_PATH = GUI_DIRECTORY + os.path.sep
 else:

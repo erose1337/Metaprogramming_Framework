@@ -169,9 +169,22 @@ def test_compile_filename():
     assert out1 == out2, '\n' + pprint.pformat((out1, out2))
 
 import itertools
+import hashlib
+import os.path
+
 import pride.gui.gui
 from pride.components import deep_update, Component
 from pride.functions.utilities import resolve_string
+
+def generate_manifest(data):
+    return dict((key, hashlib.sha256(value).hexdigest()) for
+                key, value in data.items())
+
+def load_resource_data(filename):
+    with open(filename, "rb") as _file:
+        data = _file.read()
+    return data
+
 
 class Scrollable_Window(pride.gui.gui.Window):
 
@@ -294,7 +307,8 @@ class Form(Scrollable_Window):
                                        location="top",
                                        h_range=(0, 1.0)),
                      "horizontal_slider" : Component(location=None)}
-    mutable_defaults = {"rows" : dict, "visible_rows" : list, "layout" : layout}
+    mutable_defaults = {"rows" : dict, "visible_rows" : list,
+                        "layout" : layout, "manifest" : dict}
     interface = (tuple(), ("max_rows", ))
 
     hotkeys = {("\t", None) : "handle_tab"}
@@ -546,6 +560,17 @@ class Form(Scrollable_Window):
 def test_Form():
     import pride.gui.main
 
+    images_dir = pride.site_config.IMAGES_DIRECTORY
+    image_filename = os.path.join(images_dir, "testimage.png")
+    image_data = load_resource_data(image_filename)
+    manifest_data = {"/images/testimage.png" : image_data}
+    manifest = generate_manifest(manifest_data)
+    resource_filename = os.path.join(pride.site_config.RESOURCE_DIRECTORY,
+                                     manifest["/images/testimage.png"])
+    with open(resource_filename, "wb") as _file:
+        _file.write(image_data)
+        _file.flush()
+
     _layout = layout(row_info(0,
                               field_info("test_bool"),
                               field_info("test_text"),
@@ -567,8 +592,8 @@ def test_Form():
                      row_info(5, field_info("test_bool")),
                      test_bool=True, test_text="Text", test_int=0,
                      test_slider=50, test_dropdown=0,
-                     test_image="/home/e/projects/pride/pride/gui/resources/images/testimage.png")
-    #_layout = layout()
+                     test_image="/images/testimage.png",
+                     manifest=manifest)
 
     class Test_Form(Form):
 
@@ -576,6 +601,7 @@ def test_Form():
 
         def test_callable(self):
             self.alert("test_callable")
+
 
 
     pride.gui.main.run_programs([Test_Form])

@@ -1,4 +1,5 @@
 import collections
+import os.path
 
 import pride.gui.gui
 import pride.gui.themes
@@ -943,7 +944,12 @@ class Image_Entry(Entry):
 
     def __init__(self, **kwargs):
         super(Image_Entry, self).__init__(**kwargs)
-        image_surface = sdl2.ext.load_image(self.parent_field.value,
+        image_field = self.parent_field
+        resource_alias = image_field.value
+        resource_id = image_field.parent_form.manifest[resource_alias]
+        file_name = os.path.join(pride.site_config.RESOURCE_DIRECTORY,
+                                 resource_id)
+        image_surface = sdl2.ext.load_image(file_name,
                                             enforce=self._enforce_flag)
         sprite_factory = self.sdl_window.renderer.sprite_factory
         image_texture = sprite_factory.from_surface(image_surface)

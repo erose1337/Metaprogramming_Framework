@@ -14,7 +14,7 @@ import base64 # for standard_b64encode on machine username
 
 import pride
 import pride.components.base as base
-import pride.components.authentication3
+import pride.components.rpc2
 import pride.components.shell
 import pride.components.user
 import pride.functions.contextmanagers
@@ -30,7 +30,7 @@ def main_as_name():
     finally:
         globals()["__name__"] = backup
 
-class Shell(pride.components.authentication3.Authenticated_Client):
+class Shell(pride.components.rpc2.Authenticated_Client):
     """ Handles keystrokes and sends python source to the Interpreter to
         be executed. This requires authentication via username/password."""
     defaults = {"username" : None, "password" : None, "startup_definitions" : '',
@@ -55,7 +55,7 @@ class Shell(pride.components.authentication3.Authenticated_Client):
             self.startup_definitions = ''
             self.execute_source(source)
 
-    @pride.components.authentication3.remote_procedure_call(callback_name="handle_result")
+    @pride.components.rpc2.remote_procedure_call(callback_name="handle_result")
     def execute_source(self, source):
         """ Sends source to the interpreter specified in self.target_service for execution """
 
@@ -85,7 +85,7 @@ class Loud_Logger(object):
         _logger.flush()
 
 
-class Interpreter(pride.components.authentication3.Authenticated_Service):
+class Interpreter(pride.components.rpc2.Authenticated_Service):
     """ Executes python source. Requires authentication from remote hosts.
         The source code and return value of all requests are logged. """
 

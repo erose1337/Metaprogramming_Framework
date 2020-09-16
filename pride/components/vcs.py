@@ -1,6 +1,6 @@
-import pride.components.authentication3
+import pride.components.rpc2
 
-class Version_Control(pride.components.authentication3.Authenticated_Service):
+class Version_Control(pride.components.rpc2.Authenticated_Service):
 
     schema = {"Repository" : ("module_id PRIMARY_KEY BLOB", "module_name TEXT",
                                           "module_source TEXT", "repo_id BLOB")}

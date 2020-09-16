@@ -3,7 +3,7 @@
     in the form of keystrokes, mouse clicks, and potentially audio,
     operate on the input in a manner opaque to the client, and return output
     to the client. """
-import pride.components.authentication3
+import pride.components.rpc2
 import pride.functions.utilities
 
 class Event_Structure(object):
@@ -24,7 +24,7 @@ class Mouse_Structure(object):
         return "Mouse(x={}, y={}, clicks={}, button={})".format(self.x, self.y, self.clicks, self.button)
 
 
-class Black_Box_Service(pride.components.authentication3.Authenticated_Service):
+class Black_Box_Service(pride.components.rpc2.Authenticated_Service):
 
     defaults = {"input_types" : ("keyboard", "mouse", "audio"), "window_type" : "pride.gui.sdllibrary.Window_Context",
                 "command_line" : "/User/Command_Line", "command_line_program" : "python"}
@@ -69,7 +69,7 @@ class Black_Box_Service(pride.components.authentication3.Authenticated_Service):
                    level=self.verbosity["handle_audio"])
 
 
-class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
+class Black_Box_Client(pride.components.rpc2.Authenticated_Client):
 
     defaults = {"target_service" : "/Program/Black_Box_Service",
                 "mouse_support" : False, "refresh_interval" : .95,
@@ -90,7 +90,7 @@ class Black_Box_Client(pride.components.authentication3.Authenticated_Client):
         if self.audio_support:
             pride.objects[self.audio_source].add_listener(self.reference)
 
-    @pride.components.authentication3.remote_procedure_call(callback_name="receive_response")
+    @pride.components.rpc2.remote_procedure_call(callback_name="receive_response")
     def handle_input(self, packed_user_input):
         pass
 

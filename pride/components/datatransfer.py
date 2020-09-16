@@ -2,7 +2,7 @@
     Constructs a service for the transfer of arbitrary data from one registered
     party to another. """
 
-import pride.components.authentication3
+import pride.components.rpc2
 import pride.components.shell
 import pride.functions.utilities
 import pride.components.scheduler
@@ -36,7 +36,7 @@ class Background_Refresh(pride.components.scheduler.Process):
             getattr(client, method)()
 
 
-class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client):
+class Data_Transfer_Client(pride.components.rpc2.Authenticated_Client):
     """ Client program for sending data to a party registered with the target service.
 
         Security is provided by TLS, which provides end to end security between
@@ -50,7 +50,7 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
         pride.objects["/Program/Background_Refresh"].callbacks.append((self, "refresh"))
         super(Data_Transfer_Client, self).__init__(**kwargs)
 
-    @pride.components.authentication3.remote_procedure_call(callback_name="receive")
+    @pride.components.rpc2.remote_procedure_call(callback_name="receive")
     def send_to(self, receiver, message):
         """ Sends message to receiver via remote procedure call through
             self.target_service@self.ip. Automatically returns any messages
@@ -76,7 +76,7 @@ class Data_Transfer_Client(pride.components.authentication3.Authenticated_Client
         super(Data_Transfer_Client, self).delete()
 
 
-class Data_Transfer_Service(pride.components.authentication3.Authenticated_Service):
+class Data_Transfer_Service(pride.components.rpc2.Authenticated_Service):
     """ Service for transferring arbitrary data from one registered client to another """
     mutable_defaults = {"messages" : dict}
     remotely_available_procedures = ("send_to", )

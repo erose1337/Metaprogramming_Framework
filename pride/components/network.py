@@ -96,7 +96,8 @@ class Socket(base.Wrapper):
 
                 "serializer" : DEFAULT_SERIALIZER,
 
-                "shutdown_on_close" : True, "shutdown_flag" : 2}
+                "shutdown_on_close" : True, "shutdown_flag" : 2,
+                "absolute_max_buffer_size" : 2 ** 20}
 
     predefaults = {"_byte_count" : 0, "_connecting" : False,
                    "_endpoint_reference" : '', "connected" : False,
@@ -192,11 +193,15 @@ class Socket(base.Wrapper):
         except (ValueError, socket.error) as error:
             if isinstance(error, ValueError): # Socket._buffer is not big enough
                 old_buffer = Socket._buffer
+
+                # prevent intentional data flood
+                if len(old_buffer) > self.absolute_max_buffer_size:
+                    raise
                 del Socket._memoryview
                 del _memoryview
                 old_buffer.extend(bytearray(2 * len(old_buffer)))
                 Socket._memoryview = memoryview(old_buffer)
-                self.recv(buffer_size)
+                return self.recv(buffer_size)
             elif error.errno not in (10035, 11, 2):
                 raise
         _byte_count = self._byte_count

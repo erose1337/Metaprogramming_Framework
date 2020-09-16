@@ -5,32 +5,31 @@ from pride.functions.utilities import resolve_string
 from pride.gui.form import Form
 from pride.components import Component
 
-ENTRIES = ("pride.gui.fields.Entry",
-           "pride.gui.fields.Callable_Entry",
+ENTRIES = ("pride.gui.fields.Callable_Entry",
            "pride.gui.fields.Text_Entry",
            "pride.gui.fields.Dropdown_Entry",
            "pride.gui.fields.Spinbox_Entry",
            "pride.gui.fields.Toggle_Entry",
            "pride.gui.fields.Slider_Entry",
-           "pride.gui.fields._Endcap_Entry",
-           "pride.gui.fields.Callable_Entry")
+           "pride.gui.fields.Callable_Entry",
+           "pride.gui.fields.Image_Entry",
+           "pride.gui.fields.Media_Entry")
 
-FIELDS = ("pride.gui.fields.Field",
-          "pride.gui.fields.Callable_Field",
+FIELDS = ("pride.gui.fields.Callable_Field",
           "pride.gui.fields.Text_Field",
           "pride.gui.fields.Dropdown_Field",
           "pride.gui.fields.Spinbox",
           "pride.gui.fields.Toggle",
           "pride.gui.fields.Slider_Field",
-          "pride.gui.fields._Endcap",
-          "pride.gui.fields.Dropdown_Callable")
+          "pride.gui.fields.Dropdown_Callable",
+          "pride.gui.fields.Image_Field",
+          "pride.gui.fields.Media_Field")
+
 
 class Remote_Form(Form):
 
     def deep_filter(self, key, value, _type,
                     layout_name=None, row_no=None, field_name=None):
-        print key, value, _type
-        print value is None or value ==_type
         if key not in _type.interface[1]:
             self.raise_error("'{}' not in {} interface",
                              layout_name, row_no, field_name,
@@ -102,14 +101,7 @@ class Remote_Form(Form):
         field_type = self.determine_field_type(self.target_object,
                                                f_name,
                                                untrusted_kwargs)
-        if field_type not in ("pride.gui.fields.Dropdown_Field",
-                              "pride.gui.fields.Slider_Field",
-                              "pride.gui.fields.Toggle",
-                              "pride.gui.fields.Spinbox",
-                              "pride.gui.fields.Text_Field",
-                              "pride.gui.fields.Text_Display",
-                              "pride.gui.fields.Callable_Field",
-                              "pride.gui.fields.Dropdown_Callable"):
+        if field_type not in FIELDS:
             self.raise_error("Requested field_type '{}' is unavailable",
                              row=row_no, field=f_name,
                              args=(field_type, ))
@@ -138,7 +130,29 @@ class Remote_Form(Form):
 
 def test_Remote_Form():
     import pride.gui.main
-    from pride.gui.form import layout, row_info, field_info
+    from pride.gui.form import (layout, row_info, field_info,
+                                load_resource_data, generate_manifest)
+
+    images_dir = pride.site_config.IMAGES_DIRECTORY
+    image_filename = os.path.join(images_dir, "testimage.png")
+    image_data = load_resource_data(image_filename)
+
+    audio_dir = pride.site_config.GUI_RESOURCES_DIRECTORY
+    audio_filename = os.path.join(audio_dir, "testaudio.ogg")
+    audio_data = load_resource_data(audio_filename)
+
+    manifest_data = {"/images/testimage.png" : image_data,
+                     "/audio/testaudio.ogg" : audio_data}
+    manifest = generate_manifest(manifest_data)
+    resource_filename = os.path.join(pride.site_config.RESOURCE_DIRECTORY,
+                                     manifest["/images/testimage.png"])
+    with open(resource_filename, "wb") as _file:
+        _file.write(image_data)
+        _file.flush()
+    with open(os.path.join(pride.site_config.RESOURCE_DIRECTORY,
+                           manifest["/audio/testaudio.ogg"]), "wb") as _file:
+        _file.write(audio_data)
+        _file.flush()
 
     _layout = layout(row_info(0,
                               field_info("test_bool"),
@@ -154,11 +168,19 @@ def test_Remote_Form():
                               field_info("delete",
                                          button_text="Delete (Test Callable)"),
                               h_range=(0, .3)),
-                     row_info(2), row_info(3), row_info(4),
+                     row_info(2,
+                              field_info("test_image",
+                                    field_type="pride.gui.fields.Image_Field")),
+                     row_info(3,
+                              field_info("test_audio",
+                                    field_type="pride.gui.fields.Media_Field")),
+                     row_info(4),
                      row_info(5, field_info("test_bool")),
                      test_bool=True, test_text="Text", test_int=0,
                      test_slider=50, test_dropdown=0,
-                     layout_name="Remote_Form test layout")
+                     test_image="/images/testimage.png",
+                     test_audio="/audio/testaudio.ogg",
+                     manifest=manifest, layout_name="Form2 test layout")
 
     class Test_Form(Remote_Form):
 

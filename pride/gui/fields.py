@@ -1,5 +1,6 @@
 import collections
 import os.path
+from math import floor
 
 import pride.gui.gui
 import pride.gui.themes
@@ -7,6 +8,12 @@ import pride.functions.utilities
 from pride.components import Component
 
 import sdl2
+
+try:
+    import vlc
+except ImportError:
+    print("Required package 'vlc' does not appear to be installed")
+    raise
 
 # key codes used for hotkeys
 UP_ARROW = 1073741906
@@ -924,7 +931,7 @@ class Slider_Field(Field):
         self.entry.continuum.update_position_from_value()
 
 
-class Image_Theme(pride.gui.themes.Theme):
+class Image_Theme(pride.gui.themes.Animated_Theme2):
 
     def draw_texture(self):
         area = self.area
@@ -956,7 +963,270 @@ class Image_Entry(Entry):
         sdl2.SDL_SetTextureAlphaMod(image_texture.texture, self.color[-1])
         self.image_texture = image_texture
 
+    def on_hover(self):
+        if self.tip_bar_text:
+            self.sdl_window.set_tip_bar_text(self.tip_bar_text)
+            self._tip_set = True
+
+    def hover_ends(self):
+        if self._tip_set:
+            self._clear_tip_bar_text()
+
 
 class Image_Field(Field):
 
     subcomponents = {"entry" : Component("pride.gui.fields.Image_Entry")}
+
+
+
+class Media_Player(pride.gui.form.Form):
+
+    defaults = {"play_when_opened" : False,
+                "_volume_requested" : None, "volume" : 100,
+                "h_range" : (0, .25),
+                "layout" :
+                    layout(row_info(0,
+                               field_info("resource_alias",
+                                       label_kwargs={"text" : "resource name"}),
+                               field_info("volume", minimum=0, maximum=100)),
+                           row_info(1,
+                               field_info("track_position", minimum=0,
+                                          maximum=1000, auto_create_id=False,
+                                       label_kwargs={"text" : "track position"},
+                                 entry_kwargs={"include_minmax_buttons" : False,
+                                               "include_incdec_buttons" : False,
+                                               "hide_text" : True}),
+                               field_info("time_info", editable=False,
+                                          auto_create_id=False,
+                                          w_range=(0, .15),
+                                          label_kwargs={"text" : "time"})),
+                           row_info(2,
+                             field_info("handle_play", button_text="|>",
+                                        entry_kwargs={"scale_to_text" : False}),
+                             field_info("handle_stop", button_text="[]",
+                                        entry_kwargs={"scale_to_text" : False}),
+                             field_info("handle_pause", button_text="||",
+                                        entry_kwargs={"scale_to_text" : False}),
+                             field_info("handle_previous", button_text="<<",
+                                        entry_kwargs={"scale_to_text" : False}),
+                             field_info("handle_next", button_text=">>",
+                                        entry_kwargs={"scale_to_text" : False}))
+                            ),
+                "_synchronize_instruction" : None}
+    mutable_defaults = {"player" : vlc.MediaPlayer}
+    verbosity = {"vlc_error" : "v"}
+    parser_args = ("volume", )
+
+    def _get_track_position(self):
+        output = int(round(1000 * self.player.get_position()))
+        if output == -100:
+            output = 0
+        return output
+    def _set_track_position(self, value):
+        adjusted = value / 1000.0
+        self.player.set_position(adjusted)
+    track_position = property(_get_track_position, _set_track_position)
+
+    def _get_volume(self):
+        output = self.player.audio_get_volume()
+        if output == -1:
+            output = 0
+        return output
+    def _set_volume(self, value):
+        value = min(100, max(0, value))
+        self.player.audio_set_volume(value)
+        # vlc cannot adjust volume while not playing/paused
+        after = self.volume
+        if after != value: # defer setting volume until play begins/resumes
+            self._volume_requested = value
+    volume = property(_get_volume, _set_volume)
+
+    def _get_time_info(self):
+        player = self.player
+        progress = self._format_time(player.get_time())
+        total = self._format_time(player.get_length())
+        return "{}/{}".format(progress, total)
+    time_info = property(_get_time_info)
+
+    def _format_time(self, ms):
+        progressf = []
+        seconds = int(floor(ms / 1000.0))
+        if seconds < 0:
+            seconds = 0
+        minutes = int(floor(seconds / 60.0))
+        hours = int(floor(minutes / 60.0))
+        progressf.append(hours)
+        progressf.append(minutes % 60)
+        progressf.append(seconds % 60)
+        if not hours:
+            #if not minutes:
+            #    output = str(seconds).zfill(2)
+            #else:
+            output = ':'.join(str(item).zfill(2) for item in progressf[1:])
+        else:
+            output = ':'.join(str(item).zfill(2) for item in progressf)
+        return output
+
+    def _get_resource_alias(self):
+        media_entry = self.parent
+        media_field = media_entry.parent_field
+        form = media_field.parent_form
+        return media_field.value
+    def _set_resource_alias(self, value):
+        self.parent.parent_field.value = value
+    resource_alias = property(_get_resource_alias, _set_resource_alias)
+
+    def _get_resource_filename(self):
+        media_entry = self.parent
+        media_field = media_entry.parent_field
+        form = media_field.parent_form
+        resource_id = form.manifest[self.resource_alias]
+        resource_filename = os.path.join(pride.site_config.RESOURCE_DIRECTORY,
+                                         resource_id)
+        return resource_filename
+    resource_filename = property(_get_resource_filename)
+
+    def __init__(self, **kwargs):
+        super(Media_Player, self).__init__(**kwargs)
+        self.player.set_mrl(self.resource_filename)
+        if self.play_when_opened:
+            self.handle_play()
+
+    def create_subcomponents(self):
+        super(Media_Player, self).create_subcomponents()
+        self.disable_sliders()
+
+    def disable_sliders(self):
+        self.rows[0].fields[1].editable = False
+        self.rows[1].fields[0].editable = False
+
+    def enable_sliders(self):
+        self.rows[0].fields[1].editable = True
+        self.rows[1].fields[0].editable = True
+
+    def handle_value_changed(self, field, old, new):
+        if field.name == "resource_alias":
+            if self.player.is_playing():
+                self.player.stop()
+            try:
+                self.player.set_mrl(self.resource_filename)
+            except KeyError:
+                pass
+        elif field.name == "volume":
+            field.update_position_from_value()
+        super(Media_Player, self).handle_value_changed(field, old, new)
+
+    def handle_play(self):
+        should_play = True
+        try:
+            filename = self.resource_filename
+        except KeyError:
+            message = "No resource named '{}'".format(self.resource_alias)
+            self.show_status(message)
+            should_play = False
+
+        if should_play:
+            self.show_status("Playing {}".format(self.resource_alias))
+            player = self.player
+            player.play()
+
+            if self._volume_requested is not None:
+                self.volume = self._volume_requested
+                self._volume_requested = None
+
+            self.enable_slider_synchronization()
+            self.enable_sliders()
+
+    def enable_slider_synchronization(self):
+        inst = pride.Instruction(self.reference, "synchronize_slider")
+        if self._synchronize_instruction is None:
+            self._synchronize_instruction = inst
+        inst.execute(priority=1)
+        self._slider_synchronization_enabled = True
+
+    def disable_slider_synchronization(self):
+        if self._synchronize_instruction is not None:
+            self._synchronize_instruction.unschedule()
+        self._slider_synchronization_enabled = False
+
+    def synchronize_slider(self):
+        state = self.player.get_state()
+        disable = False
+        if state == vlc.State.Error:
+            self.alert("VLC Error", verbosity=self.verbosity["vlc_error"])
+            self.show_status("VLC Error")
+            disable = True
+        elif state == vlc.State.Ended:
+            self.show_status("Playback ended")
+            disable = True
+
+        if disable:
+            self.disable_slider_synchronization()
+            self.disable_sliders()
+
+        rows = self.rows
+        volume_bar = rows[0].fields[1]
+        volume_bar.entry.texture_invalid = True
+        volume_bar.update_position_from_value()
+
+        fields = self.rows[1].fields
+        seek_bar = fields[0]
+        seek_bar.entry.texture_invalid = True
+        seek_bar.update_position_from_value()
+        if self._slider_synchronization_enabled:
+            self._synchronize_instruction.execute(priority=1)
+
+        time_info = fields[1]
+        time_info.entry.texture_invalid = True
+
+    def handle_stop(self):
+        self.show_status("Stopping {}".format(self.resource_alias))
+        self.player.stop()
+        self.track_position = 0
+        self.disable_slider_synchronization()
+        self.synchronize_slider()
+        self.disable_sliders()
+
+    def handle_pause(self):
+        self.show_status("Pausing {}".format(self.resource_alias))
+        self.player.pause()
+        if hasattr(self, "_synchronize_instruction"):
+            self.disable_slider_synchronization()
+
+    def handle_previous(self):
+        self.show_status("Back")# to {}".format(self.prior_filename))
+
+    def handle_next(self):
+        self.show_status("Next")# to {}".format(self.playlist))
+
+    def delete(self):
+        self.disable_slider_synchronization()
+        self.player.release()
+        del self.player
+        super(Media_Player, self).delete()
+
+
+class Media_Entry(Entry):
+
+    subcomponents = {"player" : Component("pride.gui.fields.Media_Player")}
+    autoreferences = ("player", )
+
+    def _get_text(self):
+        return ''
+    def _set_text(self, value):
+        super(Media_Entry, self)._set_text(value)
+    text = property(_get_text, _set_text)
+
+    def __init__(self, **kwargs):
+        super(Media_Entry, self).__init__(**kwargs)
+        self.create_subcomponents()
+
+    def create_subcomponents(self):
+        self.player = self.create(self.player_type,
+                                  **self.player_kwargs)
+
+
+class Media_Field(Field):
+
+    defaults = {"has_label" : False}
+    subcomponents = {"entry" : Component("pride.gui.fields.Media_Entry")}

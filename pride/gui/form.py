@@ -309,7 +309,7 @@ class Form(Scrollable_Window):
                      "horizontal_slider" : Component(location=None)}
     mutable_defaults = {"rows" : dict, "visible_rows" : list,
                         "layout" : layout, "manifest" : dict}
-    interface = (tuple(), ("max_rows", ))
+    interface = (tuple(), ("max_rows", "manifest"))
 
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
@@ -563,12 +563,22 @@ def test_Form():
     images_dir = pride.site_config.IMAGES_DIRECTORY
     image_filename = os.path.join(images_dir, "testimage.png")
     image_data = load_resource_data(image_filename)
-    manifest_data = {"/images/testimage.png" : image_data}
+
+    audio_dir = pride.site_config.GUI_RESOURCES_DIRECTORY
+    audio_filename = os.path.join(audio_dir, "testaudio.ogg")
+    audio_data = load_resource_data(audio_filename)
+
+    manifest_data = {"/images/testimage.png" : image_data,
+                     "/audio/testaudio.ogg" : audio_data}
     manifest = generate_manifest(manifest_data)
     resource_filename = os.path.join(pride.site_config.RESOURCE_DIRECTORY,
                                      manifest["/images/testimage.png"])
     with open(resource_filename, "wb") as _file:
         _file.write(image_data)
+        _file.flush()
+    with open(os.path.join(pride.site_config.RESOURCE_DIRECTORY,
+                           manifest["/audio/testaudio.ogg"]), "wb") as _file:
+        _file.write(audio_data)
         _file.flush()
 
     _layout = layout(row_info(0,
@@ -588,11 +598,15 @@ def test_Form():
                      row_info(2,
                               field_info("test_image",
                                     field_type="pride.gui.fields.Image_Field")),
-                     row_info(3), row_info(4),
+                     row_info(3,
+                              field_info("test_audio",
+                                    field_type="pride.gui.fields.Media_Field")),
+                     row_info(4),
                      row_info(5, field_info("test_bool")),
                      test_bool=True, test_text="Text", test_int=0,
                      test_slider=50, test_dropdown=0,
                      test_image="/images/testimage.png",
+                     test_audio="/audio/testaudio.ogg",
                      manifest=manifest)
 
     class Test_Form(Form):

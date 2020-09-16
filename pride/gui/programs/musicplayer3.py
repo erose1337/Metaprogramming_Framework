@@ -1,11 +1,11 @@
 import pride.gui.gui
 import pride.gui.programs.musicplayer
-import pride.gui.widgets.form
-import pride.gui.widgets.formext2
-tab_info = pride.gui.widgets.formext2.tab_info
-field_info = pride.gui.widgets.form.field_info
+import pride.gui.form
+import pride.gui.formext2
+tab_info = pride.gui.formext2.tab_info
+field_info = pride.gui.form.field_info
 
-class Track(pride.gui.widgets.form.Form):
+class Track(pride.gui.form.Form):
 
     defaults = {"filename" : '',
                 "fields" : [[field_info("filename", display_name="File name")]]}
@@ -19,7 +19,7 @@ class Track(pride.gui.widgets.form.Form):
         super(type(self), self).handle_value_changed(field, old, new)
 
 
-class Playlist(pride.gui.widgets.formext2.Tabbed_Form):
+class Playlist(pride.gui.formext2.Tabbed_Form):
 
     defaults = {"include_new_tab_button" : True, "new_window_type" : Track,
                 "playlist_name" : '',
@@ -29,7 +29,7 @@ class Playlist(pride.gui.widgets.formext2.Tabbed_Form):
                                         id_kwargs={"scale_to_text" : True})]]}
 
 
-    class form_type(pride.gui.widgets.form.Form):
+    class form_type(pride.gui.form.Form):
 
         defaults = {"h_range" : (0, .05)}
 
@@ -42,7 +42,7 @@ class Playlist(pride.gui.widgets.formext2.Tabbed_Form):
     defaults["form_type"] = form_type
 
 
-class Library(pride.gui.widgets.formext2.Tabbed_Form):
+class Library(pride.gui.formext2.Tabbed_Form):
 
     defaults = {"include_new_tab_button" : True, "new_window_type" : Playlist,
                 "tabs_per_row" : 1}
@@ -59,7 +59,7 @@ class Library(pride.gui.widgets.formext2.Tabbed_Form):
 
 class Visualizer(pride.gui.gui.Window): pass
 
-class File_Player(pride.gui.widgets.formext2.Tabbed_Form):
+class File_Player(pride.gui.formext2.Tabbed_Form):
 
     tabs = [tab_info("controls", pride.gui.programs.musicplayer.File_Player),
             tab_info("library", Library),

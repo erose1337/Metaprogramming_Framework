@@ -51,6 +51,10 @@ class Remote_Form(Form):
                                      layout_name, row_no, field_name)
 
     def create_subcomponents(self):
+        self.filter_form_vars()
+        super(Remote_Form, self).create_subcomponents()
+
+    def filter_form_vars(self):
         api_controlled_values = dir(self)
         form_vars = self.form_vars = []
         for key, value in self.layout[-1].items():
@@ -67,7 +71,6 @@ class Remote_Form(Form):
             if key not in form_vars:
                 self.deep_filter(key, value, type(self),
                                  form_kwargs.get("layout_name", None))
-        super(Remote_Form, self).create_subcomponents()
 
     def create_row(self, _row_info):
         untrusted_kwargs = _row_info[-1]

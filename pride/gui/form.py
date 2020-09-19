@@ -299,6 +299,11 @@ class Visible_Row(pride.gui.gui.Container):
         self.unload_row(tuple())
         super(Visible_Row, self).delete()
 
+def iterrows(rows):
+    for row_no in sorted(rows.keys()):
+        row = rows[row_no]
+        for field in row.fields:
+            yield field
 
 class Form(Scrollable_Window):
 
@@ -316,8 +321,7 @@ class Form(Scrollable_Window):
 
     def _get_fields(self):
         rows = self.rows
-        return itertools.chain(rows[x].fields for x in sorted(rows.keys())
-                               if x in rows)
+        return iterrows(rows)
     fields = property(_get_fields)
 
     def create_subcomponents(self):
@@ -553,6 +557,10 @@ class Form(Scrollable_Window):
                 self.y_scroll_value = row_no
                 self.handle_y_scroll(y_value, row_no)
             self.synchronize_scroll_bars()
+
+    def synchronize_fields(self):
+        for field in self.fields:
+            field.entry.texture_invalid = True
 
     def delete(self):
         self.rows.clear()

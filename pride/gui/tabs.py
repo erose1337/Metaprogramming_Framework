@@ -160,7 +160,6 @@ class Tab_Bar(pride.gui.form.Form):
 
         if mode == 0:
             self.deselect_other_tabs(tab)
-
         self.x_scroll_value = max(0, len(self.tabs) - self.max_tabs)
 
     def handle_x_scroll(self, old, new):
@@ -190,11 +189,11 @@ class Tab_Bar(pride.gui.form.Form):
     def select_tab(self, window_object, mode=0):
         tab = pride.objects[window_object.tab_reference]
         tab.selected = not tab.selected
-        if mode == 0:
+        if mode == 0: # click with no modifiers (e.g. shift)
             # open only the selected tab
             # hide all other open tabs
             self.deselect_other_tabs(tab)
-        else:
+        else: # shift click
             if mode != 1:
                 raise ValueError("Invalid mode {} not in (0, 1)".format(mode))
             # open the selected tab in addition to others

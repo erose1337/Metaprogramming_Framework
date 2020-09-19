@@ -348,7 +348,10 @@ class Form(Scrollable_Window):
 
         self.load_rows()
         if self.selected_entry is None and self.rows:
-            self.selected_entry = self.rows[0].fields[0].entry
+            try:
+                self.selected_entry = self.rows[0].fields[0].entry
+            except IndexError:
+                pass
 
         self.synchronize_scroll_bars()
 

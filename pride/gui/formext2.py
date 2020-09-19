@@ -1,11 +1,11 @@
-import pride.gui.widgets.tabs
+import pride.gui.tabs
 
 API = ("tab_info", "Tabbed_form", )
 
 def tab_info(tab_name, _type, **tab_kwargs):
     return (tab_name, _type, tab_kwargs)
 
-class Tabbed_Form(pride.gui.widgets.tabs.Tabbed_Window):
+class Tabbed_Form(pride.gui.tabs.Tabbed_Window):
 
     defaults = {"include_new_tab_button" : False,
                 "form_type" : "pride.gui.widgets.form.Form"}

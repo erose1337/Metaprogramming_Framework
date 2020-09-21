@@ -342,18 +342,20 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 setattr(self, attribute, kwargs.pop(attribute))
             else:
                 setattr(self, attribute, value)
-
+        
         if subcomponents:
             for name, component in self.subcomponents.items():
                 value = copy.deepcopy(component.kwargs)
                 _type = component.type
                 attribute = "{}_kwargs".format(name)
                 setattr(self, attribute, value)
-                setattr(self, "{}_type".format(name), _type)
-
                 if attribute in kwargs:
                     new_value = kwargs.pop(attribute)
                     deep_update(value, new_value)
+
+                attribute = "{}_type".format(name)
+                if not hasattr(self, attribute):
+                    setattr(self, attribute, _type)
 
         if self.parse_args:
             command_line_args = self.parser.get_options()

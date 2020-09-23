@@ -1,210 +1,132 @@
-import ast
+import pride.gui.link2
+import pride.gui.form
+from pride.components import Component
+from pride.gui.form import field_info, row_info, layout
+page = pride.gui.link2.page
 
-import pride.gui.widgets.tabs
-import pride.gui.widgets.form
+class Theme_Form(pride.gui.form.Form):
 
-try:
-    import cefparser
-except ImportError:
-    print("cefparser package not installed")
-    print("Please download and install cefparser from https://github.com/erose1337/cef_parser")
-    raise
+    subcomponents = {"form" :
+                    Component("pride.gui.programs.themecustomizer2.Theme_Form")}
 
-class Value_Editor(pride.gui.widgets.tabs.Tabbed_Window):
+    def get_parent_theme_editor(self):
+        parent = self.parent
+        while not hasattr(parent, "target_theme"):
+            parent = parent.parent
+        return parent
 
-    defaults = {"include_new_tab_button" : False, "location" : "top",
-                "include_delete_button" : False, "names" : tuple(),
-                "new_window_type" : "pride.gui.widgets.form.Form"}
-    mutable_defaults = {"target_object" : dict}
-    required_attributes = ("target_object", )
+    def handle_value_changed(self, field, old, new):
+        self.get_parent_theme_editor().target_theme.update_theme_users()
 
-    def create_subcomponents(self):
-        create_window = self.create_window
-        targets = self.tab_targets = []
-        for name in self.names:
-            def callable(name=name):
-                return create_window(name)
-            callable.tab_kwargs = {"button_text" : name}
-            targets.append(callable)
-        super(Value_Editor, self).create_subcomponents()
+    def save_theme(self):
+        self.get_parent_theme_editor().save_theme()
 
-    def create_window(self, name):
-        window = self.main_window.create(self.new_window_type, fields=[[name]],
-                                         tab_kwargs={"button_text" : name.replace('_', ' ')},
-                                         target_object=self.target_object)
-        return window
+    def load_theme(self):
+        self.get_parent_theme_editor().load_theme()
 
 
-class Color_Form(pride.gui.widgets.form.Form):
+def generate_theme_editor_layout(theme):
+    names = sorted(theme.theme_colors.keys())
+    links = []
+    for theme_profile in names:
+        _theme_profile = theme.theme_colors[theme_profile]
+        _links = []
+        for color_profile in sorted(_theme_profile.keys()):
+            _object = _theme_profile[color_profile]
+            if isinstance(_object, int):
+                _layout = layout(row_info(0,
+                                      field_info(color_profile, minimum=0)),
+                                 target_object=_theme_profile)
+            else:
+                _layout = \
+                    layout(row_info(0,
+                                field_info('a', minimum=0, maximum=255)),
+                           row_info(1,
+                                field_info('r', minimum=0, maximum=255)),
+                           row_info(2,
+                                field_info('g', minimum=0, maximum=255)),
+                           row_info(3,
+                                field_info('b', minimum=0, maximum=255)),
+                            target_object=_object)
+                interface = getattr(_object, "interface",
+                                    (tuple(), tuple()))
+                additional = tuple()
+                for name in "rgba":
+                    if name not in interface:
+                        additional += (name, )
+                _object.interface = (interface[0],
+                                     interface[1] + additional)
+            _links.append(page(color_profile, _layout))
+        links.append(page(theme_profile,
+                          layout(links=_links,
+                            tab_bar_kwargs={"include_new_tab_button" : False})))
+    return layout(links=links)
 
-    def handle_value_changed(self, field, old_value, new_value):
-        super(Color_Form, self).handle_value_changed(field, old_value,
-                                                     new_value)
-        self.theme.update_theme_users()
-
-
-class Profile_Editor(Value_Editor):
-
-    def create_window(self, name):
-        try:
-            _object = self.target_object[name]
-        except KeyError as error:
-            try:
-                _object = self.target_object["{}_color".format(name)]
-            except KeyError:
-                raise error
-        kwargs = dict()
-        try:
-            rmin, rmax = _object.r_range; gmin, gmax = _object.g_range
-            bmin, bmax = _object.b_range; amin, amax = _object.a_range
-            fields = [
-                      [('a', {"minimum" : amin, "maximum" : amax})],
-                      [('r', {"minimum" : rmin, "maximum" : rmax})],
-                      [('g', {"minimum" : gmin, "maximum" : gmax})],
-                      [('b', {"minimum" : bmin, "maximum" : bmax})]
-                     ]
-        except AttributeError:
-            orientation = "side by side"
-            field_info = pride.gui.widgets.form.field_info
-            fields = [
-                      [field_info(name,
-                       entry_kwargs=dict(orientation=orientation),
-                       minimum=0)]
-                     ]
-            target = self.target_object
-            if orientation == "stacked":
-                kwargs["w_range"] = (0, .25)
-        else:
-            target = _object
-
-        window = self.main_window
-        form = window.create(Color_Form, fields=fields, location="top",
-                             target_object=target,
-                             tab_kwargs={"button_text" : name}, **kwargs)
-        return form
+def generate_options_layout():
+    return layout(
+            row_info(0, field_info("save_theme", button_text="Save Theme",
+                                   entry_kwargs={"scale_to_text" : False}),
+                        field_info("load_theme", button_text="Load Theme",
+                                   entry_kwargs={"scale_to_text" : False}),
+                     h_range=(0, .1)),
+                  tab_bar_kwargs={"include_new_tab_button" : False})
 
 
-class Theme_Editor(Value_Editor):
+class Theme_Editor(pride.gui.link2.Linked_Form):
 
-    defaults = {"new_window_type" : Profile_Editor}
+    defaults = {"target_theme" : None}
+    subcomponents = {"form" :
+                    Component("pride.gui.programs.themecustomizer2.Theme_Form"),
+                     "tab_bar" : Component(include_new_tab_button=False),
+                     "file_saver" :
+                         Component("pride.gui.programs.fileexplorer.File_Saver",
+                                   location="top", autodelete=True),
+                     "file_selector" :
+                     Component("pride.gui.programs.fileexplorer.File_Selector")}
     autoreferences = ("file_saver", "file_selector")
 
     def create_subcomponents(self):
-        self.show_status("Initializing theme editor...", immediately=True)
-        theme = self.target_object
-        self.names = sorted(theme.theme_colors.keys())
-        self.create("pride.gui.widgets.form.Form", target_object=self,
-                    location="top", h_range=(0, .05),
-                    fields=[[("delete_color_options", {"button_text" : 'x',
-                                                       "scale_to_text" : True,
-                                                       "location" : "right"}),
-                             ("save_color_options", {"button_text" : "Export color options",
-                                                     "location" : "right"}),
-                             ("load_color_options", {"button_text" : "Import color options",
-                                                     "location" : "right"})
-                           ]])
-
-        targets = self.tab_targets = []
-        for profile in self.target_object.theme_colors.keys():
-            def callable(profile=profile):
-                return self.create_window(profile)
-            targets.append(callable)
+        if self.target_theme is None:
+            self.target_theme = self.theme
+        theme = self.target_theme
+        theme_editor_layout = generate_theme_editor_layout(theme)
+        options_layout = generate_options_layout()
+        self.layout = layout(links=(page("editor", theme_editor_layout),
+                                    page("options", options_layout)))
         super(Theme_Editor, self).create_subcomponents()
-        self.show_status("...Done")
 
-    def create_window(self, profile):
-        theme = self.target_object; theme_colors = theme.theme_colors
-        names = sorted(theme_colors.values()[0].keys())
-        window = self.main_window.create(self.new_window_type, names=names,
-                                         target_object=theme_colors[profile],
-                                         tab_bar_title_text="{} profile settings".format(profile),
-                                         tab_kwargs={"button_text" : profile})
-        return window
-
-    def save_color_options(self):
+    def save_theme(self):
         if self.file_saver is None:
-            self.file_saver = self.create("pride.gui.programs.fileexplorer.File_Saver",
-                                          location="top", data=self.serialize_color_options())
-
-    def serialize_color_options(self):
-        self.show_status("Serializing color options...")
-        theme = self.theme.__class__.theme_colors
-        lines = ["Theme Profiles",
-                 '=' * len("Theme Profiles"),
-                 '']
-
-        for profile, profile_data in sorted(theme.items()):
-            lines.append(profile)
-            lines.append('-' * len(profile) + '\n')
-            for parameter, value in sorted(profile_data.items()):
-                try:
-                    r, g, b, a = value # unpack Color objects into their constituent values
-                except (ValueError, TypeError):
-                    lines.append("      " + "- {}: {}".format(parameter, value))
-                else:
-                    lines.append("      " + "- {}: {}".format(parameter, (r, g, b, a)))
-            lines.append('\n')
-        return '\n'.join(lines)
-
-    def load_color_options(self):
-        if self.file_selector is None:
-            self.file_selector = self.create("pride.gui.programs.fileexplorer.File_Selector",
-                                            location="top", callback=self._load_color_options)
-
-    def _load_color_options(self, filename):
-        self.show_status("Importing color options from {}...".format(filename),
-                         immediately=True)
-        try:
-            theme = cefparser.parse_filename(filename)
-        except Exception: # cefparser needs to be improved to throw exceptions properly on malformed files
-            assert hasattr(cefparser, "parse_filename")
-            self.show_status("Invalid or corrupt theme file")
-            return
+            # have to use this window to make the result look "right"
+            window = self.main_window.children[0].form.main_window
+            file_saver = window.create(self.file_saver_type,
+                                       data=self.theme.serialize(),
+                                       **self.file_saver_kwargs)
+            self.file_saver = file_saver
         else:
-            if "Theme Profiles" not in theme:
-                self.show_status("Invalid or corrupt theme file")
-                return
-        theme_colors = self.theme.theme_colors
-        for profile, values in theme["Theme Profiles"].iteritems():
-            bad_keys = []
-            for key, value in values.iteritems():
-                values[key] = ast.literal_eval(value)
-                try:
-                    r, g, b, a = values[key]
-                except (ValueError, TypeError):
-                    theme_colors[profile][key] = values[key]
-                else:
-                    _color = theme_colors[profile][key]
-                    _color.r = r
-                    _color.g = g
-                    _color.b = b
-                    _color.a = a
-                    values[key] = _color
-            theme_colors[profile].update(values)
-            for key in bad_keys:
-                del theme_colors[profile][key]
-        self.theme.update_theme_users()
-        self.clear_status()
-        self.file_selector.delete()
+            self.file_saver.delete()
 
-    def delete_color_options(self):
-        self.delete()
+    def load_theme(self):
+        if self.file_selector is None:
+            # have to use this window to make the result look "right"
+            window = self.main_window.children[0].form.main_window
+            file_selector = window.create(self.file_selector_type,
+                                          callback=self._load_theme,
+                                          **self.file_selector_kwargs)
+            self.file_selector = file_selector
+        else:
+            self.file_selector.delete()
+
+    def _load_theme(self, filename):
+        with open(filename, 'r') as _file:
+            _bytes = _file.read()
+        theme_colors = self.theme.deserialize(_bytes)
+        self.theme.update_theme_colors(theme_colors)
+
+
+def test_Theme_Editor():
+    import pride.gui.main
+    pride.gui.main.run_programs([Theme_Editor])
 
 if __name__ == "__main__":
-    import pride.gui
-    import pride.gui.themes
-    import pride.components.base
-    window = pride.objects[pride.gui.enable(x=50, y=50)]
-    _object = pride.components.base.Base(test_value=1)
-    #callable = lambda **kwargs: Value_Editor(target_object=_object,
-    #                                         names=("test_value", ),
-    #                                         **kwargs)
-    theme = pride.gui.themes.Minimal_Theme
-    info = theme.theme_colors
-    #callable = lambda **kwargs: Profile_Editor(target_object=info.values()[0],
-    #                                           names=sorted(info.values()[0].keys()),
-    #                                           **kwargs)
-    callable = lambda **kwargs: Theme_Editor(target_object=theme,
-                                             **kwargs)
-    window.create("pride.gui.main.Gui", user=pride.objects["/User"],
-                  startup_programs=(callable, ))
+    test_Theme_Editor()

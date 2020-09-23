@@ -5,11 +5,6 @@ import os.path
 import pride.components.user
 import pride.gui.gui
 
-try:
-    import cefparser
-except ImportError:
-    print("install cefparser package from https://github.com/erose1337/cef_parser")
-    raise
 
 class User(pride.components.user.User):
 
@@ -43,11 +38,12 @@ class Gui(pride.gui.gui.Application):
 
     def set_theme_colors(self, filename):
         self.show_status("Importing color options...")
-        theme = cefparser.parse_filename(filename)
+        with open(filename, 'r') as _file:
+            data = _file.read()
+        new_theme_colors = self.theme.deserialize(data)
         theme_colors = self.theme.theme_colors
-        for profile, values in theme["Theme Profiles"].iteritems():
+        for profile, values in new_theme_colors.items():
             for key, value in values.iteritems():
-                values[key] = ast.literal_eval(value)
                 try:
                     r, g, b, a = values[key]
                 except TypeError:

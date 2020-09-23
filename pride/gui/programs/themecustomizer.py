@@ -1,8 +1,8 @@
-import pride.gui.link2
+import pride.gui.link
 import pride.gui.form
 from pride.components import Component
 from pride.gui.form import field_info, row_info, layout
-page = pride.gui.link2.page
+page = pride.gui.link.page
 
 class Theme_Form(pride.gui.form.Form):
 
@@ -72,7 +72,7 @@ def generate_options_layout():
                   tab_bar_kwargs={"include_new_tab_button" : False})
 
 
-class Theme_Editor(pride.gui.link2.Linked_Form):
+class Theme_Editor(pride.gui.link.Linked_Form):
 
     defaults = {"target_theme" : None}
     subcomponents = {"form" :

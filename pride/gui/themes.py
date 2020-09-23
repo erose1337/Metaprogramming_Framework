@@ -1,8 +1,11 @@
 import copy
+import ast
+import pprint
 
 import pride.gui
 import pride.gui.color
 import pride.components.base
+from pride.components import deep_update
 
 import sdl2
 
@@ -37,6 +40,38 @@ class Theme(pride.components.base.Wrapper):
     theme_profiles += ("blank", )
 
     _theme_users = [] # may need metaclass to make a new _theme_users for subclasses
+
+    def serialize(self):
+        theme_colors = self.theme_colors
+        output = dict()
+        for profile_name, profile in theme_colors.items():
+            _output = output[profile_name] = dict()
+            for key, value in profile.items():
+                try:
+                    value = value.r, value.g, value.b, value.a
+                except AttributeError:
+                    _output[key] = value
+                else:
+                    _output[key] = value
+        return pprint.pformat(output)
+
+    @staticmethod
+    def deserialize(serialized_theme_colors):
+        output = ast.literal_eval(serialized_theme_colors)
+        for profile_name, profile in output.items():
+            for key, value in profile.items():
+                try:
+                    r, g, b, a = value
+                except TypeError:
+                    pass
+                else:
+                    profile[key] = pride.gui.color.Color(r, g, b, a)
+        return output
+
+    def update_theme_colors(self, theme_colors):
+        # what if keys have been removed/deprecated from the code since theme_colors was serialized?
+        # what if theme_colors contains keys for profiles that do not exist? yet (or anymore)?
+        deep_update(self.theme_colors, theme_colors)
 
     def draw_texture(self):
         raise NotImplementedError

@@ -98,7 +98,9 @@ class Organizer(base.Base):
                 old_area[child] = child.area
 
         top, main, bottom, left, right = (_lists[item] for item in ("top", "main", "bottom", "left", "right"))
-        assert len(main) in (0, 1), main
+        if len(main) not in (0, 1):
+            message = "More than 1 object declared as 'main' ({})"
+            raise ValueError(message.format([str(item) for item in main]))
 
         if top or main or bottom:
             self.pack_verticals(area, z, top, main, bottom)

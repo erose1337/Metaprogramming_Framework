@@ -2,21 +2,26 @@ import time
 import os
 
 import pride.gui.gui
-import pride.gui.widgets.form
+import pride.gui.form
 import pride.gui.widgets.tree
+from pride.gui.form import field_info, row_info, layout
+from pride.components import Component
 
-class Prompt(pride.gui.widgets.form.Form):
+
+class Prompt(pride.gui.form.Form):
 
     defaults = {"prompt_text" : '',
-                "fields" : [ [("prompt_text", {"editable" : False, "auto_create_id" : False,
-                                               "scale_to_text" : True,
-                                               "entry_kwargs" : {"theme_profile" : "default"}}),
-                              ("handle_yes", {"orientation" : "stacked",
-                                              "button_text" : "Yes"}),
-                              ("handle_no", {"orientation" : "stacked",
-                                             "button_text" : "No"})
-                             ]
-                           ],
+                "layout" :
+                    layout(
+                        row_info(0,
+                            field_info("prompt_text", editable=False,
+                                       auto_create_id=False,
+                                    entry_kwargs={"theme_profile" : "default",
+                                                  "scale_to_text" : True}),
+                            field_info("handle_yes", orientation="stacked",
+                                       button_text="Yes"),
+                            field_info("handle_no", orientation="stacked",
+                                       button_text="No"))),
                 "location" : "top", "h_range" : (.25, .25),
                 "include_delete_button" : True
                 }
@@ -34,45 +39,24 @@ class Overwrite_Prompt(Prompt):
                 "theme_profile" : "alert"}
 
     def handle_yes(self):
-        self.parent.save_data(overwrite=True)
         assert not self.deleted
         self.delete()
+        self.parent.parent.save_data(overwrite=True)
 
     def handle_no(self):
         assert not self.deleted
         self.delete()
 
 
-class File_Saver(pride.gui.widgets.form.Form):
+class _File_Saver(pride.gui.form.Form):
 
-    defaults = {"filename" : '', "data" : '', "autodelete" : False,
-                "fields" : (("filename", ("save_data", {"button_text" : "save"})), ),
+    defaults = {"layout" :
+                    layout(
+                        row_info(0,
+                            field_info("filename"),
+                            field_info("save_data", button_text="save"))),
                 "h_range" : (0, .25), "include_delete_button" : True,
                 "form_name" : "File saver"}
-    autoreferences = ("prompt", )
-
-    def save_data(self, overwrite=False):
-        if (not overwrite) and os.path.exists(self.filename) and self.prompt is None:
-            self.prompt = self.create(Overwrite_Prompt)
-
-        if self.prompt is None or overwrite:
-            size = len(self.data)
-            units = ["bytes", "KB", "MB", "GB", "TB"]
-            index = 0
-            while size > 1024:
-                index += 1
-                size /= 1024.0
-            self.show_status("Saving {0:.2f}{1} to {2}...".format(size, units[index], self.filename))
-            try:
-                with open(self.filename, "wb") as _file:
-                    _file.write(self.data)
-            except IOError:
-                if os.path.exists(self.filename):
-                    raise
-                self.show_status("Unable to write to file {}; Ensure all directories exist and are spelled correctly and try again.".format(self.filename))
-            else:
-                if self.autodelete:
-                    self.delete()
 
 
 class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
@@ -162,7 +146,7 @@ class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
 
 class File_Selector(Directory_Viewer):
 
-    required_attributes = ("callback", )
+    defaults = {"callback" : None}
     autoreferences = ("confirmation_box", )
     hotkeys = {('\n', None) : "handle_return"}
 
@@ -170,13 +154,16 @@ class File_Selector(Directory_Viewer):
         self.view_node()
 
     def select_file(self, filename):
+        super(File_Selector, self).select_file(filename)
         self.filename = filename
         if self.confirmation_box is None:
-            fields = [["filename", ("confirm_selection", {"button_text" : "Confirm"}),
-                       ("delete_confirmation", {"button_text" : 'x'})
-                     ]]
-            box = self.application_window.create(pride.gui.widgets.form.Form,
-                                                fields=fields, target_object=self)
+            _layout = layout(
+                        row_info(0,
+                            field_info("filename"),
+                        field_info("confirm_selection", button_text="Confirm"),
+                        field_info("delete_confirmation", button_text='x')))
+            box = self.main_window.create(pride.gui.form.Form,
+                                          layout=_layout, target_object=self)
             self.confirmation_box = box
         else:
             self.confirmation_box.synchronize_fields()
@@ -185,9 +172,63 @@ class File_Selector(Directory_Viewer):
         self.confirmation_box.delete()
 
     def confirm_selection(self):
-        self.callback(self.filename)
+        if self.callback is not None:
+            self.callback(self.filename)
         if not self.deleted:
             self.delete()
+
+
+class File_Saver(pride.gui.form.Scrollable_Window):
+
+    defaults = {"data" : bytes(), "filename" : '', "autodelete" : False,
+                "location" : "top"}
+    subcomponents = {"vertical_slider" : Component(location=None),
+                     "horizontal_slider" : Component(location=None),
+        "_file_saver" : Component("pride.gui.programs.fileexplorer._File_Saver",
+                                  h_range=(0, .1)),
+        "directory_viewer" :
+                  Component("pride.gui.programs.fileexplorer.Directory_Viewer")}
+    autoreferences = ("prompt", "file_saver", "directory_viewer")
+
+    def create_subcomponents(self):
+        super(File_Saver, self).create_subcomponents()
+        window = self.main_window
+        self.file_saver = window.create(self._file_saver_type, data=self.data,
+                                        target_object=self,
+                                        **self._file_saver_kwargs)
+        self.directory_viewer = window.create(self.directory_viewer_type,
+                                              **self.directory_viewer_kwargs)
+
+    def save_data(self, overwrite=False):
+        filename = os.path.join(self.directory_viewer.current_node,
+                                self.filename)
+        filename = os.path.expanduser(filename)
+        already_exists = os.path.exists(filename)
+        if already_exists and self.prompt is None:
+            if overwrite == False:
+                self.prompt = self.main_window.create(Overwrite_Prompt)
+            #else:
+            #    if self.prompt is not None and not self.prompt.deleted:
+            #        self.prompt.delete()
+            #        assert self.prompt is None
+        if overwrite or not already_exists:
+            size = len(self.data)
+            units = ["bytes", "KB", "MB", "GB", "TB"]
+            index = 0
+            while size > 1024:
+                index += 1
+                size /= 1024.0
+            self.show_status("Saving {0:.2f}{1} to {2}...".format(size, units[index], filename))
+            try:
+                with open(filename, "wb") as _file:
+                    _file.write(self.data)
+            except IOError:
+                if os.path.exists(filename):
+                    raise
+                self.show_status("Unable to write to file {}; Ensure all directories exist and are spelled correctly and try again.".format(filename))
+            else:
+                if self.autodelete:
+                    self.delete()
 
 
 def directory_explorer_test():
@@ -203,5 +244,5 @@ def file_saver_test():
                         startup_programs=(File_Saver, ))
 
 if __name__ == "__main__":
-    directory_explorer_test()
+    #directory_explorer_test()
     file_saver_test()

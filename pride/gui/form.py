@@ -207,7 +207,7 @@ class Scrollable_Window(pride.gui.gui.Window):
                                                minimum=0, maximum=0,
                                                location="bottom",
                                                orientation="side by side"),
-                     "main_window" : Component("pride.gui.gui.Container",
+                     "main_window" : Component("pride.gui.gui.Window",
                                                location="main")}
     interface = (tuple(), ("horizontal_slider_kwargs",
                            "vertical_slider_kwargs"))
@@ -236,14 +236,14 @@ class Scrollable_Window(pride.gui.gui.Window):
         self.main_window = self.create(self.main_window_type,
                                        **self.main_window_kwargs)
         kwargs = self.vertical_slider_kwargs
-        position = kwargs["location"]
-        if position is not None:
+        location = kwargs["location"]
+        if location is not None:
             slider_type = self.vertical_slider_type
             self.vertical_slider = self.create(slider_type, target_object=self,
                                                **kwargs)
         kwargs = self.horizontal_slider_kwargs
-        position = kwargs["location"]
-        if position is not None:
+        location = kwargs["location"]
+        if location is not None:
             slider_type = self.horizontal_slider_type
             self.horizontal_slider = self.create(slider_type,
                                                  target_object=self, **kwargs)
@@ -427,6 +427,7 @@ class Form(Scrollable_Window):
                            field_no=sum(len(_row.fields) for
                                         _row in self.rows.values()),
                            **field_kwargs)
+        del field_kwargs["target_object"]
         row.fields.append(field)
         return field
 

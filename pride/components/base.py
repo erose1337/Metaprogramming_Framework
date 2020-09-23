@@ -342,7 +342,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
                 setattr(self, attribute, kwargs.pop(attribute))
             else:
                 setattr(self, attribute, value)
-        
+
         if subcomponents:
             for name, component in self.subcomponents.items():
                 value = copy.deepcopy(component.kwargs)

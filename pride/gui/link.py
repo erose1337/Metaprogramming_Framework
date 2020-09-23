@@ -26,7 +26,6 @@ class Linked_Form(pride.gui.tabs.Tabbed_Window):
         if not tabs:
             self.tab_bar.hide()
         if _layout[0]:
-            self.alert("Creating form")
             self.form = self.main_window.create(form_type, layout=_layout)
 
 def test_Linked_Form():

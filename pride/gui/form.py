@@ -168,9 +168,9 @@ def test_compile_filename():
     out2 = compile_filename("_formtest.txt")
     assert out1 == out2, '\n' + pprint.pformat((out1, out2))
 
-import itertools
 import hashlib
 import os.path
+import pprint
 
 import pride.gui.gui
 from pride.components import deep_update, Component
@@ -194,9 +194,17 @@ def load_resources(*alias_filename_pairs):
 def store_resource(resource_id, data,
                    _dir=pride.site_config.RESOURCE_DIRECTORY):
     filename = os.path.join(_dir, resource_id)
-    with open(filename, "wb") as _file:
-        _file.write(data)
-
+    if not os.path.exists(filename):
+        with open(filename, "wb") as _file:
+            _file.write(data)
+    else:
+        current_file_size = os.stat(filename).st_size
+        new_size = len(data)
+        if current_file_size != new_size:
+            message  = "Existing resource {} is of length {} (new length {})."
+            message += "Unable to resolve conflict automatically."
+            raise ValueError(message.format(resource_id, current_file_size,
+                                            new_size))
 
 class Scrollable_Window(pride.gui.gui.Window):
 
@@ -584,22 +592,32 @@ class Form(Scrollable_Window):
 def test_Form():
     import pride.gui.main
 
-    images_dir = pride.site_config.IMAGES_DIRECTORY
-    image_filename = os.path.join(images_dir, "testimage.png")
     image_alias = "/images/testimage.png"
-
-    audio_dir = pride.site_config.GUI_RESOURCES_DIRECTORY
-    audio_filename = os.path.join(audio_dir, "testaudio.ogg")
     audio_alias = "/audio/testaudio.ogg"
 
-    manifest, datas = load_resources((image_alias, image_filename),
-                                     (audio_alias, audio_filename))
-    image_data = datas[image_alias]
-    audio_data = datas[audio_alias]
+    manifests_dir = pride.site_config.MANIFESTS_DIRECTORY
+    manifest_filename = os.path.join(manifests_dir,
+                                     "pride_gui_form_Form_unittest")
+    if os.path.exists(manifest_filename):
+        with open(manifest_filename, "rb") as _file:
+            manifest = ast.literal_eval(_file.read())
+    else:
+        images_dir = pride.site_config.IMAGES_DIRECTORY
+        image_filename = os.path.join(images_dir, "testimage.png")
 
-    store_resource(manifest[image_alias], image_data)
-    store_resource(manifest[audio_alias], audio_data)
-    print manifest
+        audio_dir = pride.site_config.GUI_RESOURCES_DIRECTORY
+        audio_filename = os.path.join(audio_dir, "testaudio.ogg")
+
+        manifest, datas = load_resources((image_alias, image_filename),
+                                        (audio_alias, audio_filename))
+        image_data = datas[image_alias]
+        audio_data = datas[audio_alias]
+
+        store_resource(manifest[image_alias], image_data)
+        store_resource(manifest[audio_alias], audio_data)
+        with open(manifest_filename, "wb") as _file:
+            _file.write(pprint.pformat(manifest))
+
     _layout = layout(row_info(0,
                               field_info("test_bool"),
                               field_info("test_text"),

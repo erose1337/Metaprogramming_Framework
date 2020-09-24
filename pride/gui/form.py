@@ -180,10 +180,22 @@ def generate_manifest(data):
     return dict((key, hashlib.sha256(value).hexdigest()) for
                 key, value in data.items())
 
-def load_resource_data(filename):
+def read_file(filename):
     with open(filename, "rb") as _file:
         data = _file.read()
     return data
+
+def load_resources(*alias_filename_pairs):
+    manifest_data = dict()
+    for alias, filename in alias_filename_pairs:
+        manifest_data[alias] = read_file(filename)
+    return generate_manifest(manifest_data), manifest_data
+
+def store_resource(resource_id, data,
+                   _dir=pride.site_config.RESOURCE_DIRECTORY):
+    filename = os.path.join(_dir, resource_id)
+    with open(filename, "wb") as _file:
+        _file.write(data)
 
 
 class Scrollable_Window(pride.gui.gui.Window):
@@ -574,25 +586,20 @@ def test_Form():
 
     images_dir = pride.site_config.IMAGES_DIRECTORY
     image_filename = os.path.join(images_dir, "testimage.png")
-    image_data = load_resource_data(image_filename)
+    image_alias = "/images/testimage.png"
 
     audio_dir = pride.site_config.GUI_RESOURCES_DIRECTORY
     audio_filename = os.path.join(audio_dir, "testaudio.ogg")
-    audio_data = load_resource_data(audio_filename)
+    audio_alias = "/audio/testaudio.ogg"
 
-    manifest_data = {"/images/testimage.png" : image_data,
-                     "/audio/testaudio.ogg" : audio_data}
-    manifest = generate_manifest(manifest_data)
-    resource_filename = os.path.join(pride.site_config.RESOURCE_DIRECTORY,
-                                     manifest["/images/testimage.png"])
-    with open(resource_filename, "wb") as _file:
-        _file.write(image_data)
-        _file.flush()
-    with open(os.path.join(pride.site_config.RESOURCE_DIRECTORY,
-                           manifest["/audio/testaudio.ogg"]), "wb") as _file:
-        _file.write(audio_data)
-        _file.flush()
+    manifest, datas = load_resources((image_alias, image_filename),
+                                     (audio_alias, audio_filename))
+    image_data = datas[image_alias]
+    audio_data = datas[audio_alias]
 
+    store_resource(manifest[image_alias], image_data)
+    store_resource(manifest[audio_alias], audio_data)
+    print manifest
     _layout = layout(row_info(0,
                               field_info("test_bool"),
                               field_info("test_text"),

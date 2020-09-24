@@ -76,7 +76,8 @@ class Directory_Viewer(pride.gui.widgets.tree.Tree_Viewer):
         else:
             name = "view_node"
         return (name, {"button_text" : getattr(child, "text", alt),
-                       "args" : (child, )})
+                       "args" : (child, ),
+                       "entry_kwargs" : {"scale_to_text" : False}})
 
     def convert_size_unit(self, size):
         units = ["bytes", "KB", "MB", "GB", "TB"]

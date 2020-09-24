@@ -57,7 +57,7 @@ class Tree_Viewer(pride.gui.gui.Application):
             self.viewer.delete()
         self.viewer = self.bottom.create(Node_Viewer, target_object=self,
                                          layout=_layout, row_h_range=(0, .15),
-                                         max_rows=6)
+                                         max_rows=10)
         if self.history: # need to check for contents before testing [-1] in case history is empty
             if self.history[-1] != identifier:
                 self.history.append(identifier)
@@ -81,15 +81,15 @@ class Tree_Viewer(pride.gui.gui.Application):
         raise NotImplementedError()
 
     def children_to_fields(self, children):
-        return [row_info(i,
-                        *[self.new_entry(child) for child in chunk]) for
-                 i, chunk in enumerate(slide(children, self.max_count))]
+        return [row_info(i, self.new_entry(child)) for
+                i, child in enumerate(children)]
 
     @staticmethod
     def new_entry(child):
         return field_info("view_node",
                           button_text=getattr(child, "text", str(child)),
-                          args=(child, ), scale_to_text=False)
+                          args=(child, ),
+                          entry_kwargs={"scale_to_text" : False})
 
     def lookup(self, identifier):
         """ lookup should return a sequence of items that are children of the current node """

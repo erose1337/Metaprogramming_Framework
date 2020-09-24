@@ -981,8 +981,7 @@ class Image_Field(Field):
 
 class Media_Player(pride.gui.form.Form):
 
-    defaults = {"play_when_opened" : False,
-                "_volume_requested" : None, "volume" : 100,
+    defaults = {"_volume_requested" : None, "volume" : 100,
                 "layout" :
                     layout(row_info(0,
                                field_info("resource_alias",
@@ -1088,7 +1087,8 @@ class Media_Player(pride.gui.form.Form):
     def __init__(self, **kwargs):
         super(Media_Player, self).__init__(**kwargs)
         self.player.set_mrl(self.resource_filename)
-        if self.play_when_opened:
+        media_field = self.parent.parent_field
+        if media_field.play_when_opened:
             self.handle_play()
 
     def create_subcomponents(self):
@@ -1227,5 +1227,7 @@ class Media_Entry(Entry):
 
 class Media_Field(Field):
 
-    defaults = {"has_label" : False, "h_range" : (0, .25)}
+    defaults = {"has_label" : False, "h_range" : (0, .25),
+                "play_when_opened" : False,}
     subcomponents = {"entry" : Component("pride.gui.fields.Media_Entry")}
+    interface = (tuple(), ("play_when_opened", ))

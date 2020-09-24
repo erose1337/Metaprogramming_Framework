@@ -1,7 +1,7 @@
 import pride.gui.link
 from pride.components import Component
 from pride.gui.form import (field_info, row_info, layout, load_resources,
-                            read_file, generate_manifest)
+                            read_file, generate_manifest, store_resource)
 page = pride.gui.link.page
 
 class Media_Player(pride.gui.link.Linked_Form):
@@ -20,9 +20,11 @@ class Media_Player(pride.gui.link.Linked_Form):
                  layout(
                     row_info(0,
                          field_info("filename",
-                                    field_type="pride.gui.fields.Media_Field")),
+                                    field_type="pride.gui.fields.Media_Field",
+                                    play_when_opened=True)),
                         manifest=manifest, filename=alias))
-
+        resource_id = manifest[alias]
+        store_resource(resource_id, manifest_data[alias])
         self.layout = control_page[1]#layout(links=(control_page, ))
         super(Media_Player, self).create_subcomponents()
 

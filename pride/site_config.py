@@ -67,11 +67,12 @@ DATA_DIRECTORY = os.path.join(os.path.expanduser('~'), "pride")
 DATABASE_DIRECTORY = os.path.join(DATA_DIRECTORY, "database")
 LOG_DIRECTORY = os.path.join(DATA_DIRECTORY, "log")
 RESOURCE_DIRECTORY = os.path.join(DATA_DIRECTORY, "resource")
+MANIFESTS_DIRECTORY = os.path.join(RESOURCE_DIRECTORY, "manifests")
 
-ensure_folder_exists(DATA_DIRECTORY)
-ensure_folder_exists(DATABASE_DIRECTORY)
-ensure_folder_exists(LOG_DIRECTORY)
-ensure_folder_exists(RESOURCE_DIRECTORY)
+for _folder in (DATA_DIRECTORY, DATABASE_DIRECTORY, LOG_DIRECTORY,
+                RESOURCE_DIRECTORY, MANIFESTS_DIRECTORY):
+    ensure_folder_exists(_folder)
+del _folder
 
 FUNCTIONS_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "functions")
 GUI_DIRECTORY = os.path.join(PRIDE_DIRECTORY, "gui")

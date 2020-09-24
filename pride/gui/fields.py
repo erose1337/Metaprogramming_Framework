@@ -983,7 +983,6 @@ class Media_Player(pride.gui.form.Form):
 
     defaults = {"play_when_opened" : False,
                 "_volume_requested" : None, "volume" : 100,
-                "h_range" : (0, .25),
                 "layout" :
                     layout(row_info(0,
                                field_info("resource_alias",
@@ -1228,5 +1227,5 @@ class Media_Entry(Entry):
 
 class Media_Field(Field):
 
-    defaults = {"has_label" : False}
+    defaults = {"has_label" : False, "h_range" : (0, .25)}
     subcomponents = {"entry" : Component("pride.gui.fields.Media_Entry")}

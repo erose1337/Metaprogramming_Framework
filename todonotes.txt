@@ -1,14 +1,6 @@
 Currently working on:
 
-- hide/show bugs when switching tabs in game and closing theme customizer
-    - refactor tabs to use Forms and see if it is still an issue
-    - still an issue
-        - click on a continuum then try to open another tab
-
-- refactor things that use tabs:
-    - Homescreen?
-        - just write a new one with Forms
-    - gamestuff
+changing fileexplorer to use a details view, one line per file
 
 
 
@@ -24,7 +16,6 @@ To Do/Bugs
     - use Database.db_info and table_info to display contents
 
 - add form names to theme customizer tabs
-- open tabs left/right instead of top/bottom
 
 - documentation for Forms and Tabs
 

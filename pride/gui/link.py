@@ -19,7 +19,7 @@ class Linked_Form(pride.gui.tabs.Tabbed_Window):
         for page_id, page_layout in _layout[-1].get("links", tuple()):
             target = lazy_loaded(Linked_Form, layout=page_layout,
                                  form_type=form_type)
-            tabs.append(tab_info(target, text=page_id,
+            tabs.append(tab_info(target, button_text=page_id,
                                  entry_kwargs={"scale_to_text" : False}))
         self.tab_bar_kwargs["tab_info"] = tabs
         super(Linked_Form, self).create_subcomponents()

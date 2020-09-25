@@ -187,9 +187,10 @@ class File_Saver(pride.gui.form.Scrollable_Window):
     subcomponents = {"vertical_slider" : Component(location=None),
                      "horizontal_slider" : Component(location=None),
         "_file_saver" : Component("pride.gui.programs.fileexplorer._File_Saver",
-                                  h_range=(0, .1)),
+                                  h_range=(0, .1), location="left"),
         "directory_viewer" :
-                  Component("pride.gui.programs.fileexplorer.Directory_Viewer")}
+                  Component("pride.gui.programs.fileexplorer.Directory_Viewer",
+                            location="left")}
     autoreferences = ("prompt", "file_saver", "directory_viewer")
 
     def create_subcomponents(self):

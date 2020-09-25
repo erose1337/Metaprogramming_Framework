@@ -15,9 +15,10 @@ class Prompt(pride.gui.form.Form):
                     layout(
                         row_info(0,
                             field_info("prompt_text", editable=False,
-                                       auto_create_id=False,
+                                       has_label=False,
                                     entry_kwargs={"theme_profile" : "default",
-                                                  "scale_to_text" : True}),
+                                                  "scale_to_text" : False,
+                                                  "hoverable" :False}),
                             field_info("handle_yes", orientation="stacked",
                                        button_text="Yes"),
                             field_info("handle_no", orientation="stacked",

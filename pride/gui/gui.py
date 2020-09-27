@@ -332,6 +332,8 @@ class _Window_Object(Organized_Object):
         if not self.texture_invalid:
             self.texture_invalid = True
         super(_Window_Object, self)._on_set(coordinate, value)
+        if coordinate == 'z':
+            self.sdl_window.user_input._update_coordinates(self)
 
     def _get_text(self):
         return self._text

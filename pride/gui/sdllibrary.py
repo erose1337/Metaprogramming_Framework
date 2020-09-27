@@ -244,7 +244,6 @@ class SDL_Window(SDL_Component):
         cache = self.cache
         user_input = self.user_input
         layers = user_input._layer_tracker
-        update_coords = user_input._update_coordinates
         renderer.set_render_target(None)
         renderer.clear()
 
@@ -258,23 +257,23 @@ class SDL_Window(SDL_Component):
                 if item.hidden or not w or not h:
                     continue
                 #if item.texture_invalid:
-                update_coords(item)
-                #cache_key = (w, h, item.theme_profile)
-                #try:
-                #    cached_texture = cache[cache_key]
-                #except KeyError:
-                #    cached_texture = self.create_texture((w, h))
-                #    cache[cache_key] = cached_texture
-                #    renderer.set_render_target(cached_texture.texture)
-                #    renderer.clear()
-                renderer.set_blendmode(COPY_BLENDMODE)
-                theme = item.theme
-                for op_name in theme.draw_instructions:
-                    f = getattr(theme, "{}_instruction".format(op_name))
-                    f(renderer)
-
-                #renderer.set_render_target(None)
-                #renderer.copy(cached_texture.texture, dstrect=item.area)
+                cache_key = (w, h, item.theme_profile)
+                try:
+                    cached_texture = cache[cache_key]
+                except KeyError:
+                    extra = item.glow_thickness
+                    texture_size = (w + extra, h + extra)
+                    cached_texture = self.create_texture((w, h))
+                    cache[cache_key] = cached_texture
+                    renderer.set_render_target(cached_texture.texture)
+                    renderer.clear()
+                    renderer.set_blendmode(sdl2.SDL_BLENDMODE_NONE)
+                    theme = item.theme
+                    for op_name in theme.draw_instructions:
+                        f = getattr(theme, "{}_instruction".format(op_name))
+                        f(renderer)
+                    renderer.set_render_target(None)
+                renderer.copy(cached_texture.texture, dstrect=item.area)
                 if item.text:
                     item.theme.text_instruction(renderer)
                 item.texture_invalid = False

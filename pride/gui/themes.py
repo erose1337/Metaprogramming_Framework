@@ -138,27 +138,30 @@ class Minimal_Theme(Theme):
                                center_text=self.center_text)
 
     def fill_instruction(self, renderer):
-        renderer.fill(self.area, color=self.background_color)
+        offset = self.glow_thickness
+        renderer.fill((offset, offset, self.w, self.h), color=self.background_color)
 
     def shadow_instruction(self, renderer):
         shadow_thickness = self.shadow_thickness
-        x, y, w, h = self.area
+        w, h = self.size
         if shadow_thickness:
             r, g, b, a = self.shadow_color
+            offset = self.glow_thickness / 2
             for thickness in range(shadow_thickness):
-                renderer.draw_rect((x + thickness, y + thickness,
+                renderer.draw_rect((offset + thickness, offset + thickness,
                                     w - (2 * thickness), h - (2 * thickness)),
                                    color=(r, g, b, a / (thickness + 1)))
 
     def glow_instruction(self, renderer):
         glow_thickness = self.glow_thickness
-        x, y, w, h = self.area
+        w, h = self.size
         if glow_thickness:
             r, g, b, a = self.glow_color
             fade_scalar = a / glow_thickness
             assert fade_scalar > 0
             for thickness in range(glow_thickness):
-                renderer.draw_rect((x - thickness, y - thickness,
+                renderer.draw_rect((glow_thickness - thickness,
+                                    glow_thickness - thickness,
                                     w + (2 * thickness), h + (2 * thickness)),
                                  color=(r, g, b, a - (thickness * fade_scalar)))
 

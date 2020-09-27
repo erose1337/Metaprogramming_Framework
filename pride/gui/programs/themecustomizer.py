@@ -7,7 +7,7 @@ page = pride.gui.link.page
 class Theme_Form(pride.gui.form.Form):
 
     subcomponents = {"form" :
-                    Component("pride.gui.programs.themecustomizer2.Theme_Form")}
+                    Component("pride.gui.programs.themecustomizer.Theme_Form")}
 
     def get_parent_theme_editor(self):
         parent = self.parent
@@ -76,7 +76,7 @@ class Theme_Editor(pride.gui.link.Linked_Form):
 
     defaults = {"target_theme" : None}
     subcomponents = {"form" :
-                    Component("pride.gui.programs.themecustomizer2.Theme_Form"),
+                    Component("pride.gui.programs.themecustomizer.Theme_Form"),
                      "tab_bar" : Component(include_new_tab_button=False),
                      "file_saver" :
                          Component("pride.gui.programs.fileexplorer.File_Saver",

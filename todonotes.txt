@@ -1,7 +1,6 @@
 Currently working on:
 
-changing fileexplorer to use a details view, one line per file
-
+- rendering optimizations
 
 
 To Do/Bugs
@@ -10,12 +9,6 @@ To Do/Bugs
 - if some object is not clickable, should that apply to children?
     - current behavior does not do so
         - must set both parent and child `clickable` flags to False
-
-- database viewer program
-    - select db file (File_Selector)
-    - use Database.db_info and table_info to display contents
-
-- add form names to theme customizer tabs
 
 - documentation for Forms and Tabs
 
@@ -28,13 +21,8 @@ To Do/Bugs
 
 Form stuff
 ----------
-- Field_Info and Entry_Info ?
-    - instead of (name, kwargs_dict) pairs, use Field_Info(name, option=value, ...)
-                                            and Entry_Info(option=value, ...)
-    - Cleaner syntax than tuples containing dictionaries
 - update Form max_rows on area change
     - when more space is available, more rows can be displayed
-- balance on Forms probably still needs testing
 
 - mouse click animation looks dark/opaque when clicking on empty space in container with buttons
 
@@ -215,8 +203,6 @@ Refactor gui package
 --------------------
 - refactor pride.gui.gui.Window_Object into different objects with separate responsibilities
     - already started in the form of the Organized_Object class
-- refactor widgetlibrary into .widgets package
-- move any programs into the .programs package
 - remove all deprecated and/or unused+untested code
 
 

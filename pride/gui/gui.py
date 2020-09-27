@@ -302,11 +302,11 @@ class _Window_Object(Organized_Object):
                    "_text" : '', "draw_cursor" : False,
                    "queue_scroll_operation" : False, "_backup_w_range" : tuple(),
                    "_old_z" : 0, "_parent_hidden" : False, "_hidden" : False,
-                   "_always_on_top" : False, "use_custom_colors" : False,
+                   "use_custom_colors" : False,
                    "_status" : None, "_tip_set" : False,
                    "_theme_profile" : "default"}
 
-    mutable_defaults = {"_draw_operations" : list, "_children" : list,
+    mutable_defaults = {"_children" : list,
                         "scroll_instructions" : list, "colors" : dict}
     verbosity = {"press" : "vv", "release" : "vv"}
     hotkeys = dict()
@@ -318,19 +318,6 @@ class _Window_Object(Organized_Object):
     allowed_values = {"theme_type" : ("pride.gui.themes.Theme",
                                       "pride.gui.themes.Minimal_Theme",
                                       "pride.gui.themes.Animated_Theme2")}
-
-    def _get_always_on_top(self):
-        return self._always_on_top
-    def _set_always_on_top(self, value):
-        self._always_on_top = value
-        if value:
-            self.sdl_window.user_input.always_on_top.append(self)
-        else:
-            try:
-                self.sdl_window.user_input.always_on_top.remove(self)
-            except ValueError:
-                pass
-    always_on_top = property(_get_always_on_top, _set_always_on_top)
 
     def _get_texture_invalid(self):
         return self._texture_invalid
@@ -455,7 +442,7 @@ class _Window_Object(Organized_Object):
 
         self._children.remove(self.theme)
         window = self.sdl_window
-        window.user_input._update_coordinates(self, self.reference, self.area, self.z)
+        window.user_input._update_coordinates(self)
         #self.texture = window.create_texture(window.size)
         self.pack()
 
@@ -512,7 +499,6 @@ class _Window_Object(Organized_Object):
         if self.hoverable and not self.hovering:
             self._hover_backup_theme_profile = self.theme_profile
             self.theme_profile = "hover"
-            self.texture_invalid = True
             self.hovering = True
 
         if self.tip_bar_text:
@@ -525,7 +511,6 @@ class _Window_Object(Organized_Object):
             if self.theme_profile == "hover":
                 self.theme_profile = self._hover_backup_theme_profile
                 self._hover_backup_theme_profile = ''
-                self.texture_invalid = True
             self.hovering = False
 
         if self._tip_set:
@@ -540,7 +525,6 @@ class _Window_Object(Organized_Object):
         if self.hidden:
             return
         self.sdl_window.remove_window_object(self)
-        self.sdl_window.dirty_layers.add(self.z)
         if parent_call:
             self._parent_hidden = True
         else:
@@ -559,7 +543,7 @@ class _Window_Object(Organized_Object):
         if not self.hidden:
             assert not self.deleted
             window = self.sdl_window
-            window.user_input._update_coordinates(self, self.reference, self.area, self.z)
+            window.user_input._update_coordinates(self)
             if self.texture_invalid:
                 window.invalidate_object(self) # need to re-invalidate after _update_coordinates
             else:
@@ -567,36 +551,12 @@ class _Window_Object(Organized_Object):
             for child in self.children:
                 child.show(True)
 
-    def draw(self, figure, *args, **kwargs):
-        """ Draws the specified figure on self. figure can be any shape supported
-            by the renderer, namely: "rect", "line", "point", "text", and "rect_width".
-            The first argument(s) will include the destination of the shape in the
-            form appropriate for the figure specified (i.e. an area for a rect, a
-            pair of points for a point). For a full list of arguments for a
-            particular figure, see the appropriate draw method of the renderer. """
-        # draw operations are enqueued and processed in batches by the Renderer
-        self._draw_operations.append((figure, args, kwargs))
-
-    def _redraw(self):
-        assert not (self.hidden or self._parent_hidden)
-        if self._redraw_needed or not self._draw_operations:
-            del self._draw_operations[:]
-            self.draw_texture()
-        self.texture_invalid = False
-
-    def draw_texture(self):
-        assert not self.hidden
-        assert not self._parent_hidden
-        self.theme.draw_texture()
-
     def pack(self):
         super(_Window_Object, self).pack()
         self.sdl_window._schedule_run()
 
     def delete(self):
         assert not self.deleted, self
-        del self._draw_operations[:]
-        self.sdl_window.dirty_layers.add(self.z)
         self._clear_tip_bar_text()
         self.theme.delete()
         self.theme = None
@@ -618,7 +578,6 @@ class _Window_Object(Organized_Object):
     def __getstate__(self):
         state = super(_Window_Object, self).__getstate__()
         state["theme"] = self.theme.save()
-        del state["_draw_operations"]
         del state["_children"]
         print self, "getstate"
         import pprint
@@ -631,7 +590,6 @@ class _Window_Object(Organized_Object):
         theme_type = self.theme_type
         self.theme = pride.functions.utilities.resolve_string(theme_type).load(self.theme)
         self.theme.wraps(self)
-        self._draw_operations = []
         self._children = list(super(_Window_Object, self).children)
         print self, "on load"
         import pprint
@@ -779,7 +737,7 @@ class _Mouse_Click(Animated_Object):
         self.sdl_window.schedule_postdraw_operation(self.delete, self)
 
 
-Window_Object = Animated_Object # can upgrade everything in-place by changing this
+Window_Object = _Window_Object#Animated_Object # can upgrade everything in-place by changing this
 
 
 class Window(Window_Object):

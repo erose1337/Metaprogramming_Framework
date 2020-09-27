@@ -101,41 +101,14 @@ class Minimal_Theme(Theme):
     theme_colors = copy.deepcopy(Theme.theme_colors)
     _cache = dict() # for conspiring with gui.Animated_Object. update_theme_users should flush the cache
     _replacement_string = '*' * 10
+    draw_instructions = ("fill", "shadow", "glow")
 
     @classmethod
     def update_theme_users(cls):
         cls._cache.clear()
         super(Minimal_Theme, cls).update_theme_users()
 
-    def draw_texture(self):
-        assert not self.deleted
-        assert not self.hidden
-        x, y, w, h = area = self.x, self.y, self.w, self.h
-        if not w or not h:
-            #self.alert("occupies no area, not drawing")
-            return #raise Exception()
-        #if self._cached:
-        #    self.draw("copy", self.texture, self.area, self.area)
-        #else:
-        self.draw("fill", area, color=self.background_color)
-        shadow_thickness = self.shadow_thickness
-        if shadow_thickness:
-            r, g, b, a = self.shadow_color
-            for thickness in range(shadow_thickness):
-                self.draw("rect", (x + thickness, y + thickness,
-                                   w - (2 * thickness), h - (2 * thickness)),
-                          color=(r, g, b, a / (thickness + 1)))
-
-        glow_thickness = self.glow_thickness
-        if glow_thickness:
-            r, g, b, a = self.glow_color
-            fade_scalar = a / glow_thickness
-            assert fade_scalar > 0
-            for thickness in range(glow_thickness):
-                self.draw("rect", (x - thickness, y - thickness,
-                                   w + (2 * thickness), h + (2 * thickness)),
-                          color=(r, g, b, a - (thickness * fade_scalar)))
-
+    def text_instruction(self, renderer):
         text = self.text
         if text or self.draw_cursor:
             assert self.wrap_text
@@ -157,10 +130,37 @@ class Minimal_Theme(Theme):
                 # if the text has newlines, then the texture will have the maximum width
                 # when text rendering is upgraded to use an atlas, this fix should no longer be necessary
                 text += "\n\n"
-            assert w
-            self.draw("text", area, text, width=w if self.wrap_text else None,
-                      bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text, alias=self.font)
+            assert self.w
+            renderer.draw_text(self.area, text,
+                               width=self.w if self.wrap_text else None,
+                               bg_color=self.text_background_color,
+                               alias=self.font, color=self.text_color,
+                               center_text=self.center_text)
+
+    def fill_instruction(self, renderer):
+        renderer.fill(self.area, color=self.background_color)
+
+    def shadow_instruction(self, renderer):
+        shadow_thickness = self.shadow_thickness
+        x, y, w, h = self.area
+        if shadow_thickness:
+            r, g, b, a = self.shadow_color
+            for thickness in range(shadow_thickness):
+                renderer.draw_rect((x + thickness, y + thickness,
+                                    w - (2 * thickness), h - (2 * thickness)),
+                                   color=(r, g, b, a / (thickness + 1)))
+
+    def glow_instruction(self, renderer):
+        glow_thickness = self.glow_thickness
+        x, y, w, h = self.area
+        if glow_thickness:
+            r, g, b, a = self.glow_color
+            fade_scalar = a / glow_thickness
+            assert fade_scalar > 0
+            for thickness in range(glow_thickness):
+                renderer.draw_rect((x - thickness, y - thickness,
+                                    w + (2 * thickness), h + (2 * thickness)),
+                                 color=(r, g, b, a - (thickness * fade_scalar)))
 
 
 class Perspective_Theme(Theme):

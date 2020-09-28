@@ -738,8 +738,7 @@ class _Mouse_Click(Animated_Object):
         #self.delete()
         self.sdl_window.schedule_postdraw_operation(self.delete, self)
 
-
-Window_Object = _Window_Object#Animated_Object # can upgrade everything in-place by changing this
+Window_Object = Animated_Object # can upgrade everything in-place by changing this
 
 
 class Window(Window_Object):

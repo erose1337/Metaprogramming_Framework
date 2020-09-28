@@ -10,6 +10,8 @@ import keyword # for kwlist
 import tokenize
 import copy # for deepcopy
 import operator # for attrgetter
+import ast
+
 try:
     import cStringIO as StringIO
 except ImportError:
@@ -130,7 +132,6 @@ def test_compile_layout():
     out2 = compile_layout(_layout)
     assert out1 == out2, '\n' + pprint.pformat((out1, out2))
 
-    import ast
     out3 = ast.literal_eval(bytes(out2))
     assert out3 == out2
 

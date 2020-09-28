@@ -267,7 +267,7 @@ class SDL_Window(SDL_Component):
             renderer.clear()
             for item in layer:
                 assert not item.deleted
-                w, h = item.size
+                x, y, w, h = item.area
                 if item.hidden or not w or not h:
                     continue
 
@@ -288,9 +288,8 @@ class SDL_Window(SDL_Component):
                         f = getattr(theme, "{}_instruction".format(op_name))
                         f(renderer)
                     renderer.set_render_target(layer_texture.texture)
-                item_area = (item.x - item.glow_thickness,
-                             item.y - item.glow_thickness,
-                             item.w, item.h)
+                offset = item.glow_thickness
+                item_area = (x - offset, y - offset, w, h)
                 renderer.copy(cached_texture.texture, dstrect=item_area)
                 if item.text:
                     item.theme.text_instruction(renderer)

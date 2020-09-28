@@ -139,14 +139,15 @@ class Minimal_Theme(Theme):
 
     def fill_instruction(self, renderer):
         offset = self.glow_thickness
-        renderer.fill((offset, offset, self.w, self.h), color=self.background_color)
+        renderer.fill((offset, offset, self.w, self.h),
+                      color=self.background_color)
 
     def shadow_instruction(self, renderer):
         shadow_thickness = self.shadow_thickness
         w, h = self.size
         if shadow_thickness:
             r, g, b, a = self.shadow_color
-            offset = self.glow_thickness / 2
+            offset = self.glow_thickness
             for thickness in range(shadow_thickness):
                 renderer.draw_rect((offset + thickness, offset + thickness,
                                     w - (2 * thickness), h - (2 * thickness)),

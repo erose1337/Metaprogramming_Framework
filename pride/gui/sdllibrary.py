@@ -105,6 +105,7 @@ class SDL_Window(SDL_Component):
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
     mutable_defaults = {"cache" : dict, "predraw_queue" : list,
+                        "dirty_layers" : set, "layer_cache" : dict,
                         "postdraw_scheduled" : dict}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
@@ -205,7 +206,7 @@ class SDL_Window(SDL_Component):
         self.running = True # trigger run to wipe out the screen
 
     def run(self):
-        frame_start = timestamp()
+        #frame_start = timestamp()
         self.run_instruction.execute(priority=self.priority)
         assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
         self.user_input.run()
@@ -235,35 +236,49 @@ class SDL_Window(SDL_Component):
             self.postdraw_scheduled = dict()
             for callable in queue:
                 callable()
-        frame_end = timestamp()
-        print("Allocated {0:.5f}; Used: {1:.5f}; Spare: {2:.5f}".format(self.priority, frame_end - frame_start, self.priority - (frame_end - frame_start)))
+        #frame_end = timestamp()
+        #print("Allocated {0:.5f}; Used: {1:.5f}; Spare: {2:.5f}".format(self.priority, frame_end - frame_start, self.priority - (frame_end - frame_start)))
 
     def draw(self):
         area = (0, 0) + self.size
         renderer = self.renderer
         cache = self.cache
+        layer_cache = self.layer_cache
         user_input = self.user_input
         layers = user_input._layer_tracker
+        dirty_layers = self.dirty_layers
         renderer.set_render_target(None)
         renderer.clear()
 
         for layer_number, layer in sorted(layers.items()):
             if not layer:
                 continue
+            try:
+                layer_texture = layer_cache[layer_number]
+            except KeyError:
+                layer_texture = self.create_texture(self.size)
+                layer_cache[layer_number] = layer_texture
 
+            if layer_number not in dirty_layers:
+                renderer.set_render_target(None)
+                renderer.copy(layer_texture.texture, dstrect=area)
+                continue
+            renderer.set_render_target(layer_texture.texture)
+            renderer.clear()
             for item in layer:
                 assert not item.deleted
                 w, h = item.size
                 if item.hidden or not w or not h:
                     continue
-                #if item.texture_invalid:
+
                 cache_key = (w, h, item.theme_profile)
                 try:
                     cached_texture = cache[cache_key]
                 except KeyError:
                     extra = item.glow_thickness
                     texture_size = (w + extra, h + extra)
-                    cached_texture = self.create_texture((w, h))
+                    cached_texture = self.create_texture((w, h),
+                                            blendmode=sdl2.SDL_BLENDMODE_NONE)
                     cache[cache_key] = cached_texture
                     renderer.set_render_target(cached_texture.texture)
                     renderer.clear()
@@ -272,11 +287,16 @@ class SDL_Window(SDL_Component):
                     for op_name in theme.draw_instructions:
                         f = getattr(theme, "{}_instruction".format(op_name))
                         f(renderer)
-                    renderer.set_render_target(None)
-                renderer.copy(cached_texture.texture, dstrect=item.area)
+                    renderer.set_render_target(layer_texture.texture)
+                item_area = (item.x - item.glow_thickness,
+                             item.y - item.glow_thickness,
+                             item.w, item.h)
+                renderer.copy(cached_texture.texture, dstrect=item_area)
                 if item.text:
                     item.theme.text_instruction(renderer)
                 item.texture_invalid = False
+            renderer.set_render_target(None)
+            renderer.copy(layer_texture.texture, dstrect=area)
         renderer.present()
 
     def schedule_postdraw_operation(self, callable, caller):
@@ -507,6 +527,8 @@ class SDL_User_Input(pride.components.base.Base):
         except KeyError:
             self._layer_tracker[z] = [item]
         item._old_z = z
+        add = self.parent.dirty_layers.add
+        add(z); add(old_z)
         return old_z
 
     def _remove_from_coordinates(self, item):

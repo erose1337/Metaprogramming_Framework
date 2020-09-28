@@ -244,8 +244,7 @@ class SDL_Window(SDL_Component):
         renderer = self.renderer
         cache = self.cache
         layer_cache = self.layer_cache
-        user_input = self.user_input
-        layers = user_input._layer_tracker
+        layers = self.user_input._layer_tracker
         dirty_layers = self.dirty_layers
         renderer.set_render_target(None)
         renderer.clear()
@@ -275,7 +274,7 @@ class SDL_Window(SDL_Component):
                 try:
                     cached_texture = cache[cache_key]
                 except KeyError:
-                    extra = item.glow_thickness
+                    extra = item.glow_thickness * 2
                     texture_size = (w + extra, h + extra)
                     cached_texture = self.create_texture((w, h),
                                             blendmode=sdl2.SDL_BLENDMODE_NONE)
@@ -289,7 +288,7 @@ class SDL_Window(SDL_Component):
                         f(renderer)
                     renderer.set_render_target(layer_texture.texture)
                 offset = item.glow_thickness
-                item_area = (x - offset, y - offset, w, h)
+                item_area = (x - offset, y - offset, w + offset, h + offset)
                 renderer.copy(cached_texture.texture, dstrect=item_area)
                 if item.text:
                     item.theme.text_instruction(renderer)

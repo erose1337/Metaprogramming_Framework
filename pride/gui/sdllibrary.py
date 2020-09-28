@@ -224,7 +224,7 @@ class SDL_Window(SDL_Component):
             self.running = True # trigger run to wipe out the screen
 
     def run(self):
-        frame_start = timestamp()
+        #frame_start = timestamp()
         self.run_instruction.execute(priority=self.priority)
         assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
         self.user_input.run()
@@ -263,8 +263,8 @@ class SDL_Window(SDL_Component):
             self.postdraw_scheduled = dict()
             for callable in queue:
                 callable()
-        frame_end = timestamp()
-        print("Allocated {0:.5f}; Used: {1:.5f}; Spare: {2:.5f}".format(self.priority, frame_end - frame_start, self.priority - (frame_end - frame_start)))
+        #frame_end = timestamp()
+        #print("Allocated {0:.5f}; Used: {1:.5f}; Spare: {2:.5f}".format(self.priority, frame_end - frame_start, self.priority - (frame_end - frame_start)))
 
     def update_drawing_instructions(self):
         instructions = self.drawing_instructions

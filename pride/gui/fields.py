@@ -658,6 +658,7 @@ class Continuum(pride.gui.gui.Button):
         else:
             bucket_width = width / (float(maximum - minimum) + 1)
             new_size = int(bucket_width * parent_field.value)
+        new_size = max(0, new_size)
         setattr(self.bar, "{}_range".format(size), (new_size, new_size))
         self.bar.pack()
 

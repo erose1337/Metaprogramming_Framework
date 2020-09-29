@@ -14,7 +14,7 @@ class Node_Viewer(pride.gui.form.Form):
 
 # change current_node theme profile to alert if it does not exist
 
-class Tree_Viewer(pride.gui.gui.Application):
+class Tree_Viewer(pride.gui.form.Scrollable_Window):
 
     defaults = {"current_node" : '', "max_count" : 8, "node_label" : "current node"}
     autoreferences = ("top", "bottom", "viewer")
@@ -22,11 +22,11 @@ class Tree_Viewer(pride.gui.gui.Application):
 
     def __init__(self, **kwargs):
         super(Tree_Viewer, self).__init__(**kwargs)
-        self.create_subcomponents()
         self.view_node()
 
     def create_subcomponents(self):
-        window = self.application_window
+        super(Tree_Viewer, self).create_subcomponents()
+        window = self.main_window
         _layout = layout(
                     row_info(0,
                         field_info("handle_back", button_text='<',

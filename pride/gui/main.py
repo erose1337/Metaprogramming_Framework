@@ -3,7 +3,7 @@ import argparse
 import os.path
 
 import pride.components.user
-import pride.gui.gui
+import pride.gui.form
 
 
 class User(pride.components.user.User):
@@ -17,7 +17,7 @@ class User(pride.components.user.User):
             raise ValueError()
 
 
-class Gui(pride.gui.gui.Application):
+class Gui(pride.gui.form.Scrollable_Window):
 
     defaults = {"lockscreen_type" : "pride.gui.programs.lockscreen.Login_Screen",
                 "startup_components" : tuple(), "startup_programs" : tuple(),
@@ -31,8 +31,11 @@ class Gui(pride.gui.gui.Application):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
         if not self.user.logged_in:
-            self.lockscreen = self.application_window.create(self.lockscreen_type, user=self.user,
-                                                             service_name="User", host_info=("localhost", 40022))
+            self.lockscreen = self.main_window.create(self.lockscreen_type,
+                                                      user=self.user,
+                                                      service_name="User",
+                                                      host_info=("localhost",
+                                                                 40022))
         else:
             self.launch_programs()
 

@@ -295,7 +295,8 @@ class _Window_Object(Organized_Object):
                 "_selected" : False, "confidential" : False,
                 "tip_bar_text" : '', "font" : "Aero",
                 "theme_type" : "pride.gui.themes.Minimal_Theme",
-                "theme_profile" : "default", "clickable" : True}
+                "theme_profile" : "default", "clickable" : True,
+                "draw_edge" : True}
 
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
@@ -405,23 +406,6 @@ class _Window_Object(Organized_Object):
     def _set_hidden(self, value):
         self._hidden = value
     hidden = property(_get_hidden, _set_hidden)
-
-    def _get_parent_application(self):
-        result = None
-        instance = self.parent
-        while not result:
-            if isinstance(instance, Application):
-                result = instance
-            else:
-                try:
-                    instance = instance.parent
-                except AttributeError:
-                    if isinstance(self, Application):
-                        result = self
-                    else:
-                        raise AttributeError("Unable to find parent application of {}".format(self))
-        return result
-    parent_application = property(_get_parent_application)
 
     def _get_children(self):
         return self._children
@@ -673,53 +657,6 @@ class Animated_Object(_Window_Object):
         # this is used by the Animated_Theme end animation, NOT the color animation performed by this class
         pass
 
-    def draw_texture(self):
-        animating = self.animating
-        state_counter = self._transition_state
-        if animating:
-            if state_counter == self.frame_count:
-                self.end_animation()
-            else:
-                assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
-                assert state_counter < self.frame_count, (state_counter, self.frame_count)
-                self.next_frame()
-                self._transition_state += 1
-                assert not self.deleted
-                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self)
-        super(Animated_Object, self).draw_texture()
-
-    def next_frame(self):
-        end_profile = self.theme_profile
-        old_profile = self._old_theme
-        unit = 1.0 / self.frame_count
-        scalar = self._transition_state
-        set_theme = super(Animated_Object, self)._set_theme_profile
-        theme = self.theme
-        _theme_colors = theme.theme_colors
-        _cache = theme._cache # conspires with Minimal_Theme class to keep the cache fresh when theme colors are edited
-        for key in theme.theme_colors[end_profile].keys():
-            if key not in ("shadow_thickness", "glow_thickness"):
-                key += "_color"
-            try:
-                new_value = _cache[(scalar, old_profile, end_profile, key)]
-            except KeyError:
-                if key not in ("shadow_thickness", "glow_thickness"):
-                    end_value = _theme_colors[end_profile][key[:-6]]#getattr(self, key)
-                else:
-                    end_value = _theme_colors[end_profile][key]
-                set_theme(old_profile)
-                old_value = getattr(self, key)
-                set_theme(end_profile)
-                if old_value != end_value:
-                    new_value = lerp(old_value, end_value, scalar * unit)
-                else:
-                    new_value = end_value
-                if key in ("shadow_thickness", "glow_thickness"):
-                    new_value = int(new_value)
-                _cache[(scalar, old_profile, end_profile, key)] = new_value
-            assert not isinstance(new_value, float)
-            setattr(self, key, new_value)
-
     def handle_area_change(self, old_area):
         assert self.area != old_area
         if self.animation_enabled:
@@ -755,26 +692,6 @@ class Button(Window_Object):
 
     defaults = {"location" : "top", "theme_profile" : "interactive",
                 "hoverable" : True}
-
-
-class Application(Window):
-    """ Applications have an application_window attribute.
-        This extra window allows the background to be customized (e.g. rotating stars)"""
-
-    autoreferences = ("application_window", )
-
-    def __init__(self, **kwargs):
-        super(Application, self).__init__(**kwargs)
-        self.application_window = self.create("pride.gui.gui.Window")
-
-    def __getstate__(self):
-        state = super(Application, self).__getstate__()
-        del state["application_window"]
-        return state
-
-    def on_load(self, state):
-        super(Application, self).on_load(state)
-        self.application_window = self.objects["Window"][0] # brittle, needs to be done properly
 
 
 class Placeholder(Container):

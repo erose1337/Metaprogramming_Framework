@@ -106,7 +106,7 @@ class SDL_Window(SDL_Component):
 
     mutable_defaults = {"cache" : dict, "predraw_queue" : list,
                         "dirty_layers" : set, "layer_cache" : dict,
-                        "postdraw_scheduled" : dict}
+                        "postdraw_scheduled" : dict, "dirty_profiles" : set}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
@@ -246,6 +246,7 @@ class SDL_Window(SDL_Component):
         layer_cache = self.layer_cache
         layers = self.user_input._layer_tracker
         dirty_layers = self.dirty_layers
+        dirty_profiles = self.dirty_profiles
         renderer.set_render_target(None)
         renderer.clear()
 
@@ -270,13 +271,19 @@ class SDL_Window(SDL_Component):
                 if item.hidden or not w or not h:
                     continue
 
-                cache_key = (w, h, item.theme_profile)
+                theme_profile = item.theme_profile
+                cache_key = (w, h, theme_profile)
+                if theme_profile in dirty_profiles and cache_key in cache:
+                    del cache_key
+                    dirty_profiles.remove(theme_profile)
+
                 try:
                     cached_texture = cache[cache_key]
                 except KeyError:
-                    extra = item.glow_thickness * 2
+                    edge = int(item.draw_edge) # True == 1, False == 0
+                    extra = (item.glow_thickness * 2) + edge
                     texture_size = (w + extra, h + extra)
-                    cached_texture = self.create_texture((w, h),
+                    cached_texture = self.create_texture(texture_size,
                                             blendmode=sdl2.SDL_BLENDMODE_NONE)
                     cache[cache_key] = cached_texture
                     renderer.set_render_target(cached_texture.texture)
@@ -288,7 +295,7 @@ class SDL_Window(SDL_Component):
                         f(renderer)
                     renderer.set_render_target(layer_texture.texture)
                 offset = item.glow_thickness
-                item_area = (x - offset, y - offset, w + offset, h + offset)
+                item_area = (x - offset, y - offset, w + (2 * offset), h + (2 * offset))
                 renderer.copy(cached_texture.texture, dstrect=item_area)
                 if item.text:
                     item.theme.text_instruction(renderer)

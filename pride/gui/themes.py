@@ -149,7 +149,8 @@ class Minimal_Theme(Theme):
             r, g, b, a = self.shadow_color
             offset = self.glow_thickness
             for thickness in range(shadow_thickness):
-                renderer.draw_rect((offset + thickness, offset + thickness,
+                _offset = offset + thickness
+                renderer.draw_rect((_offset, _offset,
                                     w - (2 * thickness), h - (2 * thickness)),
                                    color=(r, g, b, a / (thickness + 1)))
 
@@ -161,10 +162,64 @@ class Minimal_Theme(Theme):
             fade_scalar = a / glow_thickness
             assert fade_scalar > 0
             for thickness in range(glow_thickness):
-                renderer.draw_rect((glow_thickness - thickness,
-                                    glow_thickness - thickness,
+                offset = glow_thickness - thickness
+                renderer.draw_rect((offset, offset,
                                     w + (2 * thickness), h + (2 * thickness)),
                                  color=(r, g, b, a - (thickness * fade_scalar)))
+
+
+class Color_Animated(Minimal_Theme):
+
+    draw_instructions = ("animate_color", "fill", "shadow", "glow")
+
+    def animate_color_instruction(self, renderer):
+        self = self.wrapped_object
+        animating = self.animating
+        state_counter = self._transition_state
+        if animating:
+            if state_counter == self.frame_count:
+                self.end_animation()
+            else:
+                assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
+                assert state_counter < self.frame_count, (state_counter, self.frame_count)
+                self.next_frame()
+                self._transition_state += 1
+                assert not self.deleted
+                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self)
+
+    def next_frame(self):
+        self = self.wrapped_object
+        self.sdl_window.dirty_profiles.add(self.theme_profile)
+        end_profile = self.theme_profile
+        old_profile = self._old_theme
+        unit = 1.0 / self.frame_count
+        scalar = self._transition_state
+        set_theme = super(Animated_Object, self)._set_theme_profile
+        theme = self.theme
+        _theme_colors = theme.theme_colors
+        _cache = theme._cache # conspires with Minimal_Theme class to keep the cache fresh when theme colors are edited
+        for key in theme.theme_colors[end_profile].keys():
+            if key not in ("shadow_thickness", "glow_thickness"):
+                key += "_color"
+            try:
+                new_value = _cache[(scalar, old_profile, end_profile, key)]
+            except KeyError:
+                if key not in ("shadow_thickness", "glow_thickness"):
+                    end_value = _theme_colors[end_profile][key[:-6]]#getattr(self, key)
+                else:
+                    end_value = _theme_colors[end_profile][key]
+                set_theme(old_profile)
+                old_value = getattr(self, key)
+                set_theme(end_profile)
+                if old_value != end_value:
+                    new_value = lerp(old_value, end_value, scalar * unit)
+                else:
+                    new_value = end_value
+                if key in ("shadow_thickness", "glow_thickness"):
+                    new_value = int(new_value)
+                _cache[(scalar, old_profile, end_profile, key)] = new_value
+            assert not isinstance(new_value, float)
+            setattr(self, key, new_value)
 
 
 class Perspective_Theme(Theme):

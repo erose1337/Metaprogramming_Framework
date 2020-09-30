@@ -932,7 +932,7 @@ class Slider_Field(Field):
         self.entry.continuum.update_position_from_value()
 
 
-class Image_Theme(pride.gui.themes.Animated_Theme2):
+class Image_Theme(pride.gui.themes.Animated_Theme):
 
     def draw_texture(self):
         area = self.area

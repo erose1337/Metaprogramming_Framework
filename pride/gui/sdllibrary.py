@@ -104,9 +104,9 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
-    mutable_defaults = {"cache" : dict, "predraw_queue" : list,
+    mutable_defaults = {"cache" : dict, "predraw_queue" : dict,
                         "dirty_layers" : set, "layer_cache" : dict,
-                        "postdraw_scheduled" : dict, "dirty_profiles" : set}
+                        "postdraw_queue" : dict, "dirty_profiles" : set}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
@@ -191,7 +191,7 @@ class SDL_Window(SDL_Component):
 
     def remove_window_object(self, window_object):
         try:
-            del self.postdraw_scheduled[window_object]
+            del self.postdraw_queue[window_object]
         except KeyError:
             pass
         try:
@@ -208,12 +208,12 @@ class SDL_Window(SDL_Component):
     def run(self):
         #frame_start = timestamp()
         self.run_instruction.execute(priority=self.priority)
-        assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
+        assert not any(caller.deleted for caller in self.postdraw_queue.keys())
         self.user_input.run()
 
         if self.predraw_queue:
-            queue = self.predraw_queue
-            self.predraw_queue = []
+            queue = itertools.chain(*self.predraw_queue.values())
+            self.predraw_queue = dict()
             for callable in queue:
                 callable()
 
@@ -230,10 +230,10 @@ class SDL_Window(SDL_Component):
 
         #if self.take_screenshot:
 
-        if self.postdraw_scheduled:
-            assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
-            queue = itertools.chain(*self.postdraw_scheduled.values())
-            self.postdraw_scheduled = dict()
+        if self.postdraw_queue:
+            assert not any(caller.deleted for caller in self.postdraw_queue.keys())
+            queue = itertools.chain(*self.postdraw_queue.values())
+            self.postdraw_queue = dict()
             for callable in queue:
                 callable()
         #frame_end = timestamp()
@@ -267,14 +267,16 @@ class SDL_Window(SDL_Component):
             renderer.clear()
             for item in layer:
                 assert not item.deleted
-                x, y, w, h = item.area
+
+                x, y, w, h = (item.theme.x, item.theme.y,
+                              item.theme.w, item.theme.h)
                 if item.hidden or not w or not h:
                     continue
 
                 theme_profile = item.theme_profile
                 cache_key = (w, h, theme_profile)
                 if theme_profile in dirty_profiles and cache_key in cache:
-                    del cache_key
+                    del cache[cache_key]
                     dirty_profiles.remove(theme_profile)
 
                 try:
@@ -307,15 +309,22 @@ class SDL_Window(SDL_Component):
     def schedule_postdraw_operation(self, callable, caller):
         assert not caller.deleted
         try:
-            self.postdraw_scheduled[caller].append(callable)
+            self.postdraw_queue[caller].append(callable)
         except KeyError:
-            self.postdraw_scheduled[caller] = [callable]
+            self.postdraw_queue[caller] = [callable]
 
     def unschedule_postdraw_operation(self, callable, caller):
-        self.postdraw_scheduled[caller].remove(callable)
+        self.postdraw_queue[caller].remove(callable)
 
-    def schedule_predraw_operation(self, callable):
-        self.predraw_queue.append(callable)
+    def schedule_predraw_operation(self, callable, caller):
+        assert not caller.deleted
+        try:
+            self.predraw_queue[caller].append(callable)
+        except KeyError:
+            self.predraw_queue[caller] = [callable]
+
+    def unschedule_predraw_operation(self, callabler, caller):
+        self.predraw_queue[caller].remove(callable)
 
     def get_mouse_state(self):
         mouse = sdl2.mouse

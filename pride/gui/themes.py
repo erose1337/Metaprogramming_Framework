@@ -73,9 +73,6 @@ class Theme(pride.components.base.Wrapper):
         # what if theme_colors contains keys for profiles that do not exist? yet (or anymore)?
         deep_update(self.theme_colors, theme_colors)
 
-    def draw_texture(self):
-        raise NotImplementedError
-
     def wraps(self, _object):
         super(Theme, self).wraps(_object)
         self._theme_users.append(_object)
@@ -130,9 +127,14 @@ class Minimal_Theme(Theme):
                 # if the text has newlines, then the texture will have the maximum width
                 # when text rendering is upgraded to use an atlas, this fix should no longer be necessary
                 text += "\n\n"
-            assert self.w
-            renderer.draw_text(self.area, text,
-                               width=self.w if self.wrap_text else None,
+
+            # use self.x, self.y, self.w, self.h explicitly because:
+            # - animation sets these values and not self.area
+            # - attribute assignemnt on wrappers does not "write through" to the wrapped object
+            w = self.w
+            area = (self.x, self.y, w, self.h)
+            renderer.draw_text(area, text,
+                               width=w if self.wrap_text else None,
                                bg_color=self.text_background_color,
                                alias=self.font, color=self.text_color,
                                center_text=self.center_text)
@@ -144,7 +146,7 @@ class Minimal_Theme(Theme):
 
     def shadow_instruction(self, renderer):
         shadow_thickness = self.shadow_thickness
-        w, h = self.size
+        w, h = self.w, self.h
         if shadow_thickness:
             r, g, b, a = self.shadow_color
             offset = self.glow_thickness
@@ -156,11 +158,13 @@ class Minimal_Theme(Theme):
 
     def glow_instruction(self, renderer):
         glow_thickness = self.glow_thickness
-        w, h = self.size
+        w, h = self.w, self.h
         if glow_thickness:
             r, g, b, a = self.glow_color
+            if not a:
+                return
             fade_scalar = a / glow_thickness
-            assert fade_scalar > 0
+            assert fade_scalar > 0, (a, glow_thickness, fade_scalar)
             for thickness in range(glow_thickness):
                 offset = glow_thickness - thickness
                 renderer.draw_rect((offset, offset,
@@ -168,306 +172,44 @@ class Minimal_Theme(Theme):
                                  color=(r, g, b, a - (thickness * fade_scalar)))
 
 
-class Color_Animated(Minimal_Theme):
-
-    draw_instructions = ("animate_color", "fill", "shadow", "glow")
-
-    def animate_color_instruction(self, renderer):
-        self = self.wrapped_object
-        animating = self.animating
-        state_counter = self._transition_state
-        if animating:
-            if state_counter == self.frame_count:
-                self.end_animation()
-            else:
-                assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
-                assert state_counter < self.frame_count, (state_counter, self.frame_count)
-                self.next_frame()
-                self._transition_state += 1
-                assert not self.deleted
-                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self)
-
-    def next_frame(self):
-        self = self.wrapped_object
-        self.sdl_window.dirty_profiles.add(self.theme_profile)
-        end_profile = self.theme_profile
-        old_profile = self._old_theme
-        unit = 1.0 / self.frame_count
-        scalar = self._transition_state
-        set_theme = super(Animated_Object, self)._set_theme_profile
-        theme = self.theme
-        _theme_colors = theme.theme_colors
-        _cache = theme._cache # conspires with Minimal_Theme class to keep the cache fresh when theme colors are edited
-        for key in theme.theme_colors[end_profile].keys():
-            if key not in ("shadow_thickness", "glow_thickness"):
-                key += "_color"
-            try:
-                new_value = _cache[(scalar, old_profile, end_profile, key)]
-            except KeyError:
-                if key not in ("shadow_thickness", "glow_thickness"):
-                    end_value = _theme_colors[end_profile][key[:-6]]#getattr(self, key)
-                else:
-                    end_value = _theme_colors[end_profile][key]
-                set_theme(old_profile)
-                old_value = getattr(self, key)
-                set_theme(end_profile)
-                if old_value != end_value:
-                    new_value = lerp(old_value, end_value, scalar * unit)
-                else:
-                    new_value = end_value
-                if key in ("shadow_thickness", "glow_thickness"):
-                    new_value = int(new_value)
-                _cache[(scalar, old_profile, end_profile, key)] = new_value
-            assert not isinstance(new_value, float)
-            setattr(self, key, new_value)
-
-
-class Perspective_Theme(Theme):
-
-    theme_colors = copy.deepcopy(Theme.theme_colors)
-    for profile in theme_colors.values():
-        profile["vanishing_point"] = (-MAX_W, MAX_H / 2)
-
-    defaults = {"animating" : False, "vanishing_point_backup" : None,
-                "frame_count" : 13, "frame_number" : 0}
-
-    frame_cache = dict((key, dict()) for key in theme_colors.keys())
-
-    def draw_frames(self):
-        self.enable_animation()
-
-    def enable_animation(self):
-        #raise NotImplementedError()
-        # too slow, caching doesn't work properly. didn't want to spend more time
-        if self.vanishing_point_backup is None:
-            self.vanishing_point_backup = self.vanishing_point
-        if not self.animating:
-            self.sdl_window.schedule_postdraw_operation(self.animate, self)
-            self.animating = True
-            self.frame_number = 0
-            self.vanishing_point = self.vanishing_point_backup
-            self.wrapped_object.texture_invalid = True
-
-    def animate(self):
-        x, y = self.vanishing_point
-        x += (self.frame_number + 1) ** 4#abs(x)
-        if self.frame_number == self.frame_count - 1 or not self.frame_count:
-            self.animating = False
-            self.vanishing_point = tuple()
-        else:
-            self.sdl_window.schedule_postdraw_operation(self.animate, self)
-            self.vanishing_point = (x, y)
-            self.frame_number += 1
-
-        self.wrapped_object.texture_invalid = True
-
-    def draw_texture(self):
-        assert not self.hidden
-    #    assert self.frame_number <= self.frame_count - 1, (self.frame_number, self.frame_count)
-    #    print("Frame number {}".format(self.frame_number))
-        x, y, w, h = area = self.area
-        size = (w, h)
-        profile = self.theme_profile
-        try:
-            texture, ready = self.frame_cache[profile][size][self.frame_number]
-        except KeyError:
-            _new_texture = self.sdl_window.create_texture
-            _cache = [(_new_texture(size, blendmode=sdl2.SDL_BLENDMODE_ADD), False) for
-                      count in range(self.frame_count)]
-            if profile in self.frame_cache:
-                self.frame_cache[profile][size] = _cache
-            else:
-                self.frame_cache[profile] = {size : _cache}
-            texture, ready = _cache[self.frame_number]
-
-        if ready and self.animating:
-            #print("Using cached texture for {}/{} {} {}".format(self.frame_number, self.frame_count - 1, size, profile))
-            self.draw("copy", texture.texture, dstrect=area)
-            if self.text:
-                assert self.wrap_text
-                assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-                self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
-                        bg_color=self.text_background_color, color=self.text_color,
-                        center_text=self.center_text)
-            return
-        self.draw("fill", area, color=self.background_color)
-        #print("Drawing texture for {}/{} {} {}".format(self.frame_number, self.frame_count - 1, size, profile))
-        shadow_thickness = self.shadow_thickness
-        vanishing_point = self.vanishing_point
-    #    assert not vanishing_point
-        if shadow_thickness:
-            r, g, b, a = self.shadow_color
-            if vanishing_point and a:
-                for thickness in range(shadow_thickness):
-                    self.draw("rect_perspective", (x + thickness, y + thickness,
-                                    w - (2 * thickness), h - (2 * thickness)),
-                            vanishing_point,
-                            color=(r, g, b, a / (thickness + 1)))
-            elif a:
-                for thickness in range(shadow_thickness):
-                    self.draw("rect", (x + thickness, y + thickness,
-                                    w - (2 * thickness), h - (2 * thickness)),
-                            color=(r, g, b, a / (thickness + 1)))
-
-        glow_thickness = self.glow_thickness
-        if glow_thickness:
-            r, g, b, a = self.glow_color
-            fade_scalar = a / glow_thickness
-            assert fade_scalar > 0
-            if vanishing_point and a:
-                for thickness in range(glow_thickness):
-                    self.draw("rect_perspective", (x - thickness, y - thickness,
-                                    w + (2 * thickness), h + (2 * thickness)),
-                            vanishing_point,
-                            color=(r, g, b, a - (thickness * fade_scalar)))
-            elif a:
-                for thickness in range(glow_thickness):
-                    self.draw("rect", (x - thickness, y - thickness,
-                                    w + (2 * thickness), h + (2 * thickness)),
-                            color=(r, g, b, a - (thickness * fade_scalar)))
-
-        self.sdl_window.renderer.draw(texture.texture,
-                                                     self._draw_operations)
-        ##del self._draw_operations[:]
-        ##self.draw("copy", texture.texture, srcrect=(0, 0) + self.size, dstrect=area)
-        self.frame_cache[profile][size][self.frame_number] = (texture, True)
-
-        if self.text:
-            assert self.wrap_text
-            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", area, self.text, width=self.w if self.wrap_text else None,
-                    bg_color=self.text_background_color, color=self.text_color,
-                    center_text=self.center_text)
-
-
-class Animated_Theme(Perspective_Theme):
-
-    defaults = {"frame_number" : 0, "frame_count" : 1, "frames" : None}
-    theme_colors = copy.deepcopy(Perspective_Theme.theme_colors)
-
-    def draw_texture(self):
-        frame_number = self.frame_number
-        area = self.area
-        #self.wrapped_object.alert("Copying frame")
-        #texture = self.sdl_window.create_texture(self.size)
-        #super(Animated_Theme, self).draw_texture()
-        #self.sdl_window.renderer.draw(texture.texture, self._draw_operations)
-        #self.draw("copy", texture, area, area)
-        self.wrapped_object.alert("drawing at {}".format(self.area))
-        self.draw("copy", self.frames[frame_number], area, area)
-        if frame_number + 1 < self.frame_count:
-            self.frame_number = frame_number + 1
-            self.sdl_window.schedule_postdraw_operation(self._next_frame, self)
-
-    def _next_frame(self):
-        self.wrapped_object.texture_invalid = True
-
-    def draw_frames(self):
-        self.wrapped_object.alert("caching at {}".format(self.area))
-        texture = self.sdl_window.create_texture(self.size)
-        super(Animated_Theme, self).draw_texture()
-        self.sdl_window.renderer.draw(texture.texture, self._draw_operations)
-        self.frames = [texture]
-        return
-        size = self.size
-        backup = self.vanishing_point
-        frames = self.frames = []
-        window = self.sdl_window
-        create_texture = window.create_texture
-        fetch_instructions = super(Animated_Theme, self).draw_texture
-        draw_to_texture = window.renderer.draw
-        operations = self._draw_operations
-        #for frame_number in range(self.frame_count - 1):
-        #    texture = create_texture(size)
-        #    fetch_instructions()
-        #    draw_to_texture(texture.texture, operations)
-        #    frames.append(texture)
-        self.vanishing_point = backup
-        texture = create_texture(size)
-        fetch_instructions()
-        draw_to_texture(texture.texture, operations)
-        frames.append(texture)
-
-    def start_animation(self):
-        self.sdl_window.schedule_postdraw_operation(self._enable_animation, self)
-
-    def _enable_animation(self):
-        self.frame_number = 0
-        self.texture_invalid = True
-
-
-class Animated_Theme2(Minimal_Theme):
+class Animated_Theme(Minimal_Theme):
 
     defaults = {"_animating_movement" : False, "frame_count" : 7,
                 "_old_area" : None, "_end_area" : None}
 
-    def draw_frames(self, old_area):
-        if old_area != self.area:
-            self.start_animation(old_area)
-
-    def start_animation(self, old_area):
+    def start_area_animation(self, old_area):
         assert old_area != self.area
         self._animating_movement = True
         self.frame_number = 0
         self._old_area = old_area
         self._end_area = self.area
+        self.animate_area()
 
-    def end_animation(self):
+    def end_area_animation(self):
         self._animating_movement = False
         self._old_area = self._end_area = None
         del self.x, self.y, self.w, self.h # removes lerp'd values from Wrapper; future attribute accesses will go through to wrapped object
         self.wrapped_object.handle_transition_animation_end()
 
-    def _invalidate_texture(self):
-        self.wrapped_object.texture_invalid = True
-
-    def draw_texture(self):
+    def animate_area(self):
         if self._animating_movement:
-            assert self.frame_number <= self.frame_count, (self.frame_number, self.frame_count)
+            assert self.frame_number <= self.frame_count, (self.frame_number,
+                                                           self.frame_count)
             midpoint = float(self.frame_number) / self.frame_count
             old_area = self._old_area
             end_area = self._end_area
             assert old_area is not None
             assert end_area is not None
-            assert 0.0 <= midpoint <= 1.0, (midpoint, self.frame_number, self.frame_count)
+            assert 0.0 <= midpoint <= 1.0, (midpoint, self.frame_number,
+                                            self.frame_count)
             (self.x, self.y,
              self.w, self.h) = [int(round(lerp(old_value, end_value, midpoint))) for
                                 old_value, end_value in zip(old_area, end_area)]
-            super(Animated_Theme2, self).draw_texture()
             self.frame_number += 1
-            if self.frame_number > self.frame_count or (self.x, self.y, self.w, self.h) == self.wrapped_object.area:
+            if (self.frame_number > self.frame_count or
+                (self.x, self.y, self.w, self.h) == self.wrapped_object.area):
                 assert (self.x, self.y, self.w, self.h) == self.wrapped_object.area
-                self.end_animation()
-            else: # end_animation can delete this self; delete clears the postdraw queue
-                self.sdl_window.schedule_postdraw_operation(self._invalidate_texture, self.wrapped_object)
-        else:
-            super(Animated_Theme2, self).draw_texture()
-
-
-class Blank_Theme(Theme):
-
-    def draw_texture(self):
-        self.draw("fill", self.area, color=(0, 0, 0))
-
-
-class Spacer_Theme(Theme):
-
-    def draw_texture(self):
-        return
-
-
-class Text_Only_Theme(Theme):
-
-    def draw_texture(self):
-        if self.text:
-            assert isinstance(self.text, str), (type(self.text), self.text, self.parent)
-            self.draw("text", self.area, self.text, width=self.w if self.wrap_text else None,
-                      bg_color=self.text_background_color, color=self.text_color,
-                      center_text=self.center_text)
-
-
-class Copy_Theme(Theme):
-
-    def draw_texture(self):
-        texture = self.texture
-        self.draw("copy", texture, (0, 0) + self.size, self.area)
+                self.end_area_animation()
+            else: # end_area_animation can delete this self; delete clears the postdraw queue
+                self.sdl_window.schedule_postdraw_operation(self.animate_area, self.wrapped_object)
+                self.sdl_window.invalidate_object(self)

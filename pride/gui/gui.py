@@ -318,7 +318,7 @@ class _Window_Object(Organized_Object):
                            "scale_to_text"))
     allowed_values = {"theme_type" : ("pride.gui.themes.Theme",
                                       "pride.gui.themes.Minimal_Theme",
-                                      "pride.gui.themes.Animated_Theme2")}
+                                      "pride.gui.themes.Animated_Theme")}
 
     def _get_texture_invalid(self):
         return self._texture_invalid
@@ -597,7 +597,7 @@ class Animated_Object(_Window_Object):
     defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
                 "animation_enabled" : True, "click_animation_enabled" : True,
                 "click_radius" : 2,
-                "theme_type" : "pride.gui.themes.Animated_Theme2"}
+                "theme_type" : "pride.gui.themes.Animated_Theme"}
     predefaults = {"animating" : False, "_old_theme" : None,
                    "_colors_backup" : None, "_start_animation_enabled" : False,
                    "_transition_state" : 0}
@@ -606,14 +606,14 @@ class Animated_Object(_Window_Object):
         return super(Animated_Object, self)._get_theme_profile()
     def _set_theme_profile(self, value):
         if self.animating:
-            self.end_animation()
+            self.end_color_animation()
         if value != self.theme_profile:
             self._old_theme = self.theme_profile
         super(Animated_Object, self)._set_theme_profile(value)
         if (self.animation_enabled and
             self._old_theme is not None and
             self._old_theme != self.theme_profile):
-            self.start_animation()
+            self.start_color_animation()
     theme_profile = property(_get_theme_profile, _set_theme_profile)
 
     def __init__(self, **kwargs):
@@ -636,10 +636,7 @@ class Animated_Object(_Window_Object):
         self.theme_profile = backup
         self._backup_theme_profile = None
 
-    def _invalidate_texture(self):
-        self.texture_invalid = True
-
-    def start_animation(self):
+    def start_color_animation(self):
         if not self._start_animation_enabled: # dont animate when setting initial theme_profile
             return
         assert self.theme_profile != self._old_theme
@@ -647,24 +644,67 @@ class Animated_Object(_Window_Object):
         self.texture_invalid = True
         self._transition_state = 0
 
-    def end_animation(self):
+    def end_color_animation(self):
         self.animating = False
         self.colors.clear()
         self._old_theme = None
         self._transition_state = 0
 
     def handle_transition_animation_end(self):
-        # this is used by the Animated_Theme end animation, NOT the color animation performed by this class
+        # this is used by the Animated_Theme end animation
+        # NOT the color animation performed by this class
         pass
+
+    def animate_color(self):
+        animating = self.animating
+        state_counter = self._transition_state
+        if animating:
+            if state_counter == self.frame_count:
+                self.end_color_animation()
+            else:
+                assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
+                assert state_counter < self.frame_count, (state_counter, self.frame_count)
+                self.next_frame()
+                self._transition_state += 1
+                assert not self.deleted
+                self.sdl_window.schedule_postdraw_operation(self.animate_color, self)
+
+    def next_frame(self):
+        end_profile = self.theme_profile
+        old_profile = self._old_theme
+        unit = 1.0 / self.frame_count
+        scalar = self._transition_state
+        set_theme = super(Animated_Object, self)._set_theme_profile
+        theme = self.theme
+        _theme_colors = theme.theme_colors
+        _cache = theme._cache # conspires with Minimal_Theme class to keep the cache fresh when theme colors are edited
+        for key in theme.theme_colors[end_profile].keys():
+            if key not in ("shadow_thickness", "glow_thickness"):
+                key += "_color"
+            try:
+                new_value = _cache[(scalar, old_profile, end_profile, key)]
+            except KeyError:
+                if key not in ("shadow_thickness", "glow_thickness"):
+                    end_value = _theme_colors[end_profile][key[:-6]]#getattr(self, key)
+                else:
+                    end_value = _theme_colors[end_profile][key]
+                set_theme(old_profile)
+                old_value = getattr(self, key)
+                set_theme(end_profile)
+                if old_value != end_value:
+                    new_value = lerp(old_value, end_value, scalar * unit)
+                else:
+                    new_value = end_value
+                if key in ("shadow_thickness", "glow_thickness"):
+                    new_value = int(new_value)
+                _cache[(scalar, old_profile, end_profile, key)] = new_value
+            assert not isinstance(new_value, float)
+            setattr(self, key, new_value)
 
     def handle_area_change(self, old_area):
         assert self.area != old_area
         if self.animation_enabled:
-            try:
-                self.theme.draw_frames(old_area)
-            except AttributeError:
-                if hasattr(self.theme, "draw_frames"):
-                    raise
+            self.theme.start_area_animation(old_area)
 
 
 class _Mouse_Click(Animated_Object):

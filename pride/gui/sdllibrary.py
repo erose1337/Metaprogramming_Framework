@@ -274,7 +274,7 @@ class SDL_Window(SDL_Component):
                     continue
 
                 theme_profile = item.theme_profile
-                cache_key = (w, h, theme_profile)
+                cache_key = (w, h, theme_profile, item._transition_state)
                 if theme_profile in dirty_profiles and cache_key in cache:
                     del cache[cache_key]
                     dirty_profiles.remove(theme_profile)

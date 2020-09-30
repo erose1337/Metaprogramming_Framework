@@ -643,6 +643,7 @@ class Animated_Object(_Window_Object):
         self.animating = True
         self.texture_invalid = True
         self._transition_state = 0
+        self.animate_color()
 
     def end_color_animation(self):
         self.animating = False
@@ -696,7 +697,7 @@ class Animated_Object(_Window_Object):
                 else:
                     new_value = end_value
                 if key in ("shadow_thickness", "glow_thickness"):
-                    new_value = int(new_value)
+                    new_value = int(round(new_value))
                 _cache[(scalar, old_profile, end_profile, key)] = new_value
             assert not isinstance(new_value, float)
             setattr(self, key, new_value)
@@ -712,7 +713,6 @@ class _Mouse_Click(Animated_Object):
     defaults = {"clickable" : False, "location" : "fill"}
 
     def handle_transition_animation_end(self):
-        #self.delete()
         self.sdl_window.schedule_postdraw_operation(self.delete, self)
 
 Window_Object = Animated_Object # can upgrade everything in-place by changing this

@@ -39,57 +39,6 @@ COPY_BLENDMODE = sdl2.SDL_BLENDMODE_ADD
 DRAW_BLENDMODE = sdl2.SDL_BLENDMODE_NONE
 TEXT_BLENDMODE = sdl2.SDL_BLENDMODE_BLEND
 
-def condense_instructions(layer):
-    raise NotImplementedError()
-    for operation_infos in zip(*(item._draw_operations for item in layer)):
-        if len(operation_infos) == 1:
-            # only one operation; unable to batch
-            #print operation_infos
-            print("Yielding1 {}".format(len(operation_infos[0])))
-            yield operation_infos[0]
-            raise StopIteration()
-        print operation_infos[0][0]
-        rects = []
-        fills = []
-        other = []
-        for op in operation_infos:
-            if op[0] == "rect":
-                rects.append(op)
-            elif op[0] == "fill":
-                fills.append(op)
-            else:
-                other.append(op)
-        if operation_infos[0][0] in ("rect", "fill"):
-            distinct = []
-            areas = []
-            extra = []
-            for op_info in operation_infos:
-                if op_info[0] not in ("rect", "fill"):
-                    extra.append(op_info)
-                    continue
-                if op_info[2] not in distinct:
-                    distinct.append(op_info[2])
-                    areas.append([op_info[1][0]])
-                else:
-                    areas[distinct.index(op_info[2])].append(op_info[1][0])
-
-            #for i, kwargs in enumerate(distinct):
-            #    yield op_info[0], areas[i], kwargs
-            new_instructions = tuple((op_info[0], (areas[i], ), kwargs) for i, kwargs
-                                     in enumerate(distinct)) #+ tuple(extra)
-            for item in new_instructions:
-                a, b, c = item
-                print("Yielding2 {} {}".format(len(item), item))
-                yield item#a, b, c
-            #yield new_instructions
-        else:
-            for op in operation_infos:
-                assert len(op) == 3, op
-                print("Yielding3 {} {}".format(len(item), item))
-                yield op
-            #print operation_infos
-            #raw_input()
-
 class SDL_Component(base.Proxy): pass
 
 
@@ -175,6 +124,7 @@ class SDL_Window(SDL_Component):
     def invalidate_object(self, instance):
         assert not instance.deleted
         self._schedule_run()
+        self.dirty_layers.add(instance.z)
 
     def _schedule_run(self):
         if not self.running:
@@ -203,6 +153,7 @@ class SDL_Window(SDL_Component):
             self.user_input.under_mouse = None
 
         window_object.texture_invalid = False
+        self.dirty_layers.add(window_object.z)
         self.running = True # trigger run to wipe out the screen
 
     def run(self):
@@ -263,6 +214,7 @@ class SDL_Window(SDL_Component):
                 renderer.set_render_target(None)
                 renderer.copy(layer_texture.texture, dstrect=area)
                 continue
+
             renderer.set_render_target(layer_texture.texture)
             renderer.clear()
             for item in layer:
@@ -305,6 +257,7 @@ class SDL_Window(SDL_Component):
             renderer.set_render_target(None)
             renderer.copy(layer_texture.texture, dstrect=area)
         renderer.present()
+        dirty_layers.clear()
 
     def schedule_postdraw_operation(self, callable, caller):
         assert not caller.deleted

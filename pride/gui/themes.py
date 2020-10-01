@@ -128,9 +128,8 @@ class Minimal_Theme(Theme):
                 # when text rendering is upgraded to use an atlas, this fix should no longer be necessary
                 text += "\n\n"
 
-            # use self.x, self.y, self.w, self.h explicitly because:
-            # - animation sets these values and not self.area
-            # - attribute assignemnt on wrappers does not "write through" to the wrapped object
+            # use self.x, self.y, self.w, self.h explicitly because
+            # animation sets these values and not self.area
             w = self.w
             area = (self.x, self.y, w, self.h)
             renderer.draw_text(area, text,
@@ -214,5 +213,5 @@ class Animated_Theme(Minimal_Theme):
                 self.sdl_window.schedule_postdraw_operation(self._invalidate_self, self.wrapped_object)
 
     def _invalidate_self(self):
-        self.sdl_window.invalidate_object(self)
+        self.sdl_window.invalidate_object(self.wrapped_object)
         self.animate_area()

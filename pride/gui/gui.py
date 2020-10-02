@@ -660,11 +660,11 @@ class Animated_Object(_Window_Object):
         animating = self.animating
         state_counter = self._transition_state
         if animating:
-            if state_counter == self.frame_count:
+            if state_counter > self.frame_count:
                 self.end_color_animation()
             else:
                 assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
-                assert state_counter < self.frame_count, (state_counter, self.frame_count)
+                assert state_counter <= self.frame_count, (state_counter, self.frame_count)
                 self.next_frame()
                 self._transition_state += 1
                 assert not self.deleted
@@ -699,7 +699,6 @@ class Animated_Object(_Window_Object):
                 if key in ("shadow_thickness", "glow_thickness"):
                     new_value = int(round(new_value))
                 _cache[(scalar, old_profile, end_profile, key)] = new_value
-            assert not isinstance(new_value, float)
             setattr(self, key, new_value)
 
     def handle_area_change(self, old_area):

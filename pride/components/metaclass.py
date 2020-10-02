@@ -6,7 +6,7 @@ import functools
 import ast
 from copy import copy, deepcopy
 
-import cython
+#import cython
 
 import autodocumentation
 import pride

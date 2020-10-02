@@ -82,9 +82,8 @@ class Theme(pride.components.base.Wrapper):
         self.wrapped_object = None
         super(Theme, self).delete()
 
-    @classmethod
-    def update_theme_users(cls):
-        for instance in cls._theme_users:
+    def update_theme_users(self):
+        for instance in self.__class__._theme_users:
             instance.texture_invalid = True
 
     def __getstate__(self):
@@ -100,10 +99,20 @@ class Minimal_Theme(Theme):
     _replacement_string = '*' * 10
     draw_instructions = ("fill", "shadow", "glow")
 
-    @classmethod
-    def update_theme_users(cls):
-        cls._cache.clear()
-        super(Minimal_Theme, cls).update_theme_users()
+    def update_theme_users(self):
+        self.__class__._cache.clear()
+
+        window = self.sdl_window
+        item_cache = window.cache
+        theme_profile = self.theme_profile
+        removals = [cache_key for cache_key in item_cache.iterkeys() if
+                    cache_key[2] == theme_profile]
+        for key in removals:
+            del item_cache[key]
+
+        window.layer_cache.clear()
+        window.dirty_layers.update(window.user_input._layer_tracker.iterkeys())
+        super(Minimal_Theme, self).update_theme_users()
 
     def text_instruction(self, renderer):
         text = self.text

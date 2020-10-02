@@ -296,8 +296,8 @@ class _Window_Object(Organized_Object):
                 "tip_bar_text" : '', "font" : "Aero",
                 "theme_type" : "pride.gui.themes.Minimal_Theme",
                 "theme_profile" : "default", "clickable" : True,
-                "draw_edge" : True}
-
+                "draw_edge" : True, "transition_state" : None}
+    # transition_state is needed by SDL_Window even if this class doesn't use it
     predefaults = {"_scale_to_text" : False, "_texture_invalid" : False,
                    "_texture_window_x" : 0, "_texture_window_y" : 0,
                    "_text" : '', "draw_cursor" : False,
@@ -600,7 +600,7 @@ class Animated_Object(_Window_Object):
                 "theme_type" : "pride.gui.themes.Animated_Theme"}
     predefaults = {"animating" : False, "_old_theme" : None,
                    "_colors_backup" : None, "_start_animation_enabled" : False,
-                   "_transition_state" : 0}
+                   "transition_state" : 0}
 
     def _get_theme_profile(self):
         return super(Animated_Object, self)._get_theme_profile()
@@ -642,14 +642,14 @@ class Animated_Object(_Window_Object):
         assert self.theme_profile != self._old_theme
         self.animating = True
         self.texture_invalid = True
-        self._transition_state = 0
+        self.transition_state = 0
         self.animate_color()
 
     def end_color_animation(self):
         self.animating = False
         self.colors.clear()
         self._old_theme = None
-        self._transition_state = 0
+        self.transition_state = 0
 
     def handle_transition_animation_end(self):
         # this is used by the Animated_Theme end animation
@@ -658,7 +658,7 @@ class Animated_Object(_Window_Object):
 
     def animate_color(self):
         animating = self.animating
-        state_counter = self._transition_state
+        state_counter = self.transition_state
         if animating:
             if state_counter > self.frame_count:
                 self.end_color_animation()
@@ -666,7 +666,7 @@ class Animated_Object(_Window_Object):
                 assert self.theme_profile != self._old_theme, (self.theme_profile, self._old_theme, state_counter, self.frame_count)
                 assert state_counter <= self.frame_count, (state_counter, self.frame_count)
                 self.next_frame()
-                self._transition_state += 1
+                self.transition_state += 1
                 assert not self.deleted
                 self.sdl_window.schedule_postdraw_operation(self.animate_color, self)
 
@@ -674,7 +674,7 @@ class Animated_Object(_Window_Object):
         end_profile = self.theme_profile
         old_profile = self._old_theme
         unit = 1.0 / self.frame_count
-        scalar = self._transition_state
+        scalar = self.transition_state
         set_theme = super(Animated_Object, self)._set_theme_profile
         theme = self.theme
         _theme_colors = theme.theme_colors

@@ -187,6 +187,8 @@ class Animated_Theme(Minimal_Theme):
 
     def start_area_animation(self, old_area):
         assert old_area != self.area
+        if self._animating_movement:
+            self.end_area_animation()
         self._animating_movement = True
         self.frame_number = 0
         self._old_area = old_area
@@ -196,8 +198,19 @@ class Animated_Theme(Minimal_Theme):
     def end_area_animation(self):
         self._animating_movement = False
         self._old_area = self._end_area = None
-        del self.x, self.y, self.w, self.h # removes lerp'd values from Wrapper; future attribute accesses will go through to wrapped object
+        # remove lerp'd values from Wrapper
+        # future attribute accesses will go through to wrapped object
+        for attribute in "xywh":
+            try:
+                delattr(self, attribute)
+            except AttributeError:
+                pass
         self.wrapped_object.handle_transition_animation_end()
+        try:
+            self.sdl_window.unschedule_postdraw_operation(self._invalidate_self,
+                                                          self)
+        except KeyError:
+            pass
 
     def animate_area(self):
         if self._animating_movement:
@@ -210,6 +223,7 @@ class Animated_Theme(Minimal_Theme):
             assert end_area is not None
             assert 0.0 <= midpoint <= 1.0, (midpoint, self.frame_number,
                                             self.frame_count)
+            assert self._end_area == self.wrapped_object.area, (self._end_area, self.wrapped_object.area)
             (self.x, self.y,
              self.w, self.h) = [int(round(lerp(old_value, end_value, midpoint))) for
                                 old_value, end_value in zip(old_area, end_area)]
@@ -224,3 +238,11 @@ class Animated_Theme(Minimal_Theme):
     def _invalidate_self(self):
         self.sdl_window.invalidate_object(self.wrapped_object)
         self.animate_area()
+
+    def delete(self):
+        try:
+            self.sdl_window.unschedule_postdraw_operation(self._invalidate_self,
+                                                          self)
+        except KeyError:
+            pass
+        super(Animated_Theme, self).delete()

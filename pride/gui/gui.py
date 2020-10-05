@@ -628,6 +628,16 @@ class Animated_Object(_Window_Object):
             rect = self.create("pride.gui.gui._Mouse_Click")
             rect.area = (x - radius, y - radius, radius, radius)
 
+    def hide(self, parent_call=False):
+        try:
+            self.theme.end_area_animation()
+        except AttributeError:
+            if hasattr(self, "theme"):
+                raise
+            # Slider_Field.maximum hides the slider if maximum is set to 0
+            # theme may have not been created when maximum is assigned
+        super(Animated_Object, self).hide(parent_call)
+
     def show(self, parent_call=False):
         super(Animated_Object, self).show(parent_call)
         backup = self._backup_theme_profile or self.theme_profile
@@ -650,6 +660,11 @@ class Animated_Object(_Window_Object):
         self.colors.clear()
         self._old_theme = None
         self.transition_state = 0
+        try:
+            self.sdl_window.unschedule_postdraw_operation(self.animate_color,
+                                                          self)
+        except KeyError:
+            pass
 
     def handle_transition_animation_end(self):
         # this is used by the Animated_Theme end animation

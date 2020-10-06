@@ -228,7 +228,6 @@ class SDL_Window(SDL_Component):
                 cache_key = (w, h, theme_profile, item.transition_state)
                 if theme_profile in dirty_profiles and cache_key in cache:
                     del cache[cache_key]
-                    print("Cleaned dirty key")
 
                 try:
                     cached_texture = cache[cache_key]

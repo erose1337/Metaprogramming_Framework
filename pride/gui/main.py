@@ -61,7 +61,7 @@ class Gui(pride.gui.form.Scrollable_Window):
                     _color.a = a
                     values[key] = _color
             theme_colors[profile].update(values)
-        self.theme.update_theme_users()
+        self.theme.update_theme_users(None)
         self.clear_status()
 
     def login_success(self, username):

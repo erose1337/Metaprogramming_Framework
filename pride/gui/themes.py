@@ -99,19 +99,20 @@ class Minimal_Theme(Theme):
     _replacement_string = '*' * 10
     draw_instructions = ("fill", "shadow", "glow")
 
-    def update_theme_users(self):
+    def update_theme_users(self, theme_profile):
         self.__class__._cache.clear()
 
         window = self.sdl_window
         item_cache = window.cache
-        theme_profile = self.theme_profile
-        removals = [cache_key for cache_key in item_cache.iterkeys() if
-                    cache_key[2] == theme_profile]
-        for key in removals:
-            del item_cache[key]
+        if theme_profile is None:
+            item_cache.clear()
+        else:
+            removals = [cache_key for cache_key in item_cache.iterkeys() if
+                        cache_key[2] == theme_profile]
+            for key in removals:
+                del item_cache[key]
 
         window.layer_cache.clear()
-        window.dirty_layers.update(window.user_input._layer_tracker.iterkeys())
         super(Minimal_Theme, self).update_theme_users()
 
     def text_instruction(self, renderer):
@@ -154,8 +155,8 @@ class Minimal_Theme(Theme):
 
     def shadow_instruction(self, renderer):
         shadow_thickness = self.shadow_thickness
-        w, h = self.w, self.h
         if shadow_thickness:
+            w, h = self.w, self.h
             r, g, b, a = self.shadow_color
             offset = self.glow_thickness
             for thickness in range(shadow_thickness):
@@ -166,8 +167,8 @@ class Minimal_Theme(Theme):
 
     def glow_instruction(self, renderer):
         glow_thickness = self.glow_thickness
-        w, h = self.w, self.h
         if glow_thickness:
+            w, h = self.w, self.h
             r, g, b, a = self.glow_color
             if not a:
                 return

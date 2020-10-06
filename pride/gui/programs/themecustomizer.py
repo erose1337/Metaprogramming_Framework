@@ -16,7 +16,9 @@ class Theme_Form(pride.gui.form.Form):
         return parent
 
     def handle_value_changed(self, field, old, new):
-        self.get_parent_theme_editor().target_theme.update_theme_users()
+        tab = pride.objects[self.parent.parent.parent.parent.tab_reference]
+        profile = tab.button_text
+        self.get_parent_theme_editor().target_theme.update_theme_users(profile)
 
     def save_theme(self):
         self.get_parent_theme_editor().save_theme()

@@ -228,7 +228,7 @@ class SDL_Window(SDL_Component):
                 cache_key = (w, h, theme_profile, item.transition_state)
                 if theme_profile in dirty_profiles and cache_key in cache:
                     del cache[cache_key]
-                    dirty_profiles.remove(theme_profile)
+                    print("Cleaned dirty key")
 
                 try:
                     cached_texture = cache[cache_key]
@@ -258,6 +258,7 @@ class SDL_Window(SDL_Component):
             renderer.copy(layer_texture.texture, dstrect=area)
         renderer.present()
         dirty_layers.clear()
+        dirty_profiles.clear()
 
     def schedule_postdraw_operation(self, callable, caller):
         assert not caller.deleted
@@ -559,8 +560,6 @@ class SDL_User_Input(pride.components.base.Base):
         active_item = None
         for layer_number, layer in reversed(self._layer_tracker.items()):
             for item in layer:
-                #assert item in objects
-                #assert not pride.objects[item].hidden
                 if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
                     active_item = item
                     break

@@ -4,7 +4,7 @@ import os.path
 
 import pride.components.user
 import pride.gui.form
-
+from pride.components import Component
 
 class User(pride.components.user.User):
 
@@ -24,6 +24,8 @@ class Gui(pride.gui.form.Scrollable_Window):
                 "theme_file" : os.path.join(pride.site_config.GUI_DIRECTORY,
                                             "resources", "themes",
                                             "default.theme")}
+    subcomponents = {"vertical_slider" : Component(location=None),
+                     "horizontal_slider" : Component(location=None)}
     mutable_defaults = {"user" : User}
     autoreferences = ("lockscreen", )
 

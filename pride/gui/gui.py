@@ -665,7 +665,7 @@ class Animated_Object(_Window_Object):
         try:
             self.sdl_window.unschedule_postdraw_operation(self.animate_color,
                                                           self)
-        except KeyError:
+        except (ValueError, KeyError):
             pass
 
     def handle_transition_animation_end(self):

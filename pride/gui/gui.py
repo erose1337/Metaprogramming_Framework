@@ -595,7 +595,9 @@ class _Window_Object(Organized_Object):
 class Animated_Object(_Window_Object):
 
     defaults = {"frame_count" : 5, "_backup_theme_profile" : None,
-                "animation_enabled" : True, "click_animation_enabled" : True,
+                "color_animation_enabled" : True,
+                "click_animation_enabled" : True,
+                "area_animation_enabled" : True,
                 "click_radius" : 2,
                 "theme_type" : "pride.gui.themes.Animated_Theme"}
     predefaults = {"animating" : False, "_old_theme" : None,
@@ -610,7 +612,7 @@ class Animated_Object(_Window_Object):
         if value != self.theme_profile:
             self._old_theme = self.theme_profile
         super(Animated_Object, self)._set_theme_profile(value)
-        if (self.animation_enabled and
+        if (self.color_animation_enabled and
             self._old_theme is not None and
             self._old_theme != self.theme_profile):
             self.start_color_animation()
@@ -718,7 +720,7 @@ class Animated_Object(_Window_Object):
 
     def handle_area_change(self, old_area):
         assert self.area != old_area
-        if self.animation_enabled:
+        if self.area_animation_enabled:
             self.theme.start_area_animation(old_area)
 
 

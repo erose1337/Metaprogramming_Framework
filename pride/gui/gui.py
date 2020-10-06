@@ -727,7 +727,7 @@ class _Mouse_Click(Animated_Object):
     defaults = {"clickable" : False, "location" : "fill"}
 
     def handle_transition_animation_end(self):
-        self.sdl_window.schedule_postdraw_operation(self.delete, self)
+        self.sdl_window.schedule_predraw_operation(self.delete, self)
 
 Window_Object = Animated_Object # can upgrade everything in-place by changing this
 

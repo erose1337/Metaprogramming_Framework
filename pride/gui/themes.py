@@ -208,11 +208,12 @@ class Animated_Theme(Minimal_Theme):
         self.wrapped_object.handle_transition_animation_end()
         try:
             self.sdl_window.unschedule_postdraw_operation(self._invalidate_self,
-                                                          self)
-        except KeyError:
+                                                          self.wrapped_object)
+        except (KeyError, ValueError):
             pass
 
     def animate_area(self):
+        assert not self.deleted
         if self._animating_movement:
             assert self.frame_number <= self.frame_count, (self.frame_number,
                                                            self.frame_count)
@@ -242,7 +243,7 @@ class Animated_Theme(Minimal_Theme):
     def delete(self):
         try:
             self.sdl_window.unschedule_postdraw_operation(self._invalidate_self,
-                                                          self)
-        except KeyError:
+                                                          self.wrapped_object)
+        except (KeyError, ValueError):
             pass
         super(Animated_Theme, self).delete()

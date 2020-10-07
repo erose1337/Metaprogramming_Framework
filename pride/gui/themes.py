@@ -5,7 +5,6 @@ import pprint
 import pride.gui
 import pride.gui.color
 import pride.components.base
-from pride.components import deep_update
 
 import sdl2
 
@@ -68,10 +67,20 @@ class Theme(pride.components.base.Wrapper):
                     profile[key] = pride.gui.color.Color(r, g, b, a)
         return output
 
-    def update_theme_colors(self, theme_colors):
+    def update_theme_colors(self, new_theme_colors):
         # what if keys have been removed/deprecated from the code since theme_colors was serialized?
         # what if theme_colors contains keys for profiles that do not exist? yet (or anymore)?
-        deep_update(self.theme_colors, theme_colors)
+        theme_colors = self.theme_colors
+        for profile_name, new_profile in new_theme_colors.iteritems():
+            profile = theme_colors[profile_name]
+            for name, value in new_profile.iteritems():
+                try:
+                    r, g, b, a = (value.r, value.g, value.b, value.a)
+                except AttributeError:
+                    profile[name] = value
+                else:
+                    color = profile[name]
+                    color.r = r; color.g = g; color.b = b; color.a = a;
 
     def wraps(self, _object):
         super(Theme, self).wraps(_object)

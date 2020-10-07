@@ -124,6 +124,7 @@ class Theme_Editor(pride.gui.link.Linked_Form):
             _bytes = _file.read()
         theme_colors = self.theme.deserialize(_bytes)
         self.theme.update_theme_colors(theme_colors)
+        self.show_status("Loaded {}".format(filename))
 
 
 def test_Theme_Editor():

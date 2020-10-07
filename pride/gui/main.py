@@ -3,8 +3,8 @@ import argparse
 import os.path
 
 import pride.components.user
-import pride.gui.gui
-
+import pride.gui.form
+from pride.components import Component
 
 class User(pride.components.user.User):
 
@@ -17,13 +17,15 @@ class User(pride.components.user.User):
             raise ValueError()
 
 
-class Gui(pride.gui.gui.Application):
+class Gui(pride.gui.form.Scrollable_Window):
 
     defaults = {"lockscreen_type" : "pride.gui.programs.lockscreen.Login_Screen",
                 "startup_components" : tuple(), "startup_programs" : tuple(),
                 "theme_file" : os.path.join(pride.site_config.GUI_DIRECTORY,
                                             "resources", "themes",
                                             "default.theme")}
+    subcomponents = {"vertical_slider" : Component(location=None),
+                     "horizontal_slider" : Component(location=None)}
     mutable_defaults = {"user" : User}
     autoreferences = ("lockscreen", )
 
@@ -31,8 +33,11 @@ class Gui(pride.gui.gui.Application):
         super(Gui, self).__init__(**kwargs)
         self.set_theme_colors(self.theme_file)
         if not self.user.logged_in:
-            self.lockscreen = self.application_window.create(self.lockscreen_type, user=self.user,
-                                                             service_name="User", host_info=("localhost", 40022))
+            self.lockscreen = self.main_window.create(self.lockscreen_type,
+                                                      user=self.user,
+                                                      service_name="User",
+                                                      host_info=("localhost",
+                                                                 40022))
         else:
             self.launch_programs()
 
@@ -56,7 +61,7 @@ class Gui(pride.gui.gui.Application):
                     _color.a = a
                     values[key] = _color
             theme_colors[profile].update(values)
-        self.theme.update_theme_users()
+        self.theme.update_theme_users(None)
         self.clear_status()
 
     def login_success(self, username):

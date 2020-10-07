@@ -225,7 +225,9 @@ class SSL_Server(pride.components.network.Server):
             else:
                 self.alert("Usage of ssl requires certificates and key files.", level=0)
             if pride.components.shell.get_permission("{}: Generate a new self signed certificate and key now?: ".format(self.reference)):
-                filename = raw_input("(Optional) Please provide the filepaths for the .key and .crt files: (optional)")
+                message = "(Optional) Please provide the filepaths for the .key and .crt files"
+                message += "\nor press enter to use the default paths "
+                filename = raw_input()
                 if not filename:
                     filename = "ssl_server"
                 if not os.path.split(filename)[0]: # no directory supplied or no filename

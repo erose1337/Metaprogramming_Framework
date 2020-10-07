@@ -658,6 +658,7 @@ class Continuum(pride.gui.gui.Button):
         else:
             bucket_width = width / (float(maximum - minimum) + 1)
             new_size = int(bucket_width * parent_field.value)
+        new_size = max(0, new_size)
         setattr(self.bar, "{}_range".format(size), (new_size, new_size))
         self.bar.pack()
 
@@ -931,22 +932,25 @@ class Slider_Field(Field):
         self.entry.continuum.update_position_from_value()
 
 
-class Image_Theme(pride.gui.themes.Animated_Theme2):
+class Image_Theme(pride.gui.themes.Animated_Theme):
 
-    def draw_texture(self):
-        area = self.area
+    draw_instructions = ("copy_image", )
+
+    def copy_image_instruction(self, renderer):
+        offset = self.glow_thickness
+        area = (offset, offset, self.w, self.h)
         thickness = self.shadow_thickness + self.glow_thickness
         area = (area[0] + (thickness / 2), area[1] + (thickness / 2),
                 area[2] - thickness, area[3] - thickness)
-        self.draw("fill", area, color=self.background_color)
-        self.draw("copy", self.image_texture, dstrect=area)
+        renderer.fill(area, color=self.background_color)
+        renderer.copy(self.image_texture, dstrect=area)
 
 
 class Image_Entry(Entry):
 
     defaults = {"_enforce_flag" : "SDL", "color" : (0, 0, 0, 255),
                 "theme_type" : "pride.gui.fields.Image_Theme",
-                "animation_enabled" : False}
+                "color_animation_enabled" : False}
     allowed_values = {"theme_type" : ("pride.gui.fields.Image_Theme", )}
 
     def __init__(self, **kwargs):

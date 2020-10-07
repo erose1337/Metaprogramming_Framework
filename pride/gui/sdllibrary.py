@@ -39,57 +39,6 @@ COPY_BLENDMODE = sdl2.SDL_BLENDMODE_ADD
 DRAW_BLENDMODE = sdl2.SDL_BLENDMODE_NONE
 TEXT_BLENDMODE = sdl2.SDL_BLENDMODE_BLEND
 
-def condense_instructions(layer):
-    raise NotImplementedError()
-    for operation_infos in zip(*(item._draw_operations for item in layer)):
-        if len(operation_infos) == 1:
-            # only one operation; unable to batch
-            #print operation_infos
-            print("Yielding1 {}".format(len(operation_infos[0])))
-            yield operation_infos[0]
-            raise StopIteration()
-        print operation_infos[0][0]
-        rects = []
-        fills = []
-        other = []
-        for op in operation_infos:
-            if op[0] == "rect":
-                rects.append(op)
-            elif op[0] == "fill":
-                fills.append(op)
-            else:
-                other.append(op)
-        if operation_infos[0][0] in ("rect", "fill"):
-            distinct = []
-            areas = []
-            extra = []
-            for op_info in operation_infos:
-                if op_info[0] not in ("rect", "fill"):
-                    extra.append(op_info)
-                    continue
-                if op_info[2] not in distinct:
-                    distinct.append(op_info[2])
-                    areas.append([op_info[1][0]])
-                else:
-                    areas[distinct.index(op_info[2])].append(op_info[1][0])
-
-            #for i, kwargs in enumerate(distinct):
-            #    yield op_info[0], areas[i], kwargs
-            new_instructions = tuple((op_info[0], (areas[i], ), kwargs) for i, kwargs
-                                     in enumerate(distinct)) #+ tuple(extra)
-            for item in new_instructions:
-                a, b, c = item
-                print("Yielding2 {} {}".format(len(item), item))
-                yield item#a, b, c
-            #yield new_instructions
-        else:
-            for op in operation_infos:
-                assert len(op) == 3, op
-                print("Yielding3 {} {}".format(len(item), item))
-                yield op
-            #print operation_infos
-            #raw_input()
-
 class SDL_Component(base.Proxy): pass
 
 
@@ -104,10 +53,9 @@ class SDL_Window(SDL_Component):
                 "renderer_flags" : sdl2.SDL_RENDERER_ACCELERATED | sdl2.SDL_RENDERER_TARGETTEXTURE,
                 "window_flags" : None}#sdl2.SDL_WINDOW_BORDERLESS | sdl2.SDL_WINDOW_RESIZABLE}
 
-    mutable_defaults = {"redraw_objects" : list,
-                        "layer_cache" : list, "dirty_layers" : set,
-                        "predraw_queue" : list, "postdraw_scheduled" : dict,
-                        "drawing_instructions" : collections.OrderedDict}
+    mutable_defaults = {"cache" : dict, "predraw_queue" : dict,
+                        "dirty_layers" : set, "layer_cache" : dict,
+                        "postdraw_queue" : dict, "dirty_profiles" : set}
 
     predefaults = {"running" : False, "_ignore_invalidation" : None,
                    "_in_pack_queue" : False} # smoothes Organizer optimization out
@@ -150,8 +98,6 @@ class SDL_Window(SDL_Component):
         self.renderer = self.create(Renderer, self, predefaults=self.renderer_flags)
         self.user_input = self.create(SDL_User_Input)
         self.organizer = self.create("pride.gui.gui.Organizer")
-        #self.texture_atlas = self.create("pride.gui.gui.Texture_Atlas", sdl_window=self.reference)
-        self.drawing_instructions[0] = []
 
         self.tip_bar = self.create(self.tip_bar_type, location=self.tip_bar_location,
                                    h_range=self.tip_bar_h_range, center_text=False,
@@ -159,17 +105,14 @@ class SDL_Window(SDL_Component):
         if self.showing:
             self.show()
 
-        # for drawing always_on_top separately
-        self.top_texture = self.create_texture(self.renderer.max_size,
-                                               self.texture_access_flag)
-
         objects["/Finalizer"].add_callback((self.reference, "delete"), 0)
         self.run_instruction.execute(priority=self.priority)
 
     def create_texture(self, size, access=sdl2.SDL_TEXTUREACCESS_TARGET,
                        blendmode=COPY_BLENDMODE):
         _create_texture = self.renderer.sprite_factory.create_texture_sprite
-        texture = _create_texture(self.renderer.wrapped_object, size, access=access)
+        texture = _create_texture(self.renderer.wrapped_object, size,
+                                  access=access)
         sdl2.SDL_SetTextureBlendMode(texture.texture, blendmode)
         return texture
 
@@ -181,7 +124,7 @@ class SDL_Window(SDL_Component):
     def invalidate_object(self, instance):
         assert not instance.deleted
         self._schedule_run()
-        self.redraw_objects.append(instance)
+        self.dirty_layers.add(instance.z)
 
     def _schedule_run(self):
         if not self.running:
@@ -198,40 +141,30 @@ class SDL_Window(SDL_Component):
 
     def remove_window_object(self, window_object):
         try:
-            del self.postdraw_scheduled[window_object]
+            del self.postdraw_queue[window_object]
         except KeyError:
             pass
         try:
-            self.user_input._remove_from_coordinates(window_object.reference)
+            self.user_input._remove_from_coordinates(window_object)
         except ValueError:
             pass
-        try:
-            self.user_input.always_on_top.remove(window_object)
-        except ValueError:
-            pass
+
         if self.user_input.under_mouse == window_object:
             self.user_input.under_mouse = None
-        try:
-            self.redraw_objects.remove(window_object)
-        except ValueError:
-            pass
-        window_object.texture_invalid = False # texture_invalid reflects whether or not window_object is in redraw_objects
-        try:
-            self.drawing_instructions[window_object.z].remove(window_object)
-        except (KeyError, ValueError):
-            pass
-        if not self.redraw_objects:
-            self.running = True # trigger run to wipe out the screen
+
+        window_object.texture_invalid = False
+        self.dirty_layers.add(window_object.z)
+        self.running = True # trigger run to wipe out the screen
 
     def run(self):
         #frame_start = timestamp()
         self.run_instruction.execute(priority=self.priority)
-        assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
+        assert not any(caller.deleted for caller in self.postdraw_queue.keys())
         self.user_input.run()
 
         if self.predraw_queue:
-            queue = self.predraw_queue
-            self.predraw_queue = []
+            queue = itertools.chain(*self.predraw_queue.values())
+            self.predraw_queue = dict()
             for callable in queue:
                 callable()
 
@@ -240,134 +173,111 @@ class SDL_Window(SDL_Component):
             organizer.pack_items()
 
         #before = timestamp()
-        if self.redraw_objects:
-            self.update_drawing_instructions() # tends to take more time than the draw+present loop
-        #after = timestamp()
-        #print("Time taken to reorganize draw instructions: {0:.5f}".format(after - before))
-        assert not self.redraw_objects
-
-        #before = timestamp()
         if self.running:
-            self.draw(self.drawing_instructions) # tends to take less time than re-arranging draw instructions
-            assert not self.redraw_objects
+            self.draw()
         self.running = False
         #after = timestamp()
         #print("Time taken to redraw and present:           {0:.5f}".format(after - before))
 
         #if self.take_screenshot:
 
-
-        if self.postdraw_scheduled:
-            assert not any(caller.deleted for caller in self.postdraw_scheduled.keys())
-            queue = itertools.chain(*self.postdraw_scheduled.values())
-            self.postdraw_scheduled = dict()
+        if self.postdraw_queue:
+            assert not any(caller.deleted for caller in self.postdraw_queue.keys())
+            queue = itertools.chain(*self.postdraw_queue.values())
+            self.postdraw_queue = dict()
             for callable in queue:
                 callable()
         #frame_end = timestamp()
         #print("Allocated {0:.5f}; Used: {1:.5f}; Spare: {2:.5f}".format(self.priority, frame_end - frame_start, self.priority - (frame_end - frame_start)))
 
-    def update_drawing_instructions(self):
-        instructions = self.drawing_instructions
-        layer_cache = self.layer_cache
-        dirty_layers = self.dirty_layers
-        _size = self.size
-        needs_sorting = False
-        #print("Redoing {} different drawing instructions".format(len(self.redraw_objects)))
-        for window_object in self.redraw_objects:
-            assert not window_object.deleted, window_object.reference
-            assert not window_object.hidden, window_object
-            old_z = self.user_input._update_coordinates(window_object,
-                                                        window_object.reference,
-                                                        window_object.area,
-                                                        window_object.z)
-            window_object._redraw()
-
-            z = window_object.z
-            dirty_layers.add(old_z)
-            dirty_layers.add(z)
-            if (z != old_z or old_z not in instructions or
-                window_object not in instructions[old_z]):
-                try:
-                    instructions[old_z].remove(window_object)
-                except KeyError:
-                    instructions[old_z] = []
-                    layer_texture = self.create_texture(_size)
-                    layer_cache.append((old_z, layer_texture))
-                    #assert layer_texture is sorted(layer_cache)[old_z][1]
-                    needs_sorting = True
-                except ValueError:
-                    pass
-                assert window_object not in instructions.get(z, [])
-
-                try:
-                    instructions[z].append(window_object)
-                except KeyError:
-                    instructions[z] = [window_object]
-                    layer_texture = self.create_texture(_size)
-                    layer_cache.append((z, layer_texture))
-                    # assert layer_texture is sorted(layer_cache)[z][1]
-                    needs_sorting = True
-        del self.redraw_objects[:]
-        if needs_sorting:
-            layer_cache = sorted(layer_cache)
-
-    def draw(self, instructions):
+    def draw(self):
         area = (0, 0) + self.size
         renderer = self.renderer
-        draw_procedures = renderer.instructions
+        cache = self.cache
         layer_cache = self.layer_cache
+        layers = self.user_input._layer_tracker
         dirty_layers = self.dirty_layers
+        dirty_profiles = self.dirty_profiles
         renderer.set_render_target(None)
         renderer.clear()
 
-        # redraw dirty layers onto cache
-        # copy layers to screen
-        for layer_number, layer_texture in layer_cache:
-            layer = instructions[layer_number]
+        for layer_number, layer in sorted(layers.items()):
             if not layer:
                 continue
-            layer_texture = layer_texture.texture
-            if layer_number in dirty_layers:
-                renderer.set_render_target(layer_texture)
-                renderer.clear()
-                #print("Performing {} instructions for layer {}".format(sum(len(item._draw_operations) for item in layer), layer_number))
-                for item in layer:
-                    #if item.always_on_top:
-                    #    continue
-                    for operation, args, kwargs in item._draw_operations:
-                        draw_procedures[operation](*args, **kwargs)
-                renderer.set_render_target(None)
-            renderer.copy(layer_texture, area, area)
-        self.dirty_layers.clear()
+            try:
+                layer_texture = layer_cache[layer_number]
+            except KeyError:
+                layer_texture = self.create_texture(self.size)
+                layer_cache[layer_number] = layer_texture
 
-        top_items = self.user_input.always_on_top
-        if top_items:
-            dirty = False
-            top_texture = self.top_texture.texture
-            renderer.set_render_target(top_texture)
-            renderer.clear()
-            for item in self.user_input.always_on_top:
-                if item.texture_invalid:
-                    dirty = True
-                    for operation, args, kwargs in item._draw_operations:
-                        draw_procedures[operation](*args, **kwargs)
-            if dirty:
+            if layer_number not in dirty_layers:
                 renderer.set_render_target(None)
-                renderer.copy(top_texture, area, area)
+                renderer.copy(layer_texture.texture, dstrect=area)
+                continue
+
+            renderer.set_render_target(layer_texture.texture)
+            renderer.clear()
+            for item in layer:
+                assert not item.deleted
+                x, y, w, h = (item.theme.x, item.theme.y,
+                              item.theme.w, item.theme.h)
+                if item.hidden or not w or not h:
+                    continue
+
+                theme_profile = item.theme_profile
+                cache_key = (w, h, theme_profile, item.transition_state)
+                if theme_profile in dirty_profiles and cache_key in cache:
+                    del cache[cache_key]
+
+                try:
+                    cached_texture = cache[cache_key]
+                except KeyError:
+                    edge = int(item.draw_edge) # True == 1, False == 0
+                    extra = (item.glow_thickness * 2) + edge
+                    texture_size = (w + extra, h + extra)
+                    cached_texture = self.create_texture(texture_size,
+                                            blendmode=sdl2.SDL_BLENDMODE_NONE)
+                    cache[cache_key] = cached_texture
+                    renderer.set_render_target(cached_texture.texture)
+                    renderer.clear()
+                    renderer.set_blendmode(sdl2.SDL_BLENDMODE_NONE)
+                    theme = item.theme
+                    for op_name in theme.draw_instructions:
+                        f = getattr(theme, "{}_instruction".format(op_name))
+                        f(renderer)
+                    renderer.set_render_target(layer_texture.texture)
+                offset = item.glow_thickness
+                item_area = (x - offset, y - offset,
+                             w + (2 * offset), h + (2 * offset))
+                renderer.copy(cached_texture.texture, dstrect=item_area)
+                if item.text:
+                    item.theme.text_instruction(renderer)
+                item.texture_invalid = False
+            renderer.set_render_target(None)
+            renderer.copy(layer_texture.texture, dstrect=area)
         renderer.present()
+        dirty_layers.clear()
+        dirty_profiles.clear()
 
     def schedule_postdraw_operation(self, callable, caller):
         assert not caller.deleted
         try:
-            self.postdraw_scheduled[caller].append(callable)
+            self.postdraw_queue[caller].append(callable)
         except KeyError:
-            self.postdraw_scheduled[caller] = [callable]
+            self.postdraw_queue[caller] = [callable]
 
     def unschedule_postdraw_operation(self, callable, caller):
-        self.postdraw_scheduled[caller].remove(callable)
+        self.postdraw_queue[caller].remove(callable)
 
-    def schedule_predraw_operation(self, callable):
-        self.predraw_queue.append(callable)
+    def schedule_predraw_operation(self, callable, caller):
+        assert not caller.deleted
+        try:
+            self.predraw_queue[caller].append(callable)
+        except KeyError:
+            self.predraw_queue[caller] = [callable]
+
+    def unschedule_predraw_operation(self, callabler, caller):
+        self.predraw_queue[caller].remove(callable)
 
     def get_mouse_state(self):
         mouse = sdl2.mouse
@@ -489,8 +399,7 @@ class Window_Handler(pride.components.base.Base):
 class SDL_User_Input(pride.components.base.Base):
 
     defaults = {"event_verbosity" : 0, "_ignore_click" : False}
-    mutable_defaults = {"_layer_tracker" : collections.OrderedDict,
-                        "always_on_top" : list}
+    mutable_defaults = {"_layer_tracker" : dict}
     autoreferences = ("active_item", "under_mouse")
     verbosity = {"handle_text_input" : "vvv"}
 
@@ -573,22 +482,24 @@ class SDL_User_Input(pride.components.base.Base):
                                                                    traceback.format_exc()),
                                 level=0)
 
-    def _update_coordinates(self, item, reference, area, z):
+    def _update_coordinates(self, item):
         old_z = item._old_z
         try:
-            self._layer_tracker[old_z].remove(reference)
+            self._layer_tracker[old_z].remove(item)
         except (KeyError, ValueError):
             pass
-        #assert reference not in self._layer_tracker.get(z, []), (z, reference)
+        z = item.z
         try:
-            self._layer_tracker[z].append(reference)
+            self._layer_tracker[z].append(item)
         except KeyError:
-            self._layer_tracker[z] = [reference]
-        pride.objects[reference]._old_z = z
+            self._layer_tracker[z] = [item]
+        item._old_z = z
+        add = self.parent.dirty_layers.add
+        add(z); add(old_z)
         return old_z
 
     def _remove_from_coordinates(self, item):
-        self._layer_tracker[pride.objects[item]._old_z].remove(item)
+        self._layer_tracker[item._old_z].remove(item)
         if self.active_item == item:
             self.active_item = None
 
@@ -642,35 +553,17 @@ class SDL_User_Input(pride.components.base.Base):
         if active_item:
             active_item.select()
 
-    #def _check_children(self, active_item, mouse_position):
-    #    # have to check if it clicked on the children of the always_on_top item
-    #    for child in active_item.children:
-    #        if child.clickable and pride.gui.point_in_area(active_item.area, mouse_position):
-    #            active_item = child
-    #            active_item = self._check_children(active_item, mouse_position) # recursion until no descendants left to check
-    #            break
-    #    return active_item
-
     def _get_object_under_mouse(self, mouse_position):
         # find the top-most item such that the mouse position is within its area
         objects = pride.objects
         active_item = None
-        for item in self.always_on_top:
-            if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
-                active_item = item
-                #active_item = self._check_children(active_item)
-                break
-        else:
-            for layer_number, layer in reversed(self._layer_tracker.items()):
-                for item in layer:
-                    #assert item in objects
-                    #assert not pride.objects[item].hidden
-                    item = objects[item]
-                    if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
-                        active_item = item
-                        break
-                if active_item:
+        for layer_number, layer in reversed(self._layer_tracker.items()):
+            for item in layer:
+                if item.clickable and pride.gui.point_in_area(item.area, mouse_position):
+                    active_item = item
                     break
+            if active_item:
+                break
         return active_item
 
     def handle_mousebuttonup(self, event):
@@ -716,17 +609,6 @@ class SDL_User_Input(pride.components.base.Base):
                     self.under_mouse = new_under_mouse
                     if new_under_mouse is not None:
                         new_under_mouse.on_hover()
-                elif self.always_on_top:
-                    for item in self.always_on_top:
-                        if item is under_mouse:
-                            break
-                        if item.clickable and pride.gui.point_in_area(item.area, position):
-                            new_under_mouse = item
-                            under_mouse.hover_ends()
-                            self.under_mouse = new_under_mouse
-                            if new_under_mouse is not None:
-                                new_under_mouse.on_hover()
-                            break
 
     def handle_keydown(self, event):
         if self.active_item is None:
@@ -796,7 +678,7 @@ class Renderer(SDL_Component):
 
     defaults = {"flags" : sdl2.SDL_RENDERER_ACCELERATED,
                 "blendmode_flag" : DRAW_BLENDMODE, "logical_size" : (800, 600)}
-    mutable_defaults = {"_get_text_size_memo" : dict}
+    mutable_defaults = {"_get_text_size_memo" : dict, "text_cache" : dict}
 
     def __init__(self, window, **kwargs):
         super(Renderer, self).__init__(**kwargs)
@@ -904,9 +786,15 @@ class Renderer(SDL_Component):
         x, y, w, h = area
         assert w, (area, text, kwargs)
         assert "width" in kwargs
-        texture = self.sprite_factory.from_text(text,
-                                                fontmanager=self.font_manager,
-                                                **kwargs)
+        key = (text, kwargs["width"], kwargs["bg_color"], kwargs["alias"],
+               kwargs["color"])
+        try:
+            texture = self.text_cache[key]
+        except KeyError:
+            texture = self.sprite_factory.from_text(text,
+                                                  fontmanager=self.font_manager,
+                                                    **kwargs)
+            self.text_cache[key] = texture
         _w, _h = texture.size
         if kwargs.get("center_text", False):# and _w <= (w + 40): # +40? seems to fix scaled text snapping between centered/not
             destination = [(x + (w / 2)) - (_w / 2),

@@ -11,7 +11,6 @@ import tokenize
 import copy # for deepcopy
 import operator # for attrgetter
 import ast
-
 try:
     import cStringIO as StringIO
 except ImportError:
@@ -635,7 +634,9 @@ def test_Form():
                               h_range=(0, .3)),
                      row_info(2,
                               field_info("test_image",
-                                    field_type="pride.gui.fields.Image_Field")),
+                                    field_type="pride.gui.fields.Image_Field",
+                                    entry_kwargs={"tip_bar_text" :
+                                                      "This is a test image"})),
                      row_info(3,
                               field_info("test_audio",
                                     field_type="pride.gui.fields.Media_Field")),

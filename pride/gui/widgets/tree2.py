@@ -12,7 +12,7 @@ class Node_Viewer(pride.gui.form.Form):
     pass
 
 
-class Tree_Viewer(pride.gui.gui.Application):
+class Tree_Viewer(pride.gui.form.Scrollable_Window):
 
     defaults = {"current_node" : '', "max_count" : 8,
                 "initial_node" : "Tree Viewer",
@@ -26,7 +26,7 @@ class Tree_Viewer(pride.gui.gui.Application):
         self.view_node()
 
     def create_subcomponents(self):
-        window = self.application_window
+        window = self.main_window
         _layout = \
             layout(row_info(0,
                             field_info("handle_back", button_text='<',

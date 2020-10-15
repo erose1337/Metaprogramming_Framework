@@ -33,7 +33,7 @@ _join = os.path.join
 gui_dir = _join("pride", "gui")
 
 options = {"name" : "pride",
-           "version" : "7.1.0a",
+           "version" : "7.2.0a",
            "description" : "Python runtime and integrated development environment",
            "long_description" : '',
            "url" : "https://github.com/erose1337/pride",

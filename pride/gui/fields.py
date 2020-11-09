@@ -1225,8 +1225,7 @@ class Media_Entry(Entry):
         self.create_subcomponents()
 
     def create_subcomponents(self):
-        self.player = self.create(self.player_type,
-                                  **self.player_kwargs)
+        self.player = self.create(self.player_type, **self.player_kwargs)
 
 
 class Media_Field(Field):
@@ -1235,3 +1234,29 @@ class Media_Field(Field):
                 "play_when_opened" : False,}
     subcomponents = {"entry" : Component("pride.gui.fields.Media_Entry")}
     interface = (tuple(), ("play_when_opened", ))
+
+
+
+class Tuple_Entry(Entry):
+
+    def __init__(self, **kwargs):
+        super(Tuple_Entry, self).__init__(**kwargs)
+        self.scale_to_text = False
+        self.create("pride.gui.form.Form", layout=self.parent_field.layout,
+                    target_object=self.parent_field.value)
+
+
+class Tuple_Field(Field):
+
+    defaults = {"layout" : None}
+    subcomponents = {"entry" : Component("pride.gui.fields.Tuple_Entry")}
+
+    def create_subcomponents(self):
+        if self.layout is None:
+            value = self.value
+            self.layout = layout(
+                            row_info(0,
+                                     *(field_info(index,
+                                                  target_object=value) for
+                                        index in range(len(value)))))
+        super(Tuple_Field, self).create_subcomponents()

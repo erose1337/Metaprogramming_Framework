@@ -1,3 +1,14 @@
+# make form_vars explicitly declared as a layout kwarg
+
+
+# regarding `target_object`:
+# if the layout is received from another machine,
+# then it must be valid for ast.literal_eval and so must be purely data
+# a remote machine cannot assign `target_object` to a python object
+# (assuming that object is not a basic datatype)
+# it should be safe to include target_object in the interface
+# so that code in the process where the form resides (i.e. the application)
+# can actually utilize the target_object attribute
 import pprint
 
 import pride.gui.fields

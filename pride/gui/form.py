@@ -334,7 +334,7 @@ class Form(Scrollable_Window):
                      "horizontal_slider" : Component(location=None)}
     mutable_defaults = {"rows" : dict, "visible_rows" : list,
                         "layout" : layout, "manifest" : dict}
-    interface = (tuple(), ("max_rows", "manifest"))
+    interface = (tuple(), ("max_rows", "manifest", "target_object"))
 
     hotkeys = {("\t", None) : "handle_tab"}
     autoreferences = ("selected_entry", )
@@ -480,7 +480,7 @@ class Form(Scrollable_Window):
             elif hasattr(value, "__call__"):
                 field_type = "pride.gui.fields.Callable_Field"
             #elif isinstance(value, tuple) or isinstance(value, list):
-            #    field_type = "pride.gui.widgets.formext.Tabbed_Form"
+            #    field_type = "pride.gui.fields.Tuple_Field"
         if field_type is None:
             message = "Unable to determine field_type for {}"
             raise ValueError(message.format((target_object, name, value, field_kwargs)))

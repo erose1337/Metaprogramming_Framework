@@ -9,7 +9,8 @@ def page(page_id, page_layout):
 
 class Linked_Form(pride.gui.tabs.Tabbed_Window):
 
-    subcomponents = {"form" : Component("pride.gui.form2.Remote_Form")}
+    subcomponents = {"form" : Component("pride.gui.form2.Remote_Form"),
+                     "tab_bar" : Component(include_new_tab_button=False)}
     autoreferences = ("form", )
 
     def create_subcomponents(self):

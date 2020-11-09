@@ -65,12 +65,19 @@ def generate_theme_editor_layout(theme):
     return layout(links=links)
 
 def generate_options_layout():
-    return layout(
-            row_info(0, field_info("save_theme", button_text="Save Theme",
-                                   entry_kwargs={"scale_to_text" : False}),
+    links = [page("Save",
+                  layout(
+                    row_info(0,
+                        field_info("save_theme", button_text="Save Theme",
+                                   entry_kwargs={"scale_to_text" : False})),
+                         h_range=(0, .1))),
+            page("Load",
+                layout(
+                    row_info(0,
                         field_info("load_theme", button_text="Load Theme",
-                                   entry_kwargs={"scale_to_text" : False}),
-                     h_range=(0, .1)),
+                                   entry_kwargs={"scale_to_text" : False})),
+                       h_range=(0, .1)))]
+    return layout(links=links,
                   tab_bar_kwargs={"include_new_tab_button" : False})
 
 
@@ -79,7 +86,6 @@ class Theme_Editor(pride.gui.link.Linked_Form):
     defaults = {"target_theme" : None}
     subcomponents = {"form" :
                     Component("pride.gui.programs.themecustomizer.Theme_Form"),
-                     "tab_bar" : Component(include_new_tab_button=False),
                      "file_saver" :
                          Component("pride.gui.programs.fileexplorer.File_Saver",
                                    location="top", autodelete=True),
@@ -100,7 +106,7 @@ class Theme_Editor(pride.gui.link.Linked_Form):
     def save_theme(self):
         if self.file_saver is None:
             # have to use this window to make the result look "right"
-            window = self.main_window.children[0].form.main_window
+            window = self.main_window.children[0]
             file_saver = window.create(self.file_saver_type,
                                        data=self.theme.serialize(),
                                        **self.file_saver_kwargs)
@@ -111,7 +117,9 @@ class Theme_Editor(pride.gui.link.Linked_Form):
     def load_theme(self):
         if self.file_selector is None:
             # have to use this window to make the result look "right"
-            window = self.main_window.children[0].form.main_window
+            window = self.main_window.children[0]
+            if window.form is not None:
+                window = window.form.main_window
             file_selector = window.create(self.file_selector_type,
                                           callback=self._load_theme,
                                           **self.file_selector_kwargs)

@@ -26,10 +26,10 @@ import pride.components.datastructures
 import pride.components.scheduler as scheduler
 import pride.components.base as base
 import pride.functions.utilities
-import pride.functions.persistence
+import pride.functions.serializer
 
-DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.persistence.save_data),
-                                                     "loads" : staticmethod(pride.functions.persistence.load_data)})
+DEFAULT_SERIALIZER = type("Serializer", (object, ), {"dumps" : staticmethod(pride.functions.serializer.dumps),
+                                                     "loads" : staticmethod(pride.functions.serializer.loads)})
 
 ERROR_CODES = {}
 

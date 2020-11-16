@@ -6,18 +6,26 @@ import time
 import functools
 from os import path
 import socket
+import traceback
 
 import pride
 import pride.components.base
 import pride.components.scheduler
 import pride.components.networkssl
 import pride.components.network
-import pride.functions.persistence
 import pride.functions.decorators
+from pride.errors import UnauthorizedError
 
 DEFAULT_SERIALIZER = pride.components.network.DEFAULT_SERIALIZER
 
-class UnauthorizedError(Warning): pass
+NO_ERROR = 0
+UNAUTHORIZED_ERROR = 1
+CODE_ERROR = 2
+GENERIC_ERROR = 3
+
+def Result(error_code, message=''):
+    return (error_code, message)
+
 
 @pride.functions.decorators.required_arguments(no_args=True)
 def remote_procedure_call(callback_name='', callback=None):
@@ -72,8 +80,6 @@ class Session(pride.components.base.Base):
         request = DEFAULT_SERIALIZER.dumps(self.id, component, method,
                                            DEFAULT_SERIALIZER.dumps((instruction.args, instruction.kwargs)))
         host = pride.objects["/Program/Rpc_Connection_Manager"].get_host(self.host_info)
-        # we have to insert at the beginning things will happen inline, and
-        # must append to the end when network round trips with callbacks are used
         self._callbacks.append((_call, callback))
         host.make_request(request, self.reference)
 
@@ -190,7 +196,9 @@ class Rpc_Client_Socket(Packet_Client):
     """ Client socket for making rpc requests using packetized tcp stream. """
     verbosity = {"delayed_request_sent" : "vvv", "request_delayed" : "vvv",
                  "request_sent" : "vvv", "unresolved_callback" : 0,
-                 "handle_exception" : 0}
+
+                 "unauthorized_error" : 0, "code_error" : 0,
+                 "generic_error" : 0, "invalid_error_code" : 0}
 
     mutable_defaults = {"_requests" : list, "_callbacks" : list}
 
@@ -218,36 +226,65 @@ class Rpc_Client_Socket(Packet_Client):
 
     def recv(self, packet_count=0):
         for response in super(Rpc_Client_Socket, self).recv():
-            _response = self.deserialize(bytes(response))
+            rpc_code, _response = self.deserialize(bytes(response))
             callback_owner = self._callbacks.pop(0)
             try:
                 _call, callback = pride.objects[callback_owner].next_callback()
             except KeyError:
-                self.alert("Could not resolve callback_owner '{}' for {} {}".format(callback_owner,
-                                                                                    "callback with arguments {}",
-                                                                                    _response),
+                message = "Could not resolve callback_owner '{}'"
+                self.alert(message.format(callback_owner),
                            level=self.verbosity["unresolved_callback"])
-            else:
-                if isinstance(_response, BaseException):
-                    self.handle_exception(_call, callback, _response)
+            if rpc_code == NO_ERROR:
                 if callback is not None:
                     callback(_response)
+            else:
+                if rpc_code == UNAUTHORIZED_ERROR:
+                    message = self.format_error("Unauthorized Error",
+                                                (callback_owner, _call))
+                    self.alert(message,
+                               level=self.verbosity["unauthorized_error"])
+                elif rpc_code == CODE_ERROR:
+                    extra = "\nRemote Traceback:\n{}".format(_response)
+                    message = self.format_error("Code Error",
+                                                (callback_owner, _call),
+                                                extra)
+                    self.alert(message,
+                               level=self.verbosity["code_error"])
+                elif rpc_code == GENERIC_ERROR:
+                    message = self.format_error("Generic Error",
+                                                (callback_owner, _call))
+                    self.alert(message,
+                               level=self.verbosity["generic_error"])
+                else:
+                    message = self.format_error("Invalid Error Code",
+                                                (callback_owner, _call),
+                          "\nReceived invalid error code '{}'".format(rpc_code))
+                    self.alert(message,
+                               level=self.verbosity["invalid_error_code"])
 
-    def handle_exception(self, _call, callback, response):
-        if (isinstance(response, SystemExit) or
-            isinstance(response, KeyboardInterrupt)):
-            raise response
-        else:
-            message = "\nRemote Traceback: {} calling {}"#Unable to proceed with callback {}"
-            self.alert(message.format(response.__class__.__name__, '.'.join(_call)),# callback),
-                        level=self.verbosity["handle_exception"])
+    def format_error(self, error, caller_info, extra=''):
+        client_name, server_info = caller_info
+        service_name, procedure_name = server_info
+        error_message = error + '\n'
+        length = min(79, len(error) + len(self.reference) + 1)
+        error_message += ('-' * length) + '\n'
+        error_message += "- returned by: "
+        error_message += "`{}.{}`".format(service_name, procedure_name)
+        error_message += "\n- requested by `{}`".format(client_name)
+        error_message += extra
+        return error_message
+
 
 
 class Rpc_Socket(Packet_Socket):
     """ Packetized tcp socket for receiving and delegating rpc requests """
 
-    defaults = {"idle_after" : 600}
-    verbosity = {"request_exception" : 0, "request_result" : "vvv"}
+    defaults = {"idle_after" : 600,
+                "production_mode" : "debug"}
+                 # this default will provide an adversary with tracebacks
+                 # but defaulting to "production" rather than debug seems wrong
+    verbosity = {"request_exception" : 'v', "request_result" : "vvv"}
+    allowed_values = {"production_mode" : ("debug", "production")}
 
     def __init__(self, **kwargs):
         super(Rpc_Socket, self).__init__(**kwargs)
@@ -271,22 +308,32 @@ class Rpc_Socket(Packet_Socket):
         for (session_id, component_name, method,
              serialized_arguments) in (self.deserialize(bytes(packet)) for
                                        packet in super(Rpc_Socket, self).recv()):
+            worker = next(self.rpc_workers)
             try:
-                result = next(self.rpc_workers).handle_request(peername, session_id, component_name,
-                                                               method, serialized_arguments)
+                output = worker.handle_request(peername, session_id,
+                                               component_name, method,
+                                               serialized_arguments)
             except BaseException as result:
                 if ((isinstance(result, KeyError) and component_name not in pride.objects) or
-                    (isinstance(result, AttributeError) and not hasattr(objects[component_name], "validate"))):
-                    result = UnauthorizedError()
+                    (isinstance(result, AttributeError) and not hasattr(objects[component_name], "validate")) or
+                    isinstance(result, UnauthorizedError)):
+                    result = Result(UNAUTHORIZED_ERROR)
 
-                elif not isinstance(result, UnauthorizedError):
+                else:
+                    assert not isinstance(result, UnauthorizedError)
+                    assert not isinstance(result, SystemExit)
                     stack_trace = traceback.format_exc()
-                    result.traceback = stack_trace
-                    if not isinstance(result, SystemExit):
-                        self.alert("Exception processing request {}.{}: \n{}".format(component_name,
-                                                                                     method, stack_trace),
-                                   level=self.verbosity["request_exception"])
+                    self.alert("Exception processing request {}.{}: \n{}".format(component_name,
+                                                                                 method, stack_trace),
+                               level=self.verbosity["request_exception"])
+
+                    if self.production_mode == "debug":
+                        stack_trace = traceback.format_exc()
+                        result = Result(CODE_ERROR, stack_trace)
+                    else:
+                        result = Result(GENERIC_ERROR)
             else:
+                result = Result(NO_ERROR, output)
                 self.alert("Sending result of {}.{}: {}".format(component_name, method, result),
                            level=self.verbosity["request_result"])
             self.send(self.serialize(result))

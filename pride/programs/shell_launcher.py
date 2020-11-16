@@ -3,7 +3,7 @@ import pride.components.user
 
 def launch_shell(user, password_source="user_secret"):
     user.create("pride.components.interpreter.Shell", username=user.username,
-                password_source=password_source, parse_args=True)
+                parse_args=True)
     try:
         command_line = user.objects["Command_Line"][0]
     except KeyError:

@@ -20,6 +20,8 @@ import pride.components.user
 import pride.functions.contextmanagers
 import pride.site_config
 import pride.functions.utilities
+from pride.components import Component
+from pride.components.rpc import Result
 
 @contextlib.contextmanager
 def main_as_name():
@@ -33,10 +35,11 @@ def main_as_name():
 class Shell(pride.components.rpc2.Authenticated_Client):
     """ Handles keystrokes and sends python source to the Interpreter to
         be executed. This requires authentication via username/password."""
-    defaults = {"username" : None, "password" : None, "startup_definitions" : '',
+    defaults = {"username" : '', "password" : None, "startup_definitions" : '',
                 "target_service" : "/Program/Interpreter", "stdout" : None}
 
     verbosity = {"login" : 0, "execute_source" : "vv"}
+    parser_args = ("username", )
 
     def login_success(self, message):
         super(Shell, self).login_success(message)
@@ -60,9 +63,11 @@ class Shell(pride.components.rpc2.Authenticated_Client):
         """ Sends source to the interpreter specified in self.target_service for execution """
 
     def handle_result(self, packet):
-        if packet:
-            packet += ">>> "
-            (self.stdout or sys.stdout).write('\r' + packet)
+        code, content = packet
+        if code is not None:
+            content = "Remote Traceback\n" + ('-' * 16) + '\n' + content + '\n'
+        content += ">>> "
+        (self.stdout or sys.stdout).write('\r' + content)
 
 
 class Loud_Logger(object):
@@ -90,8 +95,8 @@ class Interpreter(pride.components.rpc2.Authenticated_Service):
         The source code and return value of all requests are logged. """
 
     defaults = {"help_string" : 'Type "help", "copyright", "credits" or "license" for more information.',
-                "login_message" : "Welcome {} from {}\Python {} on {}\n{}\n",
-                "_logger_type" : "StringIO.StringIO", "allow_registration" : False}
+                "login_message" : "Welcome {} from {}\nPython {} on {}\n{}\n",
+                "allow_registration" : False}
 
     mutable_defaults = {"user_namespaces" : dict, "user_session" : dict}
 
@@ -104,7 +109,6 @@ class Interpreter(pride.components.rpc2.Authenticated_Service):
         self.log = self.create("pride.components.fileio.File",
                                "{}.log".format(filename), 'a+',
                                persistent=False).reference
-        self._logger = pride.functions.utilities.invoke(self._logger_type)
 
     def login_success(self, username):
         flag, message, session_id = super(Interpreter, self).login_success(username)
@@ -124,47 +128,27 @@ class Interpreter(pride.components.rpc2.Authenticated_Service):
         try:
             code = compile(source, "{}@{}_execute_source".format(username, sender), 'exec')
         except (SyntaxError, OverflowError, ValueError):
-            result = traceback.format_exc()
+            output = Result("Compilation Error", traceback.format_exc())
         else:
-            if sender == "localhost":
-                _logger = Loud_Logger()
-            else:
-                _logger = self._logger
-            backup = sys.stdout
-            sys.stdout = _logger
-            try:
+            log2 = StringIO.StringIO()
+            # it is possible that other threads could write to stdout while the
+            # request is executing, which would divert their output into this
+            # requests output.
+            # this program is single threaded, but someone could use it in
+            # conjunction with a threaded program
+            with pride.functions.contextmanagers.backup(sys, "stdout"):
+                sys.stdout = log2
                 self.execute_code(code, globals())
-            except SystemExit:
-                sys.stdout = backup
-                raise
-            except: # we explicitly really do want to catch everything here
-                _logger.seek(0)
-                result = _logger.read() + '\n' + traceback.format_exc()
-            else:
-                self.user_session[username] += source
-                _logger.seek(0)
-                if sender != "localhost":
-                    result = _logger.read()
-                else:
-                    result = '\b'
-            log.write("{}\n".format(result))
-            _logger.truncate(0)
-            sys.stdout = backup
-        log.flush()
-        return result
+
+            self.user_session[username] += source
+            log2.seek(0)
+            output = Result(None, log2.read())
+
+            log.write("{}\n".format(output[1]))
+        return output
 
     def execute_code(self, code, _locals):
         exec code in _locals
-
-    def _exec_command(self, source):
-        """ Executes the supplied source as the __main__ module"""
-        try:
-            code = compile(source, "__main__", "exec")
-            with main_as_name():
-                exec code in globals(), globals()
-        except Exception as error:
-            self.alert("{}".format(traceback.format_exc()), level=0)
-            raise SystemExit()
 
     def execute_instruction(self, instruction, priority, callback):
         """ Executes the supplied instruction with the specified priority and callback """
@@ -203,10 +187,8 @@ class Program(base.Base):
                                         "pride.components.datatransfer.Background_Refresh",
                                         "pride.components.encryptedstorage.Encryption_Service"),
                 "startup_definitions" : '', "use_existing_server" : True,
-                "interpreter_type" : "pride.components.interpreter.Interpreter",
-                "rpc_server_type" : "pride.components.rpc.Rpc_Server",
                 }
-
+    subcomponents = {"rpc_server" :Component("pride.components.rpc.Rpc_Server")}
     parser_args = ("command", )
     # make an optional "command" positional argument and allow
     # both -h and --help flags
@@ -260,7 +242,7 @@ class Program(base.Base):
         except IOError:
             self.alert("Unable to locate '{}';\nCWD: {}".format(command, os.getcwd()))
             raise SystemExit()
-        pride.Instruction(self.interpreter, "_exec_command", source).execute()
+        pride.Instruction(self.reference, "exec_command_as_main", source).execute()
 
     def get_machine_credentials(self):
         try:
@@ -302,3 +284,13 @@ class Program(base.Base):
 
     def exit(self, exit_code=0):
         raise SystemExit(exit_code)
+
+    def exec_command_as_main(self, source):
+        """ Executes the supplied source as the __main__ module"""
+        try:
+            code = compile(source, "__main__", "exec")
+            with main_as_name():
+                exec code in globals(), globals()
+        except Exception as error:
+            self.alert("{}".format(traceback.format_exc()), level=0)
+            raise SystemExit()

@@ -10,7 +10,7 @@ import pride.functions.security
 import pride.functions.decorators
 import pride.functions.utilities
 from pride.functions.security import hash_function
-from pride.errors import SecurityError, UnauthorizedError
+from pride.errors import SecurityError
 
 remote_procedure_call = pride.components.rpc.remote_procedure_call
 
@@ -34,7 +34,6 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
                 "allow_login" : True, "allow_registration" : True,
                 "login_success_message" : "Welcome to the {}, {}@{}",
                 "login_failure_message" : "Failed to login to {} as {}@{}",
-                "registration_success_message" : "Registered as '{}'@{}",
                 "registration_failure_message" : "Failed to register as '{}'@{}"}
 
     verbosity = {"register" : "vv", "validate_success" : 'vvv',
@@ -83,7 +82,6 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
             On success, inserts (identifier, hashed_password_verifier, salt) into database and returns register_success()
             On failure, returns register_failure() """
-        assert password_verifier, type(password_verifier)
         identifier_in_use = self.database.query("Users", retrieve_fields=("identifier", ),
                                                          where={"identifier" : identifier})
         salt = os.urandom(self.salt_size)
@@ -104,17 +102,14 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
 
     def register_success(self, username):
         """ usage: called during register() when registration succeeds.
-            returns: (success_flag, server_message, session_id)
-                - success_flag is True when registration succeeds
-                - server message is a string to be printed or used by the client"""
-        return True, self.registration_success_message.format(username, self.current_session[1])
+            returns: success_flag
+                - success_flag is True when registration succeeds"""
+        return True
 
     def register_failure(self, username):
         """ usage: called during register() when registration fails.
-            returns: (success_flag, server_message, session_id)
-                - success_flag is False when registration fails
-                - server message is a string to be print or used by the client"""
-        return False, self.registration_failure_message.format(username, self.current_session[1])
+            returns: success_flag"""
+        return False
 
     def login(self, username, password):
         """ usage:
@@ -139,15 +134,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
             correct_hash, salt = self.database.query("Users", retrieve_fields=("verifier_hash", "salt"),
                                                      where={"identifier" : username})
         except ValueError:
-            # note: Triggering except automaticallly means that this branch will take longer than the other would to run the same code
-            # "constant time" is going to be hard to achieve in such a situation
-            #       - unless the underlying api can re-done to not use exceptions?
-            constant_time = self._hash_password(password, "\x00" * 16) # hopefully building the string doesn't take too long
-            # only way to have the call to alert not cause timing variance would be to buffer it for a while and call it later
-            #   - this causes entries printed to stdout or to the log to be out of order
-            #       - print does not happen until well after the code is executed
-            #self.alert("Login failure; {} does not exist".format(username),
-            #           level=0)#self.verbosity["username_does_not_exist"])
+            # note: Triggering an exception automaticallly means that this branch will take longer than the other
             return self.login_failure(username)
         else:
             password_hash = self._hash_password(password, salt)
@@ -255,7 +242,7 @@ class Authenticated_Service(pride.components.rpc.RPC_Service):
                     message = "Rate of {} calls exceeded 1/{}s ({}); Denying request".format(method_name,
                                                                                              self.rate_limit[method_name],
                                                                                              current_rate)
-                    self.alert(message, level=0)#self.verbosity["validate_failure"])
+                    self.alert(message, level=self.verbosity["validate_failure"])
                     return False
 
         self.alert("Authorizing: {} for {}".format(peername, method_name),
@@ -279,7 +266,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
                  "auto_login" : 'v', "logout" : 'v', "login_message" : 0,
                  "login_failed" : 0, "logout_success" : 0, "auto_register" : "vv",
                  "not_registered" : 0, "change_credentials" : 0, "invalid_password" : 0,
-                 "registering_locally" : 0}
+                 "registering_locally" : 0, "change_credential_result" : 0}
 
     defaults = {"target_service" : "/Program/Authenticated_Service",
                 "username_prompt" : "{}: Please provide the user name for {}@{}: ",
@@ -336,7 +323,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
         registered_users = pride.objects["/Program/Persistent_Storage"]["registered_users"]
         user_info = (self.target_service, self.ip, self.username)
         if user_info not in registered_users and self.auto_register:
-            self.alert("Auto registering with {}@{} as {}".format(*user_info), level=self.verbosity["auto_register"])
+            self.alert("Auto registering with {}@{} as {}".format(*user_info),
+                       level=self.verbosity["auto_register"])
             self.register()
 
         elif self.auto_login:
@@ -353,12 +341,7 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
 
     def register_results(self, server_response):
         self._registering = False
-        try:
-            success, message = server_response
-        except ValueError:
-            if not isinstance(server_response, UnauthorizedError):
-                raise
-            success, message = False, "UnauthorizedError"
+        success, message = server_response
         if success:
             self.register_success()
         else:
@@ -398,13 +381,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
 
     def login_result(self, server_response):
         self._logging_in = False
-        try:
-            success, message, self.session.id = server_response
-        except ValueError:
-            if not isinstance(server_response, BaseException):
-                raise
-            success = False
-            message = type(server_response).__name__
+        success, message, self.session.id = server_response
+        #self.session.id = session_id
         if success:
             self.login_success(message)
         else:
@@ -469,7 +447,8 @@ class Authenticated_Client(pride.components.rpc.RPC_Client):
 
     def change_credential_result(self, server_response):
         success, message = server_response
-        self.alert("{}".format(message), level=0)
+        self.alert("{}".format(message),
+                   level=self.verbosity["change_credential_result"])
         old_credentials = self.username, self.password
         self.username, self.password = self._new_credentials
         self._new_credentials = None

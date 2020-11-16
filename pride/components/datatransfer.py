@@ -110,7 +110,7 @@ class File_Transfer(Data_Transfer_Client):
             _file = self.file or open(self.filename, "a+b")
             data = _file.read()
             if len(data) < 65535:
-                packet = pride.functions.utilities.save_data(self.filename, 0, data)
+                packet = pride.functions.utilities.dumps(self.filename, 0, data)
                 ip = self.ip
                 port = self.port
                 for receiver in self.receivers:
@@ -123,7 +123,7 @@ class File_Transfer(Data_Transfer_Client):
 
     def receive(self, messages):
         for sender, message in messages:
-            filename, offset, data = pride.functions.utilities.load_data(message)
+            filename, offset, data = pride.functions.utilities.loads(message)
             if pride.components.shell.get_permission(self.permission_string.format(self.username, self.reference,
                                                                         sender, filename, len(data))):
                 filename = raw_input("Please enter the filename or press enter to use '{}': ".format(filename)) or filename
@@ -137,8 +137,8 @@ class File_Storage_Daemon(Data_Transfer_Client):
 
     def receive(self, message):
         for sender, message in message:
-            request_type, packet = pride.functions.utilities.load_data(message)
-            filename, offset, data = pride.functions.utilities.load_data(packet)
+            request_type, packet = pride.functions.utilities.loads(message)
+            filename, offset, data = pride.functions.utilities.loads(packet)
             if request_type == "save":
                 file_operation(filename, "a+b", "write", self.file_type, offset, data)
                 try:
@@ -161,7 +161,7 @@ class Proxy(Data_Transfer_Client):
 
     def receive(self, messages):
         for sender, message in messages:
-            target, packet = pride.functions.utilities.load_data(message)
+            target, packet = pride.functions.utilities.loads(message)
             self.send_to(target, packet)
 
 

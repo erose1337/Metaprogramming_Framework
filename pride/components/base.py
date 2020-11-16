@@ -23,7 +23,7 @@ __all__ = ["DeleteError", "AddError", "load", "Base", "Reactor", "Wrapper", "Pro
 def rebuild_object(saved_data):
     """ usage: load(saved_data) => restored_instance, attributes """
     #user = pride.objects["/User"]
-    #attributes = user.load_data(saved_data)
+    #attributes = user.loads(saved_data)
     #repo_id = user.generate_tag(user.username)
     #version_control = pride.objects["/Program/Version_Control"]
     #_required_modules = []
@@ -34,7 +34,7 @@ def rebuild_object(saved_data):
         #source = version_control.load_module(module_name, module_id, repo_id)
         #module_object = pride.functions.module_utilities.create_module(module_name, source)
     #    _required_modules.append((module_name, module_id, module_object))
-    saved_data = utilities.load_data(saved_data)
+    saved_data = utilities.loads(saved_data)
     module_name, class_name = saved_data.pop("_type_info")
     module_object = importlib.import_module(module_name)
     self_class = getattr(module_object, class_name)
@@ -592,7 +592,7 @@ class Base(with_metaclass(pride.components.metaclass.Metaclass, object)):
         #except TypeError:
         #    self.alert("Unable to save attributes '{}'".format(pprint.pformat(attributes)), level=0)
         #    raise
-        saved_data = utilities.save_data(attributes)
+        saved_data = utilities.dumps(attributes)
         if _file:
             _file.write(saved_data)
         return saved_data

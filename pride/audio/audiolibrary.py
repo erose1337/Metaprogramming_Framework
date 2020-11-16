@@ -152,7 +152,7 @@ class Config_Utility(scheduler.Process):
         with open(self.config_file_name, "wb") as config_file:
             for device in device_list:
                 print device
-            config_file.write(pride.functions.utilities.save_data(device_list))
+            config_file.write(pride.functions.utilities.dumps(device_list))
             config_file.flush()
             config_file.close()
 
@@ -308,7 +308,7 @@ class Audio_Manager(base.Base):
 
     def load_config_file(self):
         with open(self.config_file_name, "rb") as config_file:
-            for device_info in pride.functions.utilities.load_data(config_file):
+            for device_info in pride.functions.utilities.loads(config_file):
                 device = self.create(self.Audio_Input, **device_info)
                 self.device_names[device.reference] = device
                 self.device_names[device.name] = device

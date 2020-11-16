@@ -11,7 +11,7 @@ import pprint
 import traceback
 import timeit
 
-from persistence import save_data, load_data
+from serializer import dumps, loads
 timestamp = timeit.default_timer
 
 _TYPE_SYMBOL = {int : chr(0), float : chr(1), str : chr(2),
@@ -324,8 +324,8 @@ def test_pack_unpack():
     tag = "zpx98yvzclkj"
     extra_data = "1x897=a[19njkS"
 
-    packed = save_data(ciphertext, iv, tag, extra_data)
-    _ciphertext, _iv, _tag, _extra_data = load_data(packed)
+    packed = dumps(ciphertext, iv, tag, extra_data)
+    _ciphertext, _iv, _tag, _extra_data = loads(packed)
     assert _ciphertext == ciphertext
     assert _iv == iv
     assert _tag == tag

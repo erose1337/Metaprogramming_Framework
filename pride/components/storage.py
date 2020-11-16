@@ -1,5 +1,5 @@
 import pride.components.database
-import pride.functions.persistence
+import pride.functions.serializer
 
 class Persistent_Storage(pride.components.database.Database):
     """ Usage:
@@ -14,7 +14,7 @@ class Persistent_Storage(pride.components.database.Database):
         Can store basic python objects, i.e. ints, floats, strings, sets, lists, and dicts
 
         Similar to anydbm:
-            - Uses pride.functions.persistence instead of pickle for serialization (safer)
+            - Uses pride.functions.serializer instead of pickle for serialization (safer)
             - Stored in a sqlite3 database
                 - Less likely then anydbm to end up with a corrupted .db file"""
 
@@ -34,10 +34,10 @@ class Persistent_Storage(pride.components.database.Database):
         if not data:
             raise KeyError("'{}' not in database".format(item))
         else:
-            return pride.functions.persistence.load_data(data)
+            return pride.functions.serializer.loads(data)
 
     def __setitem__(self, item, value):
-        data = pride.functions.persistence.save_data(value)
+        data = pride.functions.serializer.dumps(value)
         self.insert_or_replace("Entries", (item, data))
 
     def __delitem__(self, item):

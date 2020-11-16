@@ -1,4 +1,4 @@
-""" Provides authenticated encryption and decryption functions using only the python standard library and the persistence module.
+""" Provides authenticated encryption and decryption functions using only the python standard library and the serializer module.
     Used when the cryptography package cannot be installed.
     If the layout seems strange (why are there objects for some things?) the reason why is compatibility with the cryptography packages interface"""
 
@@ -8,7 +8,7 @@ import hmac
 import os
 import six
 
-from persistence import save_data, load_data
+from serializer import dumps, loads
 
 __all__ = ("InvalidTag", "random_bytes", "psuedorandom_bytes", "encrypt", "decrypt",
            "Hash_Object", "Key_Derivation_Object", "HKDFExpand", "hkdf_expand",
@@ -122,15 +122,15 @@ def hash_password(password, iterations, algorithm="pbkdf2hmac", sub_algorithm="s
                                         salt=None, salt_size=16, output_size=32,
                                         backend="cryptographyless"):
     salt = os.urandom(salt_size)
-    header = save_data(algorithm, sub_algorithm, iterations, salt_size, output_size)
+    header = dumps(algorithm, sub_algorithm, iterations, salt_size, output_size)
     if algorithm == "pbkdf2hmac":
-        return save_data(header, salt, hashlib.pbkdf2_hmac(sub_algorithm, header + password, salt, iterations, output_size))
+        return dumps(header, salt, hashlib.pbkdf2_hmac(sub_algorithm, header + password, salt, iterations, output_size))
     else:
         return -1
 
 def verify_hashed_password(password, header_salt_hash, backend="cryptographyless"):
-    header, salt, correct_output = load_data(header_salt_hash)
-    algorithm, sub_algorithm, iterations, salt_size, output_size = load_data(header)
+    header, salt, correct_output = loads(header_salt_hash)
+    algorithm, sub_algorithm, iterations, salt_size, output_size = loads(header)
     if algorithm == "pbkdf2hmac":
         output = hashlib.pbkdf2_hmac(sub_algorithm, header + password, salt, iterations, output_size)
     else:
@@ -156,12 +156,12 @@ def generate_mac(key, data, algorithm="SHA256", backend=None):
     return hmac.HMAC(key, algorithm + "::" + data, Hash_Factory(algorithm)).digest()
 
 def apply_mac(key, data, algorithm="SHA256", backend=None):
-    return save_data(generate_mac(key, data, algorithm, backend), data)
+    return dumps(generate_mac(key, data, algorithm, backend), data)
 
 def verify_mac(key, packed_data, algorithm="SHA256", backend=None):
     """ Verifies a message authentication code as obtained by apply_mac.
         Successful comparison indicates integrity and authenticity of the data. """
-    mac, data = load_data(packed_data)
+    mac, data = loads(packed_data)
     calculated_mac = hmac.HMAC(key, algorithm + "::" + data, Hash_Factory(algorithm)).digest()
     try:
         if not hmac.compare_digest(mac, calculated_mac):
@@ -242,7 +242,7 @@ def _encrypt(data, key, mac_key, nonce='', extra_data='', algorithm="sha256", no
     header = algorithm + '_' + mode + '_' + hmac_algorithm
     mac_tag = hmac.HMAC(mac_key, header + extra_data + nonce + encrypted_data, getattr(hashlib, hmac_algorithm)).digest()
     if return_mode == "cryptogram":
-        return save_data(header, encrypted_data, nonce, mac_tag, extra_data)
+        return dumps(header, encrypted_data, nonce, mac_tag, extra_data)
     elif return_mode == "values":
         return header, encrypted_data, nonce, mac_tag, extra_data
     else:
@@ -256,7 +256,7 @@ def _decrypt(data, key, mac_key):
         Returns (extra_data, plaintext) when extra data is available
         Otherwise, just returns plaintext data.
         Authenticity and integrity of the plaintext/extra data is guaranteed. """
-    header, encrypted_data, nonce, mac_tag, extra_data = load_data(data)
+    header, encrypted_data, nonce, mac_tag, extra_data = loads(data)
     algorithm, mode, mac_algorithm = header.split('_', 2)
     mac_algorithm = mac_algorithm.lower()
     try:
@@ -297,9 +297,9 @@ def test__encrypt__decrypt():
     decrypted = _decrypt(packet, _TEST_KEY, _TEST_KEY)
     assert decrypted == (_TEST_MESSAGE, "extra_data"), decrypted
 
-    header, encrypted_data, nonce, mac_tag, extra_data = load_data(packet)
+    header, encrypted_data, nonce, mac_tag, extra_data = loads(packet)
     extra_data = "Changed"
-    packet = save_data(header, encrypted_data, nonce, mac_tag, extra_data)
+    packet = dumps(header, encrypted_data, nonce, mac_tag, extra_data)
     try:
         _decrypt(packet, _TEST_KEY, _TEST_KEY)
     except InvalidTag:

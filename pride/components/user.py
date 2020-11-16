@@ -5,7 +5,7 @@ import pride.components.base
 import pride.functions.security
 import pride.components.asymmetric
 import pride.components.shell
-from pride.functions.persistence import save_data, load_data
+from pride.functions.serializer import dumps, loads
 from pride.functions.utilities import slide
 
 def generate_identity(identifier=None, keypair=None, secret=None,
@@ -28,12 +28,12 @@ def generate_identity(identifier=None, keypair=None, secret=None,
 
 def encrypt_identity(identifier, keypair, secret, encryption_key, mac_key):
     private_key, public_key  = keypair[0].serialize(), keypair[1].serialize()
-    message = save_data(identifier, private_key, public_key, secret)
+    message = dumps(identifier, private_key, public_key, secret)
     return pride.functions.security.encrypt(message, encryption_key, mac_key)
 
 def decrypt_identity(cryptogram, encryption_key, mac_key):
     serialized_data = pride.functions.security.decrypt(cryptogram, encryption_key, mac_key)
-    identifier, private_key, public_key, secret = load_data(serialized_data)
+    identifier, private_key, public_key, secret = loads(serialized_data)
     return private_key, public_key, secret
 
 def store_identity(encryption_key, mac_key, identifier, private_key, public_key, secret, storage="/Program/Persistent_Storage"):
@@ -166,6 +166,7 @@ class User(pride.components.base.Base):
             else:
                 self.handle_not_registered(identifier)
                 cryptogram = pride.objects[self.storage_reference]["/Users/{}".format(identifier)]
+        assert not isinstance(cryptogram, tuple)
         return cryptogram
 
     def derive_master_keys(self):
@@ -188,18 +189,24 @@ class User(pride.components.base.Base):
         self.data_encryption_key = keys[:size1]
         self.data_mac_key = keys[size1:size1 + size2]
 
-    def handle_not_registered(self, identifier):
-        if self.auto_register or (self.prompt_flag and pride.components.shell.get_permission("{}: Register as '{}'? (y/n): ".format(self.reference, identifier))):
+    def handle_not_registered(self, identifier,
+                              _msg="{}: Register as '{}'? (y/n): "):
+        if (self.auto_register or
+            (self.prompt_flag and
+             pride.components.shell.get_permission(_msg.format(self.reference,
+                                                               identifier)))):
             if not self.auto_register:
-                self.alert("Registering user '{}'".format(identifier), level=self.verbosity["registering"])
+                self.alert("Registering user '{}'".format(identifier),
+                           level=self.verbosity["registering"])
             self.store_new_identity(identifier)
         else:
             raise ValueError("{} not registered; Unable to continue".format(identifier))
 
     def store_new_identity(self, identifier):
         identifier, keypair, secret = generate_identity(identifier)
-        store_identity(self.master_encryption_key, self.master_mac_key, identifier,
-                       keypair[0], keypair[1], secret, storage=self.storage_reference)
+        store_identity(self.master_encryption_key, self.master_mac_key,
+                       identifier, keypair[0], keypair[1], secret,
+                       storage=self.storage_reference)
 
     def forget_identity(self, identifier):
         #identifiers = pride.objects[self.storage_reference]
@@ -261,7 +268,7 @@ class User(pride.components.base.Base):
     def save_data(self, *args):
         """ Serializes and authenticates supplied arguments.
             To reload, use load_data. """
-        package = pride.functions.persistence.save_data(*args)
+        package = pride.functions.serializer.dumps(*args)
         return self.authenticate(package)
 
     def load_data(self, package):
@@ -269,7 +276,7 @@ class User(pride.components.base.Base):
             Returns the arguments that were passed to save_data."""
         packed_bytes = self.verify(package)
         if packed_bytes is not pride.functions.security.INVALID_TAG:
-            return pride.functions.persistence.load_data(packed_bytes)
+            return pride.functions.serializer.loads(packed_bytes)
         else:
             raise InvalidTag()
 

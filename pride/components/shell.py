@@ -1,7 +1,6 @@
 import random
 import sys
 import os
-import threading
 import codeop
 import traceback
 import inspect
@@ -63,25 +62,25 @@ def is_affirmative(input, affirmative_words=("affirmative", "true")):
     return is_positive
 
 
-class Command_Line(pride.components.base.Base):
+class Command_Line(pride.components.scheduler.Process):
     """ Captures user input and provides the input to the specified or default program.
 
         Available programs can be modified via the add_program, remove_program,
         set_default_program, and get_program methods."""
-    defaults = {"thread_started" : False, "write_prompt" : True,
+    defaults = {"write_prompt" : True,
                 "prompt" : ">>> ", "programs" : None,
                 "default_programs" : ("pride.components.shell.OS_Shell",
                                       "pride.components.shell.Switch_Program"),
                 "idle_threshold" : 1000,
                 "screensaver_type" : "pride.components.shell.Random_Screensaver",
-                "_raw_input_callback" : None}
+                "_raw_input_callback" : None,
+                "priority" : .05}
 
     def __init__(self, **kwargs):
         self._idle = True
         self.screensaver = None
         super(Command_Line, self).__init__(**kwargs)
 
-        self._new_thread()
         self.programs = self.programs or {}
         default_program = self.create(self.default_programs[0])
         self.set_default_program(default_program.name, (default_program.reference, "handle_input"), set_backup=True)
@@ -90,14 +89,7 @@ class Command_Line(pride.components.base.Base):
             self.create(program)
 
         pride.Instruction(self.reference, "handle_idle").execute(priority=self.idle_threshold)
-
-        self._new_thread()
-        self.thread.start()
-
-    def _new_thread(self):
-        self.thread = threading.Thread(target=self.read_input)
-        self.thread.daemon = True
-        self.thread_started = False
+        self._input_generator = self._new_input_generator()
 
     def add_program(self, program_name, callback_info):
         self.programs[program_name] = callback_info
@@ -121,34 +113,27 @@ class Command_Line(pride.components.base.Base):
             result = self.programs.get(program_name, self.default_program)
         return result
 
-    def run(self):
-        if input_waiting():
-            pass
-            #if not self.thread_started:
-            #    self._new_thread()
-            #    self.thread.start()
-            #    self.thread_started = True
-            #    self._idle = False
-
     def set_prompt(self, prompt):
         self.prompt = prompt
 
     def __getstate__(self):
         attributes = super(Command_Line, self).__getstate__()
-        del attributes["thread"]
         return attributes
 
-    def on_load(self, attributes):
-        super(Command_Line, self).on_load(attributes)
-        self._new_thread()
-
-    def read_input(self):
-        self.thread_started = True
+    def _new_input_generator(self):
         while True:
-            input = sys.stdin.readline()
-            self._idle = False
-            self.clear_screensaver()
-            self.handle_input(input)
+            if input_waiting():
+                try:
+                    input = sys.stdin.readline()
+                except ValueError: # main thread exited
+                    raise SystemExit()
+                self._idle = False
+                self.clear_screensaver()
+                self.handle_input(input)
+            yield
+
+    def run(self):
+        next(self._input_generator)
 
     def clear_screensaver(self):
         if self.screensaver is not None:

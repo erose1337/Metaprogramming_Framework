@@ -1256,7 +1256,10 @@ class Tuple_Field(Field):
             value = self.value
             self.layout = layout(
                             row_info(0,
-                                     *(field_info(index,
-                                                  target_object=value) for
+                                     *(field_info("select_index",
+                                                  args=(index, )) for
                                         index in range(len(value)))))
         super(Tuple_Field, self).create_subcomponents()
+
+    def select_index(self, index):
+        raise NotImplementedError()

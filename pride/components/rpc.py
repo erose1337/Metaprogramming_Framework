@@ -320,8 +320,8 @@ class Rpc_Socket(Packet_Socket):
                     result = Result(UNAUTHORIZED_ERROR)
 
                 else:
-                    assert not isinstance(result, UnauthorizedError)
-                    assert not isinstance(result, SystemExit)
+                    if isinstance(result, SystemExit):
+                        raise result
                     stack_trace = traceback.format_exc()
                     self.alert("Exception processing request {}.{}: \n{}".format(component_name,
                                                                                  method, stack_trace),

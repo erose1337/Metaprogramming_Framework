@@ -3,7 +3,6 @@
 #    - use Database.db_info and table_info to display contents
 import pride.components.database
 import pride.gui.widgets.tabs
-import pride.functions.persistence
 
 class Table_Viewer(pride.gui.gui.Window):
 

@@ -298,6 +298,74 @@ deal with certificates properly
 Have a clearly defined user model
 ---------------------------------
 
+# begin security system remodel notes
+
+Setup
+-----
+
+Generate for the user a random passphrase of sufficient strength.
+Generate uniformly random master secret (e.g. via /dev/urandom).
+Derive the user_secret (e.g. pbkdf2/bcrypt/scrypt/argon2)
+Encrypt the master secret, using the user_secret as the source secret material.
+Store the encrypted master secret:
+
+- locally, on the device
+- on the internet somewhere
+    - Enables access in the event of a missing device or device failure
+    - Download the encrypted master_key to the new device
+    - The new device is now usable with the same access
+
+
+Generating the passphrase
+-------------------------
+- 10 words from a word list with 4096 entries (4096 = 2 ** 12)
+- 8 words using 2 ** 20 (1 million) kdf iterations
+
+
+Deriving the user_secret
+------------------------
+With a 10-word passphrase, a slow key derivation function should not be necessary.
+The advantage is a simpler implementation.
+
+A shorter, 8-word passphrase could be obtained with only 2**20 (1 million) iterations (or equivalent work factor).
+The advantage is an improved user experience.
+2 ** 30 (1 billion) iterations only shrinks the passphrase by a single word and takes significantly longer.
+
+
+Encrypting the master secret
+----------------------------
+
+
+
+
+(Optional) Backup
+-----------------
+Store an encrypted copy of master_secret in a persistent public space.
+Generate a new identity (e.g. `hkdf(master_secret, info="master")`).
+
+- The `info` string should be fixed to a constant, public value
+
+
+
+"Login"
+-------
+Decrypt the master secret using the passphrase.
+    - Authentication success/failure indicates "log-in" success/failure
+Derive master encryption key from master secret
+
+
+
+Failures
+--------
+
+- Device failure (dead, missing, etc)
+    - solution: Encrypted backup of master_secret
+- Forgotten pass phrase
+-
+
+# end of security remodel notes
+
+
 
 
 full screen toggle, resolution sliders

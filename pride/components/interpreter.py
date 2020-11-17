@@ -96,7 +96,7 @@ class Interpreter(pride.components.rpc2.Authenticated_Service):
 
     defaults = {"help_string" : 'Type "help", "copyright", "credits" or "license" for more information.',
                 "login_message" : "Welcome {} from {}\nPython {} on {}\n{}\n",
-                "allow_registration" : False}
+                "allow_registration" : False, "_disable_raw_input" : True}
 
     mutable_defaults = {"user_namespaces" : dict, "user_session" : dict}
 

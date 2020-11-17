@@ -7,6 +7,7 @@ import functools
 from os import path
 import socket
 import traceback
+import sys
 
 import pride
 import pride.components.base
@@ -22,6 +23,7 @@ NO_ERROR = 0
 UNAUTHORIZED_ERROR = 1
 CODE_ERROR = 2
 GENERIC_ERROR = 3
+EXEC_ERROR = 4                                       # used by Interpreter Shell
 
 def Result(error_code, message=''):
     return (error_code, message)
@@ -198,7 +200,8 @@ class Rpc_Client_Socket(Packet_Client):
                  "request_sent" : "vvv", "unresolved_callback" : 0,
 
                  "unauthorized_error" : 0, "code_error" : 0,
-                 "generic_error" : 0, "invalid_error_code" : 0}
+                 "generic_error" : 0, "invalid_error_code" : 0,
+                 "exec_error" : 0}
 
     mutable_defaults = {"_requests" : list, "_callbacks" : list}
 
@@ -255,6 +258,14 @@ class Rpc_Client_Socket(Packet_Client):
                                                 (callback_owner, _call))
                     self.alert(message,
                                level=self.verbosity["generic_error"])
+                elif rpc_code == EXEC_ERROR:
+                    extra = "\nRemote Traceback:\n{}".format(_response)
+                    message = self.format_error("Exec Error",
+                                                (callback_owner, _call),
+                                                extra)
+                    self.alert(message,
+                               level=self.verbosity["exec_error"])
+                    sys.stdout.write(">>> "); sys.stdout.flush()
                 else:
                     message = self.format_error("Invalid Error Code",
                                                 (callback_owner, _call),
@@ -326,9 +337,9 @@ class Rpc_Socket(Packet_Socket):
                     self.alert("Exception processing request {}.{}: \n{}".format(component_name,
                                                                                  method, stack_trace),
                                level=self.verbosity["request_exception"])
-
-                    if self.production_mode == "debug":
-                        stack_trace = traceback.format_exc()
+                    if component_name == "/Program/Interpreter":
+                        result = Result(EXEC_ERROR, stack_trace)
+                    elif self.production_mode == "debug":
                         result = Result(CODE_ERROR, stack_trace)
                     else:
                         result = Result(GENERIC_ERROR)

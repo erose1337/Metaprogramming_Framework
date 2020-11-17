@@ -22,41 +22,26 @@ if is_version_two:
     __raw_input = raw_input
     class RequestDenied(BaseException): pass
 
-
-    _PERSISTENCE = [] # readline in one thread and raw_input in another doesn't play nicely
-    def _store(text, _persistence=_PERSISTENCE):
-        _persistence.append(text)
-
-    def _get_input(_persistence=_PERSISTENCE):
-        try:
-            objects["/User/Command_Line"]._raw_input_callback = _store
-        except KeyError:
-            reply = __raw_input('')
-        else:
-            while not _persistence:
-                time.sleep(.005)
-            reply = _persistence.pop(0)
-        return reply
-
-    def raw_input(prompt='', must_reply=False, _persistence=_PERSISTENCE):
+    def raw_input(prompt='', must_reply=False):
         """ raw_input function that plays nicely when sys.stdout is swapped.
             If must_reply equals True, then the prompt will be redisplayed
             until a non empty string is returned.
 
             For documentation of the standard CPython raw_input function, consult
             the python interpreter or the internet. """
-        if getattr(objects.get("/Program/Interpreter", None), "_disable_raw_input", None):
+        if getattr(objects.get("/Program/Interpreter", None),
+                   "_disable_raw_input", False):
             raise RequestDenied("raw_input does not function remotely")
         if must_reply:
             reply = ''
             while not reply:
                 sys.__stdout__.write(prompt)
                 sys.__stdout__.flush()
-                reply = _get_input()
+                reply = __raw_input()
         else:
             sys.__stdout__.write(prompt)
             sys.__stdout__.flush()
-            reply = _get_input()
+            reply = __raw_input()
         return reply
 else:
     __input = input
